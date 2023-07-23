@@ -1,0 +1,28 @@
+# Python:
+__pycache__
+*.egg-info
+
+# IDEs
+*.idea*
+
+# venv
+venv/
+
+# pkl files
+*.pkl
+
+#*.urdf
+
+*.pt
+
+scripts/
+models/
+#assets/
+logs/
+save/
+baselines/
+lib/
+bin/
+share/
+downloads/
+pyvenv.cfg

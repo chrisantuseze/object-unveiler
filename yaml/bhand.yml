@@ -1,0 +1,21 @@
+env:
+  workspace:
+    bounds: [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
+    position: [0, 0, 0]
+  pixel_size: 0.005
+  nr_of_obstacles:
+    -5
+    -7
+
+agent:
+  per: False
+
+  fcn:
+    rotations: 16
+    batch_size: 1
+    learning_rate: 0.0001
+
+  regressor:
+    aperture_limits: [0.6, 1.1]
+    batch_size: 1
+    learning_rate: 0.0001
