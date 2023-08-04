@@ -28,8 +28,8 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.15
-        self.z = 0.1
+        self.push_distance = 0.15 # distance of the floating hand from the object to be grasped
+        self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
@@ -196,14 +196,20 @@ class Policy:
         valid_pxl_map = np.zeros(state.shape)
         for x in range(state.shape[0]):
             for y in range(state.shape[1]):
-                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1)
+                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
 
-                if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size:
+                if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
                     valid_pxl_map[y, x] = 255
 
                 
-        valid_pxls = np.argwhere(valid_pxl_map == 255)
-        valid_ids = np.arange(0, valid_pxls.shape[0])
+        valid_pxls = np.argwhere(valid_pxl_map == 255) # gets indices of the pixels with values equal to 255
+        valid_ids = np.arange(0, valid_pxls.shape[0]) # creates an array containing values from 0 - valid_pxls.shape[0]
+
+        print(target_mask.shape)
+        print()
+
+        valid_target_mask_pxls = np.argwhere(target_mask == 255)
+        valid_target_mask_ids = np.arange(0, valid_target_mask_pxls.shape[0])
 
         objects_mask = np.zeros(state.shape)
         objects_mask[state > self.z] = 255
@@ -212,6 +218,8 @@ class Policy:
 
         while True:
             pxl = valid_pxls[self.rng.choice(valid_ids, 1)[0]]
+            # pxl = valid_target_mask_pxls[self.rng.choice(valid_target_mask_ids, 1)[0]]
+            print("pxl", pxl)
             p1 = np.array([pxl[1], pxl[0]])
 
             # Sample pushing direction. Push directions point always towards the objects.
@@ -223,11 +231,14 @@ class Policy:
                     if (p1[0] - pushing_area < pnt[0, 0] < p1[0] + pushing_area) and \
                        (p1[1] - pushing_area < pnt[0, 1] < p1[1] + pushing_area):
                         points.append(pnt[0])
+
             if len(points) > 0:
+                print(len(points), "\n")
                 break
 
+        print()
         ids = np.arange(len(points))
-        random_id = self.rng.choice(ids, 1)[0]
+        random_id = self.rng.choice(ids, 1)[0] # creates an array by randomizing items in the ids array and picking one item from it.
         p2 = points[random_id]
         push_dir = p2 - p1
         theta = -np.arctan2(push_dir[1], push_dir[0])

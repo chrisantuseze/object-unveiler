@@ -36,7 +36,7 @@ class Environment:
         hz = 240
         self.pxl_size = 0.005
         self.bounds = np.array([[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]])  # workspace limits
-        self.nr_objects = [5, 8]
+        self.nr_objects = [6, 9] #[5, 8]
 
 
         # Setup cameras.

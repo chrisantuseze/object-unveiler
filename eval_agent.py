@@ -28,17 +28,10 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     
     i = 0
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][0], name="color" + str(i))
+        utils.save_image(color_img=obs['color'][1], name="color" + str(i))
 
-        # get the segmentation masks
-        mask_info = segmenter.from_maskrcnn(obs['color'][0], obs['depth'][0], plot=True)
-        
-        # randomly pick the target
-        if len(mask_info) > 1:
-            target_id = rng.randint(0, len(mask_info) - 1)
-            target_mask = mask_info[target_id]
-        else:
-            target_mask = obs['color'][0]
+        # get a randomly picked target mask from the segmented image
+        target_mask = utils.get_target_mask(segmenter, obs, rng)
         cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
 
         # add the target seegmentation mask to the observation dictionary
@@ -49,7 +42,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         if train:
             action = policy.explore(state)
         else:
-            action = policy.exploit(state)
+            action = policy.predict(state)
 
         env_action3d = policy.action3d(action)
 

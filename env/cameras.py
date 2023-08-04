@@ -26,16 +26,16 @@ class RealSense():
 
   # Default camera configs.
   CONFIG = [
-    # {
-    #   'type': 'front',
-    #   'image_size': image_size,
-    #   'intrinsics': intrinsics,
-    #   'pos': front_position,
-    #   'target_pos': front_target_pos,
-    #   'up_vector': front_up_vector,
-    #   'zrange': (0.01, 10.),
-    #   'noise': False,
-    # }, 
+    {
+      'type': 'front',
+      'image_size': (480, 640),
+      'intrinsics': intrinsics,
+      'pos': front_position,
+      'target_pos': front_target_pos,
+      'up_vector': front_up_vector,
+      'zrange': (0.01, 10.),
+      'noise': False,
+    }, 
     {
         'type': 'top',
         'image_size': image_size,

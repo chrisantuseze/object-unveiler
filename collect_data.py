@@ -13,13 +13,9 @@ from trainer.memory import ReplayBuffer
 import utils.utils as utils
 
 def collect_demonstrations(args):
-    save_dir = 'save'
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-
     save_dir = 'save/ppg-dataset'
     if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
+        os.makedirs(save_dir)
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -48,23 +44,18 @@ def collect_demonstrations(args):
         while not policy.is_state_init_valid(obs):
             obs = env.reset()
 
-        for i in range(15):
+        for i in range(15): # we need to have a planner at this point. We stop only when the target has been grasped.
+
+            utils.save_image(color_img=obs['color'][1], name="color" + str(i))
             
-            # get the segmentation masks
-            mask_info = segmenter.from_maskrcnn(obs['color'][0], obs['depth'][0], plot=True)
-            
-            # randomly pick the target
-            if len(mask_info) > 1:
-                target_id = rng.randint(0, len(mask_info) - 1)
-                target_mask = mask_info[target_id]
-            else:
-                target_mask = obs['color'][0]
+            # get a randomly picked target mask from the segmented image
+            target_mask = utils.get_target_mask(segmenter, obs, rng)
             cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
 
             # add the target seegmentation mask to the observation dictionary
             obs = utils.add_to_obs(obs, target_mask)
             
-            state  = policy.state_representation(obs)
+            state = policy.state_representation(obs)
             action = policy.guided_exploration(state)
             env_action3d = policy.action3d(action)
 

@@ -106,7 +106,7 @@ def get_fused_heightmap(obs, configs, bounds, pix_size):
 
     target_mask = None
     if 'target_mask' in obs:
-        target_mask = obs['target_mask'][0]
+        target_mask = obs['target_mask']
 
     return cv2.flip(height_grid, 1), target_mask
 
@@ -198,16 +198,28 @@ def save_image(color_img, name):
     print(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
     save_path = "save/misc"
     if not os.path.exists(save_path):
-        os.mkdir(save_path)
+        os.makedirs(save_path)
 
     img = Image.fromarray(color_img, 'RGB')
-    img.save(os.path.join(save_path, name + '.jpg'))
+    img.save(os.path.join(save_path, name + '.png'))
 
 def add_to_obs(obs, target_mask):
-    obs['target_mask'] = [target_mask]
+    obs['target_mask'] = target_mask
 
     return obs
 
+def get_target_mask(segmenter, obs, rng):
+    id = 1
+    # get the segmentation masks
+    mask_info = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], plot=True)
+
+    if len(mask_info) > 1:
+        target_id = rng.randint(0, len(mask_info) - 1)
+        target_mask = mask_info[target_id]
+    else:
+        target_mask = obs['color'][id]
+
+    return target_mask
 
 class Logger:
     def __init__(self, log_dir):
