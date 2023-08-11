@@ -1,6 +1,7 @@
 import argparse
 from trainer.train import train_fcn, train_regressor
 from eval_agent import eval_agent
+import utils.utils as utils
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -26,6 +27,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    utils.create_dirs()
 
     print("The selected mode is: ", args.mode)
 

@@ -269,9 +269,6 @@ class Environment:
 
             obs = self.get_observation()
             state = utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
-            
-            # state originally contains both the state and the target mask, so we need to unwrap it.
-            state, target_mask = state
 
             free = np.zeros(state.shape, dtype=np.uint8)
             free[state == 0] = 1

@@ -28,9 +28,8 @@ class ReplayBuffer:
             raise Exception
         os.mkdir(folder_name)
 
-        state, target_mask = transition['state']
-        cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), state)
-        cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), target_mask)
+        cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
+        cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
 
         # Save everything that obs contains
@@ -38,6 +37,9 @@ class ReplayBuffer:
             cv2.imwrite(os.path.join(folder_name, 'color_' + str(i) + '.png'), transition['obs']['color'][i])
             cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
             cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
+
+            cv2.imwrite(os.path.join(folder_name, 'mask_' + str(i) + '.png'), transition['masks'][i])
+
         pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 
         self.buffer_ids.append(self.count)

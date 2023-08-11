@@ -7,3 +7,4 @@ tabulate
 imutils==0.5.3
 pycocotools==2.0.2
 termcolor==1.1.0
+# scikit-image

@@ -28,7 +28,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.15 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
@@ -184,12 +184,10 @@ class Policy:
         action[2] = self.rng.randint(0, 16) * 2 * np.pi / self.rotations
         action[3] = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
         return action
-    
-    def guided_exploration(self, state, sample_limits=[0.1, 0.15]):
-            
-        # state originally contains both the state and the target mask, so we need to unwrap it.
-        state, target_mask = state
 
+ 
+
+    def guided_exploration(self, state, sample_limits=[0.1, 0.15]):
         obj_ids = np.argwhere(state > self.z)
 
         # sample initial position
@@ -205,12 +203,6 @@ class Policy:
         valid_pxls = np.argwhere(valid_pxl_map == 255) # gets indices of the pixels with values equal to 255
         valid_ids = np.arange(0, valid_pxls.shape[0]) # creates an array containing values from 0 - valid_pxls.shape[0]
 
-        print(target_mask.shape)
-        print()
-
-        valid_target_mask_pxls = np.argwhere(target_mask == 255)
-        valid_target_mask_ids = np.arange(0, valid_target_mask_pxls.shape[0])
-
         objects_mask = np.zeros(state.shape)
         objects_mask[state > self.z] = 255
         _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
@@ -218,9 +210,7 @@ class Policy:
 
         while True:
             pxl = valid_pxls[self.rng.choice(valid_ids, 1)[0]]
-            # pxl = valid_target_mask_pxls[self.rng.choice(valid_target_mask_ids, 1)[0]]
-            print("pxl", pxl)
-            p1 = np.array([pxl[1], pxl[0]])
+            p1 = np.array([pxl[1], pxl[0]]) # p1 is the initial distance of the palm from the object
 
             # Sample pushing direction. Push directions point always towards the objects.
             # Keep only contour points that are around the sample pixel position.
@@ -233,10 +223,8 @@ class Policy:
                         points.append(pnt[0])
 
             if len(points) > 0:
-                print(len(points), "\n")
                 break
 
-        print()
         ids = np.arange(len(points))
         random_id = self.rng.choice(ids, 1)[0] # creates an array by randomizing items in the ids array and picking one item from it.
         p2 = points[random_id]
@@ -253,6 +241,8 @@ class Policy:
         action[1] = p1[1]
         action[2] = discrete_theta
         action[3] = aperture
+
+        print("action:", action)
 
         return action
     

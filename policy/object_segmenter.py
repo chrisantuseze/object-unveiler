@@ -4,11 +4,21 @@ import cv2
 import os
 import imutils
 from torchvision.transforms import functional as TF
+# from skimage.transform import resize
 
 from vision.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
 
 class ObjectSegmenter:
+    """
+    Mask R-CNN Output Format: 
+    {
+        'boxes': [],
+        'labels': [],
+        'scores': [],
+        'masks': []
+    }
+    """
     def __init__(self) -> None:
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -23,9 +33,14 @@ class ObjectSegmenter:
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
+
+        # target_size = (100, 100)
+        # image = resize(image, target_size, mode='reflect', anti_aliasing=True, preserve_range=True).astype(np.float32)
+
         image = TF.to_tensor(image)
         prediction = self.mask_model([image.to(self.device)])[0]
-        mask_objs = []
+        processed_masks = []
+        raw_masks = []
 
         if plot:
             pred_mask = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8)
@@ -45,7 +60,8 @@ class ObjectSegmenter:
                 if np.sum(img == 255) < 100:
                     continue
                 
-                mask_objs.append(img)
+                processed_masks.append(img)
+                raw_masks.append(mask)
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20
                     name = str(idx) + "mask.png"
@@ -53,6 +69,6 @@ class ObjectSegmenter:
         if plot:
             cv2.imwrite(os.path.join("save/misc", "pred.png"), pred_mask)
 
-        print("Mask R-CNN: %d objects detected" % len(mask_objs), prediction["scores"].cpu())
+        print("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
         
-        return mask_objs
+        return processed_masks, pred_mask, raw_masks

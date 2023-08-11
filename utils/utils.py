@@ -104,11 +104,7 @@ def get_fused_heightmap(obs, configs, bounds, pix_size):
     # ax[1].imshow(seg_grid)
     # plt.show()
 
-    target_mask = None
-    if 'target_mask' in obs:
-        target_mask = obs['target_mask']
-
-    return cv2.flip(height_grid, 1), target_mask
+    return cv2.flip(height_grid, 1)
 
 
 def rgb2bgr(rgb):
@@ -197,8 +193,6 @@ def save_image(color_img, name):
     # Get color image.
     print(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
     save_path = "save/misc"
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
 
     img = Image.fromarray(color_img, 'RGB')
     img.save(os.path.join(save_path, name + '.png'))
@@ -220,6 +214,15 @@ def get_target_mask(segmenter, obs, rng):
         target_mask = obs['color'][id]
 
     return target_mask
+
+def create_dirs():
+    misc_path = "save/misc"
+    if not os.path.exists(misc_path):
+        os.makedirs(misc_path)
+
+    demo_path = 'save/ppg-dataset'
+    if not os.path.exists(demo_path):
+        os.makedirs(demo_path)
 
 class Logger:
     def __init__(self, log_dir):
