@@ -15,6 +15,7 @@ from trainer.memory import ReplayBuffer
 import utils.utils as utils
 import utils.orientation as ori
 import env.cameras as cameras
+import policy.grasping as grasping
 
 class Policy:
     def __init__(self, params) -> None:
@@ -185,7 +186,38 @@ class Policy:
         action[3] = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
         return action
 
- 
+    def heuristics_exploration(self, state, processed_masks, raw_masks, target_id):
+        target_bbox = grasping.calculate_bounding_box(processed_masks[1])
+        other_bboxes = [grasping.calculate_bounding_box(mask) for mask in processed_masks]
+
+        is_occluded = grasping.check_occlusion(target_bbox, other_bboxes)
+        is_middle = grasping.check_middle_placement(target_bbox, other_bboxes)
+
+        print("Is occluded:", is_occluded)
+        print("Is in the middle:", is_middle)
+
+        # if is_occluded and is_middle:
+        #     nodes, edges = grasping.build_graph(raw_masks)
+        nodes, edges = grasping.build_graph(raw_masks)
+
+        print("nodes:", nodes)
+        print("edges:", edges)
+
+        return nodes, edges
+
+        # node = -1
+        # while node != target_id:
+        #     optimal_nodes = grasping.get_optimal_target_path(edges)
+        #     print("optimal_nodes:", optimal_nodes)
+
+        #     if len(optimal_nodes) <= 0:
+        #         break
+        #     node = optimal_nodes[0]
+        #     grasping.compute_grasping_point_for_object(processed_masks[node], 
+        #                                                self.aperture_limits, 
+        #                                                self.rotations, self.rng)
+        #     nodes, edges = grasping.build_graph(raw_masks)
+
 
     def guided_exploration(self, state, sample_limits=[0.1, 0.15]):
         obj_ids = np.argwhere(state > self.z)

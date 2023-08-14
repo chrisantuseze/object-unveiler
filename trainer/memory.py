@@ -38,7 +38,7 @@ class ReplayBuffer:
             cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
             cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
 
-            cv2.imwrite(os.path.join(folder_name, 'mask_' + str(i) + '.png'), transition['masks'][i])
+            # cv2.imwrite(os.path.join(folder_name, 'mask_' + str(i) + '.png'), transition['masks'][i])
 
         pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 

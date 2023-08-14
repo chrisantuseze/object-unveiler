@@ -171,12 +171,15 @@ def check_middle_placement(target_bbox, other_bboxes, distance_threshold=50):
     return False
 
 def build_graph( object_masks):
+    nodes = []
+    edges = []
     # Create a NetworkX graph
     G = nx.Graph()
 
     # Add nodes (objects) to the graph
     for idx, mask in enumerate(object_masks):
         G.add_node(idx, mask=mask)  # You can add more attributes to nodes here
+        nodes.append(idx)
 
     overlap_threshold = 0.0001
     relationships = extract_relationships(object_masks, overlap_threshold=overlap_threshold)
@@ -185,31 +188,60 @@ def build_graph( object_masks):
     # Add edges (relationships) to the graph
     for rel in relationships:
         G.add_edge(rel[0], rel[1])
+        edges.append((rel[0], rel[1]))
 
-    # Choose a target object (node) to focus on
-    target_object = 2
+    # # Choose a target object (node) to focus on
+    # target_object = 2
 
-    # Visualize the graph
-    pos = nx.spring_layout(G)  # Position nodes using spring layout
-    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=1000)
-    plt.title(f"Graph of Object Relationships (Target: {target_object})")
-    plt.show()
+    # # Visualize the graph
+    # pos = nx.spring_layout(G)  # Position nodes using spring layout
+    # nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=1000)
+    # plt.title(f"Graph of Object Relationships (Target: {target_object})")
+    # plt.show()
 
+    return nodes, edges
 
+def get_optimal_target_path(representations, target_id):
+    '''
+    representations -> [(0,2), (0,3), (0,5), (3,1), (5,1), (2,3), (5,4)]
+    target_id -> 1
+    '''
+    adj_nodes = []
+    for rep in representations:
+        if rep[0] == target_id:
+            adj_nodes.append(rep[1])
+        elif rep[1] == target_id:
+            adj_nodes.append(rep[0])
 
+    '''
+    add possible paths to dictionary. Nodes are 3 and 5 -> 
+    (3,1) -> (0,3), (2,3)
+    (5,1) -> (0,5), (5,4)
+    '''
+    path_dic = {}
+    for rep in representations:
+        for node in adj_nodes:
+            if node in rep:
+                if node not in path_dic.keys():
+                    path_dic[node] = []
+                path_dic[node].append(rep)
 
-        # new_masks = processed_masks
-        # new_masks.pop(1)
+    '''
+    get node with smallest path (items in list)
+    '''
+    optimal_node = key_with_least_unique_items(path_dic)
+    return path_dic[optimal_node]
 
-        # target_bbox = policy.calculate_bounding_box(processed_masks[1])
-        # other_bboxes = [policy.calculate_bounding_box(mask) for mask in new_masks]
-
-        # is_occluded = policy.check_occlusion(target_bbox, other_bboxes)
-        # is_middle = policy.check_middle_placement(target_bbox, other_bboxes)
-
-        # print("Is occluded:", is_occluded)
-        # print("Is in the middle:", is_middle)
-
-        # policy.build_graph(raw_masks)
+def key_with_least_unique_items(dictionary):
+    min_unique_count = float('inf')
+    key_with_min_unique = None
+    
+    for key, value in dictionary.items():
+        unique_count = len(set(value))
+        if unique_count < min_unique_count:
+            min_unique_count = unique_count
+            key_with_min_unique = key
+    
+    return key_with_min_unique
 
         

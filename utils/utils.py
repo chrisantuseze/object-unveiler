@@ -205,15 +205,15 @@ def add_to_obs(obs, target_mask):
 def get_target_mask(segmenter, obs, rng):
     id = 1
     # get the segmentation masks
-    mask_info = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], plot=True)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], plot=True)
 
-    if len(mask_info) > 1:
-        target_id = rng.randint(0, len(mask_info) - 1)
-        target_mask = mask_info[target_id]
+    if len(processed_masks) > 1:
+        id = rng.randint(0, len(processed_masks) - 1)
+        target_mask = processed_masks[id]
     else:
         target_mask = obs['color'][id]
 
-    return target_mask
+    return target_mask, id
 
 def create_dirs():
     misc_path = "save/misc"
