@@ -28,7 +28,7 @@ class ObjectSegmenter:
         self.mask_model.eval()
 
     @torch.no_grad()
-    def from_maskrcnn(self, color_image, depth_image, plot=False):
+    def from_maskrcnn(self, color_image, depth_image, dir=TRAIN_EPISODES_DIR, plot=False):
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
@@ -65,10 +65,10 @@ class ObjectSegmenter:
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20
                     name = str(idx) + "mask.png"
-                    cv2.imwrite(os.path.join("save/misc", name), img)
+                    cv2.imwrite(os.path.join(dir, name), img)
         if plot:
-            cv2.imwrite(os.path.join("save/misc", "pred.png"), pred_mask)
+            cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
 
-        print("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
+        # print("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
         
         return processed_masks, pred_mask, raw_masks

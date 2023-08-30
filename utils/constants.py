@@ -92,3 +92,10 @@ if IS_REAL:
 else:
     TARGET_LOWER = blue_lower
     TARGET_UPPER = blue_upper
+
+TRAIN_DIR = "save/misc/train"
+TEST_DIR = "save/misc/test"
+DATA_DIR = "save/ppg-dataset"
+
+TRAIN_EPISODES_DIR = f"{TRAIN_DIR}/episodes"
+TEST_EPISODES_DIR = f"{TEST_DIR}/episodes"

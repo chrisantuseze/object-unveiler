@@ -16,8 +16,8 @@ def parse_args():
     parser.add_argument('--object_set', default='seen', type=str, help='')
 
     # args for trainer
-    parser.add_argument('--dataset_dir', default='logs/ppg-dataset', type=str, help='')
-    parser.add_argument('--epochs', default=100, type=int, help='')
+    parser.add_argument('--dataset_dir', default='save/ppg-dataset', type=str, help='')
+    parser.add_argument('--epochs', default=10, type=int, help='')#100
     parser.add_argument('--lr', default=0.0001, type=float, help='')
     parser.add_argument('--batch_size', default=1, type=int, help='')
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')

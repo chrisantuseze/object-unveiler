@@ -9,6 +9,7 @@ import yaml
 from PIL import Image
 
 import utils.pybullet_utils as p_utils
+from utils.constants import *
 
 
 def get_pointcloud(depth, seg, intrinsics):
@@ -189,24 +190,14 @@ def sample_distribution(prob, rng, n_samples=1):
     rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
     return np.int32(rand_ind_coords.squeeze())
 
-def save_image(color_img, name):
+def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
     # Get color image.
     print(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
-    save_path = "save/misc"
 
     img = Image.fromarray(color_img, 'RGB')
-    img.save(os.path.join(save_path, name + '.png'))
+    img.save(os.path.join(dir, name + '.png'))
 
-def add_to_obs(obs, target_mask):
-    obs['target_mask'] = target_mask
-
-    return obs
-
-def get_target_mask(segmenter, obs, rng):
-    id = 1
-    # get the segmentation masks
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], plot=True)
-
+def get_target_mask(processed_masks, obs, rng):
     if len(processed_masks) > 1:
         id = rng.randint(0, len(processed_masks) - 1)
         target_mask = processed_masks[id]
@@ -215,14 +206,59 @@ def get_target_mask(segmenter, obs, rng):
 
     return target_mask, id
 
+def delete_episodes_misc(path):
+    # Try to remove the tree; if it fails, throw an error using try...except.
+    try:
+        shutil.rmtree(path)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def recreate_train():
+    train_path = TRAIN_DIR
+
+    # Try to remove the tree; if it fails, throw an error using try...except.
+    try:
+        shutil.rmtree(train_path)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
+        
+    if not os.path.exists(f'{train_path}/episodes'):
+        os.makedirs(f'{train_path}/episodes')
+
+def recreate_test():
+    train_path = TEST_DIR
+
+    # Try to remove the tree; if it fails, throw an error using try...except.
+    try:
+        shutil.rmtree(train_path)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
+        
+    if not os.path.exists(f'{train_path}/episodes'):
+        os.makedirs(f'{train_path}/episodes')
+
 def create_dirs():
-    misc_path = "save/misc"
-    if not os.path.exists(misc_path):
-        os.makedirs(misc_path)
+    recreate_test()
+    recreate_train()
 
     demo_path = 'save/ppg-dataset'
     if not os.path.exists(demo_path):
         os.makedirs(demo_path)
+
+def rad_to_deg(radians):
+    return (radians * 180) / np.pi
+
+def deg_to_rad(degrees):
+    return (degrees * np.pi) / 180
+
+def accuracy(loss, corrects, loader):
+    epoch_loss = loss / len(loader.dataset)
+    epoch_acc = corrects.double() / len(loader.dataset)
+
+    return epoch_loss, epoch_acc
 
 class Logger:
     def __init__(self, log_dir):

@@ -1,4 +1,5 @@
 from random import Random
+import shutil
 from typing import Any
 import numpy as np
 import pickle
@@ -25,7 +26,12 @@ class ReplayBuffer:
         folder_name = os.path.join(self.save_dir, 'transition_' + str(self.count).zfill(5))
 
         if os.path.exists(folder_name):
-            raise Exception
+            # Try to remove the tree; if it fails, throw an error using try...except.
+            try:
+                shutil.rmtree(folder_name)
+            except OSError as e:
+                pass
+
         os.mkdir(folder_name)
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])

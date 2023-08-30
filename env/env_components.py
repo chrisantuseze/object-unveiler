@@ -309,7 +309,11 @@ class FloatingBHand:
 
             total_contacts += len(contacts)
 
-        if distal_contacts == total_contacts or len(np.unique(body_b)) != 1:
+        # print("distal_contacts:", distal_contacts)
+        # print("total_contacts:", total_contacts)
+        # print("len(np.unique(body_b)):", len(np.unique(body_b)))
+
+        if distal_contacts == total_contacts or len(np.unique(body_b)) == 0: #len(np.unique(body_b)) != 1: commenting this out permits the robot to grasp multiple objects
             return False, total_contacts
         
         if distal_contacts > total_contacts:

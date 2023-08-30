@@ -119,11 +119,11 @@ class Environment:
         self.remove_flat_objs()
 
         while not self.is_moving():
-            print("Objects are not moving...")
             time.sleep(0.001)
             self.simulation.step()
 
         print(">>>>>>>>>> Scene building complete >>>>>>>>>>")
+        utils.recreate_train()
 
         return self.get_observation()
 
@@ -209,6 +209,8 @@ class Environment:
         # Filter stable grasps. Keep the ones that created space around the grasped object.
         # If there is an object above the table (grasped and remained in the hand) and the push-grasping
         # increased the distance of the grasped objects from others, then count it as a successful
+
+        self.singulation_condition = False  # I do not want the singulation condition to hold
         if self.singulation_condition and stable_grasp:
             for obj in self.objects:
                 pos, _ = p.getBasePositionAndOrientation(bodyUniqueId=obj.body_id)
@@ -257,7 +259,6 @@ class Environment:
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
         for i in range(len(obj_paths)):
-            print(obj_paths[i])
             obj = env_components.Objects()
             base_pos, base_orient = self.workspace2world(np.array([1.0, 1.0, 0.0]), Quaternion())
             body_id = p_utils.load_obj(obj_path=obj_paths[i], scaling=1.0, position=base_pos, orientation=base_orient.as_vector("xyzw"))

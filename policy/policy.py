@@ -8,6 +8,8 @@ import torch.nn as nn
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
+from skimage import transform, io
 
 import pybullet as p
 from trainer.memory import ReplayBuffer
@@ -29,7 +31,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.09 #0.08 #0.02 #0.10 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
@@ -278,15 +280,31 @@ class Policy:
 
         return action
     
-    def exploit(self, state):
-
-        # state originally contains both the state and the target mask, so we need to unwrap it.
-        state, target_mask = state
+    def exploit(self, state, target_mask):
         
         # find optimal position and orientation
         heightmap = self.preprocess(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-        out_prob = self.fcn(x, target_mask, is_volatile=True)
+
+        # Resize the image using seam carving
+        new_size = (100, 100)
+        resized_target = transform.resize(target_mask, new_size, mode='reflect', anti_aliasing=True)
+
+        # plt.subplot(1, 2, 1)
+        # plt.imshow(target_mask)
+        # plt.title("Original Image")
+
+        # plt.subplot(1, 2, 2)
+        # plt.imshow(resized_target)
+        # plt.title("Resized Image")
+
+        # plt.show()
+
+        pre_processed_target = self.preprocess(resized_target)
+        pre_processed_target = torch.FloatTensor(pre_processed_target).unsqueeze(0).to(self.device)
+
+        print(x.shape, pre_processed_target.shape)
+        out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.postprocess(out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
@@ -315,13 +333,13 @@ class Policy:
 
         return action
     
-    def explore(self, state):
+    def explore(self, state, target_mask):
         explore_prob = max(0.8 * np.power(0.9998, self.learn_step_counter), 0.1)
 
         if self.rng.rand() < explore_prob:
             action = self.guided_exploration(state)
         else:
-            action = self.exploit(state)
+            action = self.exploit(state, target_mask)
         print('explore action:', action)
         return action
     

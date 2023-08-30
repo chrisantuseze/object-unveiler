@@ -17,16 +17,20 @@ import utils.utils as utils
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     for epoch in range(args.epochs):
+
+        print('\nEpoch {}/{}'.format(epoch, args.epochs))
+        print('-' * 10)
         
         model.train()
         for batch in dataloaders['train']:
 
             if is_fcn:
-                x = batch[0].to(device)
-                target_mask = batch[1].to(device)
+                x = batch[0].to(device, dtype=torch.float)
+                target_mask = batch[1].to(device, dtype=torch.float)
                 rotations = batch[2]
                 y = batch[3].to(device, dtype=torch.float)
 
+                # print(type(x), type(target_mask))
                 pred = model(x, target_mask, specific_rotation=rotations)
             else:
                 x = batch[0].to(device, dtype=torch.float32)
@@ -35,6 +39,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 pred = model(x)
 
             # compute loss in the whole scene
+
+            # print(pred.shape, y.shape)
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
@@ -44,12 +50,13 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
+        corrects = {'train': 0, 'val': 0}
         for phase in ['train', 'val']:
             for batch in dataloaders[phase]:
 
                 if is_fcn:
-                    x = batch[0].to(device)
-                    target_mask = batch[1].to(device)
+                    x = batch[0].to(device, dtype=torch.float)
+                    target_mask = batch[1].to(device, dtype=torch.float)
                     rotations = batch[2]
                     y = batch[3].to(device, dtype=torch.float)
 
@@ -64,6 +71,14 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
+
+                corrects[phase] += torch.sum(pred == y)
+
+        epoch_loss_, epoch_acc_ = utils.accuracy(epoch_loss['val'], corrects['val'], dataloaders['val'])
+        epoch_acc_ = epoch_acc_ * 100.0
+
+        print('Val Loss: {:.4f} Acc@1: {:.3f} '.format(epoch_loss_, epoch_acc_))
+
 
         # save model
         if epoch % 1 == 0:
@@ -90,7 +105,7 @@ def train_fcn(args):
     train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
     val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
 
-    train_dataset = HeightMapDataset(args.dataset_dirs, train_ids)
+    train_dataset = HeightMapDataset(args.dataset_dir, train_ids)
     val_dataset = HeightMapDataset(args.dataset_dir, val_ids)
 
     # note: the batch size is 1

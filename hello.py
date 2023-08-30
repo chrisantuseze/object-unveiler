@@ -1,22 +1,16 @@
-import pybullet as p
-import time
-import pybullet_data
+# A = [3, 1, 2, 2, 1, 4, 5]
+# B = [1, 2, 2, 3, 3, 3, 4, 4, 5]
 
+# # Create a sorting key function that uses the count of each item in B
+# def sorting_key(item):
+#     return B.count(item)
 
-physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version
-p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
-p.setGravity(0,0,-10)
-planeId = p.loadURDF("plane.urdf")
-startPos = [0,0,1]
-startOrientation = p.getQuaternionFromEuler([0,0,0])
-boxId = p.loadURDF("r2d2.urdf",startPos, startOrientation)
-#set the center of mass frame (loadURDF sets base link frame) startPos/Ornp.resetBasePositionAndOrientation(boxId, startPos, startOrientation)
+# # Sort list A using the custom sorting key
+# A_sorted = sorted(A, key=sorting_key)
 
-for i in range (10000):
-    p.stepSimulation()
-    # p.setRealTimeSimulation(enableRealTimeSimulation=1)
+# print("Sorted A based on occurrences in B:", A_sorted)
 
-    time.sleep(1./240.)
-cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)
-print(cubePos,cubeOrn)
-p.disconnect()
+list_ = [3, 2, 5, 7]
+
+for i, item in enumerate(list_):
+    print(i, item)
