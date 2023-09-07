@@ -14,6 +14,7 @@ from trainer.memory import ReplayBuffer
 import utils.utils as utils
 import policy.grasping as grasping
 from utils.constants import *
+import policy.path_planning as pp
 
 def collect_demos(args):
     save_dir = 'save/ppg-dataset'
@@ -56,7 +57,7 @@ def collect_demos(args):
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_target_mask.png"), target_mask)
 
         node_id = -1
-        prev_node = 0
+        prev_node = -1
         grasp_status = []
         is_target_grasped = False
         episode_data_list = []
@@ -72,6 +73,7 @@ def collect_demos(args):
 
             if len(edges) > 0:
                 optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
+                # optimal_nodes = pp.shortest_path_to_neighbor(raw_masks, target_id)
                 print("optimal_nodes:", optimal_nodes)
 
                 if len(optimal_nodes) > 0:
@@ -90,11 +92,10 @@ def collect_demos(args):
 
             prev_node = node_id
 
-            action = grasping.compute_grasping_point_for_object1(processed_masks, node_id, policy.aperture_limits, policy.rotations, rng)
-            env_action3d = policy.action3d(action)
-            # print("env_action__:", env_action3d)
-
             state = policy.state_representation(obs)
+            action = grasping.compute_grasping_point_for_object1(processed_masks, node_id, policy.aperture_limits, policy.rotations, rng)
+            # action = policy.guided_exploration(state, processed_masks[node_id])
+            env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step(env_action3d)
 
             grasp_status.append(grasp_info['stable'])
@@ -103,7 +104,8 @@ def collect_demos(args):
                 transition = {
                     'obs': obs, 
                     'state': state, 
-                    'target_mask': processed_masks[node_id], 
+                    'target_mask': processed_masks[target_id], 
+                    'obstacle_mask': processed_masks[node_id],
                     'masks': processed_masks, 
                     'action': action, 
                     'label': grasp_info['stable']
@@ -136,8 +138,10 @@ def collect_demos(args):
             cv2.imwrite(os.path.join(TRAIN_EPISODES_DIR, "target_mask.png"), target_mask)
 
         if grasping.episode_status(grasp_status, is_target_grasped):
-            for episode_data in episode_data_list:
-                memory.store(episode_data)
+            # for episode_data in episode_data_list:
+            #     memory.store(episode_data)
+
+            memory.store_episode(episode_data_list)
             print("Episode was successful. So data saved to memory!")
         else:
             print("Episode was not successful.")
@@ -183,7 +187,7 @@ def collect_demonstrations(args):
             cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
 
             state = policy.state_representation(obs)
-            action = policy.guided_exploration(state)
+            action = policy.guided_exploration(state, target_mask)
             env_action3d = policy.action3d(action)
             print("env_action:", env_action3d)
 

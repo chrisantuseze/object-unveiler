@@ -97,8 +97,8 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
 
     discrete_theta = utils.rad_to_deg(discrete_theta)
 
-    p1[0] *= 0.22 #0.175 #0.175 #0.21
-    p1[1] *= 0.21 #0.19 #0.18 #0.21
+    p1[0] *= 0.225 #0.22 #0.175 #0.175
+    p1[1] *= 0.215 #0.21 #0.19 #0.18
 
     grasping_angle = get_grasping_angle(segmentation_masks, object_id)
     if grasping_angle > 0:
@@ -382,15 +382,17 @@ def get_new_target(processed_masks, old_target_mask):
     target_point = get_object_centroid(old_target_mask)
     print("target_point:", target_point)
 
-    id = 0
-    mask = processed_masks[0]
+    id = -1
+    mask = None
+
+    dist_threshold = 150 # TODO: this is subject to change
 
     for key, value in valid_objs.items():
         point = value[1]
         dist = get_distance(target_point, point)
-        print("dist:", dist)
+        print("point:", point, "dist:", dist)
 
-        if dist < min_dist:
+        if dist < min_dist and dist < dist_threshold: # update only when the object isn't too far away from the previous target
             min_dist = dist
             id = key
             mask = value[0]

@@ -73,6 +73,7 @@ class Environment:
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         p.setTimeStep(1.0 / hz)
         p.setGravity(0, 0, -9.8)
+        p.setPhysicsEngineParameter(numSolverIterations=10)
 
 
         self.simulation = Simulation(self.objects)

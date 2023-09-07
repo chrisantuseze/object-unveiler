@@ -22,6 +22,28 @@ class ReplayBuffer:
     def __call__(self, index) -> Any:
         return self.buffer_ids[index]
     
+    def load_episode(self, episode):
+        episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+
+        data_list = []
+        for data in episode_data:
+            heightmap = data['state']
+            target_mask = data['target_mask']
+            obstacle_mask = data['obstacle_mask']
+            action = data['action']
+
+            data_list.append((heightmap, target_mask, obstacle_mask, action))
+
+        return data_list
+    
+    def store_episode(self, transition):
+        folder_name = os.path.join(self.save_dir, 'episode_' + str(self.count).zfill(5))
+        pickle.dump(transition, open(folder_name, 'wb'))
+
+        self.buffer_ids.append(self.count)
+        if self.count < self.buffer_size:
+            self.count += 1
+
     def store(self, transition):
         folder_name = os.path.join(self.save_dir, 'transition_' + str(self.count).zfill(5))
 
@@ -36,6 +58,7 @@ class ReplayBuffer:
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
         cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
+        cv2.imwrite(os.path.join(folder_name, 'obstacle_mask.png'), transition['obstacle_mask'])
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
 
         # Save everything that obs contains

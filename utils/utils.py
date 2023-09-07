@@ -260,6 +260,12 @@ def accuracy(loss, corrects, loader):
 
     return epoch_loss, epoch_acc
 
+def resize_mask(transform, mask):
+    # Resize the image using seam carving to match with the heightmap
+    new_size = (100, 100)
+    resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
+    return resized
+
 class Logger:
     def __init__(self, log_dir):
         self.log_dir = log_dir

@@ -11,6 +11,7 @@ from torch.utils import data
 import numpy as np
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
+from policy.neural_network import ActionNet, ApertureNet
 
 import utils.utils as utils
 
@@ -25,13 +26,12 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         for batch in dataloaders['train']:
 
             if is_fcn:
-                x = batch[0].to(device, dtype=torch.float)
-                target_mask = batch[1].to(device, dtype=torch.float)
-                rotations = batch[2]
-                y = batch[3].to(device, dtype=torch.float)
+                x = batch[0].to(device)
+                rotations = batch[1].to(device)
+                y = batch[2].to(device)
 
                 # print(type(x), type(target_mask))
-                pred = model(x, target_mask, specific_rotation=rotations)
+                pred = model(x, rotations)
             else:
                 x = batch[0].to(device, dtype=torch.float32)
                 y = batch[1].to(device, dtype=torch.float32)
@@ -55,12 +55,11 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             for batch in dataloaders[phase]:
 
                 if is_fcn:
-                    x = batch[0].to(device, dtype=torch.float)
-                    target_mask = batch[1].to(device, dtype=torch.float)
-                    rotations = batch[2]
-                    y = batch[3].to(device, dtype=torch.float)
+                    x = batch[0].to(device)
+                    rotations = batch[1].to(device)
+                    y = batch[2].to(device)
 
-                    pred = model(x, target_mask, specific_rotation=rotations)
+                    pred = model(x, rotations)
                 else:
                     x = batch[0].to(device, dtype=torch.float32)
                     y = batch[1].to(device, dtype=torch.float32)
@@ -87,6 +86,9 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         print('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
                                                   epoch_loss['val'] / len(dataloaders['val'])))
+        
+    prefix = "fcn" if is_fcn else "reg"
+    torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
 
 
@@ -105,6 +107,7 @@ def train_fcn(args):
     train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
     val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
 
+    print(train_ids)
     train_dataset = HeightMapDataset(args.dataset_dir, train_ids)
     val_dataset = HeightMapDataset(args.dataset_dir, val_ids)
 
@@ -115,9 +118,13 @@ def train_fcn(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     print('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ResFCN().to(device)
+    # model = ResFCN().to(device)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # criterion = nn.BCELoss(reduction='none')
+
+    model = ActionNet().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.MSELoss()
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=True)
 
@@ -146,7 +153,11 @@ def train_regressor(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     print('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = Regressor().to(device)
+    # model = Regressor().to(device)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # criterion = nn.SmoothL1Loss()
+
+    model = ApertureNet().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss()
 

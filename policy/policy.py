@@ -10,6 +10,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage import transform, io
+from PIL import Image
 
 import pybullet as p
 from trainer.memory import ReplayBuffer
@@ -31,7 +32,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.09 #0.08 #0.02 #0.10 #0.15 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.08 #0.02 #0.10 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
@@ -221,20 +222,31 @@ class Policy:
         #     nodes, edges = grasping.build_graph(raw_masks)
 
 
-    def guided_exploration(self, state, sample_limits=[0.1, 0.15]):
+    def guided_exploration(self, state, target_mask, sample_limits=[0.1, 0.15]):
         obj_ids = np.argwhere(state > self.z)
 
         # sample initial position
-        valid_pxl_map = np.zeros(state.shape)
-        for x in range(state.shape[0]):
-            for y in range(state.shape[1]):
-                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
+        # valid_pxl_map = np.zeros(state.shape)
+        # for x in range(state.shape[0]):
+        #     for y in range(state.shape[1]):
+        #         dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
 
-                if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
-                    valid_pxl_map[y, x] = 255
+        #         if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
+        #             valid_pxl_map[y, x] = 255
 
-                
-        valid_pxls = np.argwhere(valid_pxl_map == 255) # gets indices of the pixels with values equal to 255
+
+        valid_pxl_map = utils.resize_mask(transform, target_mask)
+
+        valid_pxl_map = np.array(valid_pxl_map, dtype=np.uint8)
+
+        # Define the filename where you want to save the array
+        # filename = "array_data.txt"
+
+        # # Use np.savetxt() to save the array to a text file
+        # np.savetxt(filename, valid_pxl_map, fmt='%d', delimiter=', ')
+
+        # Finds the indices of yellow pixels (where the value is 1)
+        valid_pxls = np.argwhere(valid_pxl_map == 1) # gets indices of the pixels with values equal to 255
         valid_ids = np.arange(0, valid_pxls.shape[0]) # creates an array containing values from 0 - valid_pxls.shape[0]
 
         objects_mask = np.zeros(state.shape)
@@ -271,12 +283,12 @@ class Policy:
         aperture = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
 
         action = np.zeros((4,))
-        action[0] = p1[0]
-        action[1] = p1[1]
+        action[0] = p1[0] * 1.05
+        action[1] = p1[1] * 1.05
         action[2] = discrete_theta
         action[3] = aperture
 
-        print("action:", action)
+        # print("action:", action)
 
         return action
     
@@ -286,9 +298,8 @@ class Policy:
         heightmap = self.preprocess(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        # Resize the image using seam carving
-        new_size = (100, 100)
-        resized_target = transform.resize(target_mask, new_size, mode='reflect', anti_aliasing=True)
+        # Resize the image using seam carving to match with the heightmap
+        resized_target = utils.resize_mask(transform, target_mask)
 
         # plt.subplot(1, 2, 1)
         # plt.imshow(target_mask)
@@ -303,7 +314,6 @@ class Policy:
         pre_processed_target = self.preprocess(resized_target)
         pre_processed_target = torch.FloatTensor(pre_processed_target).unsqueeze(0).to(self.device)
 
-        print(x.shape, pre_processed_target.shape)
         out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.postprocess(out_prob)
 
@@ -337,7 +347,7 @@ class Policy:
         explore_prob = max(0.8 * np.power(0.9998, self.learn_step_counter), 0.1)
 
         if self.rng.rand() < explore_prob:
-            action = self.guided_exploration(state)
+            action = self.guided_exploration(state, target_mask)
         else:
             action = self.exploit(state, target_mask)
         print('explore action:', action)
