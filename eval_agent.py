@@ -171,7 +171,7 @@ def eval_agent(args):
 
     env = Environment()
 
-    policy = Policy(params)
+    policy = Policy(args, params)
     policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
 
     segmenter = ObjectSegmenter()

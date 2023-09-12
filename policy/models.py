@@ -77,30 +77,30 @@ class ResFCN(nn.Module):
     
     def predict(self, depth):
         x = F.relu(self.conv1(depth))
-        x = F.max_pool2d(x, kernel_size=2, stride=2)
+        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
-        x = F.max_pool2d(x, kernel_size=2, stride=2)
+        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb2(x)
         x = self.rb3(x)
         x = self.rb4(x)
         x = self.rb5(x)
         
-        x = F.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x)
-        x = F.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         return out
     
-    def forward(self, depth_heightmap, target_mask, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask=None, specific_rotation=-1, is_volatile=[]):
         if is_volatile:
             # rotations x channel x h x w
             batch_rot_depth = torch.zeros((self.nr_rotations, 1,
                                            depth_heightmap.shape[3],
                                            depth_heightmap.shape[3])).to(self.device)
             
-            batch_rot_target = torch.zeros((self.nr_rotations, 1,
-                                           target_mask.shape[3],
-                                           target_mask.shape[3])).to(self.device)
+            # batch_rot_target = torch.zeros((self.nr_rotations, 1,
+            #                                target_mask.shape[3],
+            #                                target_mask.shape[3])).to(self.device)
             
             for rot_id in range(self.nr_rotations):
                 # Compute sample grid for rotation before neural network
@@ -121,13 +121,14 @@ class ResFCN(nn.Module):
                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
                 batch_rot_depth[rot_id] = rotate_depth[0]
-                batch_rot_target[rot_id] = rotate_target_mask[0]
+                # batch_rot_target[rot_id] = rotate_target_mask[0]
 
             # compute rotated feature maps
             prob_depth = self.predict(batch_rot_depth)
-            prob_target = self.predict(batch_rot_target)
+            prob = prob_depth
+            # prob_target = self.predict(batch_rot_target)
 
-            prob = torch.cat((prob_depth, prob_target), dim=1)
+            # prob = torch.cat((prob_depth, prob_target), dim=1)
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3))
@@ -165,14 +166,15 @@ class ResFCN(nn.Module):
             rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
             
-            rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
-                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            # rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
+            #                              flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
             prob_depth = self.predict(rotate_depth)
-            prob_target = self.predict(rotate_target_mask)
+            prob = prob_depth
+            # prob_target = self.predict(rotate_target_mask)
 
-            prob = torch.cat((prob_depth, prob_target), dim=1)
+            # prob = torch.cat((prob_depth, prob_target), dim=1)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))

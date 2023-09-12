@@ -7,8 +7,10 @@ from torch.autograd import Variable
 import numpy as np
 
 class ActionNet(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super(ActionNet, self).__init__()
+
+        self.args = args
 
         self.nr_rotations = 16
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -23,15 +25,18 @@ class ActionNet(nn.Module):
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Define training parameters
-        input_size = 2048  # Assuming 2048-dimensional features from ResNet
-        hidden_size = 64  # LSTM hidden state size
-        output_size = 3  # Assuming there are 3 objects removals including target i.e our list is of zie 3 #3D coordinates (x, y, z)
+        input_size = 150528 #50176 #2048  # Assuming 2048-dimensional features from ResNet
+        hidden_size = 224  # LSTM hidden state size
         num_layers = 4 #2  # Number of LSTM layers
-        bidirectional = True  # Use bidirectional LSTM
-        learning_rate = 0.001
+        bidirectional = False  # Use bidirectional LSTM
+        output_dim = 50176
 
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        self.fc_out = nn.Linear(hidden_size, 2 * output_size) # multiply output size by 2 since we need x & y coordinates for each item in the list
+        # self.fc_in = nn.Linear(input_size, lstm_input_size)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
+        # Define the output layer
+        self.fc = nn.Linear(hidden_size, output_dim)
+
+        self.fc_out = nn.Linear(hidden_size, 1) # this should produce an output of 6x1
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -46,17 +51,17 @@ class ActionNet(nn.Module):
     
     def _predict(self, depth):
         x = F.relu(self.conv1(depth))
-        x = F.max_pool2d(x, kernel_size=2, stride=2)
+        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
-        x = F.max_pool2d(x, kernel_size=2, stride=2)
+        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb2(x)
         x = self.rb3(x)
         x = self.rb4(x)
         x = self.rb5(x)
         
-        x = F.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x)
-        x = F.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         return out
     
@@ -182,46 +187,60 @@ class ActionNet(nn.Module):
         return out_prob
     
 
-    def forward(self, sequence, rot_ids, is_volatile=[]):
-
-        # Assuming src has shape [batch_size, sequence_length, channels, height, width]
-        # print(input_data.shape)
-        # batch_size, sequence_length, channels, height, width = input_data.shape
-
+    def forward(self, sequence, rot_ids=[], is_volatile=False):
         probs = []
         for i in range(len(sequence)):
             heightmap, target_mask, obstacle_mask = sequence[i]
-            rot_id = rot_ids[i]
+            
+            heightmap = heightmap.to(self.device)
+            target_mask = target_mask.to(self.device)
+            obstacle_mask = obstacle_mask.to(self.device)
 
             if is_volatile:
-                # batch_rot_depth, batch_rot_target, batch_rot_obstacle = self._volatile(heightmap, target_mask, obstacle_mask)
-
                 prob = self._volatile(heightmap, target_mask, obstacle_mask)
                 probs.append(prob)
-
             else:
+                rot_id = rot_ids[i]
                 prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_id)
                 probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
+        batch_size, sequence_length, channels, height, width = probs_stack.shape
+        # print("probs_stack.shape:", probs_stack.shape)
 
+        probs_stack = probs_stack.view(-1, channels, height, width)
+
+        sequence_length, channels, height, width = probs_stack.shape
+        # print("view probs_stack.shape:", probs_stack.shape)
+
+        # Pad the tensor to achieve the desired shape
+        pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
+        pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
+        probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
+        # print("padded probs_stack.shape:", probs_stack.shape)
 
         # extract the features using a resnet
         # embeddings = self._predict(input_data)
         # embeddings = embeddings.view(batch_size, sequence_length, -1)
 
-        embeddings = probs_stack.view(batch_size, sequence_length, -1)
-
+        embeddings = probs_stack.view(self.args.batch_size, self.args.sequence_length, -1)
         outputs, (hidden, cell) = self.lstm(embeddings)
-        predictions = self.fc_out(outputs)
-        predictions = predictions.view(batch_size, sequence_length, 2, -1)
+        # print("lstm outputs.shape:", outputs.shape)
+
+        predictions = self.fc(outputs)
+        # print("fc predictions.shape:", predictions.shape) # outputs should be 6x64
+
+        predictions = predictions.view(self.args.sequence_length, 1, 224, 224)
+        # print("view predictions.shape:", predictions.shape) # outputs should be 6x64
         
-        return predictions, (hidden, cell)
+        return predictions
     
 
 class ApertureNet(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super(ApertureNet, self).__init__()
+
+        self.args = args
 
         self.model = torchvision.models.resnet50(pretrained=True)
         # self.model.fc = nn.Linear(2048, 1024)

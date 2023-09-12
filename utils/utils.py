@@ -7,6 +7,7 @@ import shutil
 import pickle
 import yaml
 from PIL import Image
+import torch
 
 import utils.pybullet_utils as p_utils
 from utils.constants import *
@@ -265,6 +266,17 @@ def resize_mask(transform, mask):
     new_size = (100, 100)
     resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
     return resized
+
+def pad_label(sequence_length, label):
+    pad_needed = sequence_length - len(label)
+    padded_y = np.pad(label, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
+    # print("padded padded_y.shape:", padded_y.shape)
+
+    padded_y = torch.from_numpy(padded_y)
+    padded_y = padded_y.view(sequence_length, 1, 224, 224)
+    # print("view padded_labels.shape:", padded_y.shape)
+
+    return padded_y
 
 class Logger:
     def __init__(self, log_dir):

@@ -9,9 +9,10 @@ from trainer.memory import ReplayBuffer
 import utils.utils as utils
 
 class ApertureDataset(data.Dataset):
-    def __init__(self, dataset_dir, dir_ids):
+    def __init__(self, args, dir_ids):
         super(ApertureDataset, self).__init__()
-        self.dataset_dir = dataset_dir
+        self.args = args
+        self.dataset_dir = args.dataset_dir
         self.dir_ids = dir_ids
         self.widths = np.array([0.6, 0.8, 1.1])
         self.crop_size = 32

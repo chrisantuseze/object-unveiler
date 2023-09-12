@@ -1,9 +1,11 @@
 import os
 import pickle
 from policy.models import Regressor, ResFCN
+from policy.neural_network import ActionNet
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import torchvision.transforms as transforms
 
 import numpy as np
 import cv2
@@ -21,7 +23,8 @@ import env.cameras as cameras
 import policy.grasping as grasping
 
 class Policy:
-    def __init__(self, params) -> None:
+    def __init__(self, args, params) -> None:
+        self.args = args
         self.params = params
         self.rng = np.random.RandomState()
 
@@ -35,9 +38,13 @@ class Policy:
         self.push_distance = 0.08 #0.02 #0.10 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
-        self.fcn = ResFCN().to(self.device)
+        # self.fcn = ResFCN().to(self.device)
+        # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
+        # self.fcn_criterion = nn.BCELoss(reduction='None')
+
+        self.fcn = ActionNet(args).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
-        self.fcn_criterion = nn.BCELoss(reduction='None')
+        self.fcn_criterion = nn.MSELoss()
 
         self.reg = Regressor().to(self.device)
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
@@ -88,7 +95,9 @@ class Policy:
         padded_heightmap = (padded_heightmap - image_mean)/image_std
 
         # Add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
+        # padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
+
+        padded_heightmap = padded_heightmap.astype(np.float32)
         return padded_heightmap
     
     def postprocess(self, q_maps):
@@ -293,28 +302,33 @@ class Policy:
         return action
     
     def exploit(self, state, target_mask):
+
+        data_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.ToTensor(),
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=(0.449), std=(0.226))
+        ])
         
         # find optimal position and orientation
         heightmap = self.preprocess(state)
-        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+        # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+        x = data_transform(heightmap).to(self.device)
 
         # Resize the image using seam carving to match with the heightmap
         resized_target = utils.resize_mask(transform, target_mask)
+        target = self.preprocess(resized_target)
+        # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        target = data_transform(target).to(self.device)
 
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(target_mask)
-        # plt.title("Original Image")
+        # combine the two features into a list
+        sequence = [(x, target, target)]
 
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(resized_target)
-        # plt.title("Resized Image")
+        # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
+        out_prob = self.fcn(sequence, is_volatile=True)
+        print("out_prob:", out_prob)
 
-        # plt.show()
-
-        pre_processed_target = self.preprocess(resized_target)
-        pre_processed_target = torch.FloatTensor(pre_processed_target).unsqueeze(0).to(self.device)
-
-        out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.postprocess(out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)

@@ -23,15 +23,21 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         print('-' * 10)
         
         model.train()
+        count = 0
         for batch in dataloaders['train']:
 
             if is_fcn:
-                x = batch[0].to(device)
-                rotations = batch[1].to(device)
-                y = batch[2].to(device)
-
-                # print(type(x), type(target_mask))
+                x = batch[0]
+                rotations = batch[1]
+                y = batch[2]
                 pred = model(x, rotations)
+
+                # x = batch[0].to(device)
+                # rotations = batch[1].to(device)
+                # y = batch[2].to(device)
+                # pred = model(x, specific_rotation=rotations)
+
+                y = utils.pad_label(args.sequence_length, y).to(device, dtype=torch.float32)
             else:
                 x = batch[0].to(device, dtype=torch.float32)
                 y = batch[1].to(device, dtype=torch.float32)
@@ -40,13 +46,18 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
             # compute loss in the whole scene
 
-            # print(pred.shape, y.shape)
+            # print(pred.shape, padded_y.shape)
             loss = criterion(pred, y)
             loss = torch.sum(loss)
+
+            if count % 10 == 0:
+                print("\nIteration -", count, "; loss -", loss)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            count += 1
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -55,11 +66,17 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             for batch in dataloaders[phase]:
 
                 if is_fcn:
-                    x = batch[0].to(device)
-                    rotations = batch[1].to(device)
-                    y = batch[2].to(device)
-
+                    x = batch[0]
+                    rotations = batch[1]
+                    y = batch[2]
                     pred = model(x, rotations)
+
+                    # x = batch[0].to(device)
+                    # rotations = batch[1].to(device)
+                    # y = batch[2].to(device)
+                    # pred = model(x, specific_rotation=rotations)
+
+                    y = utils.pad_label(args.sequence_length, y).to(device, dtype=torch.float32)
                 else:
                     x = batch[0].to(device, dtype=torch.float32)
                     y = batch[1].to(device, dtype=torch.float32)
@@ -81,7 +98,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
         # save model
         if epoch % 1 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
         print('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
@@ -98,8 +115,10 @@ def train_fcn(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    transition_dirs = next(os.walk(args.dataset_dir))[1]
+    # transition_dirs = next(os.walk(args.dataset_dir))[1]
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+    transition_dirs = os.listdir(args.dataset_dir)
 
     # split data to training/validation
     random.seed(0)
@@ -107,9 +126,8 @@ def train_fcn(args):
     train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
     val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
 
-    print(train_ids)
-    train_dataset = HeightMapDataset(args.dataset_dir, train_ids)
-    val_dataset = HeightMapDataset(args.dataset_dir, val_ids)
+    train_dataset = HeightMapDataset(args, train_ids)
+    val_dataset = HeightMapDataset(args, val_ids)
 
     # note: the batch size is 1
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -122,20 +140,24 @@ def train_fcn(args):
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.BCELoss(reduction='none')
 
-    model = ActionNet().to(device)
+    model = ActionNet(args).to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
+
+    print(model)
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=True)
 
 def train_regressor(args):
-    save_path = 'save/fcn'
+    save_path = 'save/reg'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    transition_dirs = next(os.walk(args.dataset_dir))[1]
+    # transition_dirs = next(os.walk(args.dataset_dir))[1]
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+    transition_dirs = os.listdir(args.dataset_dir)
 
     # split data to training/validation
     random.seed(0)
@@ -143,8 +165,8 @@ def train_regressor(args):
     train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
     val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
 
-    train_dataset = ApertureDataset(args.dataset_dir, train_ids)
-    val_dataset = ApertureDataset(args.dataset_dir, val_ids)
+    train_dataset = ApertureDataset(args, train_ids)
+    val_dataset = ApertureDataset(args, val_ids)
 
     # note: the batch size is 4
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -157,9 +179,11 @@ def train_regressor(args):
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss()
 
-    model = ApertureNet().to(device)
+    model = ApertureNet(args).to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss()
+
+    print(model)
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=False)
 

@@ -22,6 +22,8 @@ def parse_args():
     parser.add_argument('--batch_size', default=1, type=int, help='')
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')
 
+    parser.add_argument('--sequence_length', default=4, type=int, help='')
+
     return parser.parse_args()
 
 

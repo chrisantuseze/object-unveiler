@@ -29,7 +29,7 @@ def collect_demos(args):
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
 
-    policy = Policy(params)
+    policy = Policy(args, params)
     policy.seed(args.seed)
 
     rng = np.random.RandomState()
@@ -100,17 +100,20 @@ def collect_demos(args):
 
             grasp_status.append(grasp_info['stable'])
 
-            if grasp_info['stable']:
-                transition = {
-                    'obs': obs, 
-                    'state': state, 
-                    'target_mask': processed_masks[target_id], 
-                    'obstacle_mask': processed_masks[node_id],
-                    'masks': processed_masks, 
-                    'action': action, 
-                    'label': grasp_info['stable']
-                }
-                episode_data_list.append(transition)
+            if not grasp_info['stable']:
+                print("A failure has been recorded. Episode cancelled.")
+                break
+
+            transition = {
+                'obs': obs, 
+                'state': state, 
+                'target_mask': processed_masks[target_id], 
+                'obstacle_mask': processed_masks[node_id],
+                'masks': processed_masks, 
+                'action': action, 
+                'label': grasp_info['stable']
+            }
+            episode_data_list.append(transition)
 
             print(action)
             print(grasp_info)
@@ -160,7 +163,7 @@ def collect_demonstrations(args):
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
 
-    policy = Policy(params)
+    policy = Policy(args, params)
     policy.seed(args.seed)
 
     rng = np.random.RandomState()
