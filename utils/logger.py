@@ -8,10 +8,7 @@ def init():
     handler = logging.StreamHandler(stream=sys.stdout)
     logger.addHandler(handler)
 
-    if not os.path.isdir("save/logs"):
-        os.makedirs("save/logs")
-
-    logging.basicConfig(filename="save/logs/object_unveiler.log", format="%(asctime)s %(levelname)s %(message)s", datefmt="%m-%d-%Y %I:%M:%S %p", level=logging.INFO, force=True)
+    logging.basicConfig(filename="object_unveiler.log", format="%(asctime)s %(levelname)s %(message)s", datefmt="%m-%d-%Y %I:%M:%S %p", level=logging.INFO, force=True)
     logging.info("object-unveiler started...")
 
     def handle_exception(exc_type, exc_value, exc_traceback):
