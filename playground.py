@@ -2,5 +2,5 @@
 import sys
 import zipfile
 
-with zipfile.ZipFile("object-unveiler-ds.zip", 'r') as zip_ref:
-    zip_ref.extractall("object-unveiler-ds")
+with zipfile.ZipFile(" /home/scratch1/cheze/object-unveiler-ds.zip", 'r') as zip_ref:
+    zip_ref.extractall(" /home/cheze/object-unveiler/object-unveiler-ds")

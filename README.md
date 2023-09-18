@@ -25,7 +25,7 @@ For the Aperture-CNN
 respect to optimal initial position p∗ to form a 64 × 64 map. The
 optimal p∗ and θ∗ are produced by the Pose-FCN module.
 
-
+CS: ssh cheze@csg1.cs.okstate.edu
 HPCC: ssh echris@pete.hpc.okstate.edu
 Copy to remote: scp [-r] file echris@pete.hpc.okstate.edu:.
 
@@ -38,3 +38,5 @@ squeue -u echris #checks the status of a pete job
 scancel jobid
 
 python3 -m pip install -r requirements.txt
+
+ /home/scratch1/cheze
