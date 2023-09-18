@@ -258,7 +258,7 @@ class ActionNet(nn.Module):
 
             predictions = predictions.view(self.args.sequence_length, 16, 1, 224, 224)
 
-        logging.info("view predictions.shape:", predictions.shape) 
+        # logging.info("view predictions.shape:", predictions.shape) 
         
         return predictions
     

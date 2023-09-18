@@ -4,8 +4,8 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/engine/reference/builder/
 
-ARG PYTHON_VERSION=3.9.6
-FROM python:${PYTHON_VERSION}-slim as base
+# ARG PYTHON_VERSION=3.9.6
+# FROM python:${PYTHON_VERSION}-slim as base
 
 # BOOTSTRAP docker
 
@@ -38,15 +38,15 @@ RUN adduser \
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    # apt-get update && \
-    # DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    # git \
-    # python3-pip \
-    # python3-dev \
-    # python3-opencv \
-    # libglib2.0-0 \
-    # nvidia-container-toolkit \
-    # python3 -m pip install --upgrade pip \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    git \
+    python3-pip \
+    python3-dev \
+    python3-opencv \
+    libglib2.0-0 \
+    nvidia-container-toolkit \
+    python3 -m pip install --upgrade pip \
     python3 -m pip install -r requirements.txt
 
 # Switch to the non-privileged user to run the application.

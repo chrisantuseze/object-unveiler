@@ -271,8 +271,10 @@ def resize_mask(transform, mask):
 
 def pad_label(sequence_length, labels):
     pad_needed = sequence_length - len(labels)
+
+    logging.info("len(labels):", len(labels))
     labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
-    logging.info("padded labels.shape:", labels.shape)
+    # logging.info("padded labels.shape:", labels.shape)
 
     # labels = np.asarray(labels)
     # logging.info("labels.shape:", labels.shape)
