@@ -1,13 +1,6 @@
-from collections import deque
+#!/usr/bin/env python3
+import sys
+import zipfile
 
-graph = {
-    'A': ['B', 'C'],
-    'B': ['A', 'D', 'E'],
-    'C': ['A', 'F'],
-    'D': ['B'],
-    'E': ['B', 'F'],
-    'F': ['C', 'E'],
-}
-
-d = deque(graph) 
-print(d.popleft())
+with zipfile.ZipFile("object-unveiler-ds.zip", 'r') as zip_ref:
+    zip_ref.extractall("object-unveiler-ds")

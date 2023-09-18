@@ -19,3 +19,13 @@ For the Aperture-CNN
 - The depth heightmap I is first rotated according to optimal angle θ∗ and then cropped with
 respect to optimal initial position p∗ to form a 64 × 64 map. The
 optimal p∗ and θ∗ are produced by the Pose-FCN module.
+
+
+HPCC: ssh echris@pete.hpc.okstate.edu
+Copy to remote: scp [-r] file echris@pete.hpc.okstate.edu:.
+
+scp cc@ip:/home/cc/filename . # This copy's the file to the local current directory
+scp -r cc@ip:/home/cc/save . # This recursively copy's all the files to the local current directory
+cp filename /destination directory
+
+squeue -u echris #checks the status of a pete job
