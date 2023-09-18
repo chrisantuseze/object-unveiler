@@ -17,6 +17,8 @@ import utils.utils as utils
 
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    prefix = "fcn" if is_fcn else "reg"
+    
     for epoch in range(args.epochs):
 
         print('\nEpoch {}/{}'.format(epoch, args.epochs))
@@ -46,7 +48,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
             # compute loss in the whole scene
 
-            # print(pred.shape, padded_y.shape)
+            # print(pred.shape, y.shape)
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
@@ -104,7 +106,6 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
                                                   epoch_loss['val'] / len(dataloaders['val'])))
         
-    prefix = "fcn" if is_fcn else "reg"
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
 

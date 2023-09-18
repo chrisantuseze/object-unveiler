@@ -199,6 +199,7 @@ def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
     img.save(os.path.join(dir, name + '.png'))
 
 def get_target_mask(processed_masks, obs, rng):
+    id = 0
     if len(processed_masks) > 1:
         id = rng.randint(0, len(processed_masks) - 1)
         target_mask = processed_masks[id]
@@ -267,16 +268,19 @@ def resize_mask(transform, mask):
     resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
     return resized
 
-def pad_label(sequence_length, label):
-    pad_needed = sequence_length - len(label)
-    padded_y = np.pad(label, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
-    # print("padded padded_y.shape:", padded_y.shape)
+def pad_label(sequence_length, labels):
+    pad_needed = sequence_length - len(labels)
+    labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
+    print("padded labels.shape:", labels.shape)
 
-    padded_y = torch.from_numpy(padded_y)
-    padded_y = padded_y.view(sequence_length, 1, 224, 224)
-    # print("view padded_labels.shape:", padded_y.shape)
+    # labels = np.asarray(labels)
+    # print("labels.shape:", labels.shape)
 
-    return padded_y
+    labels = torch.from_numpy(labels)
+    labels = labels.view(sequence_length, 1, 1, 224, 224)
+    # print("view labels.shape:", labels.shape)
+
+    return labels
 
 class Logger:
     def __init__(self, log_dir):

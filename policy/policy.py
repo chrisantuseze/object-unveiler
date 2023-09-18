@@ -6,6 +6,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
 import numpy as np
 import cv2
@@ -42,7 +43,7 @@ class Policy:
         # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         # self.fcn_criterion = nn.BCELoss(reduction='None')
 
-        self.fcn = ActionNet(args).to(self.device)
+        self.fcn = ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.MSELoss()
 
@@ -79,7 +80,7 @@ class Policy:
         state = utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
         return state
     
-    def preprocess(self, state):
+    def preprocess_old(self, state):
         """
         Pre-process heightmap (padding and normalization)
         """
@@ -95,12 +96,54 @@ class Policy:
         padded_heightmap = (padded_heightmap - image_mean)/image_std
 
         # Add extra channel
+        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
+
+        padded_heightmap = padded_heightmap.astype(np.float32)
+        return padded_heightmap
+    
+    def preprocess(self, state):
+        """
+        Pre-process heightmap (padding and normalization)
+        """
+        print("state.shape:", state.shape)
+
+        # Pad heightmap.
+        diagonal_length = float(state.shape[0]) * np.sqrt(5)
+        diagonal_length = np.ceil(diagonal_length/16) * 16
+        self.padding_width = int((diagonal_length - state.shape[0])/2)
+        padded_heightmap = np.pad(state, self.padding_width, 'constant', constant_values=-0.01)
+
+        print("padded_heightmap.shape:", padded_heightmap.shape)
+
+        # Normalize heightmap
+        image_mean = 0.01
+        image_std = 0.03
+        padded_heightmap = (padded_heightmap - image_mean)/image_std
+
+        # # Add extra channel
         # padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
 
         padded_heightmap = padded_heightmap.astype(np.float32)
         return padded_heightmap
     
-    def postprocess(self, q_maps):
+
+    def postprocess(self, output_prob, state):
+        # Return affordances (and remove extra padding)
+        for rotate_idx in range(len(output_prob)):
+            _push_predictions = F.softmax(output_prob[rotate_idx][0], dim=1).cpu().data.numpy()
+            print("_push_predictions.shape", _push_predictions.shape)
+
+            _push_predictions = _push_predictions[int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2), 
+                                                int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2)]
+            if rotate_idx == 0:
+                push_predictions = _push_predictions
+            else:
+                push_predictions = np.concatenate((push_predictions, _push_predictions), axis=0)
+
+        return push_predictions
+
+    
+    def postprocess_old(self, q_maps):
         """
         Remove extra padding
         """
@@ -117,6 +160,28 @@ class Policy:
                                self.padding_width:int(q_maps.shape[3] - self.padding_width)]
                 
                 remove_pad[i][j] = q_map.detach().cpu().numpy()
+
+        return remove_pad
+    
+    def postprocess_(self, q_maps):
+        """
+        Remove extra padding
+        """
+
+        w = int(q_maps.shape[3] - 2 * self.padding_width)
+        h = int(q_maps.shape[4] - 2 * self.padding_width)
+
+        print(w, h, q_maps.shape[3], q_maps.shape[4], self.padding_width)
+        remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], q_maps.shape[2], w, h))
+
+        for i in range(q_maps.shape[0]):
+            for j in range(q_maps.shape[1]):
+                for k in range(q_maps.shape[2]):
+                    # remove extra padding
+                    q_map = q_maps[i, j, k, self.padding_width:int(q_maps.shape[3] - self.padding_width),
+                                self.padding_width:int(q_maps.shape[4] - self.padding_width)]
+                    
+                    remove_pad[i][j][k] = q_map.detach().cpu().numpy()
 
         return remove_pad
     
@@ -315,23 +380,85 @@ class Policy:
         heightmap = self.preprocess(state)
         # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
         x = data_transform(heightmap).to(self.device)
+        x = x.view(1, 1, 224, 224)
 
         # Resize the image using seam carving to match with the heightmap
         resized_target = utils.resize_mask(transform, target_mask)
         target = self.preprocess(resized_target)
         # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         target = data_transform(target).to(self.device)
+        target = target.view(1, 1, 224, 224)
 
         # combine the two features into a list
         sequence = [(x, target, target)]
 
         # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.fcn(sequence, is_volatile=True)
-        print("out_prob:", out_prob)
+        print("out_prob.shape:", out_prob.shape)
 
-        out_prob = self.postprocess(out_prob)
+        out_prob = self.postprocess_(out_prob)
+        print("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
+
+        best_actions = []
+        for i in range(out_prob.shape[0]):
+            prob = out_prob[i]
+            best_action = np.unravel_index(np.argmax(prob), prob.shape)
+            print("len(best_action):", len(best_action), "best_action:", best_action)
+            best_actions.append(best_action)
+
+        print("best_actions:", best_actions)
+
+        p1 = np.array([best_actions[0][3], best_actions[0][2]])
+        theta = best_actions[0][0] * 2 * np.pi/self.rotations
+
+        # best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        # print("len(best_action):", len(best_action), "best_action:", best_action)
+
+        # p1 = np.array([best_action[3], best_action[2]])
+        # theta = best_action[0] * 2 * np.pi/self.rotations
+
+        p2 = np.array([0, 0])
+        p2[0] = p1[0] + 20 * np.cos(theta)
+        p2[1] = p1[1] - 20 * np.sin(theta)
+
+        # find optimal aperture
+        aperture_img = self.preprocess_aperture_image(state, p1, theta)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
+    
+    def exploit_old(self, state, target_mask):
+
+        # find optimal position and orientation
+        heightmap = self.preprocess_old(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        # Resize the image using seam carving to match with the heightmap
+        resized_target = utils.resize_mask(transform, target_mask)
+        target = self.preprocess_old(resized_target)
+        pre_processed_target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        
+        out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
+        print("out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
+
+        out_prob = self.postprocess_old(out_prob)
+        print("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        print("len(best_action):", len(best_action), "best_action:", best_action)
+
         p1 = np.array([best_action[3], best_action[2]])
         theta = best_action[0] * 2 * np.pi/self.rotations
 

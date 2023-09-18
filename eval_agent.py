@@ -43,12 +43,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         state = policy.state_representation(obs)
-
-        if train:
-            action = policy.explore(state, target_mask)
-        else:
-            action = policy.exploit(state, target_mask)
-
+        action = policy.exploit(state, target_mask)
         env_action3d = policy.action3d(action)
         print("env_action3d:", env_action3d)
 
@@ -130,12 +125,7 @@ def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         target_mask = obs['color'][0]
 
         state = policy.state_representation(obs)
-
-        if train:
-            action = policy.explore(state, target_mask)
-        else:
-            action = policy.exploit(state, target_mask)
-
+        action = policy.exploit_old(state, target_mask)
         env_action3d = policy.action3d(action)
 
         next_obs, grasp_info = env.step(env_action3d)

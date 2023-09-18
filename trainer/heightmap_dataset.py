@@ -99,7 +99,19 @@ class HeightMapDataset(data.Dataset):
             
             labels.append(label)
 
-        # print("len(labels):", len(labels), labels[0].shape)
+        # pad dataset
+        # seq_len = self.args.sequence_length
+        # if len(episode_data) < seq_len:
+        #     required_len = seq_len - len(sequence)
+        #     c, h, w = sequence[0][0].shape
+
+        #     empty_array = np.zeros((c, w, h))
+        #     labels = labels + [empty_array] * required_len
+            
+        #     empty_tuple = (torch.zeros((c, w, h)), torch.zeros((c, w, h)), torch.zeros((c, w, h)))
+        #     sequence = sequence + [empty_tuple] * required_len
+
+        #     rot_ids = rot_ids + [0] * required_len
 
         return sequence, rot_ids, labels
         

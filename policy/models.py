@@ -126,6 +126,8 @@ class ResFCN(nn.Module):
             # compute rotated feature maps
             prob_depth = self.predict(batch_rot_depth)
             prob = prob_depth
+
+            print("prob.shape:", prob.shape)
             # prob_target = self.predict(batch_rot_target)
 
             # prob = torch.cat((prob_depth, prob_target), dim=1)
@@ -144,6 +146,8 @@ class ResFCN(nn.Module):
             flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
                                             prob.size(), align_corners=True)
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+
+            print("out_prob.shape:", out_prob.shape)
 
             return out_prob
         
