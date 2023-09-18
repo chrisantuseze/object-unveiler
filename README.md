@@ -29,3 +29,7 @@ scp -r cc@ip:/home/cc/save . # This recursively copy's all the files to the loca
 cp filename /destination directory
 
 squeue -u echris #checks the status of a pete job
+
+scancel jobid
+
+python3 -m pip -r install requirements.txt

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import torch
 import argparse
 from trainer.train import train_fcn, train_regressor
 from eval_agent import eval_agent
@@ -35,6 +35,9 @@ if __name__ == "__main__":
 
     args = parse_args()
     utils.create_dirs()
+
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"You are using {args.device}")
 
     logging.info("The selected mode is: ", args.mode)
 

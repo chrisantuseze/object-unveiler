@@ -17,7 +17,6 @@ import utils.utils as utils
 import utils.logger as logging
 
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     prefix = "fcn" if is_fcn else "reg"
     
     for epoch in range(args.epochs):
@@ -35,15 +34,15 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 y = batch[2]
                 pred = model(x, rotations)
 
-                # x = batch[0].to(device)
-                # rotations = batch[1].to(device)
-                # y = batch[2].to(device)
+                # x = batch[0].to(args.device)
+                # rotations = batch[1].to(args.device)
+                # y = batch[2].to(args.device)
                 # pred = model(x, specific_rotation=rotations)
 
-                y = utils.pad_label(args.sequence_length, y).to(device, dtype=torch.float32)
+                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
             else:
-                x = batch[0].to(device, dtype=torch.float32)
-                y = batch[1].to(device, dtype=torch.float32)
+                x = batch[0].to(args.device, dtype=torch.float32)
+                y = batch[1].to(args.device, dtype=torch.float32)
 
                 pred = model(x)
 
@@ -74,15 +73,15 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                     y = batch[2]
                     pred = model(x, rotations)
 
-                    # x = batch[0].to(device)
-                    # rotations = batch[1].to(device)
-                    # y = batch[2].to(device)
+                    # x = batch[0].to(args.device)
+                    # rotations = batch[1].to(args.device)
+                    # y = batch[2].to(args.device)
                     # pred = model(x, specific_rotation=rotations)
 
-                    y = utils.pad_label(args.sequence_length, y).to(device, dtype=torch.float32)
+                    y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
                 else:
-                    x = batch[0].to(device, dtype=torch.float32)
-                    y = batch[1].to(device, dtype=torch.float32)
+                    x = batch[0].to(args.device, dtype=torch.float32)
+                    y = batch[1].to(args.device, dtype=torch.float32)
 
                     pred = model(x)
 
@@ -118,8 +117,6 @@ def train_fcn(args):
         os.mkdir(save_path)
 
     # transition_dirs = next(os.walk(args.dataset_dir))[1]
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
     transition_dirs = os.listdir(args.dataset_dir)
 
     # split data to training/validation
@@ -138,11 +135,11 @@ def train_fcn(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # model = ResFCN().to(device)
+    # model = ResFCN().to(args.device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.BCELoss(reduction='none')
 
-    model = ActionNet(args).to(device)
+    model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
 
@@ -157,8 +154,6 @@ def train_regressor(args):
         os.mkdir(save_path)
 
     # transition_dirs = next(os.walk(args.dataset_dir))[1]
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
     transition_dirs = os.listdir(args.dataset_dir)
 
     # split data to training/validation
@@ -177,11 +172,11 @@ def train_regressor(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # model = Regressor().to(device)
+    # model = Regressor().to(args.device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss()
 
-    model = ApertureNet(args).to(device)
+    model = ApertureNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss()
 
