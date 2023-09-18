@@ -10,6 +10,7 @@ from skimage import transform, io
 
 from trainer.memory import ReplayBuffer
 import utils.utils as utils
+import utils.logger as logging
 
 
 class HeightMapDataset(data.Dataset):
@@ -79,8 +80,8 @@ class HeightMapDataset(data.Dataset):
             rot_id = round(angle / (2 * np.pi / 16))
             rot_ids.append(rot_id)
             
-            # print("transformed_heightmap.shape:", transformed_heightmap.shape)
-            # print("padded_heightmap:", padded_heightmap.shape)
+            # logging.info("transformed_heightmap.shape:", transformed_heightmap.shape)
+            # logging.info("padded_heightmap:", padded_heightmap.shape)
 
 
             action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))

@@ -10,6 +10,7 @@ import utils.pybullet_utils as p_utils
 import utils.utils as utils
 import env.env_components as env_components
 import env.cameras as cameras
+import utils.logger as logging
 
 MOUNT_URDF_PATH = 'mount.urdf'
 UR5_URDF_PATH = 'ur5e_bhand.urdf'
@@ -60,7 +61,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        p.connect(p.DIRECT)
+        # p.connect(p.DIRECT)
+        p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -123,7 +125,7 @@ class Environment:
             time.sleep(0.001)
             self.simulation.step()
 
-        print(">>>>>>>>>> Scene building complete >>>>>>>>>>")
+        logging.info(">>>>>>>>>> Scene building complete >>>>>>>>>>")
         utils.recreate_train()
 
         return self.get_observation()

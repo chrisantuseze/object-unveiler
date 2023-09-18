@@ -13,6 +13,8 @@ import utils.utils as utils
 from utils.constants import *
 import policy.grasping as grasping
 
+import utils.logger as logging
+
 def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -43,59 +45,63 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         state = policy.state_representation(obs)
-        action = policy.exploit(state, target_mask)
-        env_action3d = policy.action3d(action)
-        print("env_action3d:", env_action3d)
+        actions = policy.exploit(state, target_mask)
 
-        next_obs, grasp_info = env.step(env_action3d)
-        episode_data['attempts'] += 1
+        for action in actions:
+            env_action3d = policy.action3d(action)
+            logging.info("env_action3d:", env_action3d)
 
-        if grasp_info['collision']:
-            episode_data['collisions'] += 1
+            next_obs, grasp_info = env.step(env_action3d)
+            episode_data['attempts'] += 1
 
-        if grasp_info['stable'] and i ==0:
-            episode_data['sr-1'] += 1
+            if grasp_info['collision']:
+                episode_data['collisions'] += 1
 
-        if grasp_info['stable']:
-            episode_data['sr-n'] += 1
-            episode_data['objects_removed'] += 1
+            if grasp_info['stable'] and i ==0:
+                episode_data['sr-1'] += 1
 
-        else:
-            episode_data['fails'] += 1
-
-        utils.delete_episodes_misc(TEST_EPISODES_DIR)
-
-        if policy.is_terminal(next_obs):
-            break
-
-        if grasp_info['stable']:
-            pass
-
-        obs = copy.deepcopy(next_obs)
-
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
-        if len(processed_masks) == prev_masks_no:
-            count += 1
-
-        if count >= 2:
-            print("Robot is in an infinite loop")
-            break
-
-        target_id, target_mask = grasping.get_new_target(processed_masks, target_mask)
-        if target_id == -1:
             if grasp_info['stable']:
-                print("Target has been grasped!")
+                episode_data['sr-n'] += 1
+                episode_data['objects_removed'] += 1
+
             else:
-                print("Target could not be grasped. And it is no longer available in the scene.")
+                episode_data['fails'] += 1
 
-            break
+            utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
-        cv2.imwrite(os.path.join(TEST_EPISODES_DIR, "target_mask.png"), target_mask)
-        prev_masks_no = len(processed_masks)
+            if policy.is_terminal(next_obs):
+                break
 
-        i += 1
+            if grasp_info['stable']:
+                pass
 
-    print('--------')
+            obs = copy.deepcopy(next_obs)
+
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
+            if len(processed_masks) == prev_masks_no:
+                count += 1
+
+            if count >= 2:
+                logging.info("Robot is in an infinite loop")
+                break
+
+            target_id, target_mask = grasping.get_new_target(processed_masks, target_mask)
+            if target_id == -1:
+                if grasp_info['stable']:
+                    logging.info("Target has been grasped!")
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+                break
+
+            cv2.imwrite(os.path.join(TEST_EPISODES_DIR, "target_mask.png"), target_mask)
+            prev_masks_no = len(processed_masks)
+
+            i += 1
+
+        break
+
+    logging.info('--------')
     return episode_data
 
 def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
@@ -151,7 +157,7 @@ def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter
 
         i += 1
 
-    print('--------')
+    logging.info('--------')
     return episode_data
 
 
@@ -174,7 +180,7 @@ def eval_agent(args):
 
     for i in range(args.n_scenes):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
-        print('Episode: {}, seed: {}'.format(i, episode_seed))
+        logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
         episode_data = run_episode(policy, env, segmenter, rng, episode_seed, train=False)
         eval_data.append(episode_data)
@@ -185,11 +191,11 @@ def eval_agent(args):
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])
 
         if i % 5 == 0:
-            print('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
+            logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
                                                                                sr_n / attempts,
                                                                                objects_removed / len(eval_data)))
 
-    print('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
+    logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
                                                           sr_n / attempts,
                                                           objects_removed / len(eval_data)))
 

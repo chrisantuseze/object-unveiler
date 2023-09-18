@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 from PIL import Image
+import utils.logger as logging
 
 def grayscale_to_rgb_pil(image):
     # Convert the image to PIL image.
@@ -61,8 +62,8 @@ def object_compare(mask1, mask2):
     # Compare the similarity score with the threshold
     is_object_similar = similarity_score > threshold
     if is_object_similar:
-        print("The object appears in both images.", similarity_score)
+        logging.info("The object appears in both images.", similarity_score)
     else:
-        print("The object does not appear in both images.", similarity_score)
+        logging.info("The object does not appear in both images.", similarity_score)
 
     return is_object_similar

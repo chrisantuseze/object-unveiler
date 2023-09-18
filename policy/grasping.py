@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import utils.object_comparison as compare
 import utils.utils as utils
+import utils.logger as logging
 
 def get_object_centroid(segmentation_mask):
     # Find the contours in the segmentation mask
@@ -61,7 +62,7 @@ def get_grasping_angle(segmentation_masks, target_id):
         elif centroid[0] > target_centroid[0] and centroid[1] < target_centroid[1]:
             objects_count['D'] += 1
 
-    print("objects_count:", objects_count)
+    logging.info("objects_count:", objects_count)
 
     percentage = 0.75
     if objects_count['A'] >= int(percentage * len(segmentation_masks)):
@@ -84,7 +85,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
     center_of_mass = get_object_centroid(segmentation_masks[object_id])
 
     # Print the computed grasping point
-    print("Grasping Point:", center_of_mass)
+    logging.info("Grasping Point:", center_of_mass)
 
     # sample aperture uniformly
     aperture = rng.uniform(aperture_limits[0], aperture_limits[1])
@@ -125,7 +126,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
             # discrete_theta += np.pi             # tilt hand to face 135 degs left (anti-clockwise) -22.5 + x = 157.5; x = 180
             discrete_theta += 180
         
-    print("discrete_theta:", discrete_theta)
+    logging.info("discrete_theta:", discrete_theta)
 
     discrete_theta = utils.deg_to_rad(discrete_theta)
 
@@ -179,7 +180,7 @@ def compute_grasping_point_for_object(segmentation_mask, aperture_limits, rotati
     action[2] = discrete_theta
     action[3] = aperture
 
-    print("action_:", action)
+    logging.info("action_:", action)
 
     return action
 
@@ -260,7 +261,7 @@ def check_middle_placement(target_bbox, other_bboxes, distance_threshold=50):
         other_center = np.array([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2])
         distance = np.linalg.norm(target_center - other_center)
 
-        print("distance:", distance)
+        logging.info("distance:", distance)
         if distance < distance_threshold:
             return True
     return False
@@ -295,7 +296,7 @@ def build_graph(object_masks):
         os.remove(fig)
     else:
         # If it fails, inform the user.
-        print("Error: %s file not found" % fig)
+        logging.info("Error: %s file not found" % fig)
         
     plt.savefig(fig)
 
@@ -380,7 +381,7 @@ def get_new_target(processed_masks, old_target_mask):
     # pick the object with the closest distance to the old target as the new target
     min_dist = float('inf')
     target_point = get_object_centroid(old_target_mask)
-    print("target_point:", target_point)
+    logging.info("target_point:", target_point)
 
     id = -1
     mask = None
@@ -390,14 +391,14 @@ def get_new_target(processed_masks, old_target_mask):
     for key, value in valid_objs.items():
         point = value[1]
         dist = get_distance(target_point, point)
-        print("point:", point, "dist:", dist)
+        logging.info("point:", point, "dist:", dist)
 
         if dist < min_dist and dist < dist_threshold: # update only when the object isn't too far away from the previous target
             min_dist = dist
             id = key
             mask = value[0]
         
-    print("new target id:", id)
+    logging.info("new target id:", id)
     return id, mask
 
 def get_distance(point1, point2):
@@ -458,8 +459,8 @@ def is_object_in_images(mask1, mask2, object_threshold=5):
     # Check if enough good matches exist
     obj_present = len(good_matches) >= object_threshold
     if obj_present:
-        print("The object is present in both images.", len(good_matches))
+        logging.info("The object is present in both images.", len(good_matches))
     else:
-        print("The object is not present in both images.", len(good_matches))
+        logging.info("The object is not present in both images.", len(good_matches))
 
     return obj_present

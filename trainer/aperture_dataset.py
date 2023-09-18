@@ -7,6 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 from trainer.memory import ReplayBuffer
 import utils.utils as utils
+import utils.logger as logging
 
 class ApertureDataset(data.Dataset):
     def __init__(self, args, dir_ids):
@@ -54,7 +55,7 @@ class ApertureDataset(data.Dataset):
         cropped_map = (cropped_map - image_mean) / image_std
 
         if self.plot:
-            print(action[3])
+            logging.info(action[3])
 
             p2 = np.array([0, 0])
             p2[0] = p1[0] + 20 * np.cos(action[2])
@@ -150,7 +151,7 @@ class ApertureDataset(data.Dataset):
         cropped_map = (cropped_map - image_mean) / image_std
 
         if self.plot:
-            print(action[3])
+            logging.info(action[3])
 
             p2 = np.array([0, 0])
             p2[0] = p1[0] + 20 * np.cos(action[2])

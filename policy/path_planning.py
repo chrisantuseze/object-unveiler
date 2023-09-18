@@ -3,6 +3,7 @@ from collections import deque
 import torch
 
 from policy.grasping import calculate_iou, extract_relationships
+import utils.logger as logging
 
 # Example graph representation
 # graph = {
@@ -87,7 +88,7 @@ def build_graph(object_masks):
 
 def shortest_path_to_neighbor(segmentation_masks, target_node):
     graph = build_graph(segmentation_masks)
-    print(graph)
+    logging.info(graph)
 
     queue = deque(graph)
     queue.append(target_node)
@@ -118,13 +119,13 @@ def shortest_path_to_neighbor(segmentation_masks, target_node):
 # # Call the function to find the shortest path
 # shortest_path = shortest_path_to_neighbor(graph, target_node)
 
-# print("Shortest path:", shortest_path)
+# logging.info("Shortest path:", shortest_path)
 
 # Example usage:
 # target_node = 'A'
 # neighbor_node = 'F'
 # if is_neighbor(target_node, neighbor_node):
 #     shortest_path = path_from_target_to_neighbor(target_node, neighbor_node)
-#     print("Shortest path from", target_node, "to", neighbor_node, ":", shortest_path)
+#     logging.info("Shortest path from", target_node, "to", neighbor_node, ":", shortest_path)
 # else:
-#     print(target_node, "and", neighbor_node, "are not neighbors.")
+#     logging.info(target_node, "and", neighbor_node, "are not neighbors.")

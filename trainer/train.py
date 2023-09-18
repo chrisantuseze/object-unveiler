@@ -14,6 +14,7 @@ from trainer.heightmap_dataset import HeightMapDataset
 from policy.neural_network import ActionNet, ApertureNet
 
 import utils.utils as utils
+import utils.logger as logging
 
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -21,8 +22,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
     
     for epoch in range(args.epochs):
 
-        print('\nEpoch {}/{}'.format(epoch, args.epochs))
-        print('-' * 10)
+        logging.info('\nEpoch {}/{}'.format(epoch, args.epochs))
+        logging.info('-' * 10)
         
         model.train()
         count = 0
@@ -48,12 +49,12 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
             # compute loss in the whole scene
 
-            # print(pred.shape, y.shape)
+            # logging.info(pred.shape, y.shape)
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
             if count % 10 == 0:
-                print("\nIteration -", count, "; loss -", loss)
+                logging.info("\nIteration -", count, "; loss -", loss)
 
             optimizer.zero_grad()
             loss.backward()
@@ -95,14 +96,14 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         epoch_loss_, epoch_acc_ = utils.accuracy(epoch_loss['val'], corrects['val'], dataloaders['val'])
         epoch_acc_ = epoch_acc_ * 100.0
 
-        print('Val Loss: {:.4f} Acc@1: {:.3f} '.format(epoch_loss_, epoch_acc_))
+        logging.info('Val Loss: {:.4f} Acc@1: {:.3f} '.format(epoch_loss_, epoch_acc_))
 
 
         # save model
         if epoch % 1 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
-        print('Epoch {}: training loss = {:.4f} '
+        logging.info('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
                                                   epoch_loss['val'] / len(dataloaders['val'])))
         
@@ -135,7 +136,7 @@ def train_fcn(args):
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
-    print('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
+    logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     # model = ResFCN().to(device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -145,7 +146,7 @@ def train_fcn(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
 
-    print(model)
+    # logging.info(model)
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=True)
 
@@ -174,7 +175,7 @@ def train_regressor(args):
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
-    print('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
+    logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     # model = Regressor().to(device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -184,7 +185,7 @@ def train_regressor(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss()
 
-    print(model)
+    logging.info(model)
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=False)
 

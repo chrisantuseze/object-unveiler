@@ -22,6 +22,7 @@ import utils.utils as utils
 import utils.orientation as ori
 import env.cameras as cameras
 import policy.grasping as grasping
+import utils.logger as logging
 
 class Policy:
     def __init__(self, args, params) -> None:
@@ -105,7 +106,7 @@ class Policy:
         """
         Pre-process heightmap (padding and normalization)
         """
-        print("state.shape:", state.shape)
+        logging.info("state.shape:", state.shape)
 
         # Pad heightmap.
         diagonal_length = float(state.shape[0]) * np.sqrt(5)
@@ -113,7 +114,7 @@ class Policy:
         self.padding_width = int((diagonal_length - state.shape[0])/2)
         padded_heightmap = np.pad(state, self.padding_width, 'constant', constant_values=-0.01)
 
-        print("padded_heightmap.shape:", padded_heightmap.shape)
+        logging.info("padded_heightmap.shape:", padded_heightmap.shape)
 
         # Normalize heightmap
         image_mean = 0.01
@@ -131,7 +132,7 @@ class Policy:
         # Return affordances (and remove extra padding)
         for rotate_idx in range(len(output_prob)):
             _push_predictions = F.softmax(output_prob[rotate_idx][0], dim=1).cpu().data.numpy()
-            print("_push_predictions.shape", _push_predictions.shape)
+            logging.info("_push_predictions.shape", _push_predictions.shape)
 
             _push_predictions = _push_predictions[int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2), 
                                                 int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2)]
@@ -171,7 +172,6 @@ class Policy:
         w = int(q_maps.shape[3] - 2 * self.padding_width)
         h = int(q_maps.shape[4] - 2 * self.padding_width)
 
-        print(w, h, q_maps.shape[3], q_maps.shape[4], self.padding_width)
         remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], q_maps.shape[2], w, h))
 
         for i in range(q_maps.shape[0]):
@@ -218,7 +218,7 @@ class Policy:
         x_end = min(padded_shape[0], rotated_pt[0] + 2 * self.crop_size)
         cropped_map[0:y_end - y_start, 0:x_end - x_start] = rotated_heightmap[y_start: y_end, x_start: x_end]
 
-        # print( action['opening']['min_width'])
+        # logging.info( action['opening']['min_width'])
         if plot:
             p2 = np.array([0, 0])
             p2[0] = p1[0] + 20 * np.cos(theta)
@@ -270,22 +270,22 @@ class Policy:
         is_occluded = grasping.check_occlusion(target_bbox, other_bboxes)
         is_middle = grasping.check_middle_placement(target_bbox, other_bboxes)
 
-        print("Is occluded:", is_occluded)
-        print("Is in the middle:", is_middle)
+        logging.info("Is occluded:", is_occluded)
+        logging.info("Is in the middle:", is_middle)
 
         # if is_occluded and is_middle:
         #     nodes, edges = grasping.build_graph(raw_masks)
         nodes, edges = grasping.build_graph(raw_masks)
 
-        print("nodes:", nodes)
-        print("edges:", edges)
+        logging.info("nodes:", nodes)
+        logging.info("edges:", edges)
 
         return nodes, edges
 
         # node = -1
         # while node != target_id:
         #     optimal_nodes = grasping.get_optimal_target_path(edges)
-        #     print("optimal_nodes:", optimal_nodes)
+        #     logging.info("optimal_nodes:", optimal_nodes)
 
         #     if len(optimal_nodes) <= 0:
         #         break
@@ -312,12 +312,6 @@ class Policy:
         valid_pxl_map = utils.resize_mask(transform, target_mask)
 
         valid_pxl_map = np.array(valid_pxl_map, dtype=np.uint8)
-
-        # Define the filename where you want to save the array
-        # filename = "array_data.txt"
-
-        # # Use np.savetxt() to save the array to a text file
-        # np.savetxt(filename, valid_pxl_map, fmt='%d', delimiter=', ')
 
         # Finds the indices of yellow pixels (where the value is 1)
         valid_pxls = np.argwhere(valid_pxl_map == 1) # gets indices of the pixels with values equal to 255
@@ -362,7 +356,7 @@ class Policy:
         action[2] = discrete_theta
         action[3] = aperture
 
-        # print("action:", action)
+        # logging.info("action:", action)
 
         return action
     
@@ -394,50 +388,46 @@ class Policy:
 
         # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.fcn(sequence, is_volatile=True)
-        print("out_prob.shape:", out_prob.shape)
+        # logging.info("out_prob.shape:", out_prob.shape)
 
         out_prob = self.postprocess_(out_prob)
-        print("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
+        # logging.info("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_actions = []
+        actions = []
         for i in range(out_prob.shape[0]):
             prob = out_prob[i]
             best_action = np.unravel_index(np.argmax(prob), prob.shape)
-            print("len(best_action):", len(best_action), "best_action:", best_action)
+            logging.info("len(best_action):", len(best_action), "best_action:", best_action)
             best_actions.append(best_action)
 
-        print("best_actions:", best_actions)
 
-        p1 = np.array([best_actions[0][3], best_actions[0][2]])
-        theta = best_actions[0][0] * 2 * np.pi/self.rotations
+            p1 = np.array([best_actions[0][3], best_actions[0][2]])
+            theta = best_actions[0][0] * 2 * np.pi/self.rotations
 
-        # best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
-        # print("len(best_action):", len(best_action), "best_action:", best_action)
+            p2 = np.array([0, 0])
+            p2[0] = p1[0] + 20 * np.cos(theta)
+            p2[1] = p1[1] - 20 * np.sin(theta)
 
-        # p1 = np.array([best_action[3], best_action[2]])
-        # theta = best_action[0] * 2 * np.pi/self.rotations
+            # find optimal aperture
+            aperture_img = self.preprocess_aperture_image(state, p1, theta)
+            x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+            aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        
+            # undo normalization
+            aperture = utils.min_max_scale(aperture, range=[0, 1], 
+                                        target_range=[self.aperture_limits[0], 
+                                                        self.aperture_limits[1]])
 
-        p2 = np.array([0, 0])
-        p2[0] = p1[0] + 20 * np.cos(theta)
-        p2[1] = p1[1] - 20 * np.sin(theta)
+            action = np.zeros((4,))
+            action[0] = p1[0]
+            action[1] = p1[1]
+            action[2] = theta
+            action[3] = aperture
 
-        # find optimal aperture
-        aperture_img = self.preprocess_aperture_image(state, p1, theta)
-        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
-        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
-       
-        # undo normalization
-        aperture = utils.min_max_scale(aperture, range=[0, 1], 
-                                       target_range=[self.aperture_limits[0], 
-                                                     self.aperture_limits[1]])
+            actions.append(action)
 
-        action = np.zeros((4,))
-        action[0] = p1[0]
-        action[1] = p1[1]
-        action[2] = theta
-        action[3] = aperture
-
-        return action
+        return actions
     
     def exploit_old(self, state, target_mask):
 
@@ -451,13 +441,13 @@ class Policy:
         pre_processed_target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         
         out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
-        print("out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
+        logging.info("out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         out_prob = self.postprocess_old(out_prob)
-        print("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
+        logging.info("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
-        print("len(best_action):", len(best_action), "best_action:", best_action)
+        logging.info("len(best_action):", len(best_action), "best_action:", best_action)
 
         p1 = np.array([best_action[3], best_action[2]])
         theta = best_action[0] * 2 * np.pi/self.rotations
@@ -491,7 +481,7 @@ class Policy:
             action = self.guided_exploration(state, target_mask)
         else:
             action = self.exploit(state, target_mask)
-        print('explore action:', action)
+        logging.info('explore action:', action)
         return action
     
     def get_fcn_labels(self, state, action):
@@ -534,7 +524,7 @@ class Policy:
         # compute loss in the whole scene
         loss = self.fcn_criterion(q_maps, label)
         loss = torch.sum(loss)
-        print('fcn_loss:', loss.detach().cpu().numpy())
+        logging.info('fcn_loss:', loss.detach().cpu().numpy())
         self.info['fcn_loss'].append(loss.detach().cpu().numpy())
 
         self.fcn_optimizer.zero_grad()
@@ -552,12 +542,12 @@ class Policy:
         gt_aperture = torch.FloatTensor(np.array([normalized_aperture])).unsqueeze(0).to(self.device)
         pred_aperture = self.reg(x)
 
-        print('APERTURES')
-        print(gt_aperture, pred_aperture)
+        logging.info('APERTURES')
+        logging.info(gt_aperture, pred_aperture)
 
         # compute loss
         loss = self.reg_criterion(pred_aperture, gt_aperture)
-        print('reg_loss:', loss.detach().cpu().numpy())
+        logging.info('reg_loss:', loss.detach().cpu().numpy())
         self.info['reg_loss'].append(loss.detach().cpu().numpy())
 
         self.reg_optimizer.zero_grad()

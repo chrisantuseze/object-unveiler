@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
+import utils.logger as logging
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):
@@ -101,9 +102,9 @@ class ActionNet(nn.Module):
         prob_target = self._predict(batch_rot_target)
         prob_obstacle = self._predict(batch_rot_obstacle)
 
-        # print("prob_depth.shape:", prob_depth.shape)
-        # print("prob_target.shape:", prob_target.shape)
-        # print("prob_obstacle.shape:", prob_obstacle.shape)
+        # logging.info("prob_depth.shape:", prob_depth.shape)
+        # logging.info("prob_target.shape:", prob_target.shape)
+        # logging.info("prob_obstacle.shape:", prob_obstacle.shape)
 
         probs = torch.cat((prob_depth, prob_target, prob_obstacle), dim=1)
 
@@ -124,16 +125,16 @@ class ActionNet(nn.Module):
         flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device), prob.size(), align_corners=True)
         out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-        print("out_prob.shape:", out_prob.shape)
+        logging.info("out_prob.shape:", out_prob.shape)
         out_prob = torch.mean(out_prob, dim=0, keepdim=True)
 
         # batch_rot_target = torch.mean(batch_rot_target, dim=0, keepdim=True)
 
         # batch_rot_obstacle = torch.mean(batch_rot_obstacle, dim=0, keepdim=True)
 
-        # print("mean out_prob.shape:", out_prob.shape)
-        # print("batch_rot_target.shape:", batch_rot_target.shape)
-        # print("batch_rot_obstacle.shape:", batch_rot_obstacle.shape)
+        # logging.info("mean out_prob.shape:", out_prob.shape)
+        # logging.info("batch_rot_target.shape:", batch_rot_target.shape)
+        # logging.info("batch_rot_obstacle.shape:", batch_rot_obstacle.shape)
 
         return out_prob
     
@@ -212,7 +213,7 @@ class ActionNet(nn.Module):
             target_mask = target_mask.to(self.device)
             obstacle_mask = obstacle_mask.to(self.device)
 
-            # print("heightmap.shape:", heightmap.shape)
+            # logging.info("heightmap.shape:", heightmap.shape)
 
             if is_volatile:
                 prob = self._volatile(heightmap, target_mask, obstacle_mask)
@@ -223,19 +224,19 @@ class ActionNet(nn.Module):
                 probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
-        print("probs_stack.shape:", probs_stack.shape)
+        # logging.info("probs_stack.shape:", probs_stack.shape)
 
         batch_size, sequence_length, channels, height, width = probs_stack.shape
 
         probs_stack = probs_stack.view(-1, channels, height, width)
-        print("view probs_stack.shape:", probs_stack.shape)
+        # logging.info("view probs_stack.shape:", probs_stack.shape)
 
         # Pad the tensor to achieve the desired shape
         sequence_length, channels, height, width = probs_stack.shape
         pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
         pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
         probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-        print("padded probs_stack.shape:", probs_stack.shape)
+        # logging.info("padded probs_stack.shape:", probs_stack.shape)
 
         # extract the features using a resnet
         # embeddings = self._predict(input_data)
@@ -244,20 +245,20 @@ class ActionNet(nn.Module):
         embeddings = probs_stack.view(self.args.batch_size, self.args.sequence_length, -1)
 
         outputs, (hidden, cell) = self.lstm(embeddings)
-        print("lstm outputs.shape:", outputs.shape)
+        # logging.info("lstm outputs.shape:", outputs.shape)
 
         if self.is_train:
             predictions = self.fc_train(outputs)
-            # print("fc predictions.shape:", predictions.shape) # outputs should be 6x64
+            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
             predictions = predictions.view(self.args.sequence_length, 1, 1, 224, 224)
         else:
             predictions = self.fc_eval(outputs)
-            print("fc predictions.shape:", predictions.shape) # outputs should be 6x64
+            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
             predictions = predictions.view(self.args.sequence_length, 16, 1, 224, 224)
 
-        print("view predictions.shape:", predictions.shape) 
+        logging.info("view predictions.shape:", predictions.shape) 
         
         return predictions
     
@@ -284,7 +285,7 @@ class ApertureNet(nn.Module):
 
     def forward(self, x):
         # Assuming src has shape [batch_size, sequence_length, channels, height, width]
-        print(x.shape)
+        logging.info(x.shape)
         batch_size, sequence_length, channels, height, width = x.shape
 
         x = self.model(x)

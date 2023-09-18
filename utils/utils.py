@@ -11,6 +11,7 @@ import torch
 
 import utils.pybullet_utils as p_utils
 from utils.constants import *
+import utils.logger as logging
 
 
 def get_pointcloud(depth, seg, intrinsics):
@@ -193,7 +194,7 @@ def sample_distribution(prob, rng, n_samples=1):
 
 def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
     # Get color image.
-    print(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
+    logging.info(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
 
     img = Image.fromarray(color_img, 'RGB')
     img.save(os.path.join(dir, name + '.png'))
@@ -213,7 +214,7 @@ def delete_episodes_misc(path):
     try:
         shutil.rmtree(path)
     except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
+        logging.info("Error: %s - %s." % (e.filename, e.strerror))
 
     if not os.path.exists(path):
         os.mkdir(path)
@@ -225,7 +226,7 @@ def recreate_train():
     try:
         shutil.rmtree(train_path)
     except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
+        logging.info("Error: %s - %s." % (e.filename, e.strerror))
         
     if not os.path.exists(f'{train_path}/episodes'):
         os.makedirs(f'{train_path}/episodes')
@@ -237,7 +238,7 @@ def recreate_test():
     try:
         shutil.rmtree(train_path)
     except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
+        logging.info("Error: %s - %s." % (e.filename, e.strerror))
         
     if not os.path.exists(f'{train_path}/episodes'):
         os.makedirs(f'{train_path}/episodes')
@@ -271,14 +272,14 @@ def resize_mask(transform, mask):
 def pad_label(sequence_length, labels):
     pad_needed = sequence_length - len(labels)
     labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
-    print("padded labels.shape:", labels.shape)
+    logging.info("padded labels.shape:", labels.shape)
 
     # labels = np.asarray(labels)
-    # print("labels.shape:", labels.shape)
+    # logging.info("labels.shape:", labels.shape)
 
     labels = torch.from_numpy(labels)
     labels = labels.view(sequence_length, 1, 1, 224, 224)
-    # print("view labels.shape:", labels.shape)
+    # logging.info("view labels.shape:", labels.shape)
 
     return labels
 
@@ -288,7 +289,7 @@ class Logger:
 
         # Create the log directory
         if os.path.exists(log_dir):
-            print('Directory ', log_dir, 'exists, do you want to remove it? (y/n)')
+            logging.info('Directory ', log_dir, 'exists, do you want to remove it? (y/n)')
             answer = input('')
             if answer == 'y':
                 shutil.rmtree(log_dir)

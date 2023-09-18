@@ -8,6 +8,7 @@ from torchvision.transforms import functional as TF
 
 from vision.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
+import utils.logger as logging
 
 class ObjectSegmenter:
     """
@@ -69,6 +70,6 @@ class ObjectSegmenter:
         if plot:
             cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
 
-        # print("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
+        # logging.info("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
         
         return processed_masks, pred_mask, raw_masks
