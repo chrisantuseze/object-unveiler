@@ -4,7 +4,6 @@ import torch
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import networkx as nx
 import utils.object_comparison as compare
 import utils.utils as utils
 import utils.logger as logging
@@ -269,12 +268,9 @@ def check_middle_placement(target_bbox, other_bboxes, distance_threshold=50):
 def build_graph(object_masks):
     nodes = []
     edges = []
-    # Create a NetworkX graph
-    G = nx.Graph()
 
     # Add nodes (objects) to the graph
     for idx, mask in enumerate(object_masks):
-        G.add_node(idx, mask=mask)  # You can add more attributes to nodes here
         nodes.append(idx)
 
     overlap_threshold = 0.0001
@@ -283,24 +279,7 @@ def build_graph(object_masks):
 
     # Add edges (relationships) to the graph
     for rel in relationships:
-        G.add_edge(rel[0], rel[1])
         edges.append((rel[0], rel[1]))
-
-    # # Visualize the graph
-    pos = nx.spring_layout(G)  # Position nodes using spring layout
-    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=1000)
-
-    fig = "save/misc/graph.png"
-    # If file exists, delete it.
-    if os.path.isfile(fig):
-        os.remove(fig)
-    else:
-        # If it fails, inform the user.
-        logging.info("Error: %s file not found" % fig)
-        
-    plt.savefig(fig)
-
-    G = None
 
     return nodes, edges
 

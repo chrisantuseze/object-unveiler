@@ -9,6 +9,11 @@ python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 50
 
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
+
+
+
+
+
 For the Pose-FCN Pose (Paper):
 - To simplify learning of the angle θ, we account for
 different pushing directions by rotating the input heightmap into
@@ -32,4 +37,4 @@ squeue -u echris #checks the status of a pete job
 
 scancel jobid
 
-python3 -m pip -r install requirements.txt
+python3 -m pip install -r requirements.txt
