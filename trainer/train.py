@@ -57,8 +57,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             if step % 200 == 0:
                 logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}")
 
-        epoch_loss = total_loss / len(dataloaders['train'].dataset)
-        logging.info(f'Train Loss: {epoch_loss}')
+        train_loss = total_loss / len(dataloaders['train'].dataset)
+        logging.info(f'Train Loss: {train_loss}')
 
 
 
@@ -102,7 +102,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
         logging.info('Epoch {}: training loss = {}, validation loss = {}'
-                     .format(epoch, epoch_loss['train'] / len(dataloaders['train']), epoch_loss['val'] / len(dataloaders['val'])))
+                     .format(epoch, train_loss, epoch_loss['val'] / len(dataloaders['val'])))
         
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
