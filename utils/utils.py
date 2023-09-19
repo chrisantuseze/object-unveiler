@@ -278,11 +278,14 @@ def pad_label(sequence_length, labels):
     # logging.info("padded labels.shape:", labels.shape)
 
     # logging.info("labels:", labels)
-    labels = np.asarray(labels)
+    # labels = np.asarray(labels, dtype=object)
     # logging.info("labels.shape:", labels.shape)
-    logging.info("labels:", labels)
+    # logging.info("labels:", labels)
 
-    labels = torch.from_numpy(labels)
+    # labels = torch.from_numpy(labels)
+    labels = torch.stack(labels, dim=0)
+    # logging.info("labels:", labels)
+
     # labels = labels.view(sequence_length, 1, 1, 224, 224)
     logging.info("view labels.shape:", labels.shape)
 
