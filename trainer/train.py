@@ -58,7 +58,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}")
 
         epoch_loss = total_loss / len(dataloaders['train'].dataset)
-        logging.info('Train Loss: {:.4f}'.format(epoch_loss))
+        logging.info(f'Train Loss: {epoch_loss}')
 
 
 
@@ -94,7 +94,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                     logging.info(f"{phase.capitalize()} Step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
 
             epoch_loss = total_loss / len(dataloaders[phase].dataset)
-            logging.info(f'{phase.capitalize()} ' + 'Loss: {:.4f}'.format(epoch_loss))
+            logging.info(f'{phase.capitalize()} Loss: {epoch_loss}')
 
 
         # save model
