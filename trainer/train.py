@@ -52,7 +52,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            if count % 10 == 0:
+            if count % 50 == 0:
                 logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
 
             optimizer.zero_grad()
@@ -93,7 +93,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
                 corrects[phase] += torch.sum(pred == y)
 
-                if count % 10 == 0:
+                if count % 50 == 0:
                     logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
 
                 count += 1
