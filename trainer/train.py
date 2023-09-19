@@ -25,7 +25,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         logging.info('-' * 10)
         
         model.train()
-        logging.info("Train mode...")
+        logging.info("\nTrain mode...")
         for step, batch in enumerate(dataloaders['train']):
             if is_fcn:
                 x = batch[0]
@@ -60,7 +60,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         epoch_loss = {'train': 0.0, 'val': 0.0}
         corrects = {'train': 0, 'val': 0}
 
-        logging.info("Eval mode...")
+        logging.info("\nEval mode...")
         for phase in ['train', 'val']:
             for step, batch in enumerate(dataloaders[phase]):
                 if is_fcn:
