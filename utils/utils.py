@@ -277,9 +277,10 @@ def pad_label(sequence_length, labels):
     # labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
     # logging.info("padded labels.shape:", labels.shape)
 
-    logging.info("labels:", labels)
+    # logging.info("labels:", labels)
     labels = np.asarray(labels)
     # logging.info("labels.shape:", labels.shape)
+    logging.info("labels:", labels)
 
     labels = torch.from_numpy(labels)
     # labels = labels.view(sequence_length, 1, 1, 224, 224)
