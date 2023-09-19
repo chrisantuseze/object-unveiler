@@ -93,8 +93,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 if step % 200 == 0:
                     logging.info(f"{phase.capitalize()} Step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
 
-            epoch_loss = total_loss / len(dataloaders[phase].dataset)
-            logging.info(f'{phase.capitalize()} Loss: {epoch_loss}')
+            loss_ = total_loss / len(dataloaders[phase].dataset)
+            logging.info(f'{phase.capitalize()} Loss: {loss_}')
 
 
         # save model
