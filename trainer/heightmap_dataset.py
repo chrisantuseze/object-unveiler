@@ -101,27 +101,20 @@ class HeightMapDataset(data.Dataset):
             labels.append(label)
 
         # pad dataset
-        # seq_len = self.args.sequence_length
-        # if len(episode_data) < seq_len:
-        #     required_len = seq_len - len(sequence)
-        #     c, h, w = sequence[0][0].shape
+        seq_len = self.args.sequence_length
+        if len(episode_data) < seq_len:
+            required_len = seq_len - len(sequence)
+            c, h, w = sequence[0][0].shape
 
-        #     empty_array = np.zeros((c, w, h))
-        #     labels = labels + [empty_array] * required_len
+            empty_array = np.zeros((c, w, h))
+            labels = labels + [empty_array] * required_len
             
-        #     empty_tuple = (torch.zeros((c, w, h)), torch.zeros((c, w, h)), torch.zeros((c, w, h)))
-        #     sequence = sequence + [empty_tuple] * required_len
+            # empty_tuple = (torch.zeros((c, w, h)), torch.zeros((c, w, h)), torch.zeros((c, w, h)))
+            # sequence = sequence + [empty_tuple] * required_len
 
-        #     rot_ids = rot_ids + [0] * required_len
+            # rot_ids = rot_ids + [0] * required_len
 
         return sequence, rot_ids, labels
-        
-        # Stack the sequence along a new dimension to create the input tensor
-        # input_data_stack = torch.stack(sequence, dim=0)
-        # rot_id_stack = torch.stack(rot_ids, dim=0)
-        # label_stack = torch.stack(labels, dim=0)
-        
-        # return input_data_stack, rot_id_stack, label_stack
 
     def __getitem__old(self, id):
         heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
