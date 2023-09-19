@@ -25,9 +25,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         logging.info('-' * 10)
         
         model.train()
-        count = 0
-        for batch in dataloaders['train']:
-
+        logging.info("Train mode...")
+        for step, batch in enumerate(dataloaders['train']):
             if is_fcn:
                 x = batch[0]
                 rotations = batch[1]
@@ -47,27 +46,23 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 pred = model(x)
 
             # compute loss in the whole scene
-
-            # logging.info(pred.shape, y.shape)
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            if count % 50 == 0:
-                logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
+            if step % 200 == 0:
+                logging.info("Step -", step, "; Loss -", loss.detach().cpu().numpy())
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            count += 1
-
-        count = 0
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         corrects = {'train': 0, 'val': 0}
-        for phase in ['train', 'val']:
-            for batch in dataloaders[phase]:
 
+        logging.info("Eval mode...")
+        for phase in ['train', 'val']:
+            for step, batch in enumerate(dataloaders[phase]):
                 if is_fcn:
                     x = batch[0]
                     rotations = batch[1]
@@ -90,13 +85,10 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
-
                 corrects[phase] += torch.sum(pred == y)
 
-                if count % 50 == 0:
-                    logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
-
-                count += 1
+                if step % 200 == 0:
+                    logging.info("Step -", step, "; Loss -", loss.detach().cpu().numpy())
 
         epoch_loss_, epoch_acc_ = utils.accuracy(epoch_loss['val'], corrects['val'], dataloaders['val'])
         epoch_acc_ = epoch_acc_ * 100.0
@@ -105,7 +97,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
 
         # save model
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
         logging.info('Epoch {}: training loss = {:.4f} '
