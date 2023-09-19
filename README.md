@@ -40,3 +40,5 @@ scancel jobid
 python3 -m pip install -r requirements.txt
 
  /home/scratch1/cheze
+
+ scp -r cheze@csg1.cs.okstate.edu:/home/scratch1/cheze/x/save . # This recursively copy's all the files to the local current directory

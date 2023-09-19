@@ -398,12 +398,12 @@ class Policy:
         for i in range(out_prob.shape[0]):
             prob = out_prob[i]
             best_action = np.unravel_index(np.argmax(prob), prob.shape)
-            logging.info("len(best_action):", len(best_action), "best_action:", best_action)
+            # logging.info("len(best_action):", len(best_action), "best_action:", best_action)
             best_actions.append(best_action)
 
 
-            p1 = np.array([best_actions[0][3], best_actions[0][2]])
-            theta = best_actions[0][0] * 2 * np.pi/self.rotations
+            p1 = np.array([best_actions[i][3], best_actions[i][2]])
+            theta = best_actions[i][0] * 2 * np.pi/self.rotations
 
             p2 = np.array([0, 0])
             p2[0] = p1[0] + 20 * np.cos(theta)
@@ -424,6 +424,8 @@ class Policy:
             action[1] = p1[1]
             action[2] = theta
             action[3] = aperture
+
+            print("action:", action)
 
             actions.append(action)
 
