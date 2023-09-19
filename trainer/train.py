@@ -65,7 +65,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         logging.info("\nEval mode...")
-        for phase in ['train', 'val']:
+        for phase in ['val']:
             for step, batch in enumerate(dataloaders[phase]):
                 if is_fcn:
                     x = batch[0]
@@ -101,9 +101,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         if epoch % 10 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
-        logging.info('Epoch {}: training loss = {:.4f} '
-              ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
-                                                  epoch_loss['val'] / len(dataloaders['val'])))
+        logging.info('Epoch {}: training loss = {}, validation loss = {}'
+                     .format(epoch, epoch_loss['train'] / len(dataloaders['train']), epoch_loss['val'] / len(dataloaders['val'])))
         
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
