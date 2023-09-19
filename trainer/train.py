@@ -53,7 +53,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             loss = torch.sum(loss)
 
             if count % 10 == 0:
-                logging.info("\nIteration -", count, "; loss -", loss)
+                logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
 
             optimizer.zero_grad()
             loss.backward()
@@ -61,6 +61,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
             count += 1
 
+        count = 0
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         corrects = {'train': 0, 'val': 0}
@@ -91,6 +92,11 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 corrects[phase] += torch.sum(pred == y)
+
+                if count % 10 == 0:
+                    logging.info("\nIteration -", count, "; loss -", loss.detach().cpu().numpy())
+
+                count += 1
 
         epoch_loss_, epoch_acc_ = utils.accuracy(epoch_loss['val'], corrects['val'], dataloaders['val'])
         epoch_acc_ = epoch_acc_ * 100.0

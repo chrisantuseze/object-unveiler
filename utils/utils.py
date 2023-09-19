@@ -287,7 +287,7 @@ def pad_label(sequence_length, labels):
     # logging.info("labels:", labels)
 
     # labels = labels.view(sequence_length, 1, 1, 224, 224)
-    logging.info("view labels.shape:", labels.shape)
+    # logging.info("view labels.shape:", labels.shape)
 
     return labels
 
