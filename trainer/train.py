@@ -20,10 +20,10 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
     prefix = "fcn" if is_fcn else "reg"
     
     for epoch in range(args.epochs):
-
         logging.info('\nEpoch {}/{}'.format(epoch, args.epochs))
         logging.info('-' * 10)
         
+        total_loss = 0
         model.train()
         logging.info("\nTrain mode...")
         for step, batch in enumerate(dataloaders['train']):
@@ -49,17 +49,21 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            if step % 200 == 0:
-                logging.info("Step -", step, "; Loss -", loss.detach().cpu().numpy())
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
+            total_loss += loss.item()
+            if step % 200 == 0:
+                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}")
+
+        epoch_loss = total_loss / len(dataloaders['train'].dataset)
+        logging.info('Train Loss: {:.4f}'.format(epoch_loss))
+
+
+
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
-        corrects = {'train': 0, 'val': 0}
-
         logging.info("\nEval mode...")
         for phase in ['train', 'val']:
             for step, batch in enumerate(dataloaders[phase]):
@@ -84,16 +88,13 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 # compute loss
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
-                epoch_loss[phase] += loss.detach().cpu().numpy()
-                corrects[phase] += torch.sum(pred == y)
+                epoch_loss[phase] += loss.item()
 
                 if step % 200 == 0:
-                    logging.info("Step -", step, "; Loss -", loss.detach().cpu().numpy())
+                    logging.info(f"{phase.capitalize()} Step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
 
-        epoch_loss_, epoch_acc_ = utils.accuracy(epoch_loss['val'], corrects['val'], dataloaders['val'])
-        epoch_acc_ = epoch_acc_ * 100.0
-
-        logging.info('Val Loss: {:.4f} Acc@1: {:.3f} '.format(epoch_loss_, epoch_acc_))
+            epoch_loss = total_loss / len(dataloaders[phase].dataset)
+            logging.info(f'{phase.capitalize()} ' + 'Loss: {:.4f}'.format(epoch_loss))
 
 
         # save model
