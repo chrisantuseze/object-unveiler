@@ -277,6 +277,7 @@ def pad_label(sequence_length, labels):
     # labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
     # logging.info("padded labels.shape:", labels.shape)
 
+    logging.info("labels:", labels)
     labels = np.asarray(labels)
     # logging.info("labels.shape:", labels.shape)
 
