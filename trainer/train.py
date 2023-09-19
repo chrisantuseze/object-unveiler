@@ -120,8 +120,10 @@ def train_fcn(args):
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
-    train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
-    val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
+
+    split_index = int(args.split_ratio * len(transition_dirs))
+    train_ids = transition_dirs[:split_index]
+    val_ids = transition_dirs[split_index:]
 
     train_dataset = HeightMapDataset(args, train_ids)
     val_dataset = HeightMapDataset(args, val_ids)
@@ -157,8 +159,10 @@ def train_regressor(args):
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
-    train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
-    val_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
+    
+    split_index = int(args.split_ratio * len(transition_dirs))
+    train_ids = transition_dirs[:split_index]
+    val_ids = transition_dirs[split_index:]
 
     train_dataset = ApertureDataset(args, train_ids)
     val_dataset = ApertureDataset(args, val_ids)
