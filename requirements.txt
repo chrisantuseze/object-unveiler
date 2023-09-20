@@ -2,7 +2,7 @@ opencv-python==4.5.1.48
 torch
 torchvision
 pybullet==3.0.8
-open3d==0.14.1
+open3d
 numpy
 matplotlib
 tabulate
