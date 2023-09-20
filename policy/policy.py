@@ -398,7 +398,7 @@ class Policy:
         for i in range(out_prob.shape[0]):
             prob = out_prob[i]
             best_action = np.unravel_index(np.argmax(prob), prob.shape)
-            # logging.info("len(best_action):", len(best_action), "best_action:", best_action)
+            # logging.info("\nbest_action:", best_action)
             best_actions.append(best_action)
 
 

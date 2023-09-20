@@ -98,8 +98,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
 
         # save model
-        if epoch % 10 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
+        # if epoch % 50 == 0:
+        #     torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
         logging.info('Epoch {}: training loss = {}, validation loss = {}'
                      .format(epoch, train_loss, epoch_loss['val'] / len(dataloaders['val'])))
