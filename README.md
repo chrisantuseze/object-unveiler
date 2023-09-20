@@ -7,7 +7,7 @@ python3 main.py --mode 'eval' --fcn_model 'save/fcn/fcn_model_4.pt' --reg_model 
 
 python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 150
 
-python3 collect_data.py --singulation_condition --n_samples 30000 --seed 4 #1
+python3 collect_data.py --singulation_condition --n_samples 30000 --seed 5 #4 #1
 
 
 
