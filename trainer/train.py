@@ -11,7 +11,7 @@ from torch.utils import data
 import numpy as np
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.neural_network import ActionNet, ApertureNet
+from policy.neural_network_new import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
@@ -174,11 +174,7 @@ def train_regressor(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # model = Regressor().to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # criterion = nn.SmoothL1Loss()
-
-    model = ApertureNet(args).to(args.device)
+    model = Regressor().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss()
 

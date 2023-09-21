@@ -62,6 +62,57 @@ class HeightMapDataset(data.Dataset):
                 padded_heightmap, padded_heightmap_width_depth = self._preprocess_data(heightmap)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
+                object_mask = utils.resize_mask(transform, target_mask)
+                padded_object_mask, _ = self._preprocess_data(object_mask)
+                transformed_object_mask = self.data_transform(padded_object_mask)
+
+            sequence.append((transformed_heightmap, transformed_object_mask))
+
+            # convert theta to range 0-360 and then compute the rot_id
+            angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
+            rot_id = round(angle / (2 * np.pi / 16))
+            rot_ids.append(rot_id)
+            
+            action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
+
+            if int(action[1]) > 99 or int(action[0]):
+                i = min(int(action[1]) * 0.95, 99)
+                j = min(int(action[0]) * 0.95, 99)
+            else:
+                i = action[1]
+                j = action[0]
+
+            action_area[int(i), int(j)] = 1.0
+            label = np.zeros((1, transformed_heightmap.shape[1], transformed_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+            label[0, padded_heightmap_width_depth:padded_heightmap.shape[0] - padded_heightmap_width_depth,
+                    padded_heightmap_width_depth:padded_heightmap.shape[1] - padded_heightmap_width_depth] = action_area
+            
+            labels.append(label)
+
+        # pad dataset
+        seq_len = self.args.sequence_length
+        if len(episode_data) < seq_len:
+            required_len = seq_len - len(sequence)
+            c, h, w = sequence[0][0].shape
+
+            empty_array = np.zeros((c, w, h))
+            labels = labels + [empty_array] * required_len
+            
+        return sequence, rot_ids, labels
+    
+    def __getitem__old1(self, id):
+        episode_data = self.memory.load_episode(self.dir_ids[id])
+
+        sequence = []
+        labels, rot_ids = [], []
+        for data in episode_data:
+            heightmap, target_mask, obstacle_mask, action = data
+
+            padded_heightmap, padded_heightmap_width_depth = None, None
+            if self.data_transform:
+                padded_heightmap, padded_heightmap_width_depth = self._preprocess_data(heightmap)
+                transformed_heightmap = self.data_transform(padded_heightmap)
+
                 target_mask = utils.resize_mask(transform, target_mask)
                 padded_target_mask, _ = self._preprocess_data(target_mask)
                 transformed_target_mask = self.data_transform(padded_target_mask)

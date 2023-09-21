@@ -384,7 +384,8 @@ class Policy:
         target = target.view(1, 1, 224, 224)
 
         # combine the two features into a list
-        sequence = [(x, target, target)]
+        # sequence = [(x, target, target)]
+        sequence = [(x, target)]
 
         # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.fcn(sequence, is_volatile=True)
