@@ -28,3 +28,4 @@ bin/
 share/
 downloads/
 pyvenv.cfg
+.DS_Store
