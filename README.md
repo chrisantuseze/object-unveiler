@@ -7,12 +7,12 @@ python3 main.py --mode 'eval' --fcn_model 'save/fcn/fcn_model_4.pt' --reg_model 
 
 python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 150
 
-python3 collect_data.py --singulation_condition --n_samples 30000 --seed 7 #6 #5 #4 #1
+python3 collect_data.py --singulation_condition --n_samples 30000 --seed 8 #7 #6 #5 #4 #1
 
 4 - edgar
-5,6 - iMAc
-7 - Regan
-
+5,6 - iMac (ou-1)
+7 - Regan (ou-2)
+8 - Mac
 
 
 
@@ -29,10 +29,9 @@ optimal p∗ and θ∗ are produced by the Pose-FCN module.
 
 CS: ssh cheze@csg1.cs.okstate.edu
 HPCC: ssh echris@pete.hpc.okstate.edu
-Copy to remote: scp [-r] file echris@pete.hpc.okstate.edu:.
+Copy to remote: clear
 
 scp cc@ip:/home/cc/filename . # This copy's the file to the local current directory
-scp -r cc@ip:/home/cc/save . # This recursively copy's all the files to the local current directory
 cp filename /destination directory
 
 squeue -u echris #checks the status of a pete job
@@ -44,3 +43,7 @@ python3 -m pip install -r requirements.txt
  /home/scratch1/cheze
 
  scp -r cheze@csg1.cs.okstate.edu:/home/scratch1/cheze/x/save . # This recursively copy's all the files to the local current directory
+
+
+ssh e_chrisantus@robcog.cs.okstate.edu
+Eze@33963003
