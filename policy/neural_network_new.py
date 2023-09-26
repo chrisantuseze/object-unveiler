@@ -192,12 +192,12 @@ class ActionNet(nn.Module):
             # logging.info("prob.shape:", prob.shape)                     #torch.Size([1, 2, 224, 224])
 
         probs_stack = torch.stack(probs, dim=0)
-        # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 2, 224, 224])
+        logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 2, 224, 224])
 
         batch_size, sequence_length, channels, height, width = probs_stack.shape
 
         probs_stack = probs_stack.view(-1, channels, height, width)
-        # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 2, 224, 224])
+        logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 2, 224, 224])
 
         # Pad the tensor to achieve the desired shape
         # sequence_length, channels, height, width = probs_stack.shape
@@ -208,10 +208,10 @@ class ActionNet(nn.Module):
 
 
         embeddings = probs_stack.view(self.args.batch_size, self.args.sequence_length, -1)
-        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 100352])
+        logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 100352])
 
         outputs, (hidden, cell) = self.lstm(embeddings)
-        # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
+        logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
 
         if self.is_train:
             predictions = self.fc_train(outputs)
@@ -224,7 +224,7 @@ class ActionNet(nn.Module):
 
             predictions = predictions.view(self.args.sequence_length, self.args.batch_size * 16, 1, 224, 224)
 
-        # logging.info("view predictions.shape:", predictions.shape)      
+        logging.info("view predictions.shape:", predictions.shape)      
         
         return predictions
     
