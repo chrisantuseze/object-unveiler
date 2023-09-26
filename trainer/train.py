@@ -131,6 +131,8 @@ def train_fcn(args):
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
 
+    train_ids = train_ids[:503]
+
     args.step = int(len(train_ids)/(4*args.batch_size))
 
     train_dataset = HeightMapDataset(args, train_ids)
