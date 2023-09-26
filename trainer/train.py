@@ -39,6 +39,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 # pred = model(x, specific_rotation=rotations)
 
                 y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+
+                # print("y.shape:", y.shape)  #torch.Size([4, 1, 1, 224, 224])
             else:
                 x = batch[0].to(args.device, dtype=torch.float32)
                 y = batch[1].to(args.device, dtype=torch.float32)
@@ -54,7 +56,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             optimizer.step()
 
             total_loss += loss.item()
-            if step % 200 == 0:
+            if step % args.step == 0:
                 logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}")
 
         train_loss = total_loss / len(dataloaders['train'].dataset)
