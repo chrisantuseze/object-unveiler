@@ -134,17 +134,16 @@ def train_fcn(args):
     # this ensures that the split is done properly without causing input mismatch error
     data_length = (len(train_ids)//args.batch_size) * args.batch_size
     train_ids = train_ids[:data_length]
-
-    data_length = (len(val_ids)//args.batch_size) * args.batch_size
-    val_ids = val_ids[:data_length]
+    
+    train_dataset = HeightMapDataset(args, train_ids)
+    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
-    train_dataset = HeightMapDataset(args, train_ids)
-    val_dataset = HeightMapDataset(args, val_ids)
+    # data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    # val_ids = val_ids[:data_length]
 
-    # note: the batch size is 1
-    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)
+    val_dataset = HeightMapDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=1, num_workers=4, pin_memory=True)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
