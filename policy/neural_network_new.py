@@ -194,8 +194,7 @@ class ActionNet(nn.Module):
         probs_stack = torch.stack(probs, dim=0)
         # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 2, 224, 224])
 
-        batch_size, sequence_length, channels, height, width = probs_stack.shape
-        print("batch_size:", sequence_length)
+        sequence_length, batch_size, channels, height, width = probs_stack.shape
 
         probs_stack = probs_stack.view(-1, channels, height, width)
         # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 2, 224, 224])
@@ -208,7 +207,7 @@ class ActionNet(nn.Module):
         # logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 2, 224, 224])
 
 
-        embeddings = probs_stack.view(self.args.batch_size, self.args.sequence_length, -1)
+        embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
         # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 100352])
 
         outputs, (hidden, cell) = self.lstm(embeddings)
@@ -218,12 +217,12 @@ class ActionNet(nn.Module):
             predictions = self.fc_train(outputs)
             # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
-            predictions = predictions.view(self.args.sequence_length, self.args.batch_size * 1, 1, 224, 224) #torch.Size([4, 1, 1, 224, 224])
+            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, 224, 224) #torch.Size([4, 1, 1, 224, 224])
         else:
             predictions = self.fc_eval(outputs)
             # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
-            predictions = predictions.view(self.args.sequence_length, self.args.batch_size * 16, 1, 224, 224)
+            predictions = predictions.view(self.args.sequence_length, batch_size * 16, 1, 224, 224)
 
         # logging.info("view predictions.shape:", predictions.shape)      
         
