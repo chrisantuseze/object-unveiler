@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 import os
 import cv2
+import utils.logger as logging
+
 
 class ReplayBuffer:
     def __init__(self, save_dir, buffer_size=100000) -> None:
@@ -26,7 +28,7 @@ class ReplayBuffer:
         try:
             episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
         except:
-            print("Failed episode:", episode)
+            logging.info("Failed episode:", episode)
 
         data_list = []
         for data in episode_data:

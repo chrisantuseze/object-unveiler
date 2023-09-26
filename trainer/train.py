@@ -117,6 +117,10 @@ def train_fcn(args):
     # transition_dirs = next(os.walk(args.dataset_dir))[1]
     transition_dirs = os.listdir(args.dataset_dir)
 
+    if ".DS_Store" in transition_dirs:
+        transition_dirs.remove(".DS_Store")
+        logging.info("Item removed")
+
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
