@@ -195,6 +195,7 @@ class ActionNet(nn.Module):
         # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 2, 224, 224])
 
         batch_size, sequence_length, channels, height, width = probs_stack.shape
+        print("batch_size:", batch_size)
 
         probs_stack = probs_stack.view(-1, channels, height, width)
         # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 2, 224, 224])
