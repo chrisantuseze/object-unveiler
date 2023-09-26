@@ -92,7 +92,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.item()
 
-                if step % 200 == 0:
+                if step % args.step == 0:
                     logging.info(f"{phase.capitalize()} Step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
 
             loss_ = total_loss / len(dataloaders[phase].dataset)
@@ -130,6 +130,8 @@ def train_fcn(args):
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
+
+    args.step = int(len(train_ids)/(4*args.batch_size))
 
     train_dataset = HeightMapDataset(args, train_ids)
     val_dataset = HeightMapDataset(args, val_ids)
