@@ -31,8 +31,6 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 x = batch[0]
                 rotations = batch[1]
                 y = batch[2]
-
-                logging.info("len(x):", len(x))
                 pred = model(x, rotations)
 
                 # x = batch[0].to(args.device)
@@ -129,11 +127,12 @@ def train_fcn(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    split_index = int(args.split_ratio * len(transition_dirs))
+    # this ensures that the split is done properly without causing input mismatch error
+    data_length = (len(transition_dirs)//args.batch_size) * args.batch_size
+
+    split_index = int(args.split_ratio * data_length)
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
-
-    train_ids = train_ids[:303]
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
