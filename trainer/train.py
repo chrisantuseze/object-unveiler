@@ -31,6 +31,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 x = batch[0]
                 rotations = batch[1]
                 y = batch[2]
+
+                logging.info("len(x):", len(x))
                 pred = model(x, rotations)
 
                 # x = batch[0].to(args.device)
@@ -131,7 +133,7 @@ def train_fcn(args):
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
 
-    train_ids = train_ids[:503]
+    train_ids = train_ids[:303]
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
@@ -139,8 +141,8 @@ def train_fcn(args):
     val_dataset = HeightMapDataset(args, val_ids)
 
     # note: the batch size is 1
-    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
+    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memeory=True, shuffle=True)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memeory=True)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
