@@ -127,12 +127,16 @@ def train_fcn(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    # this ensures that the split is done properly without causing input mismatch error
-    data_length = (len(transition_dirs)//args.batch_size) * args.batch_size
-
-    split_index = int(args.split_ratio * data_length)
+    split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
+
+    # this ensures that the split is done properly without causing input mismatch error
+    data_length = (len(train_ids)//args.batch_size) * args.batch_size
+    train_ids = train_ids[:data_length]
+
+    data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    val_ids = val_ids[:data_length]
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
