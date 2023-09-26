@@ -23,7 +23,10 @@ class ReplayBuffer:
         return self.buffer_ids[index]
     
     def load_episode(self, episode):
-        episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+        try:
+            episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+        except:
+            print("Failed episode:", episode)
 
         data_list = []
         for data in episode_data:
