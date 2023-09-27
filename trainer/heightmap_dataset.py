@@ -62,11 +62,15 @@ class HeightMapDataset(data.Dataset):
                 padded_heightmap, padded_heightmap_width_depth = self._preprocess_data(heightmap)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
-                object_mask = utils.resize_mask(transform, target_mask)
-                padded_object_mask, _ = self._preprocess_data(object_mask)
-                transformed_object_mask = self.data_transform(padded_object_mask)
+                target_mask = utils.resize_mask(transform, target_mask)
+                padded_target_mask, _ = self._preprocess_data(target_mask)
+                transformed_target_mask = self.data_transform(padded_target_mask)
 
-            sequence.append((transformed_heightmap, transformed_object_mask))
+                obstacle_mask = utils.resize_mask(transform, obstacle_mask)
+                padded_obstacle_mask, _ = self._preprocess_data(obstacle_mask)
+                transformed_obstacle_mask = self.data_transform(padded_obstacle_mask)
+
+            sequence.append((transformed_heightmap, transformed_target_mask, transformed_obstacle_mask))
 
             # convert theta to range 0-360 and then compute the rot_id
             angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -102,9 +106,6 @@ class HeightMapDataset(data.Dataset):
             sequence = sequence + [empty_tuple] * required_len
 
             rot_ids = rot_ids + [0] * required_len
-
-
-        print(len(sequence), len(rot_ids), len(labels))
             
         return sequence, rot_ids, labels
     
