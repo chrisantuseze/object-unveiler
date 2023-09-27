@@ -27,18 +27,19 @@ class ActionNet(nn.Module):
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Define training parameters
-        input_size = 150528
-        hidden_size = 224  # LSTM hidden state size
+        input_size = 62208 #150528
+        hidden_size = 144 #224  # LSTM hidden state size
         num_layers = 2  # Number of LSTM layers
         bidirectional = False  # Use bidirectional LSTM
-        output_dim = 50176
+        output_dim1 = 20736 #50176
+        output_dim2 = 331776 #802816
 
         # self.fc_in = nn.Linear(input_size, lstm_input_size)
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
         # Define the output layer
-        self.fc_train = nn.Linear(hidden_size, output_dim)
+        self.fc_train = nn.Linear(hidden_size, output_dim1)
 
-        self.fc_eval = nn.Linear(hidden_size, 802816) # this should produce an output of 6x1
+        self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -241,7 +242,7 @@ class ActionNet(nn.Module):
 
 
         embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
-        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528])
+        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528]) #62208
 
         outputs, (hidden, cell) = self.lstm(embeddings)
         # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
