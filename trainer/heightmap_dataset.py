@@ -104,7 +104,7 @@ class HeightMapDataset(data.Dataset):
             rot_ids = rot_ids + [0] * required_len
 
 
-        # print(len(sequence), len(rot_ids), len(labels))
+        print(len(sequence), len(rot_ids), len(labels))
             
         return sequence, rot_ids, labels
     
