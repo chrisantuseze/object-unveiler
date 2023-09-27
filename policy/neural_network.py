@@ -250,12 +250,12 @@ class ActionNet(nn.Module):
             predictions = self.fc_train(outputs)
             # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, 224, 224) #torch.Size([4, 1, 1, 224, 224])
+            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, 144, 144) #torch.Size([4, 1, 1, 224, 224])
         else:
             predictions = self.fc_eval(outputs)
             # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
 
-            predictions = predictions.view(self.args.sequence_length, batch_size * 16, 1, 224, 224)
+            predictions = predictions.view(self.args.sequence_length, batch_size * 16, 1, 144, 144)
 
         # logging.info("view predictions.shape:", predictions.shape)      
         

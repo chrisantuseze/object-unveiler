@@ -21,7 +21,7 @@ class HeightMapDataset(data.Dataset):
         self.dir_ids = dir_ids
         self.data_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((224, 224)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.Resize((144, 144)),  # Resize to the input size expected by ResNet (can be adjusted)
             transforms.ToTensor(),
             # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             transforms.Normalize(mean=(0.449), std=(0.226))

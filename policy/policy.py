@@ -364,7 +364,7 @@ class Policy:
 
         data_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((224, 224)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.Resize((144, 144)),  # Resize to the input size expected by ResNet (can be adjusted)
             transforms.ToTensor(),
             # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             transforms.Normalize(mean=(0.449), std=(0.226))
@@ -374,14 +374,14 @@ class Policy:
         heightmap = self.preprocess(state)
         # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
         x = data_transform(heightmap).to(self.device)
-        x = x.view(1, 1, 224, 224)
+        x = x.view(1, 1, 144, 144)
 
         # Resize the image using seam carving to match with the heightmap
         resized_target = utils.resize_mask(transform, target_mask)
         target = self.preprocess(resized_target)
         # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         target = data_transform(target).to(self.device)
-        target = target.view(1, 1, 224, 224)
+        target = target.view(1, 1, 144, 144)
 
         # combine the two features into a list
         sequence = [(x, target, target)]
