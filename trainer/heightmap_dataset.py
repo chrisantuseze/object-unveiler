@@ -98,7 +98,7 @@ class HeightMapDataset(data.Dataset):
             empty_array = np.zeros((c, w, h))
             labels = labels + [empty_array] * required_len
 
-            empty_tuple = (torch.zeros((c, w, h)), torch.zeros((c, w, h)))
+            empty_tuple = (torch.zeros((c, w, h)), torch.zeros((c, w, h)), torch.zeros((c, w, h)))
             sequence = sequence + [empty_tuple] * required_len
 
             rot_ids = rot_ids + [0] * required_len

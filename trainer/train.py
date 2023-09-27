@@ -11,7 +11,7 @@ from torch.utils import data
 import numpy as np
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.neural_network_new import ActionNet
+from policy.neural_network import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging

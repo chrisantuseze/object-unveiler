@@ -200,11 +200,12 @@ class ActionNet(nn.Module):
         # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 2, 224, 224])
 
         # Pad the tensor to achieve the desired shape
-        # sequence_length, channels, height, width = probs_stack.shape
-        # pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
-        # pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
-        # probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-        # logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 2, 224, 224])
+        if not self.is_train:
+            sequence_length, channels, height, width = probs_stack.shape
+            pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
+            pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
+            probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
+            logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 2, 224, 224])
 
 
         embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)

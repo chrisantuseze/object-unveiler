@@ -1,7 +1,7 @@
 import os
 import pickle
 from policy.models import Regressor, ResFCN
-from policy.neural_network_new import ActionNet
+from policy.neural_network import ActionNet
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -384,9 +384,9 @@ class Policy:
         target = target.view(1, 1, 224, 224)
 
         # combine the two features into a list
-        # sequence = [(x, target, target)]
-        sequence = [(x, target)]
-
+        sequence = [(x, target, target)]
+        # sequence = [(x, target)]
+        
         # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.fcn(sequence, is_volatile=True)
         # logging.info("out_prob.shape:", out_prob.shape)

@@ -61,9 +61,9 @@ def object_compare(mask1, mask2):
 
     # Compare the similarity score with the threshold
     is_object_similar = similarity_score > threshold
-    if is_object_similar:
-        logging.info("The object appears in both images.", similarity_score)
-    else:
-        logging.info("The object does not appear in both images.", similarity_score)
+    # if is_object_similar:
+    #     logging.info("The object appears in both images.", similarity_score)
+    # else:
+    #     logging.info("The object does not appear in both images.", similarity_score)
 
     return is_object_similar

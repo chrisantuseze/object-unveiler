@@ -360,7 +360,7 @@ def get_new_target(processed_masks, old_target_mask):
     # pick the object with the closest distance to the old target as the new target
     min_dist = float('inf')
     target_point = get_object_centroid(old_target_mask)
-    logging.info("target_point:", target_point)
+    # logging.info("target_point:", target_point)
 
     id = -1
     mask = None
@@ -370,7 +370,7 @@ def get_new_target(processed_masks, old_target_mask):
     for key, value in valid_objs.items():
         point = value[1]
         dist = get_distance(target_point, point)
-        logging.info("point:", point, "dist:", dist)
+        # logging.info("point:", point, "dist:", dist)
 
         if dist < min_dist and dist < dist_threshold: # update only when the object isn't too far away from the previous target
             min_dist = dist
