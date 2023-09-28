@@ -6,6 +6,7 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import utils.logger as logging
+from utils.constants import *
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):
@@ -27,18 +28,15 @@ class ActionNet(nn.Module):
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Define training parameters
-        input_size = 62208 #150528
-        hidden_size = 144 #224  # LSTM hidden state size
+        input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
+        hidden_size = IMAGE_SIZE
         num_layers = 2  # Number of LSTM layers
         bidirectional = False  # Use bidirectional LSTM
-        output_dim1 = 20736 #50176
-        output_dim2 = 331776 #802816
+        output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
+        output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
 
-        # self.fc_in = nn.Linear(input_size, lstm_input_size)
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        # Define the output layer
         self.fc_train = nn.Linear(hidden_size, output_dim1)
-
         self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
@@ -214,8 +212,6 @@ class ActionNet(nn.Module):
             target_mask = target_mask.to(self.device)
             obstacle_mask = obstacle_mask.to(self.device)
 
-            # logging.info("heightmap.shape:", heightmap.shape)
-
             if is_volatile:
                 prob = self._volatile(heightmap, target_mask, obstacle_mask)
                 probs.append(prob)
@@ -228,7 +224,6 @@ class ActionNet(nn.Module):
         # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
 
         sequence_length, batch_size, channels, height, width = probs_stack.shape
-
         probs_stack = probs_stack.view(-1, channels, height, width)
         # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 3, 224, 224])
 
@@ -249,51 +244,11 @@ class ActionNet(nn.Module):
 
         if self.is_train:
             predictions = self.fc_train(outputs)
-            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
-
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, 144, 144) #torch.Size([4, 1, 1, 224, 224])
+            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
         else:
             predictions = self.fc_eval(outputs)
-            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
-
-            predictions = predictions.view(self.args.sequence_length, batch_size * 16, 1, 144, 144)
+            predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # logging.info("view predictions.shape:", predictions.shape)      
         
         return predictions
-    
-
-class ApertureNet(nn.Module):
-    def __init__(self, args):
-        super(ApertureNet, self).__init__()
-
-        self.args = args
-
-        self.model = torchvision.models.resnet50(pretrained=True)
-        # self.model.fc = nn.Linear(2048, 1024)
-
-        # Define training parameters
-        input_size = 2048  # Assuming 2048-dimensional features from ResNet
-        hidden_size = 64  # LSTM hidden state size
-        output_size = 3  # Assuming there are 3 objects removals including target i.e our list is of zie 3 #3D coordinates (x, y, z)
-        num_layers = 4 #2  # Number of LSTM layers
-        bidirectional = True  # Use bidirectional LSTM
-        learning_rate = 0.001
-
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        self.fc_out = nn.Linear(hidden_size, 2 * output_size) # multiply output size by 2 since we need x & y coordinates for each item in the list
-
-    def forward(self, x):
-        # Assuming src has shape [batch_size, sequence_length, channels, height, width]
-        logging.info(x.shape)
-        batch_size, sequence_length, channels, height, width = x.shape
-
-        x = self.model(x)
-
-        embeddings = embeddings.view(batch_size, sequence_length, -1)
-
-        outputs, (hidden, cell) = self.lstm(embeddings)
-        predictions = self.fc_out(outputs)
-        predictions = predictions.view(batch_size, sequence_length, 2, -1)
-
-        return predictions, (hidden, cell)

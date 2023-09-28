@@ -1,7 +1,7 @@
 import os
 import pickle
 from policy.models import Regressor, ResFCN
-from policy.neural_network import ActionNet
+from policy.action_net import ActionNet
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -20,6 +20,7 @@ from trainer.memory import ReplayBuffer
 
 import utils.utils as utils
 import utils.orientation as ori
+from utils.constants import *
 import env.cameras as cameras
 import policy.grasping as grasping
 import utils.logger as logging
@@ -127,22 +128,6 @@ class Policy:
         padded_heightmap = padded_heightmap.astype(np.float32)
         return padded_heightmap
     
-
-    def postprocess(self, output_prob, state):
-        # Return affordances (and remove extra padding)
-        for rotate_idx in range(len(output_prob)):
-            _push_predictions = F.softmax(output_prob[rotate_idx][0], dim=1).cpu().data.numpy()
-            logging.info("_push_predictions.shape", _push_predictions.shape)
-
-            _push_predictions = _push_predictions[int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2), 
-                                                int(self.padding_width/2) : int(state.shape[0]/2 - self.padding_width/2)]
-            if rotate_idx == 0:
-                push_predictions = _push_predictions
-            else:
-                push_predictions = np.concatenate((push_predictions, _push_predictions), axis=0)
-
-        return push_predictions
-
     
     def postprocess_old(self, q_maps):
         """
@@ -164,7 +149,7 @@ class Policy:
 
         return remove_pad
     
-    def postprocess_(self, q_maps):
+    def postprocess(self, q_maps):
         """
         Remove extra padding
         """
@@ -364,7 +349,7 @@ class Policy:
 
         data_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((144, 144)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
             transforms.ToTensor(),
             # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             transforms.Normalize(mean=(0.449), std=(0.226))
@@ -374,24 +359,23 @@ class Policy:
         heightmap = self.preprocess(state)
         # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
         x = data_transform(heightmap).to(self.device)
-        x = x.view(1, 1, 144, 144)
+        x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # Resize the image using seam carving to match with the heightmap
         resized_target = utils.resize_mask(transform, target_mask)
         target = self.preprocess(resized_target)
         # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         target = data_transform(target).to(self.device)
-        target = target.view(1, 1, 144, 144)
+        target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # combine the two features into a list
         sequence = [(x, target, target)]
         # sequence = [(x, target)]
         
-        # out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
         out_prob = self.fcn(sequence, is_volatile=True)
         # logging.info("out_prob.shape:", out_prob.shape)
 
-        out_prob = self.postprocess_(out_prob)
+        out_prob = self.postprocess(out_prob)
         # logging.info("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_actions = []

@@ -11,6 +11,7 @@ from skimage import transform, io
 from trainer.memory import ReplayBuffer
 import utils.utils as utils
 import utils.logger as logging
+from utils.constants import *
 
 
 class HeightMapDataset(data.Dataset):
@@ -21,7 +22,7 @@ class HeightMapDataset(data.Dataset):
         self.dir_ids = dir_ids
         self.data_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((144, 144)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
             transforms.ToTensor(),
             # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             transforms.Normalize(mean=(0.449), std=(0.226))

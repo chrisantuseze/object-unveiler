@@ -6,6 +6,7 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import utils.logger as logging
+from utils.constants import *
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):
@@ -27,18 +28,16 @@ class ActionNet(nn.Module):
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Define training parameters
-        input_size = 100352
-        hidden_size = 224  # LSTM hidden state size
+        input_size = IMAGE_SIZE * IMAGE_SIZE * 2
+        hidden_size = IMAGE_SIZE  # LSTM hidden state size
         num_layers = 2  # Number of LSTM layers
         bidirectional = False  # Use bidirectional LSTM
-        output_dim = 50176
+        output_dim1 = IMAGE_SIZE * IMAGE_SIZE
+        output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
 
-        # self.fc_in = nn.Linear(input_size, lstm_input_size)
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        # Define the output layer
-        self.fc_train = nn.Linear(hidden_size, output_dim)
-
-        self.fc_eval = nn.Linear(hidden_size, 802816) 
+        self.fc_train = nn.Linear(hidden_size, output_dim1)
+        self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -216,14 +215,10 @@ class ActionNet(nn.Module):
 
         if self.is_train:
             predictions = self.fc_train(outputs)
-            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
-
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, 224, 224) #torch.Size([4, 1, 1, 224, 224])
+            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
         else:
             predictions = self.fc_eval(outputs)
-            # logging.info("fc predictions.shape:", predictions.shape) # outputs should be 6x64
-
-            predictions = predictions.view(self.args.sequence_length, batch_size * 16, 1, 224, 224)
+            predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # logging.info("view predictions.shape:", predictions.shape)      
         

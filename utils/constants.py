@@ -13,20 +13,6 @@ IMAGE_SIZE = 224
 IMAGE_WIDTH = 400 #640
 IMAGE_HEIGHT = 400 #480
 
-IMAGE_OBJ_CROP_SIZE = 60  # this is related to the IMAGE_SIZE and PIXEL_SIZE
-IMAGE_PAD_SIZE = math.ceil(IMAGE_SIZE * math.sqrt(2) / 32) * 32  # 320
-IMAGE_PAD_WIDTH = math.ceil((IMAGE_PAD_SIZE - IMAGE_SIZE) / 2)  # 48
-IMAGE_PAD_DIFF = IMAGE_PAD_SIZE - IMAGE_PAD_WIDTH  # 272
-
-
-background_threshold = {
-    "low": np.array([0, 0, 125], np.uint8),
-    "high": np.array([255, 255, 255], np.uint8),
-}  # white
-BG_THRESHOLD = {
-    "low": np.array([0, 0, 0], np.uint8),
-    "high": np.array([180, 255, 50], np.uint8),
-}  # black
 # colors
 real_purple_lower = np.array([100, 143, 0], np.uint8)
 real_purple_upper = np.array([126, 255, 255], np.uint8)
