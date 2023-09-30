@@ -103,31 +103,6 @@ class Policy:
         padded_heightmap = padded_heightmap.astype(np.float32)
         return padded_heightmap
     
-    def preprocess(self, state):
-        """
-        Pre-process heightmap (padding and normalization)
-        """
-        logging.info("state.shape:", state.shape)
-
-        # Pad heightmap.
-        diagonal_length = float(state.shape[0]) * np.sqrt(5)
-        diagonal_length = np.ceil(diagonal_length/16) * 16
-        self.padding_width = int((diagonal_length - state.shape[0])/2)
-        padded_heightmap = np.pad(state, self.padding_width, 'constant', constant_values=-0.01)
-
-        logging.info("padded_heightmap.shape:", padded_heightmap.shape)
-
-        # Normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-
-        # # Add extra channel
-        # padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-
-        padded_heightmap = padded_heightmap.astype(np.float32)
-        return padded_heightmap
-    
     
     def postprocess_old(self, q_maps):
         """
@@ -356,14 +331,16 @@ class Policy:
         ])
         
         # find optimal position and orientation
-        heightmap = self.preprocess(state)
+        heightmap, self.padding_width = utils.preprocess_data(state)
         # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
         x = data_transform(heightmap).to(self.device)
         x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # Resize the image using seam carving to match with the heightmap
         resized_target = utils.resize_mask(transform, target_mask)
-        target = self.preprocess(resized_target)
+        target, self.padding_width = utils.preprocess_data(resized_target) # this is might not be necessary
+
         # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         target = data_transform(target).to(self.device)
         target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)

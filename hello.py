@@ -2,20 +2,29 @@ import os
 import shutil
 
 
-dir = "/Users/chrisantuseze/Research/rl/unveiler-datasets/combined/"
+dir = "/Users/chrisantuseze/Research/robot-learning/unveiler-datasets/combined/"
 # Specify the path to the folder containing the files you want to rename
 
 # folder_path = "ppg-dataset-2/"
 # id = 845
 
-# folder_path = "ppg-dataset-edgar/"
+# folder_path = "ppg-dataset-old/"
 # id = 1616
 
+# folder_path = "ppg-dataset-old2/"
+# id = 2461
+
+# folder_path = "ppg-dataset-old3/"
+# id = 2568
+
 # folder_path = "ppg-dataset-mac/"
-# id = 2441
+# id = 2707
+
+# folder_path = "ppg-dataset-edgar/"
+# id = 3299
 
 # folder_path = "ppg-dataset-regan/"
-# id = 3031
+# id = 4869
 
 
 # folder_path = dir + folder_path
@@ -35,7 +44,7 @@ dir = "/Users/chrisantuseze/Research/rl/unveiler-datasets/combined/"
 # Loop through all subdirectories in the source directory
 
 source_dir = dir
-destination_dir = "/Users/chrisantuseze/Research/rl/unveiler-datasets/consolidated/ppg-dataset"
+destination_dir = "/Users/chrisantuseze/Research/robot-learning/unveiler-datasets/consolidated/ppg-dataset"
 
 # Create the destination directory if it doesn't exist
 if not os.path.exists(destination_dir):

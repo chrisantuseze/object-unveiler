@@ -204,6 +204,8 @@ def get_target_mask(processed_masks, obs, rng):
     if len(processed_masks) > 1:
         id = rng.randint(0, len(processed_masks) - 1)
         target_mask = processed_masks[id]
+    elif len(processed_masks) == 1:
+        target_mask = processed_masks[id]
     else:
         target_mask = obs['color'][id]
 
@@ -288,6 +290,33 @@ def pad_label(sequence_length, labels):
     # logging.info("view labels.shape:", labels.shape)
 
     return labels
+
+def preprocess_data(data, root=5):
+    """
+    Pre-process data (padding and normalization)
+    """
+    logging.info("preprocess() - data.shape:", data.shape)
+
+    # add extra padding (to handle rotations inside the network)
+    diagonal_length_data = float(data.shape[0]) * np.sqrt(root)
+    diagonal_length_data = np.ceil(diagonal_length_data / 16) * 16
+    padding_width_data = int((diagonal_length_data - data.shape[0]) / 2)
+    padded_data = np.pad(data, padding_width_data, 'constant', constant_values=-0.01)
+
+    logging.info("preprocess() - padded_data.shape:", padded_data.shape)
+
+    # normalize data
+    image_mean = 0.01
+    image_std = 0.03
+    padded_data = (padded_data - image_mean)/image_std
+
+    # add extra channel
+    # padded_data = np.expand_dims(padded_data, axis=0)
+
+    # ensure data is float32 to prevent 'TypeError: Input type float64 is not supported' error
+    padded_data = padded_data.astype(np.float32)
+
+    return padded_data, padding_width_data
 
 class Logger:
     def __init__(self, log_dir):

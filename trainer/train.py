@@ -16,7 +16,7 @@ from policy.action_net import ActionNet
 import utils.utils as utils
 import utils.logger as logging
 
-def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
+def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, is_fcn=True):
     prefix = "fcn" if is_fcn else "reg"
     
     for epoch in range(args.epochs):
@@ -32,11 +32,6 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 rotations = batch[1]
                 y = batch[2]
                 pred = model(x, rotations)
-
-                # x = batch[0].to(args.device)
-                # rotations = batch[1].to(args.device)
-                # y = batch[2].to(args.device)
-                # pred = model(x, specific_rotation=rotations)
 
                 y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
 
@@ -57,7 +52,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
             total_loss += loss.item()
             if step % args.step == 0:
-                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}")
+                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}\t Lr: {optimizer.param_groups[0]['lr']}")
 
         train_loss = total_loss / len(dataloaders['train'].dataset)
         logging.info(f'Train Loss: {train_loss}')
@@ -74,11 +69,6 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                     rotations = batch[1]
                     y = batch[2]
                     pred = model(x, rotations)
-
-                    # x = batch[0].to(args.device)
-                    # rotations = batch[1].to(args.device)
-                    # y = batch[2].to(args.device)
-                    # pred = model(x, specific_rotation=rotations)
 
                     y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
                 else:
@@ -102,6 +92,9 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         # save model
         # if epoch % 50 == 0:
         #     torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
+
+        # Decay Learning Rate
+        scheduler.step()
 
         logging.info('Epoch {}: training loss = {}, validation loss = {}'
                      .format(epoch, train_loss, epoch_loss['val'] / len(dataloaders['val'])))
@@ -155,11 +148,12 @@ def train_fcn(args):
 
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90])
     criterion = nn.MSELoss()
 
     # logging.info(model)
 
-    train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=True)
+    train(args, model, optimizer, scheduler, criterion, data_loaders, save_path, is_fcn=True)
 
 def train_regressor(args):
     save_path = 'save/reg'

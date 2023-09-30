@@ -69,8 +69,8 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
         utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
-        if policy.is_terminal(next_obs):
-            break
+        # if policy.is_terminal(next_obs):  # checks if only one object is left in the scene and terminates the episode
+        #     break
 
         if grasp_info['stable']:
             pass
@@ -81,7 +81,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         if len(processed_masks) == prev_masks_no:
             count += 1
 
-        if count >= 2:
+        if count >= 1:
             logging.info("Robot is in an infinite loop")
             break
 

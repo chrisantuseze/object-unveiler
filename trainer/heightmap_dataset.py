@@ -30,26 +30,6 @@ class HeightMapDataset(data.Dataset):
 
         self.memory = ReplayBuffer(self.dataset_dir)
 
-    def _preprocess_data(self, data):
-         # add extra padding (to handle rotations inside the network)
-        diagonal_length_data = float(data.shape[0]) * np.sqrt(2)
-        diagonal_length_data = np.ceil(diagonal_length_data / 16) * 16
-        padding_width_data = int((diagonal_length_data - data.shape[0]) / 2)
-        padded_data = np.pad(data, padding_width_data, 'constant', constant_values=-0.01)
-
-        # normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_data = (padded_data - image_mean)/image_std
-
-        # add extra channel
-        # padded_data = np.expand_dims(padded_data, axis=0)
-
-        # ensure data is float32 to prevent 'TypeError: Input type float64 is not supported' error
-        padded_data = padded_data.astype(np.float32)
-
-        return padded_data, padding_width_data
-
     def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
 
@@ -60,15 +40,15 @@ class HeightMapDataset(data.Dataset):
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
-                padded_heightmap, padded_heightmap_width_depth = self._preprocess_data(heightmap)
+                padded_heightmap, padded_heightmap_width_depth = utils.preprocess_data(heightmap, root=2)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
                 target_mask = utils.resize_mask(transform, target_mask)
-                padded_target_mask, _ = self._preprocess_data(target_mask)
+                padded_target_mask, _ = utils.preprocess_data(target_mask, root=2)
                 transformed_target_mask = self.data_transform(padded_target_mask)
 
                 obstacle_mask = utils.resize_mask(transform, obstacle_mask)
-                padded_obstacle_mask, _ = self._preprocess_data(obstacle_mask)
+                padded_obstacle_mask, _ = utils.preprocess_data(obstacle_mask, root=2)
                 transformed_obstacle_mask = self.data_transform(padded_obstacle_mask)
 
             sequence.append((transformed_heightmap, transformed_target_mask, transformed_obstacle_mask))
@@ -120,15 +100,15 @@ class HeightMapDataset(data.Dataset):
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
-                padded_heightmap, padded_heightmap_width_depth = self._preprocess_data(heightmap)
+                padded_heightmap, padded_heightmap_width_depth = utils.preprocess_data(heightmap)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
                 target_mask = utils.resize_mask(transform, target_mask)
-                padded_target_mask, _ = self._preprocess_data(target_mask)
+                padded_target_mask, _ = utils.preprocess_data(target_mask)
                 transformed_target_mask = self.data_transform(padded_target_mask)
 
                 obstacle_mask = utils.resize_mask(transform, obstacle_mask)
-                padded_obstacle_mask, _ = self._preprocess_data(obstacle_mask)
+                padded_obstacle_mask, _ = utils.preprocess_data(obstacle_mask)
                 transformed_obstacle_mask = self.data_transform(padded_obstacle_mask)
 
             # Combine heightmap and mask into a single tensor and append to the sequence
