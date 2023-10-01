@@ -295,7 +295,7 @@ def preprocess_data(data, root=5):
     """
     Pre-process data (padding and normalization)
     """
-    logging.info("preprocess() - data.shape:", data.shape)
+    # logging.info("preprocess() - data.shape:", data.shape)
 
     # add extra padding (to handle rotations inside the network)
     diagonal_length_data = float(data.shape[0]) * np.sqrt(root)
@@ -303,7 +303,7 @@ def preprocess_data(data, root=5):
     padding_width_data = int((diagonal_length_data - data.shape[0]) / 2)
     padded_data = np.pad(data, padding_width_data, 'constant', constant_values=-0.01)
 
-    logging.info("preprocess() - padded_data.shape:", padded_data.shape)
+    # logging.info("preprocess() - padded_data.shape:", padded_data.shape)
 
     # normalize data
     image_mean = 0.01
