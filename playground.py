@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import sys
 import zipfile
+import pickle
+import os
 
-with zipfile.ZipFile("ppg-dataset-consolidated.zip", 'r') as zip_ref:
+with zipfile.ZipFile("ppg-dataset.zip", 'r') as zip_ref:
     zip_ref.extractall("ppg-dataset")
 
 
@@ -17,3 +19,13 @@ with zipfile.ZipFile("ppg-dataset-consolidated.zip", 'r') as zip_ref:
 # val_ids = arr[split_index:]
 
 # print(split_index, train_ids, val_ids)
+
+# folder_path = "save/ppg-dataset"
+# for filename in os.listdir(folder_path):
+#     if os.path.isfile(os.path.join(folder_path, filename)):
+# #         # Construct the new name for the file (modify this as needed)
+#         try:
+#             episode_data = pickle.load(open(os.path.join(folder_path, filename), 'rb'))
+#         except:
+#             os.remove(os.path.join(folder_path, filename))
+#             print(filename)
