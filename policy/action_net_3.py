@@ -107,7 +107,9 @@ class ActionNet(nn.Module):
 
         probs = torch.cat((prob_depth, prob_target, prob_obstacle), dim=1)
 
-        return self._volatile_undo_rotate(probs)
+        # return self._volatile_undo_rotate(probs)
+
+        return probs
 
         
     def _volatile_undo_rotate(self, prob):
@@ -126,14 +128,6 @@ class ActionNet(nn.Module):
 
         logging.info("out_prob.shape:", out_prob.shape)
         out_prob = torch.mean(out_prob, dim=0, keepdim=True)
-
-        # batch_rot_target = torch.mean(batch_rot_target, dim=0, keepdim=True)
-
-        # batch_rot_obstacle = torch.mean(batch_rot_obstacle, dim=0, keepdim=True)
-
-        # logging.info("mean out_prob.shape:", out_prob.shape)
-        # logging.info("batch_rot_target.shape:", batch_rot_target.shape)
-        # logging.info("batch_rot_obstacle.shape:", batch_rot_obstacle.shape)
 
         return out_prob
     
@@ -208,11 +202,9 @@ class ActionNet(nn.Module):
 
             if is_volatile:
                 prob = self._volatile(heightmap, target_mask, obstacle_mask)
-                probs.append(prob)
             else:
-                rot_id = rot_ids[i]
-                prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_id)
-                probs.append(prob)
+                prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_ids[i])
+            probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
         # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
@@ -227,7 +219,7 @@ class ActionNet(nn.Module):
             pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
             pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
             probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-            logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
+            # logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
 
 
         embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
@@ -244,5 +236,20 @@ class ActionNet(nn.Module):
             predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # logging.info("view predictions.shape:", predictions.shape)      
+
+        preds = []
+        for i in range(len(sequence)):
+            if is_volatile:
+                pred = self._volatile_undo_rotate(predictions[i])
+            else:
+                heightmap, target_mask, obstacle_mask = sequence[i]
+                heightmap = heightmap.to(self.device)
+
+                thetas = np.radians(rot_ids[i] * (360 / self.nr_rotations))
+                pred = self._non_volatile_undo_rotate(heightmap, predictions[i], thetas)
+            preds.append(pred)
+
+        preds_stack = torch.stack(preds, dim=0)
+        # logging.info("preds_stack.shape:", preds_stack.shape)
         
-        return predictions
+        return preds_stack

@@ -1,17 +1,14 @@
 import os
 import random
-import shutil
-import argparse
 from policy.models import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
-import numpy as np
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net import ActionNet
+from policy.action_net_3 import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
@@ -50,43 +47,41 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item()
+            loss_item = loss.item() * len(x)
+            total_loss += loss_item
             if step % args.step == 0:
-                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}\t Lr: {optimizer.param_groups[0]['lr']}")
+                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss_item}\t Lr: {optimizer.param_groups[0]['lr']}")
 
         train_loss = total_loss / len(dataloaders['train'].dataset)
-        logging.info(f'Train Loss: {train_loss}')
 
-
-
+        total_loss = 0
         model.eval()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
         logging.info("\nEval mode...")
-        for phase in ['val']:
-            for step, batch in enumerate(dataloaders[phase]):
-                if is_fcn:
-                    x = batch[0]
-                    rotations = batch[1]
-                    y = batch[2]
-                    pred = model(x, rotations)
+        for step, batch in enumerate(dataloaders['val']):
+            if is_fcn:
+                x = batch[0]
+                rotations = batch[1]
+                y = batch[2]
+                pred = model(x, rotations)
 
-                    y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
-                else:
-                    x = batch[0].to(args.device, dtype=torch.float32)
-                    y = batch[1].to(args.device, dtype=torch.float32)
+                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+            else:
+                x = batch[0].to(args.device, dtype=torch.float32)
+                y = batch[1].to(args.device, dtype=torch.float32)
 
-                    pred = model(x)
+                pred = model(x)
 
-                # compute loss
-                loss = criterion(pred, y)
-                loss = torch.sum(loss)
-                epoch_loss[phase] += loss.item()
+            # compute loss
+            loss = criterion(pred, y)
+            loss = torch.sum(loss)
 
-                if step % args.step == 0:
-                    logging.info(f"{phase.capitalize()} Step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
+            loss_item = loss.item() * len(x)
+            total_loss += loss_item
 
-            loss_ = total_loss / len(dataloaders[phase].dataset)
-            logging.info(f'{phase.capitalize()} Loss: {loss_}')
+            if step % args.step == 0:
+                logging.info(f"Val Step [{step}/{len(dataloaders['val'])}]\t Loss: {loss_item}")
+
+        val_loss = total_loss / len(dataloaders['val'].dataset)
 
 
         # save model
@@ -96,8 +91,7 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
         # Decay Learning Rate
         scheduler.step()
 
-        logging.info('Epoch {}: training loss = {}, validation loss = {}'
-                     .format(epoch, train_loss, epoch_loss['val'] / len(dataloaders['val'])))
+        logging.info('Epoch {}: training loss = {}, validation loss = {}'.format(epoch, train_loss, val_loss))
         
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
@@ -137,7 +131,7 @@ def train_fcn(args):
     # val_ids = val_ids[:data_length]
 
     val_dataset = HeightMapDataset(args, val_ids)
-    data_loader_val = data.DataLoader(val_dataset, batch_size=1, num_workers=4, pin_memory=True)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
@@ -148,9 +142,9 @@ def train_fcn(args):
 
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90])
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60, 80])
     # criterion = nn.MSELoss()
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCEWithLogitsLoss()
 
     # logging.info(model)
 
