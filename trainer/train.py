@@ -127,11 +127,11 @@ def train_fcn(args):
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
-    # data_length = (len(val_ids)//args.batch_size) * args.batch_size
-    # val_ids = val_ids[:data_length]
+    data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    val_ids = val_ids[:int(data_length/2)]
 
     val_dataset = HeightMapDataset(args, val_ids)
-    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=2, num_workers=4, pin_memory=True)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
