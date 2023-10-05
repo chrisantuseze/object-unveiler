@@ -144,7 +144,7 @@ def train_fcn(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60, 80])
     # criterion = nn.MSELoss()
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
 
     # logging.info(model)
 
