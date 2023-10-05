@@ -149,7 +149,8 @@ def train_fcn(args):
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90])
-    criterion = nn.MSELoss()
+    # criterion = nn.MSELoss()
+    criterion = nn.BCELoss(reduction='none')
 
     # logging.info(model)
 
