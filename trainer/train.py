@@ -6,6 +6,8 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
+from torch.utils.tensorboard import SummaryWriter
+
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
 from policy.action_net_3 import ActionNet
@@ -15,6 +17,9 @@ import utils.logger as logging
 
 def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, is_fcn=True):
     prefix = "fcn" if is_fcn else "reg"
+
+    writer = SummaryWriter()
+
     
     for epoch in range(args.epochs):
         logging.info('\nEpoch {}/{}'.format(epoch, args.epochs))
@@ -92,7 +97,10 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
         scheduler.step()
 
         logging.info('Epoch {}: training loss = {}, validation loss = {}'.format(epoch, train_loss, val_loss))
+        writer.add_scalar("training loss x epoch", train_loss, epoch)
+        writer.add_scalar("validation loss x epoch", val_loss, epoch)
         
+    writer.close()
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
 
 
@@ -114,6 +122,8 @@ def train_fcn(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
+    transition_dirs = transition_dirs[:4000]
+
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
@@ -127,8 +137,8 @@ def train_fcn(args):
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
-    data_length = (len(val_ids)//args.batch_size) * args.batch_size
-    val_ids = val_ids[:int(data_length/2)]
+    # data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    # val_ids = val_ids[:int(data_length)]
 
     val_dataset = HeightMapDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=2, num_workers=4, pin_memory=True)
@@ -143,8 +153,8 @@ def train_fcn(args):
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60, 80])
-    # criterion = nn.MSELoss()
-    criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
+    criterion = nn.MSELoss()
+    # criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
 
     # logging.info(model)
 
