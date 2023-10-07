@@ -29,6 +29,7 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
         model.train()
         logging.info("\nTrain mode...")
         for step, batch in enumerate(dataloaders['train']):
+            optimizer.zero_grad()
             if is_fcn:
                 x = batch[0]
                 rotations = batch[1]
@@ -46,9 +47,6 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
 
             # compute loss in the whole scene
             loss = criterion(pred, y)
-            loss = torch.sum(loss)
-
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -57,7 +55,7 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
             if step % args.step == 0:
                 logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss_item}\t Lr: {optimizer.param_groups[0]['lr']}")
 
-        train_loss = total_loss / len(dataloaders['train'].dataset)
+        train_loss = total_loss / len(dataloaders['train'])
 
         total_loss = 0
         model.eval()
@@ -78,15 +76,13 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
 
             # compute loss
             loss = criterion(pred, y)
-            loss = torch.sum(loss)
-
             loss_item = loss.item() * len(x)
             total_loss += loss_item
 
             if step % args.step == 0:
                 logging.info(f"Val Step [{step}/{len(dataloaders['val'])}]\t Loss: {loss_item}")
 
-        val_loss = total_loss / len(dataloaders['val'].dataset)
+        val_loss = total_loss / len(dataloaders['val'])
 
 
         # save model
