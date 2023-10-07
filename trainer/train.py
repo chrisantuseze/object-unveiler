@@ -47,6 +47,7 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
 
             # compute loss in the whole scene
             loss = criterion(pred, y)
+            loss = torch.sum(loss)
             loss.backward()
             optimizer.step()
 
@@ -76,6 +77,7 @@ def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, 
 
             # compute loss
             loss = criterion(pred, y)
+            loss = torch.sum(loss)
             loss_item = loss.item() * len(x)
             total_loss += loss_item
 
