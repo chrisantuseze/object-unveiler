@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_3 import ActionNet
+from policy.action_net_linear import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
@@ -122,6 +122,7 @@ def train_fcn(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
+    # TODO: remember to remove this
     transition_dirs = transition_dirs[:4000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
