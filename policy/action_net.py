@@ -247,7 +247,7 @@ class ActionNet(nn.Module):
             predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
         else:
             predictions = self.fc_eval(outputs)
-            predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
+            predictions = predictions.view(self.args.sequence_length, self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         # logging.info("view predictions.shape:", predictions.shape)      
         
