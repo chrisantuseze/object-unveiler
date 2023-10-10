@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_undo import ActionNet
+from policy.action_net_linear import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
