@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_linear import ActionNet
+from policy.action_net_undo import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
@@ -152,8 +152,8 @@ def train_fcn(args):
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60, 80])
-    criterion = nn.MSELoss()
-    # criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
+    # criterion = nn.MSELoss()
+    criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
 
     # logging.info(model)
 
