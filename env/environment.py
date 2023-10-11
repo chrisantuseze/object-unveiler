@@ -261,7 +261,7 @@ class Environment:
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
-        for i in range(1): #range(len(obj_paths)):
+        for i in range(len(obj_paths)):
             obj = env_components.Objects()
             base_pos, base_orient = self.workspace2world(np.array([1.0, 1.0, 0.0]), Quaternion())
             body_id = p_utils.load_obj(obj_path=obj_paths[i], scaling=1.0, position=base_pos, orientation=base_orient.as_vector("xyzw"))
