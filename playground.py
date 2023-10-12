@@ -4,8 +4,8 @@ import zipfile
 import pickle
 import os
 
-with zipfile.ZipFile("ppg-dataset.zip", 'r') as zip_ref:
-    zip_ref.extractall("ppg-dataset")
+# with zipfile.ZipFile("ppg-dataset.zip", 'r') as zip_ref:
+#     zip_ref.extractall("ppg-dataset")
 
 
 # arr = [3,1,4,5,5,1,42,13,8,6]
@@ -29,3 +29,12 @@ with zipfile.ZipFile("ppg-dataset.zip", 'r') as zip_ref:
 #         except:
 #             os.remove(os.path.join(folder_path, filename))
 #             print(filename)
+
+
+directory = "/Users/chrisantuseze/Research/robot-learning/ppg-datasets/ppg-dataset/"
+for root, dirs, files in os.walk(directory, topdown=False):
+    for dir in dirs:
+        dir_path = os.path.join(root, dir)
+        if not os.listdir(dir_path):
+            os.rmdir(dir_path)
+            print(f"Removed empty directory: {dir_path}")

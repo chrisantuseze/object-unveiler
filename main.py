@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import torch
 import argparse
-from trainer.train import train_fcn, train_regressor
+from trainer.train_new import train_fcn_net, train_regressor
 from eval_agent import eval_agent
 import utils.utils as utils
 import utils.logger as logging
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     logging.info("The selected mode is:", args.mode, "and batch size is:", args.batch_size)
 
     if args.mode == 'fcn':
-        train_fcn(args)
+        train_fcn_net(args)
         
     elif args.mode == 'reg':
         train_regressor(args)
