@@ -1,6 +1,6 @@
 import os
 import random
-from policy.models import Regressor, ResFCN
+from policy.models_new import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -55,7 +55,12 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ActionNet(args).to(args.device)
+    # model = ActionNet(args).to(args.device)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # # criterion = nn.SmoothL1Loss(reduction='none')
+    # criterion = nn.BCELoss(reduction='none')
+
+    model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
@@ -63,10 +68,14 @@ def train_fcn_net(args):
     for epoch in range(args.epochs):
         model.train()
         for batch in data_loader_train:
-            x = batch[0]
+            # x = batch[0]
+            # rotations = batch[1]
+            # y = batch[2]
+            # y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+
+            x = batch[0].to(args.device)
             rotations = batch[1]
-            y = batch[2]
-            y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+            y = batch[2].to(args.device, dtype=torch.float)
 
             pred = model(x, rotations)
 
@@ -82,10 +91,14 @@ def train_fcn_net(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for batch in data_loaders[phase]:
-                x = batch[0]
+                # x = batch[0]
+                # rotations = batch[1]
+                # y = batch[2]
+                # y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+
+                x = batch[0].to(args.device)
                 rotations = batch[1]
-                y = batch[2]
-                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                y = batch[2].to(args.device, dtype=torch.float)
 
                 pred = model(x, rotations)
 

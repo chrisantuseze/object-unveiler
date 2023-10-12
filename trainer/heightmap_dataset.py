@@ -30,7 +30,7 @@ class HeightMapDataset(data.Dataset):
 
         self.memory = ReplayBuffer(self.dataset_dir)
 
-    def __getitem__(self, id):
+    def __getitem__old(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
 
         sequence = []
@@ -157,10 +157,14 @@ class HeightMapDataset(data.Dataset):
 
         return sequence, rot_ids, labels
 
-    def __getitem__old(self, id):
-        heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
-        target_mask = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'target_mask.png'), -1)
-        action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[id], 'action'), 'rb'))
+    def __getitem__(self, id):
+        episode_data = self.memory.load_episode(self.dir_ids[id])
+        heightmap, target_mask, obstacle_mask, action = episode_data[0]
+
+
+        # heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
+        # target_mask = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'target_mask.png'), -1)
+        # action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[id], 'action'), 'rb'))
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -188,7 +192,17 @@ class HeightMapDataset(data.Dataset):
         rot_id = round(angle / (2 * np.pi / 16))
 
         action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
-        action_area[int(action[1]), int(action[0])] = 1.0
+        # action_area[int(action[1]), int(action[0])] = 1.0
+
+        if int(action[1]) > 99 or int(action[0]):
+            i = min(int(action[1]) * 0.95, 99)
+            j = min(int(action[0]) * 0.95, 99)
+        else:
+            i = action[1]
+            j = action[0]
+
+        action_area[int(i), int(j)] = 1.0
+        
         label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area

@@ -124,14 +124,8 @@ def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter
     while episode_data['attempts'] < max_steps:
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        # get a randomly picked target mask from the segmented image
-        # target_mask, id = utils.get_target_mask(segmenter, obs, rng)
-        # cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
-
-        target_mask = obs['color'][0]
-
         state = policy.state_representation(obs)
-        action = policy.exploit_old(state, target_mask)
+        action = policy.exploit_old(state)
         env_action3d = policy.action3d(action)
 
         next_obs, grasp_info = env.step(env_action3d)

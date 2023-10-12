@@ -1,7 +1,7 @@
 import os
 import pickle
 from policy.models import Regressor, ResFCN
-from policy.action_net_undo import ActionNet
+from policy.action_net_linear_undo import ActionNet
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -393,26 +393,15 @@ class Policy:
 
         return actions
     
-    def exploit_old(self, state, target_mask):
+    def exploit_old(self, state):
 
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-
-        # Resize the image using seam carving to match with the heightmap
-        resized_target = utils.resize_mask(transform, target_mask)
-        target = self.preprocess_old(resized_target)
-        pre_processed_target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-        
-        out_prob = self.fcn(x, pre_processed_target, is_volatile=True)
-        logging.info("out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
-
+        out_prob = self.fcn(x, is_volatile=True)
         out_prob = self.postprocess_old(out_prob)
-        logging.info("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
-        logging.info("len(best_action):", len(best_action), "best_action:", best_action)
-
         p1 = np.array([best_action[3], best_action[2]])
         theta = best_action[0] * 2 * np.pi/self.rotations
 
