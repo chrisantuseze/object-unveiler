@@ -87,6 +87,7 @@ class ResFCN(nn.Module):
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x)
+       
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         return out
@@ -127,7 +128,6 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(batch_rot_depth)
             prob = prob_depth
 
-            print("prob.shape:", prob.shape)
             # prob_target = self.predict(batch_rot_target)
 
             # prob = torch.cat((prob_depth, prob_target), dim=1)
@@ -147,7 +147,6 @@ class ResFCN(nn.Module):
                                             prob.size(), align_corners=True)
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-            print("out_prob.shape:", out_prob.shape)
 
             return out_prob
         
@@ -204,24 +203,6 @@ class ResFCN(nn.Module):
 
             return out_prob
         
-
-class Classifier(nn.Module):
-    def __init__(self, n_classes):
-        super(Classifier, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=4, stride=2, padding=1, bias=False)
-        self.conv2 = nn.Conv2d(16, 16, kernel_size=4, stride=2, padding=1, bias=False)
-        self.fc1 = nn.Linear(4096, 128)
-        self.fc2 = nn.Linear(128, n_classes)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = x.view(x.shape[0], -1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-
-        return x
-    
 
 class Regressor(nn.Module):
     def __init__(self):
