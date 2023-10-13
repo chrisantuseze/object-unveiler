@@ -67,7 +67,7 @@ def train_fcn_net(args):
 
     for epoch in range(args.epochs):
         model.train()
-        for batch in data_loader_train:
+        for step, batch in enumerate(data_loader_train):
             x = batch[0]
             rotations = batch[1]
             y = batch[2]
@@ -90,7 +90,7 @@ def train_fcn_net(args):
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
-            for batch in data_loaders[phase]:
+            for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0]
                 rotations = batch[1]
                 y = batch[2]
@@ -105,6 +105,9 @@ def train_fcn_net(args):
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
+
+                if step % args.step == 0:
+                    logging.info(f"{phase.capitalize} Step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         # Save model
         # if epoch % 1 == 0:
