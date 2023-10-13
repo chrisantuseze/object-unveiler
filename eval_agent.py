@@ -176,7 +176,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_old(policy, env, segmenter, rng, episode_seed, train=False)
+        episode_data = run_episode(policy, env, segmenter, rng, episode_seed, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

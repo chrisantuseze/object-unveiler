@@ -39,6 +39,11 @@ class ActionNet(nn.Module):
         self.fc_train = nn.Linear(hidden_size, output_dim1)
         self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
+        n1 = output_dim1
+        n2 = 4*output_dim2
+        self.fc1 = nn.Linear(output_dim1, n1)
+        self.fc2 = nn.Linear(input_size, n2)
+
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
@@ -94,16 +99,10 @@ class ActionNet(nn.Module):
             batch_rot_target[rot_id] = rotate_target_mask[0]
             batch_rot_obstacle[rot_id] = rotate_obstacle_mask[0]
 
-        # return batch_rot_depth, batch_rot_target, batch_rot_obstacle
-
         # compute rotated feature maps
         prob_depth = self._predict(batch_rot_depth)
         prob_target = self._predict(batch_rot_target)
         prob_obstacle = self._predict(batch_rot_obstacle)
-
-        # logging.info("prob_depth.shape:", prob_depth.shape)
-        # logging.info("prob_target.shape:", prob_target.shape)
-        # logging.info("prob_obstacle.shape:", prob_obstacle.shape)
 
         probs = torch.cat((prob_depth, prob_target, prob_obstacle), dim=1)
 
@@ -126,14 +125,6 @@ class ActionNet(nn.Module):
 
         logging.info("out_prob.shape:", out_prob.shape)
         out_prob = torch.mean(out_prob, dim=0, keepdim=True)
-
-        # batch_rot_target = torch.mean(batch_rot_target, dim=0, keepdim=True)
-
-        # batch_rot_obstacle = torch.mean(batch_rot_obstacle, dim=0, keepdim=True)
-
-        # logging.info("mean out_prob.shape:", out_prob.shape)
-        # logging.info("batch_rot_target.shape:", batch_rot_target.shape)
-        # logging.info("batch_rot_obstacle.shape:", batch_rot_obstacle.shape)
 
         return out_prob
     
@@ -161,14 +152,6 @@ class ActionNet(nn.Module):
         rotate_obstacle_mask = F.grid_sample(Variable(obstacle_mask, requires_grad=False).to(self.device),
                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
-        # Compute intermediate features
-        # prob_depth = self.predict(rotate_depth)
-        # prob_target = self.predict(rotate_target_mask)
-
-        # prob = torch.cat((prob_depth, prob_target), dim=1)
-
-        # return rotate_depth, rotate_target_mask, rotate_obstacle_mask
-    
         # compute rotated feature maps
         prob_depth = self._predict(rotate_depth)
         prob_target = self._predict(rotate_target_mask)
@@ -221,34 +204,21 @@ class ActionNet(nn.Module):
                 probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
-        # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
+        logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
 
         sequence_length, batch_size, channels, height, width = probs_stack.shape
-        probs_stack = probs_stack.view(-1, channels, height, width)
-        # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 3, 224, 224])
-
-        # Pad the tensor to achieve the desired shape
-        if not self.is_train:
-            sequence_length, channels, height, width = probs_stack.shape
-            pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
-            pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
-            probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-            logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
-
-
-        embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
-        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528]) #62208
-
-        outputs, (hidden, cell) = self.lstm(embeddings)
-        # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
 
         if self.is_train:
-            predictions = self.fc_train(outputs)
+            predictions = self.fc1(probs_stack)
+            logging.info("predictions.shape:", predictions.shape)  
+
             predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
         else:
-            predictions = self.fc_eval(outputs)
+            predictions = self.fc2(probs_stack)
+            logging.info("predictions.shape:", predictions.shape)  
+            
             predictions = predictions.view(self.args.sequence_length, self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
 
-        # logging.info("view predictions.shape:", predictions.shape)      
-        
+        logging.info("view predictions.shape:", predictions.shape)  
+
         return predictions
