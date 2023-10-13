@@ -110,7 +110,7 @@ def train_fcn_net(args):
         # if epoch % 1 == 0:
         #     torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
 
-        print('Epoch {}: training loss = {:.4f} '
+        logging.info('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
 
