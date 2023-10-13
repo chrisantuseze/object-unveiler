@@ -27,22 +27,6 @@ class ActionNet(nn.Module):
         self.rb6 = self._make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        # Define training parameters
-        input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
-        hidden_size = IMAGE_SIZE
-        num_layers = 2  # Number of LSTM layers
-        bidirectional = False  # Use bidirectional LSTM
-        output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
-        output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
-
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        self.fc_train = nn.Linear(hidden_size, output_dim1)
-        self.fc_eval = nn.Linear(hidden_size, output_dim2)
-
-        n1 = output_dim1
-        n2 = 4*output_dim2
-        self.fc1 = nn.Linear(output_dim1, n1)
-        self.fc2 = nn.Linear(input_size, n2)
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -204,21 +188,10 @@ class ActionNet(nn.Module):
                 probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
-        logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
+        # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([4, 1, 3, 224, 224])
 
-        sequence_length, batch_size, channels, height, width = probs_stack.shape
+        # Reduce the tensor to 4x1x1x224x224 by taking the mean along the 3rd dimension (dimension 2)
+        output_tensor = torch.mean(probs_stack, dim=2, keepdim=True)
+        # logging.info("output_tensor.shape:", output_tensor.shape)       #torch.Size([4, 1, 1, 224, 224])
 
-        if self.is_train:
-            predictions = self.fc1(probs_stack)
-            logging.info("predictions.shape:", predictions.shape)  
-
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
-        else:
-            predictions = self.fc2(probs_stack)
-            logging.info("predictions.shape:", predictions.shape)  
-            
-            predictions = predictions.view(self.args.sequence_length, self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
-
-        logging.info("view predictions.shape:", predictions.shape)  
-
-        return predictions
+        return output_tensor
