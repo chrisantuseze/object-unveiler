@@ -127,7 +127,7 @@ class ActionNet(nn.Module):
         flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device), prob.size(), align_corners=True)
         out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-        logging.info("out_prob.shape:", out_prob.shape)
+        # logging.info("out_prob.shape:", out_prob.shape)
         out_prob = torch.mean(out_prob, dim=0, keepdim=True)
 
         return out_prob

@@ -192,6 +192,6 @@ class ActionNet(nn.Module):
 
         # Reduce the tensor to 4x1x1x224x224 by taking the mean along the 3rd dimension (dimension 2)
         output_tensor = torch.mean(probs_stack, dim=2, keepdim=True)
-        logging.info("output_tensor.shape:", output_tensor.shape)       #torch.Size([4, 1, 1, 224, 224])
+        # logging.info("output_tensor.shape:", output_tensor.shape)       #torch.Size([4, 1, 1, 224, 224])
 
         return output_tensor
