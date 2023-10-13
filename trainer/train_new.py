@@ -107,7 +107,7 @@ def train_fcn_net(args):
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    logging.info(f"{phase.capitalize} Step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                    logging.info(f"{phase} Step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         # Save model
         # if epoch % 1 == 0:
