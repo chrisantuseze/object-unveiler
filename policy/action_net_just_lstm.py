@@ -32,7 +32,7 @@ class ActionNet(nn.Module):
         hidden_size = 64
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
 
-        self.feature_extractor = torchvision.models.resnet18(pretrained=True)
+        # self.feature_extractor = torchvision.models.resnet18(pretrained=True)
         self.encoder_fc = nn.Linear(input_size, output_dim1)
 
          # LSTM for sequence processing
@@ -117,7 +117,7 @@ class ActionNet(nn.Module):
             output = self.out(decoder_output)
             # logging.info("out output.shape:", output.shape)
 
-            output = output.view(self.args.batch_size, 1, decoder_output.shape[2], decoder_output.shape[2])
+            output = output.view(self.args.batch_size, 1, outputs.shape[3], outputs.shape[4])
             # logging.info("view output.shape:", output.shape)
             
             outputs[i] = output
