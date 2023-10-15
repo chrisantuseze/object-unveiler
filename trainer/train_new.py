@@ -65,8 +65,6 @@ def train_fcn_net(args):
     # # criterion = nn.SmoothL1Loss(reduction='none')
     # criterion = nn.BCELoss(reduction='none')
 
-    logging.info("model:", model.parameters())
-
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
@@ -74,6 +72,7 @@ def train_fcn_net(args):
             rotations = batch[1]
             y = batch[2]
             y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+            logging.info("y.shape:", y.shape)
 
             # x = batch[0].to(args.device)
             # rotations = batch[1]
