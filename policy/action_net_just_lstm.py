@@ -219,9 +219,9 @@ class ActionNet(nn.Module):
         # logging.info("heightmap.shape:", sequence[0][0].shape)
         for i in range(len(sequence)):
             heightmap, target_mask, obstacle_mask = sequence[i]
-            heightmap = heightmap.to(self.args.device)
-            target_mask = target_mask.to(self.args.device)
-            obstacle_mask = obstacle_mask.to(self.args.device)
+            heightmap = heightmap.to(self.device)
+            target_mask = target_mask.to(self.device)
+            obstacle_mask = obstacle_mask.to(self.device)
 
             heightmap_features_t = self._predict(heightmap)
             target_features_t = self._predict(target_mask)
@@ -250,7 +250,7 @@ class ActionNet(nn.Module):
         output, (hidden, cell) = self.encoder(input_seq)
         # logging.info("encoder output.shape:", output.shape, "hidden.shape:", hidden.shape)
 
-        outputs = torch.zeros(self.args.sequence_length, self.args.batch_size, 1, IMAGE_SIZE, IMAGE_SIZE)
+        outputs = torch.zeros(self.args.sequence_length, self.args.batch_size, 1, IMAGE_SIZE, IMAGE_SIZE).to(self.device)
         decoder_input = torch.empty(1, self.args.batch_size, input_seq.shape[2], dtype=torch.float, device=self.args.device)
 
         for i in range(len(actions)):
