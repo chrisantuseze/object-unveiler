@@ -65,7 +65,7 @@ def train_fcn_net(args):
     # # criterion = nn.SmoothL1Loss(reduction='none')
     # criterion = nn.BCELoss(reduction='none')
 
-    logging.info("model:", model)
+    logging.info("model:", model.parameters())
 
     for epoch in range(args.epochs):
         model.train()
