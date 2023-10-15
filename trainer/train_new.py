@@ -86,6 +86,10 @@ def train_fcn_net(args):
 
             optimizer.zero_grad()
             loss.backward()
+
+            clip_value = 0.9
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_value)  # Clip gradients
+
             optimizer.step()
 
             logging.info(f"train step [{step}/{len(data_loaders['train'])}]\t Loss: {loss.detach().cpu().numpy()}")
