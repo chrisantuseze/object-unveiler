@@ -219,9 +219,9 @@ class ActionNet(nn.Module):
         # logging.info("heightmap.shape:", sequence[0][0].shape)
         for i in range(len(sequence)):
             heightmap, target_mask, obstacle_mask = sequence[i]
-            heightmap = heightmap.to(self.device)
-            target_mask = target_mask.to(self.device)
-            obstacle_mask = obstacle_mask.to(self.device)
+            heightmap = heightmap.to(self.args.device)
+            target_mask = target_mask.to(self.args.device)
+            obstacle_mask = obstacle_mask.to(self.args.device)
 
             heightmap_features_t = self._predict(heightmap)
             target_features_t = self._predict(target_mask)
