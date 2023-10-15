@@ -30,15 +30,7 @@ class ActionNet(nn.Module):
         # Define training parameters
         input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
         hidden_size = IMAGE_SIZE
-        num_layers = 2  # Number of LSTM layers
-        bidirectional = False  # Use bidirectional LSTM
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
-        output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
-
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        self.fc_train = nn.Linear(hidden_size, output_dim1)
-        self.fc_eval = nn.Linear(hidden_size, output_dim2)
-
 
         self.encoder_fc = nn.Linear(input_size, output_dim1)
 
