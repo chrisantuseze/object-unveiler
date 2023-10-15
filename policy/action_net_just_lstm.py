@@ -39,6 +39,15 @@ class ActionNet(nn.Module):
         self.fc_train = nn.Linear(hidden_size, output_dim1)
         self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
+
+        self.encoder_fc = nn.Linear(input_size, output_dim1)
+
+         # LSTM for sequence processing
+        self.encoder = nn.LSTM(input_size=output_dim1, hidden_size=hidden_size) # out, hid, cell = output_dim1, _, _
+        self.decoder = nn.LSTM(input_size=output_dim1, hidden_size=hidden_size) # decoder(in, hid, cell) = output_dim1, output_dim1, output_dim1)
+
+        self.out = nn.Linear(hidden_size, output_dim1)
+
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
@@ -203,52 +212,66 @@ class ActionNet(nn.Module):
         return out_prob
     
 
-    def forward(self, sequence, rot_ids=[], is_volatile=False):
-        probs = []
+    def forward(self, sequence, actions=None, rot_ids=[], is_volatile=False):
+        # Process the image sequence through the CNN and a fully connected layer
+        image_features = []
+
+        logging.info("heightmap.shape:", sequence[0][0].shape)
         for i in range(len(sequence)):
             heightmap, target_mask, obstacle_mask = sequence[i]
+
+            heightmap_features_t = self._predict(heightmap)
+            target_features_t = self._predict(target_mask)
+            obstacle_features_t = self._predict(obstacle_mask)
+
+            heightmap_features_t = heightmap_features_t.view(self.args.batch_size, -1)
+            # logging.info("view heightmap_features_t.shape:", heightmap_features_t.shape)
+
+            target_features_t = target_features_t.view(self.args.batch_size, -1)
+            obstacle_features_t = obstacle_features_t.view(self.args.batch_size, -1)
+
+            concat_image_features = torch.cat((heightmap_features_t, target_features_t, obstacle_features_t), dim=1).to(self.device)
+            # logging.info("concat_image_features.shape:", concat_image_features.shape)
+
+            features = self.encoder_fc(concat_image_features)
+            # logging.info("features.shape:", features.shape)
+
+            image_features.append(features)
             
-            heightmap = heightmap.to(self.device)
-            target_mask = target_mask.to(self.device)
-            obstacle_mask = obstacle_mask.to(self.device)
+        input_seq = torch.stack(image_features, dim=0)
+        # logging.info("input_seq.shape:", input_seq.shape)
 
-            if is_volatile:
-                prob = self._volatile(heightmap, target_mask, obstacle_mask)
-                probs.append(prob)
+        input_seq = input_seq.view(self.args.sequence_length, self.args.batch_size, -1)
+        # logging.info("view input_seq.shape:", input_seq.shape)
+
+        output, (hidden, cell) = self.encoder(input_seq)
+        # logging.info("encoder output.shape:", output.shape, "hidden.shape:", hidden.shape)
+
+        outputs = torch.zeros(self.args.sequence_length, self.args.batch_size, 1, IMAGE_SIZE, IMAGE_SIZE)
+        decoder_input = torch.empty(1, self.args.batch_size, input_seq.shape[2], dtype=torch.float, device=self.args.device)
+
+        for i in range(len(actions)):
+            # print(actions[i].shape)
+            decoder_output, _ = self.decoder(decoder_input, (hidden, cell))
+            # logging.info("decoder_output.shape:", decoder_output.shape)
+
+            output = self.out(decoder_output)
+            # logging.info("out output.shape:", output.shape)
+
+            output = output.view(self.args.batch_size, 1, decoder_output.shape[2], decoder_output.shape[2])
+            # logging.info("view output.shape:", output.shape)
+            
+            outputs[i] = output
+
+            if actions is not None:
+                # Teacher forcing: Feed the target as the next input
+                decoder_input = actions[i].view(1, self.args.batch_size, -1)
+                # decoder_input = target_tensor[:, i].unsqueeze(1) # Teacher forcing
             else:
-                rot_id = rot_ids[i]
-                prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_id)
-                probs.append(prob)
+                # Without teacher forcing: use its own predictions as the next input
+                _, topi = decoder_output.topk(1)
+                decoder_input = topi.squeeze(-1).detach()  # detach from history as input
 
-        probs_stack = torch.stack(probs, dim=0)
-        logging.info("probs_stack.shape:", probs_stack.shape)           #train -> torch.Size([4, 1, 3, 224, 224]) eval -> torch.Size([1, 1, 3, 224, 224])
+        logging.info("outputs.shape:", outputs.shape)
 
-        sequence_length, batch_size, channels, height, width = probs_stack.shape
-        probs_stack = probs_stack.view(-1, channels, height, width)
-        # logging.info("view probs_stack.shape:", probs_stack.shape)      #train -> torch.Size([4, 3, 224, 224])    eval -> torch.Size([1, 3, 224, 224])
-
-        # Pad the tensor to achieve the desired shape
-        if not self.is_train:
-            sequence_length, channels, height, width = probs_stack.shape
-            pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
-            pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
-            probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-            logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
-
-
-        embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
-        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528]) #62208
-
-        outputs, (hidden, cell) = self.lstm(embeddings)
-        # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
-
-        if self.is_train:
-            predictions = self.fc_train(outputs)
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
-        else:
-            predictions = self.fc_eval(outputs)
-            predictions = predictions.view(self.args.sequence_length, self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
-
-        # logging.info("view predictions.shape:", predictions.shape)      
-        
-        return predictions
+        return outputs

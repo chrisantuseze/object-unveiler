@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_new import ActionNet
+from policy.action_net_just_lstm import ActionNet
 
 import utils.utils as utils
 import utils.logger as logging
@@ -58,7 +58,7 @@ def train_fcn_net(args):
     model = ActionNet(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCEWithLogitsLoss() #nn.BCELoss(reduction='none')
 
     # model = ResFCN().to(args.device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -77,7 +77,7 @@ def train_fcn_net(args):
             # rotations = batch[1]
             # y = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(x, rotations)
+            pred = model(x, y, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -86,6 +86,8 @@ def train_fcn_net(args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            logging.info(f"train step [{step}/{len(data_loaders['train'])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -100,18 +102,18 @@ def train_fcn_net(args):
                 # rotations = batch[1]
                 # y = batch[2].to(args.device, dtype=torch.float)
 
-                pred = model(x, rotations)
+                pred = model(x, y, rotations)
 
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    logging.info(f"{phase} Step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         # Save model
-        # if epoch % 1 == 0:
-        #     torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
+        if epoch % 1 == 0:
+            torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
 
         logging.info('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),

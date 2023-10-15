@@ -108,7 +108,7 @@ class ActionNet(nn.Module):
         out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
         # logging.info("out_prob.shape:", out_prob.shape)
-        out_prob = torch.mean(out_prob, dim=0, keepdim=True)
+        # out_prob = torch.mean(out_prob, dim=0, keepdim=True)
 
         return out_prob
     
@@ -191,7 +191,14 @@ class ActionNet(nn.Module):
         # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([4, 1, 3, 224, 224])
 
         # Reduce the tensor to 4x1x1x224x224 by taking the mean along the 3rd dimension (dimension 2)
-        output_tensor = torch.mean(probs_stack, dim=2, keepdim=True)
-        # logging.info("output_tensor.shape:", output_tensor.shape)       #torch.Size([4, 1, 1, 224, 224])
+        probs_stack = torch.mean(probs_stack, dim=2, keepdim=True)
+        if self.is_train:
+            return probs_stack
 
-        return output_tensor
+        sequence_length, batch, channels, height, width = probs_stack.shape
+        pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
+        pad = (0,0, 0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 1, 16, 1
+        predictions = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
+        # logging.info("padded predictions.shape:", predictions.shape)    #torch.Size([4, 16, 1, 224, 224])
+
+        return predictions

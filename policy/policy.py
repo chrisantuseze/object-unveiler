@@ -1,7 +1,7 @@
 import os
 import pickle
 from policy.models_new import Regressor, ResFCN
-from policy.action_net_new import ActionNet
+from policy.action_net_just_lstm import ActionNet
 import torch
 import torch.optim as optim
 import torch.nn as nn
