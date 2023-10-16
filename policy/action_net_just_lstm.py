@@ -139,7 +139,7 @@ class ActionNet(nn.Module):
                 # Without teacher forcing: use its own predictions as the next input
                 decoder_input = fc_output
 
-        logging.info("outputs.shape:", outputs.shape)
+        # logging.info("outputs.shape:", outputs.shape)
 
         return outputs
     
