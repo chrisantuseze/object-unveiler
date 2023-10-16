@@ -88,7 +88,13 @@ class HeightMapDataset(data.Dataset):
 
             rot_ids = rot_ids + [0] * required_len
 
-        logging.info("sequence:", len(sequence), "rot_ids:", len(rot_ids), "labels:", len(labels))
+        for i in range(seq_len):
+            for j in range(3):
+                if sequence[i][j].shape[0] is not 1 and sequence[i][j].shape[1] is not 144 and sequence[i][j].shape[2] is not 144:
+                    logging.info("sequence:", sequence[i][j].shape)
+
+            if labels[i].shape[0] is not 1 and labels[i].shape[1] is not 144 and labels[i].shape[2] is not 144:
+                    logging.info("labels:", labels[i].shape)
             
         return sequence, rot_ids, labels
     

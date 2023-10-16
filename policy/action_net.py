@@ -221,7 +221,7 @@ class ActionNet(nn.Module):
                 probs.append(prob)
 
         probs_stack = torch.stack(probs, dim=0)
-        logging.info("probs_stack.shape:", probs_stack.shape)           #train -> torch.Size([4, 1, 3, 224, 224]) eval -> torch.Size([1, 1, 3, 224, 224])
+        # logging.info("probs_stack.shape:", probs_stack.shape)           #train -> torch.Size([4, 1, 3, 224, 224]) eval -> torch.Size([1, 1, 3, 224, 224])
 
         sequence_length, batch_size, channels, height, width = probs_stack.shape
         probs_stack = probs_stack.view(-1, channels, height, width)
