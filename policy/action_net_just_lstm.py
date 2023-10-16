@@ -8,6 +8,8 @@ import numpy as np
 import utils.logger as logging
 from utils.constants import *
 
+from torch.utils.checkpoint import checkpoint
+
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):
         super(ActionNet, self).__init__()
@@ -97,6 +99,7 @@ class ActionNet(nn.Module):
             image_features.append(features)
             
         input_seq = torch.stack(image_features, dim=0)
+        input_seq = checkpoint(input_seq)
         # logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
 
         # output, (hidden, cell) = self.encoder(input_seq)
