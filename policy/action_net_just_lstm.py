@@ -238,6 +238,8 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.args = args
 
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
         # Define training parameters
         hidden_size = 64
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
