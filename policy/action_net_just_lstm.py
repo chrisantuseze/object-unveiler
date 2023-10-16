@@ -140,7 +140,6 @@ class Encoder(nn.Module):
     def __init__(self, args, dropout_p=0.1):
         super(Encoder, self).__init__()
         self.args = args
-        self.hidden_size = hidden_size
 
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
