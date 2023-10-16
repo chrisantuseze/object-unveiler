@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_just_lstm import *
+from policy.action_net import *
 
 import utils.utils as utils
 import utils.logger as logging
@@ -78,7 +78,7 @@ def train_fcn_net(args):
             # rotations = batch[1]
             # y = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(x, y, rotations)
+            pred = model(x, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -104,7 +104,7 @@ def train_fcn_net(args):
                 # rotations = batch[1]
                 # y = batch[2].to(args.device, dtype=torch.float)
 
-                pred = model(x, y, rotations)
+                pred = model(x, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)
