@@ -29,7 +29,7 @@ class ActionNet(nn.Module):
 
         # Define training parameters
         input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
-        hidden_size = 64
+        hidden_size = 16
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
 
         # self.feature_extractor = torchvision.models.resnet18(pretrained=True)
