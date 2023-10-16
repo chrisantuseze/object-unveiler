@@ -78,7 +78,7 @@ def train_fcn_net(args):
             # rotations = batch[1]
             # y = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(x, rotations)
+            pred = model(x, rot_ids=rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -104,7 +104,7 @@ def train_fcn_net(args):
                 # rotations = batch[1]
                 # y = batch[2].to(args.device, dtype=torch.float)
 
-                pred = model(x, rotations)
+                pred = model(x, rot_ids=rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)

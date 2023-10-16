@@ -87,6 +87,8 @@ class HeightMapDataset(data.Dataset):
             sequence = sequence + [empty_tuple] * required_len
 
             rot_ids = rot_ids + [0] * required_len
+
+        logging.info("sequence:", len(sequence), "rot_ids:", len(rot_ids), "labels:", len(labels))
             
         return sequence, rot_ids, labels
     

@@ -102,7 +102,7 @@ class ActionNet(nn.Module):
     
     def checkpoint_forward(self, input, actions):
         input_seq = checkpoint(self.partial_forward, input)
-        # logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
+        logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
 
         # output, (hidden, cell) = self.encoder(input_seq)
         # logging.info("encoder output.shape:", output.shape, "hidden.shape:", hidden.shape)  #encoder output.shape: torch.Size([3, 5, 64]) hidden.shape: torch.Size([1, 5, 64])
@@ -118,14 +118,15 @@ class ActionNet(nn.Module):
 
         for i in range(self.args.sequence_length):
             # logging.info("decoder_hidden[0].shape:", decoder_hidden[0].shape)
+            # logging.info("decoder_input.shape:", decoder_input.shape)
 
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden) #(hidden, cell))
-            logging.info("decoder_output.shape:", decoder_output.shape)
+            # logging.info("decoder_output.shape:", decoder_output.shape)
 
-            output = self.out(decoder_output)
-            # logging.info("out output.shape:", output.shape)
+            fc_output = self.out(decoder_output)
+            # logging.info("fc_output.shape:", fc_output.shape)
 
-            output = output.view(self.args.batch_size, 1, outputs.shape[3], outputs.shape[4])
+            output = fc_output.view(self.args.batch_size, 1, outputs.shape[3], outputs.shape[4])
             # logging.info("view output.shape:", output.shape)
             
             outputs[i] = output
@@ -136,8 +137,7 @@ class ActionNet(nn.Module):
                 # decoder_input = target_tensor[:, i].unsqueeze(1) # Teacher forcing
             else:
                 # Without teacher forcing: use its own predictions as the next input
-                _, topi = decoder_output.topk(1)
-                decoder_input = topi.squeeze(-1).detach()  # detach from history as input
+                decoder_input = fc_output
 
         logging.info("outputs.shape:", outputs.shape)
 
