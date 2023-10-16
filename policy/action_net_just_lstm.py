@@ -115,7 +115,7 @@ class ActionNet(nn.Module):
             # logging.info("decoder_hidden[0].shape:", decoder_hidden[0].shape)
 
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden) #(hidden, cell))
-            # logging.info("decoder_output.shape:", decoder_output.shape)
+            logging.info("decoder_output.shape:", decoder_output.shape)
 
             output = self.out(decoder_output)
             # logging.info("out output.shape:", output.shape)
