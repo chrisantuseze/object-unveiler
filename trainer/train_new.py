@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_just_lstm import ActionNet
+from policy.action_net_just_lstm import *
 
 import utils.utils as utils
 import utils.logger as logging
@@ -55,8 +55,8 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ActionNet(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # model = ActionNet(args).to(args.device)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCEWithLogitsLoss() #nn.BCELoss(reduction='none')
 
@@ -65,8 +65,17 @@ def train_fcn_net(args):
     # # criterion = nn.SmoothL1Loss(reduction='none')
     # criterion = nn.BCELoss(reduction='none')
 
+    encoder = Encoder(args).to(args.device)
+    decoder = Decoder(args).to(args.device)
+
+    encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.lr)
+    decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.lr)
+
     for epoch in range(args.epochs):
-        model.train()
+        # model.train()
+
+        encoder.train()
+        decoder.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0]
             rotations = batch[1]
@@ -78,23 +87,30 @@ def train_fcn_net(args):
             # rotations = batch[1]
             # y = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(x, y, rotations)
+            # pred = model(x, y, rotations)
+
+            encoder_hidden, encoder_cell, dim = encoder(x)
+            decoder_outputs = decoder(dim, encoder_hidden, encoder_cell, y)
 
             # Compute loss in the whole scene
-            loss = criterion(pred, y)
+            # loss = criterion(pred, y)
+            loss = criterion(decoder_outputs, y)
+
             loss = torch.sum(loss)
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             loss.backward()
+            # optimizer.step()
 
-            clip_value = 1.0
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_value)  # Clip gradients
-
-            optimizer.step()
+            encoder_optimizer.step()
+            decoder_optimizer.step()
 
             logging.info(f"train step [{step}/{len(data_loaders['train'])}]\t Loss: {loss.detach().cpu().numpy()}")
 
-        model.eval()
+        # model.eval()
+        encoder.eval()
+        decoder.eval()
+
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
@@ -107,9 +123,13 @@ def train_fcn_net(args):
                 # rotations = batch[1]
                 # y = batch[2].to(args.device, dtype=torch.float)
 
-                pred = model(x, y, rotations)
+                # pred = model(x, y, rotations)
+                encoder_hidden, encoder_cell, dim = encoder(x)
+                decoder_outputs = decoder(dim, encoder_hidden, encoder_cell, y)
 
-                loss = criterion(pred, y)
+                # loss = criterion(pred, y)
+                loss = criterion(decoder_outputs, y)
+
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
@@ -117,14 +137,14 @@ def train_fcn_net(args):
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         # Save model
-        if epoch % 1 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
+        # if epoch % 1 == 0:
+        #     torch.save(model.state_dict(), os.path.join(save_path, 'model_' + str(epoch) + '.pt'))
 
         logging.info('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    # torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
 
 def train(args, model, optimizer, scheduler, criterion, dataloaders, save_path, is_fcn=True):
     prefix = "fcn" if is_fcn else "reg"
