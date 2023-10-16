@@ -238,8 +238,6 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.args = args
 
-        self.hidden_size = hidden_size
-
         # Define training parameters
         hidden_size = 64
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
