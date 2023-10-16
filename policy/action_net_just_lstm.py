@@ -69,8 +69,7 @@ class ActionNet(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def forward(self, sequence, actions=None, rot_ids=[], is_volatile=False):
-        # Process the image sequence through the CNN and a fully connected layer
+    def partial_forward(self, sequence):
         image_features = []
 
         # logging.info("heightmap.shape:", sequence[0][0].shape)
@@ -99,7 +98,10 @@ class ActionNet(nn.Module):
             image_features.append(features)
             
         input_seq = torch.stack(image_features, dim=0)
-        input_seq = checkpoint(input_seq)
+        return input_seq
+    
+    def checkpoint_forward(self, input, actions):
+        input_seq = checkpoint(self.partial_forward, input)
         # logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
 
         # output, (hidden, cell) = self.encoder(input_seq)
@@ -140,3 +142,8 @@ class ActionNet(nn.Module):
         logging.info("outputs.shape:", outputs.shape)
 
         return outputs
+    
+    def forward(self, sequence, actions=None, rot_ids=[], is_volatile=False):
+        # Process the image sequence through the CNN and a fully connected layer
+        
+        return self.checkpoint_forward(sequence, actions)
