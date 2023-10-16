@@ -235,7 +235,7 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, args):
-        super(Encoder, self).__init__()
+        super(Decoder, self).__init__()
         self.args = args
 
         self.hidden_size = hidden_size
