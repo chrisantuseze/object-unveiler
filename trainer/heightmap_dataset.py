@@ -88,32 +88,6 @@ class HeightMapDataset(data.Dataset):
 
             rot_ids = rot_ids + [0] * required_len
 
-        # Get the size of the tensors in the first tuple to compare with others
-        first_tuple_sizes = [len(tensor) for tensor in sequence[0]]
-
-        # Initialize a list to store the indices of tuples with different sizes
-        indices_of_different_sizes = []
-
-        for i, tuple_elem in enumerate(sequence):
-            if not all(len(tensor) == size for tensor, size in zip(tuple_elem, first_tuple_sizes)):
-                indices_of_different_sizes.append(i)
-
-        if indices_of_different_sizes:
-            print("Tuples with different-sized tensors:")
-            for idx in indices_of_different_sizes:
-                print(f"Tuple at index {idx}: {sequence[idx]}")
-
-
-
-        # Get the size of the first tensor to compare with others
-        first_tensor_size = len(labels[0])
-
-        # Check if all tensors have the same size
-        all_equal = all(len(tensor) == first_tensor_size for tensor in labels)
-
-        if not all_equal:
-            print("Tensors have different sizes.")
-            
         return sequence, rot_ids, labels
     
     def __getitem__old1(self, id):
