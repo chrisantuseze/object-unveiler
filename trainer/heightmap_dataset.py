@@ -98,9 +98,7 @@ class HeightMapDataset(data.Dataset):
             if not all(len(tensor) == size for tensor, size in zip(tuple_elem, first_tuple_sizes)):
                 indices_of_different_sizes.append(i)
 
-        if not indices_of_different_sizes:
-            print("All tuples have tensors with equal sizes.")
-        else:
+        if indices_of_different_sizes:
             print("Tuples with different-sized tensors:")
             for idx in indices_of_different_sizes:
                 print(f"Tuple at index {idx}: {sequence[idx]}")
@@ -113,9 +111,7 @@ class HeightMapDataset(data.Dataset):
         # Check if all tensors have the same size
         all_equal = all(len(tensor) == first_tensor_size for tensor in labels)
 
-        if all_equal:
-            print("All tensors have equal size.")
-        else:
+        if not all_equal:
             print("Tensors have different sizes.")
             
         return sequence, rot_ids, labels
