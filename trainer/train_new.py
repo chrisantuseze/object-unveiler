@@ -89,7 +89,7 @@ def train_fcn_net(args):
             loss.backward()
             optimizer.step()
 
-            logging.info(f"train step [{step}/{len(data_loaders['train'])}]\t Loss: {loss.detach().cpu().numpy()}")
+            # logging.info(f"train step [{step}/{len(data_loaders['train'])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}

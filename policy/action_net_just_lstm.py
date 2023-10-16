@@ -102,7 +102,7 @@ class ActionNet(nn.Module):
     
     def checkpoint_forward(self, input, actions):
         input_seq = checkpoint(self.partial_forward, input)
-        logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
+        # logging.info("input_seq.shape:", input_seq.shape)       #torch.Size([3, 5, 20736])
 
         # output, (hidden, cell) = self.encoder(input_seq)
         # logging.info("encoder output.shape:", output.shape, "hidden.shape:", hidden.shape)  #encoder output.shape: torch.Size([3, 5, 64]) hidden.shape: torch.Size([1, 5, 64])
