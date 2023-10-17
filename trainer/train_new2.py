@@ -32,6 +32,8 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
+    print(len(transition_dirs))
+
     # TODO: remember to remove this
     transition_dirs = transition_dirs[:4000]
 
