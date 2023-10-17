@@ -30,7 +30,7 @@ class HeightMapDataset(data.Dataset):
 
         self.memory = ReplayBuffer(self.dataset_dir)
 
-    def __getitem__(self, id):
+    def __getitem__old(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
 
         sequence = []
@@ -157,7 +157,7 @@ class HeightMapDataset(data.Dataset):
 
         return sequence, rot_ids, labels
 
-    def __getitem__old(self, id):
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, target_mask, obstacle_mask, action = episode_data[0]
 
@@ -207,8 +207,8 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
 
-        # return padded_heightmap, padded_target_mask, rot_id, label
-        return padded_heightmap, rot_id, label
+        return padded_heightmap, padded_target_mask, rot_id, label
+        # return padded_heightmap, rot_id, label
     
     def __len__(self):
         return len(self.dir_ids)

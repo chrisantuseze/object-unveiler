@@ -1,18 +1,17 @@
 import os
 import random
-from policy.models_new import Regressor, ResFCN
+from policy.models import Regressor
+from policy.models import ResFCN
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
-from torch.utils.tensorboard import SummaryWriter
-
 from trainer.aperture_dataset import ApertureDataset
+
 from trainer.heightmap_dataset import HeightMapDataset
 from policy.action_net_just_lstm import *
 
-import utils.utils as utils
 import utils.logger as logging
 
 
@@ -22,6 +21,7 @@ def train_fcn_net(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
+    # transition_dirs = next(os.walk(args.dataset_dir))[1]
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -54,25 +54,23 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ActionNet(args).to(args.device)
+    model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.BCEWithLogitsLoss() #nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
-            x = batch[0]
-            rotations = batch[1]
-            y = batch[2]
-            y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
-            # logging.info("y.shape:", y.shape)
+            x = batch[0].to(args.device)
+            target = batch[1].to(args.device)
+            rotations = batch[2]
+            y = batch[3].to(args.device, dtype=torch.float)
 
-            pred = model(x, rot_ids=rotations)
+            pred = model(x, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
-
             loss = torch.sum(loss)
 
             optimizer.zero_grad()
@@ -83,12 +81,12 @@ def train_fcn_net(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                x = batch[0]
-                rotations = batch[1]
-                y = batch[2]
-                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                x = batch[0].to(args.device)
+                target = batch[1].to(args.device)
+                rotations = batch[2]
+                y = batch[3].to(args.device, dtype=torch.float)
 
-                pred = model(x, rot_ids=rotations)
+                pred = model(x, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)

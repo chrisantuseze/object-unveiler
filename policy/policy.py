@@ -394,12 +394,18 @@ class Policy:
 
         return actions
     
-    def exploit_old(self, state):
+    def exploit_old(self, state, target_mask):
 
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
+
+        resized_target = utils.resize_mask(transform, target_mask)
+        target = self.preprocess_old(resized_target)
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-        out_prob = self.fcn(x, is_volatile=True)
+
+        out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = self.postprocess_old(out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
