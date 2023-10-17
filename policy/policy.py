@@ -1,6 +1,6 @@
 import os
 import pickle
-from policy.models_new import Regressor, ResFCN
+from policy.models import Regressor, ResFCN
 from policy.action_net_just_lstm import ActionNet
 import torch
 import torch.optim as optim
@@ -41,14 +41,14 @@ class Policy:
         self.push_distance = 0.08 #0.02 #0.10 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
-        # self.fcn = ResFCN().to(self.device)
-        # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
-        # self.fcn_criterion = nn.BCELoss(reduction='None')
-
-        self.fcn = ActionNet(args, is_train=False).to(self.device)
+        self.fcn = ResFCN().to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
-        # self.fcn_criterion = nn.MSELoss()
         self.fcn_criterion = nn.BCELoss(reduction='None')
+
+        # self.fcn = ActionNet(args, is_train=False).to(self.device)
+        # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
+        # # self.fcn_criterion = nn.MSELoss()
+        # self.fcn_criterion = nn.BCELoss(reduction='None')
 
         self.reg = Regressor().to(self.device)
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
