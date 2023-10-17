@@ -32,10 +32,11 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    print(len(transition_dirs))
-
     # TODO: remember to remove this
-    transition_dirs = transition_dirs[:4000]
+    if len(transition_dirs) > 8000:
+        transition_dirs = transition_dirs[:8000]
+    else:
+        transition_dirs = transition_dirs[:4000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
