@@ -133,8 +133,6 @@ class ResFCN(nn.Module):
             prob = torch.cat((prob_depth, prob_target), dim=1)
             prob = torch.mean(prob, dim=1, keepdim=True)
 
-            print("prob:", prob.shape)
-
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3))
             for rot_id in range(self.nr_rotations):
@@ -180,8 +178,6 @@ class ResFCN(nn.Module):
             prob_target = self.predict(rotate_target_mask)
             prob = torch.cat((prob_depth, prob_target), dim=1)
             prob = torch.mean(prob, dim=1, keepdim=True)
-
-            print("prob:", prob.shape)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
