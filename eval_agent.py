@@ -36,7 +36,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
-    cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
+    # cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
     prev_masks_no = 0
@@ -44,6 +44,14 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     max_steps = 1
     while episode_data['attempts'] < max_steps:
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+
+        nodes, edges = grasping.build_graph(raw_masks)
+        if len(edges) > 0:
+            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
+            if len(optimal_nodes) > 0:
+                target_mask = processed_masks[optimal_nodes[0]]            
+
+        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
         actions = policy.exploit_old(state, target_mask)
