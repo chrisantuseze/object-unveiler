@@ -59,8 +59,8 @@ def train_fcn_net(args):
 
     model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.SmoothL1Loss(reduction='none')
+    # criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
         model.train()

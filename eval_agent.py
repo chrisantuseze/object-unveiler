@@ -41,6 +41,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     i = 0
     prev_masks_no = 0
     count = 0
+    max_steps = 1
     while episode_data['attempts'] < max_steps:
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
