@@ -92,7 +92,7 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def forward(self, depth_heightmap, color_depth, target_mask=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask=None, specific_rotation=-1, is_volatile=[]):
         if target_mask is not None:
             target_mask = target_mask.float()
 
@@ -101,10 +101,6 @@ class ResFCN(nn.Module):
             batch_rot_depth = torch.zeros((self.nr_rotations, 1,
                                            depth_heightmap.shape[3],
                                            depth_heightmap.shape[3])).to(self.device)
-            
-            batch_rot_color_depth = torch.zeros((self.nr_rotations, 1,
-                                           color_depth.shape[3],
-                                           color_depth.shape[3])).to(self.device)
             
             batch_rot_target = torch.zeros((self.nr_rotations, 1,
                                            target_mask.shape[3],
@@ -125,25 +121,18 @@ class ResFCN(nn.Module):
                 rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
                 
-                rotate_color_depth = F.grid_sample(Variable(color_depth, requires_grad=False).to(self.device),
-                    flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-                
                 rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
                 batch_rot_depth[rot_id] = rotate_depth[0]
-                batch_rot_color_depth[rot_id] = rotate_color_depth[0]
                 batch_rot_target[rot_id] = rotate_target_mask[0]
 
-            # compute rotated feature maps
+            # compute rotated feature maps            
+            prob_depth = self.predict(batch_rot_depth)
+            prob_target = self.predict(batch_rot_target)
+            prob = torch.cat((prob_depth, prob_target), dim=1)
 
-            concat = torch.cat((batch_rot_depth, batch_rot_color_depth, batch_rot_target), dim=1)
-            concat = torch.mean(concat, dim=1, keepdim=True)
-
-            prob = self.predict(concat)
-            
-            # prob_depth = self.predict(batch_rot_depth)
-            # prob = prob_depth
+            print("prob:", prob.shape)
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3))
@@ -182,20 +171,15 @@ class ResFCN(nn.Module):
             rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
             
-            rotate_color_depth = F.grid_sample(Variable(color_depth, requires_grad=False).to(self.device),
-                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-                        
             rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
-            concat = torch.cat((rotate_depth, rotate_color_depth, rotate_target_mask), dim=1)
-            concat = torch.mean(concat, dim=1, keepdim=True)
+            prob_depth = self.predict(rotate_depth)
+            prob_target = self.predict(rotate_target_mask)
+            prob = torch.cat((prob_depth, prob_target), dim=1)
 
-            prob = self.predict(concat)
-
-            # prob_depth = self.predict(rotate_depth)
-            # prob = prob_depth
+            print("prob:", prob.shape)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))

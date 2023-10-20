@@ -159,7 +159,7 @@ class HeightMapDataset(data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, color_heightmap, target_mask, obstacle_mask, action = episode_data[0]
+        heightmap, target_mask, obstacle_mask, action = episode_data[0]
         target_mask = obstacle_mask
 
 
@@ -173,11 +173,6 @@ class HeightMapDataset(data.Dataset):
         padding_width_depth = int((diagonal_length_depth - heightmap.shape[0]) / 2)
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
 
-        diagonal_length_color_depth = float(color_heightmap.shape[0]) * np.sqrt(2)
-        diagonal_length_color_depth = np.ceil(diagonal_length_color_depth / 16) * 16
-        padding_width_color_depth = int((diagonal_length_color_depth - color_heightmap.shape[0]) / 2)
-        padded_color_heightmap = np.pad(heightmap, padding_width_color_depth, 'constant', constant_values=-0.01)
-
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
         padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
@@ -187,12 +182,10 @@ class HeightMapDataset(data.Dataset):
         image_mean = 0.01
         image_std = 0.03
         padded_heightmap = (padded_heightmap - image_mean)/image_std
-        padded_color_heightmap = (padded_color_heightmap - image_mean)/image_std
         padded_target_mask = (padded_target_mask - image_mean)/image_std
 
         # add extra channel
         padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        padded_color_heightmap = np.expand_dims(padded_color_heightmap, axis=0)
         padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
 
         # convert theta to range 0-360 and then compute the rot_id
@@ -215,7 +208,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
 
-        return padded_heightmap, padded_color_heightmap, padded_target_mask, rot_id, label
+        return padded_heightmap, padded_target_mask, rot_id, label
         # return padded_heightmap, rot_id, label
     
     def __len__(self):
