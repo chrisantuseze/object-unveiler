@@ -60,18 +60,18 @@ def train_fcn_net(args):
     model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
-    # criterion = nn.BCELoss(reduction='none')
-    criterion = nn.MSELoss()
+    criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
-            target = batch[1].to(args.device)
-            rotations = batch[2]
-            y = batch[3].to(args.device, dtype=torch.float)
+            color_x = batch[1].to(args.device)
+            target = batch[2].to(args.device)
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float)
 
-            pred = model(x, target, rotations)
+            pred = model(x, color_x, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -86,11 +86,12 @@ def train_fcn_net(args):
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
-                target = batch[1].to(args.device)
-                rotations = batch[2]
-                y = batch[3].to(args.device, dtype=torch.float)
+                color_x = batch[1].to(args.device)
+                target = batch[2].to(args.device)
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float)
 
-                pred = model(x, target, rotations)
+                pred = model(x, color_x, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)

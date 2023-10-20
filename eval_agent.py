@@ -15,7 +15,7 @@ import policy.grasping as grasping
 
 import utils.logger as logging
 
-def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
+def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -43,7 +43,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     count = 0
     max_steps = 1
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        utils.save_image(color_img=obs['color'][i], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         nodes, edges = grasping.build_graph(raw_masks)
         if len(edges) > 0:
@@ -99,6 +99,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         if target_id == -1:
             if grasp_info['stable']:
                 logging.info("Target has been grasped!")
+                success_count += 1
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -112,7 +113,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         # break
 
     logging.info('--------')
-    return episode_data
+    return episode_data, success_count
 
 def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
     env.seed(episode_seed)
@@ -182,11 +183,13 @@ def eval_agent(args):
     eval_data = []
     sr_n, sr_1, attempts, objects_removed = 0, 0, 0, 0
 
+    success_count = 0
+
     for i in range(args.n_scenes):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode(policy, env, segmenter, rng, episode_seed, train=False)
+        episode_data, success_count = run_episode(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
@@ -202,6 +205,7 @@ def eval_agent(args):
     logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
                                                           sr_n / attempts,
                                                           objects_removed / len(eval_data)))
+    logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")
 
 # def parse_args():
 #     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
