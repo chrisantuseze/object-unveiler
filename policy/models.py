@@ -131,6 +131,7 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(batch_rot_depth)
             prob_target = self.predict(batch_rot_target)
             prob = torch.cat((prob_depth, prob_target), dim=1)
+            prob = torch.mean(prob, dim=1, keepdim=True)
 
             print("prob:", prob.shape)
 
@@ -178,6 +179,7 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(rotate_depth)
             prob_target = self.predict(rotate_target_mask)
             prob = torch.cat((prob_depth, prob_target), dim=1)
+            prob = torch.mean(prob, dim=1, keepdim=True)
 
             print("prob:", prob.shape)
 
