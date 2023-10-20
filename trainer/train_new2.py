@@ -99,8 +99,8 @@ def train_fcn_net(args):
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
-        logging.info('Epoch {}: training loss = {:.4f} '
-              ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+        logging.info('Epoch {}: training loss = {:.6f} '
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
