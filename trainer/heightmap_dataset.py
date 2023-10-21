@@ -7,6 +7,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from skimage import transform, io
+from scipy import ndimage
 
 from trainer.memory import ReplayBuffer
 import utils.utils as utils
@@ -166,6 +167,11 @@ class HeightMapDataset(data.Dataset):
         # heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
         # target_mask = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'target_mask.png'), -1)
         # action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[id], 'action'), 'rb'))
+
+        # Apply 2x scale to input heightmaps
+        heightmap = ndimage.zoom(heightmap, zoom=[2, 2], order=0)
+        target_mask = ndimage.zoom(target_mask, zoom=[2, 2], order=0)
+        assert (heightmap.shape[0:2] == target_mask.shape[0:2])
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)

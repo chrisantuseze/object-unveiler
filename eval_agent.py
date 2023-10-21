@@ -197,6 +197,8 @@ def eval_agent(args):
         attempts += episode_data['attempts']
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])
 
+        logging.info(f">>>>>>>>> {success_count}/{i+1} >>>>>>>>>>>>>")
+
         if i % 5 == 0:
             logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
                                                                                sr_n / attempts,
