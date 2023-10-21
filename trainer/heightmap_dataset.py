@@ -171,6 +171,8 @@ class HeightMapDataset(data.Dataset):
         # Apply 2x scale to input heightmaps
         heightmap = ndimage.zoom(heightmap, zoom=[2, 2], order=0)
         target_mask = ndimage.zoom(target_mask, zoom=[2, 2], order=0)
+
+        print(heightmap.shape, target_mask.shape)
         assert (heightmap.shape[0:2] == target_mask.shape[0:2])
 
         # add extra padding (to handle rotations inside the network)
