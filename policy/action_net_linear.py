@@ -29,11 +29,8 @@ class ActionNet(nn.Module):
         # self.rb6 = self._make_layer(128, 64)
         # self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.use_cuda = self.device
         # Initialize network trunks with DenseNet pre-trained on ImageNet
         self.feature_tunk = FeatureTunk()
-
-        self.num_rotations = 16
 
         # Construct network branches for pushing and grasping
         self.graspnet = nn.Sequential(OrderedDict([
@@ -316,30 +313,30 @@ class ActionNet(nn.Module):
 
         # Compute intermediate features
         interm_feat = self.feature_tunk(depth.float(), target_mask.float())
-        # logging.info("interm_feat.shape:", interm_feat.shape)
+        # logging.info("interm_feat.shape:", interm_feat.shape)       #train: torch.Size([4, 1024, 4, 4]) eval: torch.Size([1, 1024, 4, 4])
 
         # Forward pass
-        out = self.graspnet(interm_feat).squeeze()
-        # logging.info("out.shape:", out.shape)
+        out = self.graspnet(interm_feat)
+        # logging.info("out.shape:", out.shape)                       #train: torch.Size([4, 128, 4, 4]) eval: torch.Size([1, 128, 4, 4])
 
         out = out.view(out.size(0), -1)
-        # logging.info("view out.shape:", out.shape)
+        # logging.info("view out.shape:", out.shape)                  #train: torch.Size([4, 2048]) eval: torch.Size([1, 2048])
 
         conf = self.fc1(out).squeeze() # regression
-        # logging.info("conf.shape:", conf.shape)
+        # logging.info("conf.shape:", conf.shape)                     #train: torch.Size([4, 20736])
 
         out_prob = conf.view(self.args.batch_size, 1, depth.shape[2], depth.shape[3])
         # logging.info("out_prob.shape:", out_prob.shape)
 
 
-        if not is_volatile:
-            # Image-wide softmax
-            output_shape = out_prob.shape
-            out_prob = out_prob.view(output_shape[0], -1)
-            # logging.info("out_prob.shape:", out_prob.shape)
+        # if not is_volatile:
+        #     # Image-wide softmax
+        #     output_shape = out_prob.shape
+        #     out_prob = out_prob.view(output_shape[0], -1)
+        #     # logging.info("out_prob.shape:", out_prob.shape)
 
-            out_prob = torch.softmax(out_prob, dim=1)
-            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-            # logging.info("out_prob.shape:", out_prob.shape)
+        #     out_prob = torch.softmax(out_prob, dim=1)
+        #     out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+        #     # logging.info("out_prob.shape:", out_prob.shape)
 
         return out_prob
