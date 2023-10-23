@@ -1,4 +1,5 @@
 from policy.models import ResidualBlock, conv3x3
+from policy.network import FeatureTunk
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,22 +20,48 @@ class ActionNet(nn.Module):
         self.nr_rotations = 16
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.rb1 = self._make_layer(64, 128)
-        self.rb2 = self._make_layer(128, 256)
-        self.rb3 = self._make_layer(256, 512)
-        self.rb4 = self._make_layer(512, 256)
-        self.rb5 = self._make_layer(256, 128)
-        self.rb6 = self._make_layer(128, 64)
-        self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
+        # self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # self.rb1 = self._make_layer(64, 128)
+        # self.rb2 = self._make_layer(128, 256)
+        # self.rb3 = self._make_layer(256, 512)
+        # self.rb4 = self._make_layer(512, 256)
+        # self.rb5 = self._make_layer(256, 128)
+        # self.rb6 = self._make_layer(128, 64)
+        # self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.use_cuda = self.device
+        # Initialize network trunks with DenseNet pre-trained on ImageNet
+        self.feature_tunk = FeatureTunk()
+
+        self.num_rotations = 16
+
+        # Construct network branches for pushing and grasping
+        self.graspnet = nn.Sequential(OrderedDict([
+            ('grasp-norm0', nn.BatchNorm2d(1024)),
+            ('grasp-relu0', nn.ReLU(inplace=True)),
+            ('grasp-conv0', nn.Conv2d(1024, 128, kernel_size=3, stride=1, padding=1, bias=True)),
+            # ('grasp-maxpool0', nn.MaxPool2d(20)),
+        ]))
+        self.fc1 = nn.Linear(4, 128)# regression
+        self.fc2 = nn.Linear(128*128*4, 144*144)
+
+        # Initialize network weights
+        for m in self.named_modules():
+            if 'grasp-' in m[0]:
+                if isinstance(m[1], nn.Conv2d):
+                    nn.init.kaiming_normal_(m[1].weight.data)
+                elif isinstance(m[1], nn.BatchNorm2d):
+                    m[1].weight.data.fill_(1)
+                    m[1].bias.data.zero_()
+        self.confidence = 0
 
         # Define training parameters
-        input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
-        hidden_size = IMAGE_SIZE
-        num_layers = 2  # Number of LSTM layers
-        bidirectional = False  # Use bidirectional LSTM
-        output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
-        output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
+        # input_size = IMAGE_SIZE * IMAGE_SIZE * 3 
+        # hidden_size = IMAGE_SIZE
+        # num_layers = 2  # Number of LSTM layers
+        # bidirectional = False  # Use bidirectional LSTM
+        # output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
+        # output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
 
         # self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
         # self.fc_train = nn.Linear(hidden_size, output_dim1)
@@ -259,19 +286,53 @@ class ActionNet(nn.Module):
         
     #     return predictions
 
-    def forward(self, depth_heightmap, target_mask=None, specific_rotation=-1, is_volatile=[]):
-        # compute rotated feature maps            
-        prob_depth = self._predict(depth_heightmap.float())
-        # logging.info("prob_depth.shape:", prob_depth.shape)  
+    # def forward(self, depth_heightmap, target_mask=None, specific_rotation=-1, is_volatile=[]):
+    #     # compute rotated feature maps            
+    #     prob_depth = self._predict(depth_heightmap.float())
+    #     # logging.info("prob_depth.shape:", prob_depth.shape)  
 
-        prob_target = self._predict(target_mask.float())
-        # logging.info("prob_target.shape:", prob_target.shape)  
+    #     prob_target = self._predict(target_mask.float())
+    #     # logging.info("prob_target.shape:", prob_target.shape)  
 
-        prob = torch.cat((prob_depth, prob_target), dim=1)
-        # logging.info("prob.shape:", prob.shape)           #torch.Size([4, 2, 144, 144])
+    #     prob = torch.cat((prob_depth, prob_target), dim=1)
+    #     # logging.info("prob.shape:", prob.shape)           #torch.Size([4, 2, 144, 144])
 
-        out_prob = torch.mean(prob, dim=1, keepdim=True)
-        # logging.info("mean prob.shape:", prob.shape)           #torch.Size([4, 1, 144, 144])
+    #     out_prob = torch.mean(prob, dim=1, keepdim=True)
+    #     # logging.info("mean prob.shape:", prob.shape)           #torch.Size([4, 1, 144, 144])
+
+    #     if not is_volatile:
+    #         # Image-wide softmax
+    #         output_shape = out_prob.shape
+    #         out_prob = out_prob.view(output_shape[0], -1)
+    #         # logging.info("out_prob.shape:", out_prob.shape)
+
+    #         out_prob = torch.softmax(out_prob, dim=1)
+    #         out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+    #         # logging.info("out_prob.shape:", out_prob.shape)
+
+    #     return out_prob
+
+    def forward(self, depth, target_mask, specific_rotation=-1, is_volatile=[]):
+
+        # Compute intermediate features
+        interm_feat = self.feature_tunk(depth.float(), target_mask.float())
+        # logging.info("interm_feat.shape:", interm_feat.shape)
+
+        # Forward pass
+        out = self.graspnet(interm_feat).squeeze()
+        # logging.info("out.shape:", out.shape)
+
+        conf = self.fc1(out).squeeze() # regression
+        # logging.info("conf.shape:", conf.shape)
+
+        flatten = conf.view(conf.size(0), -1)
+        # logging.info("flatten.shape:", flatten.shape)
+
+        conf = self.fc2(F.relu(flatten))
+        # logging.info("fc2 conf.shape:", conf.shape)
+
+        out_prob = conf.view(self.args.batch_size, 1, depth.shape[2], depth.shape[3])
+        # logging.info("out_prob.shape:", out_prob.shape)
 
         if not is_volatile:
             # Image-wide softmax
