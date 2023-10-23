@@ -7,6 +7,7 @@ from torch.autograd import Variable
 import numpy as np
 import utils.logger as logging
 from utils.constants import *
+from collections import OrderedDict
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):
@@ -35,11 +36,11 @@ class ActionNet(nn.Module):
         output_dim1 = IMAGE_SIZE * IMAGE_SIZE 
         output_dim2 = IMAGE_SIZE * IMAGE_SIZE * self.nr_rotations
 
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
-        self.fc_train = nn.Linear(hidden_size, output_dim1)
-        self.fc_eval = nn.Linear(hidden_size, output_dim2)
+        # self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
+        # self.fc_train = nn.Linear(hidden_size, output_dim1)
+        # self.fc_eval = nn.Linear(hidden_size, output_dim2)
 
-        self.fc = nn.Linear(input_size, hidden_size)
+        # self.fc = nn.Linear(input_size, hidden_size)
 
     def _make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -205,55 +206,81 @@ class ActionNet(nn.Module):
         return out_prob
     
 
-    def forward(self, sequence, rot_ids=[], is_volatile=False):
-        probs = []
-        for i in range(len(sequence)):
-            heightmap, target_mask, obstacle_mask = sequence[i]
+    # def forward(self, sequence, rot_ids=[], is_volatile=False):
+    #     probs = []
+    #     for i in range(len(sequence)):
+    #         heightmap, target_mask, obstacle_mask = sequence[i]
             
-            heightmap = heightmap.to(self.device)
-            target_mask = target_mask.to(self.device)
-            obstacle_mask = obstacle_mask.to(self.device)
+    #         heightmap = heightmap.to(self.device)
+    #         target_mask = target_mask.to(self.device)
+    #         obstacle_mask = obstacle_mask.to(self.device)
 
-            if is_volatile:
-                prob = self._volatile(heightmap, target_mask, obstacle_mask)
-                probs.append(prob)
-            else:
-                rot_id = rot_ids[i]
-                prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_id)
-                probs.append(prob)
+    #         if is_volatile:
+    #             prob = self._volatile(heightmap, target_mask, obstacle_mask)
+    #             probs.append(prob)
+    #         else:
+    #             rot_id = rot_ids[i]
+    #             prob = self._non_volatile(heightmap, target_mask, obstacle_mask, rot_id)
+    #             probs.append(prob)
 
-        probs_stack = torch.stack(probs, dim=0)
-        # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
-
-        sequence_length, batch_size, channels, height, width = probs_stack.shape
-        probs_stack = probs_stack.view(-1, channels, height, width)
-        # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 3, 224, 224])
-
-        # Pad the tensor to achieve the desired shape
-        if not self.is_train:
-            sequence_length, channels, height, width = probs_stack.shape
-            pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
-            pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
-            probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
-            logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
-
-
-        embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
-        # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528]) #62208
-
-        outputs = self.fc(embeddings)
-        outputs = F.relu(outputs)
-
-        # outputs, (hidden, cell) = self.lstm(embeddings)
-        # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
-
-        if self.is_train:
-            predictions = self.fc_train(outputs)
-            predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
-        else:
-            predictions = self.fc_eval(outputs)
-            predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
-
-        # logging.info("view predictions.shape:", predictions.shape)      
+    #     probs_stack = torch.stack(probs, dim=0)
+    #     # logging.info("probs_stack.shape:", probs_stack.shape)           #torch.Size([1, 1, 3, 224, 224])
         
-        return predictions
+    #     sequence_length, batch_size, channels, height, width = probs_stack.shape
+    #     probs_stack = probs_stack.view(-1, channels, height, width)
+    #     # logging.info("view probs_stack.shape:", probs_stack.shape)      #torch.Size([1, 3, 224, 224])
+
+    #     # Pad the tensor to achieve the desired shape
+    #     if not self.is_train:
+    #         sequence_length, channels, height, width = probs_stack.shape
+    #         pad_sequence_length = max(0, self.args.sequence_length - sequence_length)
+    #         pad = (0,0, 0,0, 0,0, 0,pad_sequence_length) # it starts from the back of the dimension i.e 224, 224, 3, 1
+    #         probs_stack = torch.nn.functional.pad(probs_stack, pad, mode='constant', value=0)
+    #         logging.info("padded probs_stack.shape:", probs_stack.shape)    #torch.Size([4, 3, 224, 224])
+
+
+    #     embeddings = probs_stack.view(batch_size, self.args.sequence_length, -1)
+    #     # logging.info("view embeddings.shape:", embeddings.shape)        #torch.Size([1, 4, 150528]) #62208
+
+    #     outputs = self.fc(embeddings)
+    #     outputs = F.relu(outputs)
+
+    #     # outputs, (hidden, cell) = self.lstm(embeddings)
+    #     # logging.info("lstm outputs.shape:", outputs.shape)              #torch.Size([1, 4, 224])
+
+    #     if self.is_train:
+    #         predictions = self.fc_train(outputs)
+    #         predictions = predictions.view(self.args.sequence_length, batch_size * 1, 1, IMAGE_SIZE, IMAGE_SIZE) #torch.Size([4, 1, 1, 224, 224])
+    #     else:
+    #         predictions = self.fc_eval(outputs)
+    #         predictions = predictions.view(self.args.sequence_length, batch_size * self.nr_rotations, 1, IMAGE_SIZE, IMAGE_SIZE)
+
+    #     # logging.info("view predictions.shape:", predictions.shape)      
+        
+    #     return predictions
+
+    def forward(self, depth_heightmap, target_mask=None, specific_rotation=-1, is_volatile=[]):
+        # compute rotated feature maps            
+        prob_depth = self._predict(depth_heightmap.float())
+        # logging.info("prob_depth.shape:", prob_depth.shape)  
+
+        prob_target = self._predict(target_mask.float())
+        # logging.info("prob_target.shape:", prob_target.shape)  
+
+        prob = torch.cat((prob_depth, prob_target), dim=1)
+        # logging.info("prob.shape:", prob.shape)           #torch.Size([4, 2, 144, 144])
+
+        out_prob = torch.mean(prob, dim=1, keepdim=True)
+        # logging.info("mean prob.shape:", prob.shape)           #torch.Size([4, 1, 144, 144])
+
+        if not is_volatile:
+            # Image-wide softmax
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            # logging.info("out_prob.shape:", out_prob.shape)
+
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+            # logging.info("out_prob.shape:", out_prob.shape)
+
+        return out_prob

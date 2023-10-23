@@ -10,7 +10,7 @@ from torch.utils import data
 from trainer.aperture_dataset import ApertureDataset
 
 from trainer.heightmap_dataset import HeightMapDataset
-from policy.action_net_just_lstm import *
+from policy.action_net_linear import *
 
 import utils.logger as logging
 
@@ -57,7 +57,7 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ResFCN().to(args.device)
+    model = ActionNet(args).to(args.device) #ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
