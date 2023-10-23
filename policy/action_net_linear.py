@@ -42,8 +42,8 @@ class ActionNet(nn.Module):
             ('grasp-conv0', nn.Conv2d(1024, 128, kernel_size=3, stride=1, padding=1, bias=True)),
             # ('grasp-maxpool0', nn.MaxPool2d(20)),
         ]))
-        self.fc1 = nn.Linear(4, 128)# regression
-        self.fc2 = nn.Linear(128*128*4, 144*144)
+        # self.fc1 = nn.Linear(4, 144)# regression
+        self.fc1 = nn.Linear(128*4*4, 144*144)
 
         # Initialize network weights
         for m in self.named_modules():
@@ -322,17 +322,15 @@ class ActionNet(nn.Module):
         out = self.graspnet(interm_feat).squeeze()
         # logging.info("out.shape:", out.shape)
 
+        out = out.view(out.size(0), -1)
+        # logging.info("view out.shape:", out.shape)
+
         conf = self.fc1(out).squeeze() # regression
         # logging.info("conf.shape:", conf.shape)
 
-        flatten = conf.view(conf.size(0), -1)
-        # logging.info("flatten.shape:", flatten.shape)
-
-        conf = self.fc2(F.relu(flatten))
-        # logging.info("fc2 conf.shape:", conf.shape)
-
         out_prob = conf.view(self.args.batch_size, 1, depth.shape[2], depth.shape[3])
         # logging.info("out_prob.shape:", out_prob.shape)
+
 
         if not is_volatile:
             # Image-wide softmax
