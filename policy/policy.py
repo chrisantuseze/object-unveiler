@@ -396,14 +396,26 @@ class Policy:
     
     def exploit_old(self, state, target_mask):
 
+        data_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
+            transforms.ToTensor(),
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=(0.449), std=(0.226))
+        ])
+
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
 
         resized_target = utils.resize_mask(transform, target_mask)
         target = self.preprocess_old(resized_target)
-        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        target = data_transform(target).to(self.device)
+        target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
-        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+        # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+        x = data_transform(heightmap).to(self.device)
+        x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
         out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = self.postprocess_old(out_prob)

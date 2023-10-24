@@ -60,7 +60,7 @@ def train_fcn_net(args):
     model = ActionNet(args).to(args.device) #ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.L1Loss() #nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
         model.train()
