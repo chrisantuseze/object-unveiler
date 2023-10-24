@@ -198,8 +198,8 @@ class HeightMapDataset(data.Dataset):
         padded_target_mask = (padded_target_mask - image_mean)/image_std
 
         # add extra channel
-        # padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        # padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
+        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
+        padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -217,14 +217,10 @@ class HeightMapDataset(data.Dataset):
 
         action_area[int(i), int(j)] = 1.0
         
-        label = np.zeros((1, padded_heightmap.shape[0], padded_heightmap.shape[1])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
-        label[0, padding_width_depth:padded_heightmap.shape[0] - padding_width_depth,
-                 padding_width_depth:padded_heightmap.shape[1] - padding_width_depth] = action_area
+        label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+        label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
+                 padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
 
-        # print(padded_heightmap.shape, padded_target_mask.shape)
-        padded_heightmap = self.data_transform(padded_heightmap)
-        padded_target_mask = self.data_transform(padded_target_mask)
-        
         return padded_heightmap, padded_target_mask, rot_id, label
         # return padded_heightmap, rot_id, label
     
