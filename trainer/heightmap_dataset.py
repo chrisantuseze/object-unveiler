@@ -177,7 +177,11 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
-        target_mask = utils.resize_mask(transform, target_mask)
+        try:
+            target_mask = utils.resize_mask(transform, target_mask)
+        except:
+            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
+            
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
         padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
