@@ -200,19 +200,12 @@ def add_edge(relationships, i, j):
     relationships.append((i, j))
     return relationships
 
-def extract_relationships(object_masks, overlap_threshold=0.2):
+def extract_relationships(object_masks, threshold_iou=0.0001):
     relationships = []
 
     for i, mask_i in enumerate(object_masks):
         for j, mask_j in enumerate(object_masks):
             if i != j:  # Avoid self-comparison
-                # overlap = self.calculate_overlap(mask_i, mask_j)
-                # print(f"overlap ({i}, {j}): {overlap}")
-                # if overlap > overlap_threshold:
-                #     relationships.append((i, j))
-
-                threshold_iou=0.0001
-
                 mask_i = torch.Tensor.float(torch.tensor(mask_i))
                 mask_j = torch.Tensor.float(torch.tensor(mask_j))
 
@@ -273,8 +266,7 @@ def build_graph(object_masks):
     for idx, mask in enumerate(object_masks):
         nodes.append(idx)
 
-    overlap_threshold = 0.0001
-    relationships = extract_relationships(object_masks, overlap_threshold=overlap_threshold)
+    relationships = extract_relationships(object_masks)
     # print("relationships:", relationships)
 
     # Add edges (relationships) to the graph

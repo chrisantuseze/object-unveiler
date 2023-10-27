@@ -159,9 +159,11 @@ class HeightMapDataset(data.Dataset):
         return sequence, rot_ids, labels
 
     def __getitem__(self, id):
-        episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, target_mask, obstacle_mask, action = episode_data[0]
-        target_mask = obstacle_mask
+        # episode_data = self.memory.load_episode(self.dir_ids[id])
+        # heightmap, target_mask, obstacle_mask, action = episode_data[0]
+        # target_mask = obstacle_mask
+
+        heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
 
         # heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
