@@ -218,8 +218,6 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
-        print(padded_heightmap.shape, padded_target_mask.shape)
-
         return padded_heightmap, padded_target_mask, rot_id, label
         # return padded_heightmap, rot_id, label
     
