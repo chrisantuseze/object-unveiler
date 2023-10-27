@@ -170,16 +170,6 @@ class HeightMapDataset(data.Dataset):
         # target_mask = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'target_mask.png'), -1)
         # action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[id], 'action'), 'rb'))
 
-        # # Apply 2x scale to input heightmaps
-        # heightmap = ndimage.zoom(heightmap, zoom=[2, 2], order=0)
-        # target_mask = ndimage.zoom(target_mask, zoom=[2, 2], order=0)
-
-        # print(heightmap.shape, target_mask.shape)
-
-        #TODO Remove this for after the linear eval
-        target_mask = utils.resize_mask(transform, target_mask)
-        # assert (heightmap.shape[0:2] == target_mask.shape[0:2])
-
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
         diagonal_length_depth = np.ceil(diagonal_length_depth / 16) * 16
@@ -187,6 +177,7 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
+        target_mask = utils.resize_mask(transform, target_mask)
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
         padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
@@ -222,6 +213,8 @@ class HeightMapDataset(data.Dataset):
         label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
+        
+        print(padded_heightmap.shape, padded_target_mask.shape)
 
         return padded_heightmap, padded_target_mask, rot_id, label
         # return padded_heightmap, rot_id, label
