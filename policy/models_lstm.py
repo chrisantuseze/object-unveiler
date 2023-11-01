@@ -239,17 +239,22 @@ class ResFCN(nn.Module):
                 # print("view out_prob.shape", out_prob.shape)
 
                 # Image-wide softmax
-                output_shape = out_prob.shape
-                out_prob = out_prob.view(output_shape[0], -1)
-                out_prob = torch.softmax(out_prob, dim=1)
-                out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+                # output_shape = out_prob.shape
+                # out_prob = out_prob.view(output_shape[0], -1)
+                # out_prob = torch.softmax(out_prob, dim=1)
+                # out_prob = out_prob.view(output_shape).to(dtype=torch.float)
 
                 # print("out_prob.shape", out_prob.shape)
 
                 outs.append(out_prob)
 
             out_prob = torch.stack(outs, dim=0)
-            # print("stack out_prob.shape", out_prob.shape)
+
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+            print("stack out_prob.shape", out_prob.shape)
 
             return out_prob
         
