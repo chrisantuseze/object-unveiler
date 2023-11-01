@@ -1,6 +1,6 @@
 import os
 import random
-from policy.models_original import Regressor, ResFCN
+from policy.models_lstm import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -28,6 +28,13 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
+    # TODO: remember to remove this
+    if args.batch_size > 1:
+        if len(transition_dirs) > 8000:
+            transition_dirs = transition_dirs[:8000]
+        else:
+            transition_dirs = transition_dirs[:4000]
+
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
@@ -54,7 +61,7 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ActionNet(args).to(args.device)
+    model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCEWithLogitsLoss() #nn.BCELoss(reduction='none')
@@ -62,18 +69,20 @@ def train_fcn_net(args):
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
-            x = batch[0]
-            rotations = batch[1]
-            y = batch[2]
-            y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+            x = batch[0].to(args.device)
+            target = batch[1].to(args.device, dtype=torch.float32)
+            rotations = batch[2]
+            y = batch[3]
+            y = utils.pad_label(y).to(args.device, dtype=torch.float32)
             # logging.info("y.shape:", y.shape)
 
-            pred = model(x, rot_ids=rotations)
+            pred = model(x, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
-
             loss = torch.sum(loss)
+
+            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -83,12 +92,13 @@ def train_fcn_net(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                x = batch[0]
-                rotations = batch[1]
-                y = batch[2]
-                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                x = batch[0].to(args.device)
+                target = batch[1].to(args.device)
+                rotations = batch[2]
+                y = batch[3]
+                y = utils.pad_label(y).to(args.device, dtype=torch.float32)
 
-                pred = model(x, rot_ids=rotations)
+                pred = model(x, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)

@@ -1,14 +1,8 @@
 from policy.models import ResidualBlock, conv3x3
-from policy.network import FeatureTunk
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-from torch.autograd import Variable
-import numpy as np
-import utils.logger as logging
 from utils.constants import *
-from collections import OrderedDict
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):

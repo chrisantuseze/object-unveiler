@@ -206,11 +206,10 @@ def extract_relationships(object_masks, threshold_iou=0.0001):
     for i, mask_i in enumerate(object_masks):
         for j, mask_j in enumerate(object_masks):
             if i != j:  # Avoid self-comparison
-                mask_i = torch.Tensor.float(torch.tensor(mask_i))
-                mask_j = torch.Tensor.float(torch.tensor(mask_j))
+                mask_i = torch.Tensor.float(mask_i)
+                mask_j = torch.Tensor.float(mask_j)
 
                 iou = calculate_iou(mask_i, mask_j)
-                # print(f"({i}, {j}) - iou:", iou)
 
                 if iou >= threshold_iou:
                     add_edge(relationships, i, j)

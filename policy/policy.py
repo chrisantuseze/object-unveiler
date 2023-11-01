@@ -1,6 +1,6 @@
 import os
 import pickle
-from policy.models import Regressor, ResFCN
+from policy.models_lstm import Regressor, ResFCN
 from policy.action_net_linear import ActionNet
 import torch
 import torch.optim as optim
@@ -45,7 +45,7 @@ class Policy:
         # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         # self.fcn_criterion = nn.BCELoss(reduction='None')
 
-        self.fcn = ResFCN().to(self.device) #ActionNet(args, is_train=False).to(self.device)
+        self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
@@ -322,45 +322,54 @@ class Policy:
     
     def exploit(self, state, target_mask):
 
-        data_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
-            transforms.ToTensor(),
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            transforms.Normalize(mean=(0.449), std=(0.226))
-        ])
+        # data_transform = transforms.Compose([
+        #     transforms.ToPILImage(),
+        #     transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
+        #     transforms.ToTensor(),
+        #     # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        #     transforms.Normalize(mean=(0.449), std=(0.226))
+        # ])
         
-        # find optimal position and orientation
-        heightmap, self.padding_width = utils.preprocess_data(state)
-        # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+        # # find optimal position and orientation
+        # heightmap, self.padding_width = utils.preprocess_data(state)
+        # # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        x = data_transform(heightmap).to(self.device)
-        x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
+        # x = data_transform(heightmap).to(self.device)
+        # x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
-        # Resize the image using seam carving to match with the heightmap
-        resized_target = utils.resize_mask(transform, target_mask)
-        target, self.padding_width = utils.preprocess_data(resized_target) # this is might not be necessary
+        # # Resize the image using seam carving to match with the heightmap
+        # resized_target = utils.resize_mask(transform, target_mask)
+        # target, self.padding_width = utils.preprocess_data(resized_target) # this is might not be necessary
 
-        # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-        target = data_transform(target).to(self.device)
-        target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
+        # # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        # target = data_transform(target).to(self.device)
+        # target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
 
-        # combine the two features into a list
-        sequence = [(x, target, target)]
-        # sequence = [(x, target)]
+        # # combine the two features into a list
+        # sequence = [(x, target, target)]
+        # # sequence = [(x, target)]
         
-        out_prob = self.fcn(sequence, is_volatile=True)
+        # out_prob = self.fcn(sequence, is_volatile=True)
         # logging.info("out_prob.shape:", out_prob.shape)
 
+        # find optimal position and orientation
+        heightmap = self.preprocess_old(state)
+
+        resized_target = utils.resize_mask(transform, target_mask)
+        target = self.preprocess_old(resized_target)
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        out_prob = self.fcn(x, target, is_volatile=True)
+
         out_prob = self.postprocess(out_prob)
-        # logging.info("postprocess out_prob.shape:", out_prob.shape, "out_prob:", out_prob)
 
         best_actions = []
         actions = []
         for i in range(out_prob.shape[0]):
             prob = out_prob[i]
             best_action = np.unravel_index(np.argmax(prob), prob.shape)
-            # logging.info("\nbest_action:", best_action)
             best_actions.append(best_action)
 
 

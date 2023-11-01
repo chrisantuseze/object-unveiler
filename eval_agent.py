@@ -54,11 +54,11 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit_old(state, target_mask)
+        actions = policy.exploit(state, target_mask)
 
         # for action in actions:
-        # env_action3d = policy.action3d(actions[0])
-        env_action3d = policy.action3d(actions)
+        env_action3d = policy.action3d(actions[0])
+        # env_action3d = policy.action3d(actions)
         logging.info("env_action3d:", env_action3d)
 
         next_obs, grasp_info = env.step(env_action3d)

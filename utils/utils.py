@@ -271,23 +271,8 @@ def resize_mask(transform, mask):
     resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
     return resized
 
-def pad_label(sequence_length, labels):
-    pad_needed = sequence_length - len(labels)
-
-    # logging.info(type(labels))
-    # logging.info("len(labels):", len(labels), "labels:", labels)
-    # labels = np.pad(labels, ((pad_needed, 0), (0, 0), (0, 0), (0, 0), (0, 0)), mode='constant')
-    # logging.info("padded labels.shape:", labels.shape)
-
-    # logging.info("labels:", labels)
-    # labels = np.asarray(labels, dtype=object)
-    # logging.info("labels.shape:", labels.shape)
-    # logging.info("labels:", labels)
-
+def pad_label(labels):
     labels = torch.stack(labels, dim=0)
-
-    # labels = labels.view(sequence_length, 1, 1, 224, 224)
-    # logging.info("view labels.shape:", labels.shape)
 
     return labels
 

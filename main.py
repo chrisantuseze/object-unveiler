@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import torch
 import argparse
-from trainer.train_new2 import train_fcn_net, train_regressor
+from trainer.train_new import train_fcn_net, train_regressor
 from eval_agent import eval_agent
 import utils.utils as utils
 import utils.logger as logging
