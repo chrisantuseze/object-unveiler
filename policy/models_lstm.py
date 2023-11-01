@@ -254,7 +254,7 @@ class ResFCN(nn.Module):
             out_prob = out_prob.view(output_shape[0], -1)
             out_prob = torch.softmax(out_prob, dim=1)
             out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-            print("stack out_prob.shape", out_prob.shape)
+            # print("stack out_prob.shape", out_prob.shape)
 
             return out_prob
         
