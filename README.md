@@ -7,13 +7,7 @@ python3 main.py --mode 'eval' --fcn_model 'save/fcn/fcn_model.pt' --reg_model 'd
 
 python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 100 --batch_size 5
 
-python3 collect_data.py --singulation_condition --n_samples 30000 --seed 9 #8 #7 #6 #5 #4 #1
-
-4 - edgar
-5,6 - iMac (ou-1)
-7 - Regan (ou-2)
-8,9,10 - Mac
-
+python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
 
 For the Pose-FCN Pose (Paper):
