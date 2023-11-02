@@ -5,35 +5,8 @@ import shutil
 dir = "/Users/chrisantuseze/Research/robot-learning/ppg-ou-datasets/ppg-ou-datasets/"
 # Specify the path to the folder containing the files you want to rename
 
-# folder_path = "ppg-dataset-2/"
-# id = 845
-
-# folder_path = "ppg-dataset-old/"
-# id = 1616
-
-# folder_path = "ppg-dataset-old2/"
-# id = 2461
-
-# folder_path = "ppg-dataset-old3/"
-# id = 2568
-
-# folder_path = "ppg-dataset-mac/"
-# id = 2707
-
-# folder_path = "ppg-dataset-edgar/"
-# id = 3299
-
-# folder_path = "ppg-dataset-regan/"
-# id = 4869
-
-# folder_path = "ppg-dataset-edgar/"
-# id = 1340
-
-# folder_path = "ppg-dataset-regan/"
-# id = 3738
-
 folder_path = "ppg-regan/"
-id = 1968
+id = 4512
 
 
 folder_path = dir + folder_path

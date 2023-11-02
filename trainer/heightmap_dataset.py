@@ -158,7 +158,7 @@ class HeightMapDataset(data.Dataset):
 
         return sequence, rot_ids, labels
 
-    def __getitem__(self, id):
+    def __getitem__old3(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, target_mask, _, _ = episode_data[0]
 
@@ -228,17 +228,8 @@ class HeightMapDataset(data.Dataset):
 
         return padded_heightmap, padded_target_mask, rot_ids, labels
 
-    def __getitem__old3(self, id):
-        # episode_data = self.memory.load_episode(self.dir_ids[id])
-        # heightmap, target_mask, obstacle_mask, action = episode_data[0]
-        # target_mask = obstacle_mask
-
+    def __getitem__(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
-
-
-        # heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'heightmap.exr'), -1)
-        # target_mask = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[id], 'target_mask.png'), -1)
-        # action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[id], 'action'), 'rb'))
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -289,7 +280,6 @@ class HeightMapDataset(data.Dataset):
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
         return padded_heightmap, padded_target_mask, rot_id, label
-        # return padded_heightmap, rot_id, label
     
     def __len__(self):
         return len(self.dir_ids)
