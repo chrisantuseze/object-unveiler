@@ -10,4 +10,4 @@ module load apptainer/1.2.2 cuda/12.1
 export APPTAINER_BIND=$PWD
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/ppg-ou-dataset' --mode 'fcn' --epochs 100 --batch_size 4 --lr 0.0001 #python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset-5k' --epochs 100 --batch_size 5
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/ppg-dataset-5k' --mode 'fcn' --epochs 100 --batch_size 1 --lr 0.0001
-apptainer run --nv apptainerfile.sif python3 collect_data.py --singulation_condition --n_samples 30000 --seed 2
+apptainer run --nv apptainerfile.sif python3 collect_data.py --singulation_condition --n_samples 30000 --seed 6
