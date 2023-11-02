@@ -223,40 +223,79 @@ class Policy:
         action[3] = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
         return action
 
-    def heuristics_exploration(self, state, processed_masks, raw_masks, target_id):
-        target_bbox = grasping.calculate_bounding_box(processed_masks[1])
-        other_bboxes = [grasping.calculate_bounding_box(mask) for mask in processed_masks]
+    def guided_exploration(self, state, target, sample_limits=[0.1, 0.15]):
+        obj_ids = np.argwhere(state > self.z)
 
-        is_occluded = grasping.check_occlusion(target_bbox, other_bboxes)
-        is_middle = grasping.check_middle_placement(target_bbox, other_bboxes)
+        # Sample initial position.
+        valid_pxl_map = np.zeros(state.shape)
+        for x in range(state.shape[0]):
+            for y in range(state.shape[1]):
+                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1)
+                if sample_limits[0] / self.pxl_size < np.min(dists) < sample_limits[1] / self.pxl_size:
+                    valid_pxl_map[y, x] = 255
 
-        logging.info("Is occluded:", is_occluded)
-        logging.info("Is in the middle:", is_middle)
+        valid_pxl_map = utils.resize_mask(transform, target)
 
-        # if is_occluded and is_middle:
-        #     nodes, edges = grasping.build_graph(raw_masks)
-        nodes, edges = grasping.build_graph(raw_masks)
+        valid_pxls = np.argwhere(valid_pxl_map == 1)
+        valid_ids = np.arange(0, valid_pxls.shape[0])
 
-        logging.info("nodes:", nodes)
-        logging.info("edges:", edges)
+        objects_mask = np.zeros(state.shape)
+        objects_mask[state > self.z] = 255
 
-        return nodes, edges
+        # print(target.shape, state.shape)
+        # np.savetxt('target.txt', target)
 
-        # node = -1
-        # while node != target_id:
-        #     optimal_nodes = grasping.get_optimal_target_path(edges)
-        #     logging.info("optimal_nodes:", optimal_nodes)
+        # fig, ax = plt.subplots(1, 4)
+        # ax[0].imshow(state)
+        # ax[1].imshow(valid_pxl_map)
+        # ax[2].imshow(objects_mask)
+        # ax[3].imshow(target)
 
-        #     if len(optimal_nodes) <= 0:
-        #         break
-        #     node = optimal_nodes[0]
-        #     grasping.compute_grasping_point_for_object(processed_masks[node], 
-        #                                                self.aperture_limits, 
-        #                                                self.rotations, self.rng)
-        #     nodes, edges = grasping.build_graph(raw_masks)
+        # plt.show()
 
 
-    def guided_exploration(self, state, target_mask, sample_limits=[0.1, 0.15]):
+        _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        while True:
+            pxl = valid_pxls[self.rng.choice(valid_ids, 1)[0]]
+            p1 = np.array([pxl[1], pxl[0]])
+
+            # Sample pushing direction. Push directions point always towards the objects.
+            # Keep only contour points that are around the sample pixel position.
+            pushing_area = self.push_distance / self.pxl_size
+            points = []
+            for cnt in contours:
+                for pnt in cnt:
+                    if (p1[0] - pushing_area < pnt[0, 0] < p1[0] + pushing_area) and \
+                       (p1[1] - pushing_area < pnt[0, 1] < p1[1] + pushing_area):
+                        points.append(pnt[0])
+            if len(points) > 0:
+                break
+
+        ids = np.arange(len(points))
+        random_id = self.rng.choice(ids, 1)[0]
+        p2 = points[random_id]
+        push_dir = p2 - p1
+        theta = -np.arctan2(push_dir[1], push_dir[0])
+        step_angle = 2 * np.pi / self.rotations
+        discrete_theta = round(theta / step_angle) * step_angle
+
+        # Sample aperture uniformly
+        aperture = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = discrete_theta
+        action[3] = aperture
+
+        # if not grasping.is_grasped_object(target, action):
+        #     self.guided_exploration(state, target)
+
+        return action
+
+    def guided_exploration_old(self, state, target_mask, sample_limits=[0.1, 0.15]):
         obj_ids = np.argwhere(state > self.z)
 
         # sample initial position

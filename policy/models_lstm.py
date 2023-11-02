@@ -270,7 +270,6 @@ class ResFCN(nn.Module):
                           torch.zeros(1, dim2, self.hidden_size, dtype=torch.float, device=self.args.device))
         
         for i in range(self.args.sequence_length):
-            # logging.info("decoder_hidden[0].shape:", decoder_hidden[0].shape)
             # print("decoder_input.shape:", decoder_input.shape)
 
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden) #(hidden, cell))

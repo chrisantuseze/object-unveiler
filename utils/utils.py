@@ -196,8 +196,8 @@ def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
     # Get color image.
     logging.info(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
 
-    img = Image.fromarray(color_img, 'RGB')
-    img.save(os.path.join(dir, name + '.png'))
+    # img = Image.fromarray(color_img, 'RGB')
+    # img.save(os.path.join(dir, name + '.png'))
 
 def get_target_mask(processed_masks, obs, rng):
     id = 0
@@ -213,37 +213,38 @@ def get_target_mask(processed_masks, obs, rng):
 
 def delete_episodes_misc(path):
     # Try to remove the tree; if it fails, throw an error using try...except.
+    # try:
+    #     shutil.rmtree(path)
+    # except OSError as e:
+    #     logging.info("Error: %s - %s." % (e.filename, e.strerror))
+
+    # if not os.path.exists(path):
+    #     os.mkdir(path)
+    pass
+
+def recreate_train():
+    path = TRAIN_DIR
+
+    # Try to remove the tree; if it fails, throw an error using try...except.
     try:
         shutil.rmtree(path)
     except OSError as e:
         logging.info("Error: %s - %s." % (e.filename, e.strerror))
-
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-def recreate_train():
-    train_path = TRAIN_DIR
-
-    # Try to remove the tree; if it fails, throw an error using try...except.
-    try:
-        shutil.rmtree(train_path)
-    except OSError as e:
-        logging.info("Error: %s - %s." % (e.filename, e.strerror))
         
-    if not os.path.exists(f'{train_path}/episodes'):
-        os.makedirs(f'{train_path}/episodes')
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def recreate_test():
-    train_path = TEST_DIR
+    path = TEST_DIR
 
     # Try to remove the tree; if it fails, throw an error using try...except.
     try:
-        shutil.rmtree(train_path)
+        shutil.rmtree(path)
     except OSError as e:
         logging.info("Error: %s - %s." % (e.filename, e.strerror))
         
-    if not os.path.exists(f'{train_path}/episodes'):
-        os.makedirs(f'{train_path}/episodes')
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def create_dirs():
     recreate_test()

@@ -303,21 +303,13 @@ class FloatingBHand:
             contacts = p.getContactPoints(bodyA=self.robot_hand_id, linkIndexA=link_id)
             if len(contacts) == 0:
                 continue
-
             for pnt in contacts:
                 body_b.append(pnt[2])
-
             total_contacts += len(contacts)
 
-        # print("distal_contacts:", distal_contacts)
-        # print("total_contacts:", total_contacts)
-        # print("len(np.unique(body_b)):", len(np.unique(body_b)))
-
-        if distal_contacts == total_contacts or len(np.unique(body_b)) == 0: #len(np.unique(body_b)) != 1: commenting this out permits the robot to grasp multiple objects
+        if distal_contacts == total_contacts or len(np.unique(body_b)) != 1:
             return False, total_contacts
-        
-        if distal_contacts > total_contacts:
-            assert(distal_contacts > total_contacts)
-
+        elif distal_contacts > total_contacts:
+            assert (distal_contacts > total_contacts)
         else:
             return True, total_contacts

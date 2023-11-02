@@ -36,10 +36,232 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
+    
+    i = 0
+    n_prev_masks = 0
+    count = 0
+    end_scene = False
+
+    max_steps = 2
+    while episode_data['attempts'] < max_steps:
+        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+
+        state = policy.state_representation(obs)
+        actions = policy.exploit(state, target_mask)
+
+        # Reverse the list
+        reversed_actions = actions[::-1]
+
+        for action in reversed_actions:
+            env_action3d = policy.action3d(action)
+            next_obs, grasp_info = env.step(env_action3d)
+
+            if grasp_info['collision']:
+                episode_data['collisions'] += 1
+
+            if grasp_info['stable'] and i ==0:
+                episode_data['sr-1'] += 1
+
+            if grasp_info['stable']:
+                episode_data['sr-n'] += 1
+                episode_data['objects_removed'] += 1
+
+            else:
+                episode_data['fails'] += 1
+
+            print(action)
+            print(grasp_info)
+            print('---------')
+
+            utils.delete_episodes_misc(TEST_EPISODES_DIR)
+
+            if policy.is_terminal(next_obs):
+                end_scene = True
+                break
+
+            obs = copy.deepcopy(next_obs)
+
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
+            if len(processed_masks) == n_prev_masks:
+                count += 1
+
+            if count >= 2:
+                logging.info("Robot is in an infinite loop")
+                break
+
+            target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+            if target_id == -1:
+                if grasp_info['stable']:
+                    logging.info("Target has been grasped!")
+                    success_count += 1
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+                print('------------------------------------------')
+
+                end_scene = True
+                break
+
+            cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
+            n_prev_masks = len(processed_masks)
+
+        episode_data['attempts'] += 1
+        if end_scene:
+            break
+
+    logging.info('--------')
+    return episode_data, success_count
+
+def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+    env.seed(episode_seed)
+    obs = env.reset()
+
+    while not policy.is_state_init_valid(obs):
+        obs = env.reset()
+
+    episode_data = {'sr-1': 0,
+                    'sr-n': 0,
+                    'fails': 0,
+                    'attempts': 0,
+                    'collisions': 0,
+                    'objects_removed': 0,
+                    'objects_in_scene': len(obs['full_state'])}
+    
+    id = 1
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
+
+    # get a randomly picked target mask from the segmented image
+    target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
+    
+    i = 0
+    node_id = -1
+    n_prev_masks = 0
+    count = 0
+    prev_node = -1
+    grasp_status = []
+
+    # NOTE: During the next iteration you need to search through the masks and identify the target, 
+    # then use its id. Don't maintain the old target id because the scene has been resegmented
+    while node_id != target_id:
+        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+
+        _, edges = grasping.build_graph(raw_masks)
+
+        if len(edges) > 0:
+            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
+            print("optimal_nodes:", optimal_nodes)
+
+            if len(optimal_nodes) > 0:
+                node_id = optimal_nodes[0]
+
+                if prev_node == node_id and len(optimal_nodes) > 1:
+                    node_id = optimal_nodes[1]
+                    
+            else: # if target is not occluded
+                node_id = target_id
+
+        else: # if target is not occluded
+            print("Object is not occluded")
+            node_id = target_id
+        print("node_id:", node_id)
+
+        prev_node = node_id
+
+        obstacle_mask = processed_masks[node_id]
+        cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
+
+        state = policy.state_representation(obs)
+        actions = policy.exploit(state, obstacle_mask)
+
+        # for action in actions:
+        env_action3d = policy.action3d(actions[0])
+        next_obs, grasp_info = env.step(env_action3d)
+
+        episode_data['attempts'] += 1
+
+        if grasp_info['collision']:
+            episode_data['collisions'] += 1
+
+        if grasp_info['stable'] and i ==0:
+            episode_data['sr-1'] += 1
+
+        if grasp_info['stable']:
+            episode_data['sr-n'] += 1
+            episode_data['objects_removed'] += 1
+
+        else:
+            episode_data['fails'] += 1
+
+        grasp_status.append(grasp_info['stable'])
+
+        print(actions)
+        print(grasp_info)
+        print('---------')
+
+        utils.delete_episodes_misc(TEST_EPISODES_DIR)
+
+        if node_id == target_id and grasp_info['stable']:
+            print(">>>>>>>>>>> Target retrieved! >>>>>>>>>>>>>")
+            print('------------------------------------------')
+            break
+
+        elif policy.is_terminal(next_obs):
+            break
+
+        obs = copy.deepcopy(next_obs)
+
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
+        if len(processed_masks) == n_prev_masks:
+            count += 1
+
+        if count >= 2:
+            logging.info("Robot is in an infinite loop")
+            break
+
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+        if target_id == -1:
+            if grasp_info['stable']:
+                logging.info("Target has been grasped!")
+                success_count += 1
+            else:
+                logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+            break
+
+        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
+        n_prev_masks = len(processed_masks)
+
+    logging.info('--------')
+    return episode_data, success_count
+
+def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+    env.seed(episode_seed)
+    obs = env.reset()
+
+    while not policy.is_state_init_valid(obs):
+        obs = env.reset()
+
+    episode_data = {'sr-1': 0,
+                    'sr-n': 0,
+                    'fails': 0,
+                    'attempts': 0,
+                    'collisions': 0,
+                    'objects_removed': 0,
+                    'objects_in_scene': len(obs['full_state'])}
+    
+    id = 1
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
+
+    # get a randomly picked target mask from the segmented image
+    target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
     # cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
-    prev_masks_no = 0
+    n_prev_masks = 0
     count = 0
     max_steps = 1
     while episode_data['attempts'] < max_steps:
@@ -88,14 +310,14 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         obs = copy.deepcopy(next_obs)
 
         processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TEST_EPISODES_DIR, plot=True)
-        if len(processed_masks) == prev_masks_no:
+        if len(processed_masks) == n_prev_masks:
             count += 1
 
         if count >= 1:
             logging.info("Robot is in an infinite loop")
             break
 
-        target_id, target_mask = grasping.get_new_target(processed_masks, target_mask)
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
         if target_id == -1:
             if grasp_info['stable']:
                 logging.info("Target has been grasped!")
@@ -106,7 +328,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
             break
 
         cv2.imwrite(os.path.join(TEST_EPISODES_DIR, "target_mask.png"), target_mask)
-        prev_masks_no = len(processed_masks)
+        n_prev_masks = len(processed_masks)
 
         i += 1
 
@@ -115,7 +337,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     logging.info('--------')
     return episode_data, success_count
 
-def run_episode_old(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
+def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
 

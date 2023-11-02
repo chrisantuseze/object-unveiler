@@ -139,58 +139,11 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
 
     return action
 
-def compute_grasping_point_for_object(segmentation_mask, aperture_limits, rotations, rng):
-    """Computes the grasping point of an object in a scene given a segmentation mask.
-
-    Args:
-        segmentation_mask: A binary mask of the scene.
-
-    Returns:
-        The grasping point of the object in the scene.
-    """
-
-    x_centers, y_centers = np.where(segmentation_mask >= 250)
-
-    # we need to normalize it a bit according to the dimension of the floor mat
-    x_center = np.mean(x_centers) * 0.25
-    y_center = np.mean(y_centers) * 0.25
-    center_of_mass = (x_center, y_center)
-
-    # sample aperture uniformly
-    aperture = rng.uniform(aperture_limits[0], aperture_limits[1])
-
-    p1 = center_of_mass
-
-    theta = -np.arctan2(p1[1], p1[0])
-    step_angle = 2 * np.pi / rotations
-    discrete_theta = round(theta / step_angle) * step_angle
-
-    if p1[0] <= 35 and p1[1] <= 35:
-        # discrete_theta -= np.pi * 0.25      # tilt hand to face 315 degs left (anti-clockwise)
-        pass
-    elif p1[0] >= 35 and p1[1] <= 35:
-        discrete_theta -= np.pi * 0.75      # tilt hand to face 225 degs left (anti-clockwise)
-    else:
-        discrete_theta += np.pi             # tilt hand to face 135 degs left (anti-clockwise)
-    
-    action = np.zeros((4,))
-    action[0] = p1[0]
-    action[1] = p1[1]
-    action[2] = discrete_theta
-    action[3] = aperture
-
-    logging.info("action_:", action)
-
-    return action
-
 def calculate_iou(mask1, mask2):
     """Calculates the intersection over union (IoU) between two object masks."""
     intersection = torch.sum(mask1 * mask2)
     union = torch.sum(mask1) + torch.sum(mask2) - intersection
     return intersection / union
-
-def calculate_overlap(mask1, mask2):
-    return (mask1 & mask2).sum() / mask1.sum()
 
 def add_edge(relationships, i, j):
     for edge in relationships:
@@ -216,14 +169,6 @@ def extract_relationships(object_masks, threshold_iou=0.0001):
 
     return relationships
 
-def calculate_bounding_box(mask):
-    # Calculate the bounding box of a segmentation mask
-    contours, _ = cv2.findContours(np.array(mask, np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if len(contours) > 0:
-        bbox = cv2.boundingRect(contours[0])
-        return bbox
-    return None
-
 def check_occlusion(target_bbox, other_bboxes, overlap_threshold=0.5):
     # Check if the target object is occluded by other objects
     for bbox in other_bboxes:
@@ -244,18 +189,6 @@ def calculate_area(bbox):
     # Calculate the area of a bounding box
     _, _, width, height = bbox
     return width * height
-
-def check_middle_placement(target_bbox, other_bboxes, distance_threshold=50):
-    # Check if the target object is in the middle of other objects
-    target_center = np.array([(target_bbox[0] + target_bbox[2]) / 2, (target_bbox[1] + target_bbox[3]) / 2])
-    for bbox in other_bboxes:
-        other_center = np.array([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2])
-        distance = np.linalg.norm(target_center - other_center)
-
-        logging.info("distance:", distance)
-        if distance < distance_threshold:
-            return True
-    return False
 
 def build_graph(object_masks):
     nodes = []
@@ -337,7 +270,7 @@ def sort_by_num_edges(representations, optimal_nodes):
     # Sort list optimal_nodes using the custom sorting key
     return sorted(optimal_nodes, key=sorting_key)
 
-def get_new_target(processed_masks, old_target_mask):
+def find_target(processed_masks, old_target_mask): 
     valid_objs = {}
 
     for id, mask in enumerate(processed_masks):
@@ -356,7 +289,7 @@ def get_new_target(processed_masks, old_target_mask):
     id = -1
     mask = None
 
-    dist_threshold = 150 # TODO: this is subject to change
+    dist_threshold = 100 #150 # TODO: this is subject to change
 
     for key, value in valid_objs.items():
         point = value[1]
@@ -400,37 +333,7 @@ def episode_status(grasping_status, is_target_grasped):
     
     return not any(item is False for item in grasping_status)
 
-
-def is_object_in_images(mask1, mask2, object_threshold=5):
-    # Initialize SIFT detector
-    sift = cv2.SIFT_create()
-
-    # Find keypoints and descriptors
-    kp1, des1 = sift.detectAndCompute(mask1, None)
-    kp2, des2 = sift.detectAndCompute(mask2, None)
-
-    # Initialize Brute-Force Matcher
-    bf = cv2.BFMatcher()
-
-    # Match descriptors
-    matches = bf.knnMatch(des1, des2, k=2)
-    # for match in matches:
-    #     print(match[0].distance, match[1].distance)
-
-    if len(matches) == 0 or len(matches[0]) < 2:
-        return False
-
-    # Apply ratio test to get good matches
-    good_matches = []
-    for m, n in matches:
-        if m.distance < 0.75 * n.distance:
-            good_matches.append(m)
-
-    # Check if enough good matches exist
-    obj_present = len(good_matches) >= object_threshold
-    if obj_present:
-        logging.info("The object is present in both images.", len(good_matches))
-    else:
-        logging.info("The object is not present in both images.", len(good_matches))
-
-    return obj_present
+def is_grasped_object(target, action):
+    dist = get_distance(get_object_centroid(target), (action[0], action[1]))
+    print(dist)
+    return dist < 30

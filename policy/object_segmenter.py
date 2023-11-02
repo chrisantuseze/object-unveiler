@@ -66,9 +66,9 @@ class ObjectSegmenter:
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20
                     name = str(idx) + "mask.png"
-                    cv2.imwrite(os.path.join(dir, name), img)
-        if plot:
-            cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
+                    # cv2.imwrite(os.path.join(dir, name), img)
+        # if plot:
+        #     cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
 
         # logging.info("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
         
