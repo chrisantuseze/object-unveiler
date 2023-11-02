@@ -239,20 +239,11 @@ class Policy:
         valid_pxls = np.argwhere(valid_pxl_map == 1)
         valid_ids = np.arange(0, valid_pxls.shape[0])
 
+        if len(valid_ids) < 1:
+            return np.zeros((4,))
+
         objects_mask = np.zeros(state.shape)
         objects_mask[state > self.z] = 255
-
-        # print(target.shape, state.shape)
-        # np.savetxt('target.txt', target)
-
-        # fig, ax = plt.subplots(1, 4)
-        # ax[0].imshow(state)
-        # ax[1].imshow(valid_pxl_map)
-        # ax[2].imshow(objects_mask)
-        # ax[3].imshow(target)
-
-        # plt.show()
-
 
         _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
