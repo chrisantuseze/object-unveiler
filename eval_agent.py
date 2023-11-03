@@ -276,11 +276,11 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit(state, target_mask)
+        actions = policy.exploit_old(state, target_mask)
 
         # for action in actions:
-        env_action3d = policy.action3d(actions[0])
-        # env_action3d = policy.action3d(actions)
+        # env_action3d = policy.action3d(actions[0])
+        env_action3d = policy.action3d(actions)
         logging.info("env_action3d:", env_action3d)
 
         next_obs, grasp_info = env.step(env_action3d)
@@ -337,7 +337,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     logging.info('--------')
     return episode_data, success_count
 
-def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15, train=True):
+def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -411,7 +411,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
+        episode_data, success_count = run_episode_old1(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

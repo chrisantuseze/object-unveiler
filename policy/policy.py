@@ -1,6 +1,6 @@
 import os
 import pickle
-from policy.models_lstm import Regressor, ResFCN
+from policy.models import Regressor, ResFCN
 from policy.action_net_linear import ActionNet
 import torch
 import torch.optim as optim
@@ -41,11 +41,11 @@ class Policy:
         self.push_distance = 0.10 #0.08 #0.02 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
-        # self.fcn = ResFCN().to(self.device)
+        self.fcn = ResFCN().to(self.device)
         # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         # self.fcn_criterion = nn.BCELoss(reduction='None')
 
-        self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
+        # self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
@@ -248,6 +248,9 @@ class Policy:
         _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+
+        count = 0
+
         while True:
             pxl = valid_pxls[self.rng.choice(valid_ids, 1)[0]]
             p1 = np.array([pxl[1], pxl[0]])
@@ -263,6 +266,11 @@ class Policy:
                         points.append(pnt[0])
             if len(points) > 0:
                 break
+
+            count += 1
+
+            if count > 20:
+                return np.zeros((4,))
 
         ids = np.arange(len(points))
         random_id = self.rng.choice(ids, 1)[0]

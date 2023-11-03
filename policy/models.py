@@ -183,10 +183,6 @@ class ResFCN(nn.Module):
             prob = torch.cat((prob_depth, prob_target), dim=1)
             prob = torch.mean(prob, dim=1, keepdim=True)
 
-            # concat = torch.cat((rotate_depth, rotate_target_mask), dim=1)
-            # concat = torch.mean(concat, dim=1, keepdim=True)
-            # prob = self.predict(concat)
-
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
             for i in range(len(thetas)):

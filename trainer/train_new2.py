@@ -24,14 +24,14 @@ def train_fcn_net(args):
     # transition_dirs = next(os.walk(args.dataset_dir))[1]
     transition_dirs = os.listdir(args.dataset_dir)
     
-    # for file_ in transition_dirs:
-    #     if not file_.startswith("episode"):
-    #         transition_dirs.remove(file_)
-    
     for file_ in transition_dirs:
-        if not file_.startswith("transition"):
-            print(file_)
+        if not file_.startswith("episode"):
             transition_dirs.remove(file_)
+    
+    # for file_ in transition_dirs:
+    #     if not file_.startswith("transition"):
+    #         print(file_)
+    #         transition_dirs.remove(file_)
 
     # split data to training/validation
     random.seed(0)
