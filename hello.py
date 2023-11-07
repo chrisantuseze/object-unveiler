@@ -2,26 +2,26 @@ import os
 import shutil
 
 
-dir = "/Users/chrisantuseze/Research/robot-learning/ppg-ou-datasets/ppg-ou-datasets/"
+dir = "/Users/chrisantuseze/Research/robot-learning/ppg-datasets/new/"
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "ppg-regan/"
-id = 4512
+folder_path = "ppg-dataset-20/"
+id = 1224
 
 
 folder_path = dir + folder_path
 # Loop through the files in the folder
 for filename in os.listdir(folder_path):
     old_name = os.path.join(folder_path, filename)
-    if os.path.isdir(old_name):
+    # if os.path.isdir(old_name):
         # Construct the new name for the file (modify this as needed)
 
-        arr = filename.split("_")
-        new_filename = arr[0] + "_" + str(id).zfill(5)
+    arr = filename.split("_")
+    new_filename = arr[0] + "_" + str(id).zfill(5)
 
-        # Rename the file
-        os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
-        id += 1
+    # Rename the file
+    os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
+    id += 1
 
 
 # Loop through all subdirectories in the source directory

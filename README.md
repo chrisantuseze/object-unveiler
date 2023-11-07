@@ -10,8 +10,9 @@ python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 100 --bat
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1,5
 
 pete - 2, 6
-uc - 3, 4, 7, 10, 18
-regan - 8, 9, 11, 12, 13, 14, 15, 16, 17
+uc - 3, 4, 7, 10, 18, 24
+regan - 25, 26, 27, 28
+tacc - 23
 
 
 For the Pose-FCN Pose (Paper):
