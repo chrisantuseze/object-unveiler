@@ -4,8 +4,8 @@ import zipfile
 import pickle
 import os
 
-with zipfile.ZipFile("ppg-ou-datasets.zip", 'r') as zip_ref:
-    zip_ref.extractall("ppg-ou-dataset")
+with zipfile.ZipFile("ou-datasets.zip", 'r') as zip_ref:
+    zip_ref.extractall("ou-dataset")
 
 
 # arr = [3,1,4,5,5,1,42,13,8,6]
