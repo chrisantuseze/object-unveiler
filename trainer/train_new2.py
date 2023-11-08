@@ -38,11 +38,11 @@ def train_fcn_net(args):
     random.shuffle(transition_dirs)
 
     # TODO: remember to remove this
-    if args.batch_size > 1:
-        if len(transition_dirs) > 8000:
-            transition_dirs = transition_dirs[:8000]
-        else:
-            transition_dirs = transition_dirs[:4000]
+    # if args.batch_size > 1:
+    #     if len(transition_dirs) > 8000:
+    #         transition_dirs = transition_dirs[:8000]
+    #     else:
+    #         transition_dirs = transition_dirs[:4000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -51,6 +51,9 @@ def train_fcn_net(args):
     # this ensures that the split is done properly without causing input mismatch error
     data_length = (len(train_ids)//args.batch_size) * args.batch_size
     train_ids = train_ids[:data_length]
+
+    data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    val_ids = val_ids[:data_length]
     
     train_dataset = HeightMapDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)

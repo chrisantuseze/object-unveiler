@@ -267,9 +267,8 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     n_prev_masks = 0
     count = 0
     max_steps = 5
-    target_is_available = True
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][i], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         # nodes, edges = grasping.build_graph(raw_masks)
         # if len(edges) > 0:
