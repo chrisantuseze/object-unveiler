@@ -15,6 +15,7 @@ import policy.grasping as grasping
 
 import utils.logger as logging
 
+# multi output
 def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -51,9 +52,9 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         actions = policy.exploit(state, target_mask)
 
         # Reverse the list
-        reversed_actions = actions[::-1]
+        # actions = actions[::-1]
 
-        for action in reversed_actions:
+        for action in actions:
             env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step(env_action3d)
 
@@ -113,6 +114,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     logging.info('--------')
     return episode_data, success_count
 
+# single output with heuristics
 def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -237,6 +239,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     logging.info('--------')
     return episode_data, success_count
 
+# single output with heuristics (with a spice)
 def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -263,15 +266,16 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     i = 0
     n_prev_masks = 0
     count = 0
-    max_steps = 1
+    max_steps = 5
+    target_is_available = True
     while episode_data['attempts'] < max_steps:
         utils.save_image(color_img=obs['color'][i], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        nodes, edges = grasping.build_graph(raw_masks)
-        if len(edges) > 0:
-            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
-            if len(optimal_nodes) > 0:
-                target_mask = processed_masks[optimal_nodes[0]]            
+        # nodes, edges = grasping.build_graph(raw_masks)
+        # if len(edges) > 0:
+        #     optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
+        #     if len(optimal_nodes) > 0:
+        #         target_mask = processed_masks[optimal_nodes[0]]            
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
@@ -279,7 +283,6 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
         actions = policy.exploit_old(state, target_mask)
 
         # for action in actions:
-        # env_action3d = policy.action3d(actions[0])
         env_action3d = policy.action3d(actions)
         logging.info("env_action3d:", env_action3d)
 
@@ -337,6 +340,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     logging.info('--------')
     return episode_data, success_count
 
+# original
 def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
