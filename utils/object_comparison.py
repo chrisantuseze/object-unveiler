@@ -27,7 +27,7 @@ def preprocess_image(preprocess, mask):
 
 def object_compare(mask1, mask2):
     # Load the pre-trained ResNet18 model
-    model = models.resnet18(pretrained=True)
+    model = models.resnet34(pretrained=True)
     model = nn.Sequential(*list(model.children())[:-1])  # Remove the classification layer
 
     # Set the model to evaluation mode
@@ -55,6 +55,7 @@ def object_compare(mask1, mask2):
 
     # Calculate cosine similarity between the feature tensors
     similarity_score = nn.functional.cosine_similarity(flat_features1, flat_features2).item()
+    # logging.info("The similarity score is", similarity_score)
 
     # Define a threshold to determine if the object appears in both images
     threshold = 0.9

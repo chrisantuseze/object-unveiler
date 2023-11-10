@@ -84,7 +84,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
     center_of_mass = get_object_centroid(segmentation_masks[object_id])
 
     # Print the computed grasping point
-    logging.info("Grasping Point:", center_of_mass)
+    # logging.info("Grasping Point:", center_of_mass)
 
     # sample aperture uniformly
     aperture = rng.uniform(aperture_limits[0], aperture_limits[1])
@@ -125,7 +125,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
             # discrete_theta += np.pi             # tilt hand to face 135 degs left (anti-clockwise) -22.5 + x = 157.5; x = 180
             discrete_theta += 180
         
-    logging.info("discrete_theta:", discrete_theta)
+    # logging.info("discrete_theta:", discrete_theta)
 
     discrete_theta = utils.deg_to_rad(discrete_theta)
 
@@ -279,6 +279,7 @@ def find_target(processed_masks, old_target_mask):
 
     # no target is found in the scene
     if not valid_objs:
+        print("No target is found in the scene")
         return -1, None
 
     # pick the object with the closest distance to the old target as the new target
@@ -289,8 +290,7 @@ def find_target(processed_masks, old_target_mask):
     id = -1
     mask = None
 
-    dist_threshold = 100 #150 # TODO: this is subject to change
-
+    dist_threshold = 100 # TODO: this is subject to change
     for key, value in valid_objs.items():
         point = value[1]
         dist = get_distance(target_point, point)
@@ -333,7 +333,7 @@ def episode_status(grasping_status, is_target_grasped):
     
     return not any(item is False for item in grasping_status)
 
-def is_grasped_object(target, action):
+def is_target_neighbor(target, action, threshold):
     dist = get_distance(get_object_centroid(target), (action[0], action[1]))
-    print(dist)
-    return dist < 30
+    # print(dist)
+    return dist < threshold
