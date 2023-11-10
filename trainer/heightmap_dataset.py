@@ -91,6 +91,7 @@ class HeightMapDataset(data.Dataset):
 
         return sequence, rot_ids, labels
     
+    # mult - input, multi - output
     def __getitem__old2(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
 
@@ -158,7 +159,8 @@ class HeightMapDataset(data.Dataset):
 
         return sequence, rot_ids, labels
 
-    def __getitem__old3(self, id):
+    # single - input, multi - output
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, target_mask, _, _ = episode_data[0]
 
@@ -228,7 +230,8 @@ class HeightMapDataset(data.Dataset):
 
         return padded_heightmap, padded_target_mask, rot_ids, labels
 
-    def __getitem__(self, id):
+    # single - input, single - output for ou-dataset
+    def __getitem__old3(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, target_mask, _, action = episode_data[0]
 
@@ -282,6 +285,7 @@ class HeightMapDataset(data.Dataset):
         
         return padded_heightmap, padded_target_mask, rot_id, label
     
+    # single - input, single - output for ppg-ou-dataset
     def __getitem__old4(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
