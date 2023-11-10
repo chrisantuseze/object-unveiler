@@ -28,13 +28,6 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    # TODO: remember to remove this
-    if args.batch_size > 1:
-        if len(transition_dirs) > 8000:
-            transition_dirs = transition_dirs[:8000]
-        else:
-            transition_dirs = transition_dirs[:4000]
-
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
@@ -49,6 +42,9 @@ def train_fcn_net(args):
     
     train_dataset = HeightMapDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)
+
+    val_dataset = HeightMapDataset(args, val_ids)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
