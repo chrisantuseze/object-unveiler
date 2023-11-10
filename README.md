@@ -7,11 +7,11 @@ python3 main.py --mode 'eval' --fcn_model 'save/fcn/fcn_model.pt' --reg_model 'd
 
 python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 100 --batch_size 5
 
-python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1,5
+python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
 pete - 2, 6
 uc - 3, 4, 7, 10, 18, 24
-regan - 25, 26, 27, 28
+regan - 25, 26, 27, 28 - 29, 30, 31, 32, 33, 34, 35
 tacc - 23
 
 
