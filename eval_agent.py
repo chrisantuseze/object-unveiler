@@ -14,7 +14,7 @@ import utils.general_utils as general_utils
 from utils.constants import *
 import policy.grasping as grasping
 
-import utils.logger as logging
+import utilities.logger as logging
 
 # multi output
 def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):

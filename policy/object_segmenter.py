@@ -8,7 +8,7 @@ from torchvision.transforms import functional as TF
 
 from vision.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
-import utils.logger as logging
+import utilities.logger as logging
 
 class ObjectSegmenter:
     """

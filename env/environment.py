@@ -10,7 +10,7 @@ import utils.pybullet_utils as p_utils
 import utils.general_utils as general_utils
 import env.env_components as env_components
 import env.cameras as cameras
-import utils.logger as logging
+import utilities.logger as logging
 
 MOUNT_URDF_PATH = 'mount.urdf'
 UR5_URDF_PATH = 'ur5e_bhand.urdf'

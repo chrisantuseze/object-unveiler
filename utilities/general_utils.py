@@ -11,7 +11,7 @@ import torch
 
 import utils.pybullet_utils as p_utils
 from utils.constants import *
-import utils.logger as logging
+import utilities.logger as logging
 import policy.grasping as grasping
 
 

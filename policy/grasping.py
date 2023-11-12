@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
 import utils.general_utils as general_utils
-import utils.logger as logging
+import utilities.logger as logging
 
 def get_object_centroid(segmentation_mask):
     # Find the contours in the segmentation mask

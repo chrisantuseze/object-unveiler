@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
-import utils.logger as logging
+import utilities.logger as logging
 from utils.constants import *
 
 class ActionNet(nn.Module):

@@ -11,7 +11,7 @@ from scipy import ndimage
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
-import utils.logger as logging
+import utilities.logger as logging
 from utils.constants import *
 
 

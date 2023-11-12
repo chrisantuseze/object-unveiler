@@ -7,7 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
-import utils.logger as logging
+import utilities.logger as logging
 
 class ApertureDataset(data.Dataset):
     def __init__(self, args, dir_ids):

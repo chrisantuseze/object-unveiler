@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 from PIL import Image
-import utils.logger as logging
+import utilities.logger as logging
 
 def grayscale_to_rgb_pil(image):
     # Convert the image to PIL image.

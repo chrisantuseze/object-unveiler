@@ -23,7 +23,7 @@ import utils.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
 import policy.grasping as grasping
-import utils.logger as logging
+import utilities.logger as logging
 
 class Policy:
     def __init__(self, args, params) -> None:

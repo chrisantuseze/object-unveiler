@@ -13,7 +13,7 @@ from trainer.heightmap_dataset import HeightMapDataset
 from policy.old.action_net_linear_undo import ActionNet
 
 import utils.general_utils as general_utils
-import utils.logger as logging
+import utilities.logger as logging
 
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
     prefix = "fcn" if is_fcn else "reg"

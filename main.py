@@ -4,7 +4,7 @@ import argparse
 from trainer.train_new2 import train_fcn_net, train_regressor
 from eval_agent import eval_agent
 import utils.general_utils as general_utils
-import utils.logger as logging
+import utilities.logger as logging
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
