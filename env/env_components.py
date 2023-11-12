@@ -4,10 +4,10 @@ import math
 import time
 import pybullet as p
 
-from utilities.orientation import Quaternion, rot_z, rot_y
-import utilities.pybullet_utils as p_utils
-from utilities import urdf_editor
-from utilities.robotics import Trajectory
+from utils.orientation import Quaternion, rot_z, rot_y
+import utils.pybullet_utils as p_utils
+from utils import urdf_editor
+from utils.robotics import Trajectory
 
 MOUNT_URDF_PATH = 'mount.urdf'
 UR5_URDF_PATH = 'ur5e_bhand.urdf'

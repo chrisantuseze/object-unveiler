@@ -3,7 +3,7 @@ from collections import deque
 import torch
 
 from policy.grasping import calculate_iou, extract_relationships
-import utilities.logger as logging
+import utils.logger as logging
 
 # Example graph representation
 # graph = {

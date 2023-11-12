@@ -1,8 +1,8 @@
 import torch
 import torchvision
 from vision.segmentation_dataset import SegmentationDataset
-import utilities.log_utils as log_utils
-import utilities.torch_utils as torch_utils
+import utils.log_utils as log_utils
+import utils.torch_utils as torch_utils
 import datetime
 import argparse
 import time

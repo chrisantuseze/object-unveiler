@@ -12,7 +12,7 @@ from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
 from policy.action_net_linear import *
 
-import utilities.logger as logging
+import utils.logger as logging
 
 
 def train_fcn_net(args):

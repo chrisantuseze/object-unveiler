@@ -10,9 +10,9 @@ from skimage import transform, io
 from scipy import ndimage
 
 from trainer.memory import ReplayBuffer
-import utilities.general_utils as general_utils
-import utilities.logger as logging
-from utilities.constants import *
+import utils.general_utils as general_utils
+import utils.logger as logging
+from utils.constants import *
 
 
 class HeightMapDataset(data.Dataset):

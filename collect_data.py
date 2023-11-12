@@ -11,9 +11,9 @@ from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
 from trainer.memory import ReplayBuffer
-import utilities.general_utils as general_utils
+import utils.general_utils as general_utils
 import policy.grasping as grasping
-from utilities.constants import *
+from utils.constants import *
 import policy.path_planning as pp
 
 def collect_episodic_dataset(args):

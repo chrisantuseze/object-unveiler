@@ -9,9 +9,9 @@ import yaml
 from PIL import Image
 import torch
 
-import utilities.pybullet_utils as p_utils
-from utilities.constants import *
-import utilities.logger as logging
+import utils.pybullet_utils as p_utils
+from utils.constants import *
+import utils.logger as logging
 
 
 def get_pointcloud(depth, seg, intrinsics):

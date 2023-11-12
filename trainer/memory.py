@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 import os
 import cv2
-import utilities.logger as logging
+import utils.logger as logging
 
 
 class ReplayBuffer:

@@ -5,12 +5,12 @@ import cv2
 
 import pybullet as p
 import numpy as np
-from utilities.orientation import Affine3, Quaternion, rot_z
-import utilities.pybullet_utils as p_utils
-import utilities.general_utils as general_utils
+from utils.orientation import Affine3, Quaternion, rot_z
+import utils.pybullet_utils as p_utils
+import utils.general_utils as general_utils
 import env.env_components as env_components
 import env.cameras as cameras
-import utilities.logger as logging
+import utils.logger as logging
 
 MOUNT_URDF_PATH = 'mount.urdf'
 UR5_URDF_PATH = 'ur5e_bhand.urdf'

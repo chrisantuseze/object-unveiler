@@ -10,11 +10,11 @@ from scipy import ndimage
 from env.environment import Environment
 from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
-import utilities.general_utils as general_utils
-from utilities.constants import *
+import utils.general_utils as general_utils
+from utils.constants import *
 import policy.grasping as grasping
 
-import utilities.logger as logging
+import utils.logger as logging
 
 # multi output
 def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
