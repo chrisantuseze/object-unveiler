@@ -45,34 +45,37 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     count = 0
     end_scene = False
 
-    max_steps = 2
+    max_steps = 3
     while episode_data['attempts'] < max_steps:
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        # actions = policy.exploit(state, target_mask)
+        actions = policy.exploit(state, target_mask)
 
         # evaluates thee actions to check if the actions are for the neighbors or the target
-        attempts = 0
-        while attempts < 2:
-            actions = policy.exploit(state, target_mask)
-            actions = utils.evaluate_actions(actions, target_mask)
-            if len(actions) > 0:
-                break
-            state, target_mask = ndimage.rotate(state, 45, reshape=False), ndimage.rotate(target_mask, 45, reshape=False)
-            attempts += 1
+        # attempts = 0
+        # while attempts < 2:
+        #     actions = policy.exploit(state, target_mask)
+        #     actions = utils.evaluate_actions(actions, target_mask)
+        #     if len(actions) > 0:
+        #         break
+        #     state, target_mask = ndimage.rotate(state, 45, reshape=False), ndimage.rotate(target_mask, 45, reshape=False)
+        #     attempts += 1
 
-        # switching to heuristics
-        print("Generating grasp action using heuristics...")
-        if len(actions) == 0:
-            obstacle_id, _ = utils.get_obstacle_id(raw_masks, target_id, prev_node_id=-1)
-            # action = grasping.compute_grasping_point_for_object1(processed_masks, obstacle_id, policy.aperture_limits, policy.rotations, rng)
-            action = policy.guided_exploration(state, processed_masks[obstacle_id])
-            actions = [action]
+        # # switching to heuristics
+        # print("Generating grasp action using heuristics...")
+        # if len(actions) == 0:
+        #     obstacle_id, _ = utils.get_obstacle_id(raw_masks, target_id, prev_node_id=-1)
+        #     # action = grasping.compute_grasping_point_for_object1(processed_masks, obstacle_id, policy.aperture_limits, policy.rotations, rng)
+        #     action = policy.guided_exploration(state, processed_masks[obstacle_id])
+        #     actions = [action]
 
-        action = actions[0]
+        # action = actions[0]
+
+        action = utils.get_closest_neighbor(actions, target_mask)
+
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
 
@@ -133,7 +136,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     logging.info('--------')
     return episode_data, success_count
 
-# single output with heuristics
+# single output with heuristics for evaluating direct target grasping 
 def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -169,27 +172,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     while node_id != target_id:
         utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        _, edges = grasping.build_graph(raw_masks)
-
-        if len(edges) > 0:
-            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
-            print("optimal_nodes:", optimal_nodes)
-
-            if len(optimal_nodes) > 0:
-                node_id = optimal_nodes[0]
-
-                if prev_node == node_id and len(optimal_nodes) > 1:
-                    node_id = optimal_nodes[1]
-                    
-            else: # if target is not occluded
-                node_id = target_id
-
-        else: # if target is not occluded
-            print("Object is not occluded")
-            node_id = target_id
-        print("node_id:", node_id)
-
-        prev_node = node_id
+        node_id, prev_node = utils.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
 
         obstacle_mask = processed_masks[node_id]
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
@@ -258,7 +241,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     logging.info('--------')
     return episode_data, success_count
 
-# single output with heuristics (with a spice)
+# single output with heuristics
 def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()

@@ -314,6 +314,13 @@ def evaluate_actions(actions, target_mask):
 
     return new_actions
 
+def get_closest_neighbor(actions, target_mask):
+    new_actions = []
+    for action in actions:
+        new_actions.append((grasping.get_distance(grasping.get_object_centroid(target_mask), (action[0], action[1])), action))
+
+    return min(new_actions, key=lambda x: x[0])[1]
+
 def get_obstacle_id(raw_masks, target_id, prev_node_id):
     _, edges = grasping.build_graph(raw_masks)
     if len(edges) > 0:
