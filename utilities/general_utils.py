@@ -12,7 +12,6 @@ import torch
 import utilities.pybullet_utils as p_utils
 from utilities.constants import *
 import utilities.logger as logging
-import policy.grasping as grasping
 
 
 def get_pointcloud(depth, seg, intrinsics):
@@ -304,45 +303,6 @@ def preprocess_data(data, root=5):
     padded_data = padded_data.astype(np.float32)
 
     return padded_data, padding_width_data
-
-def evaluate_actions(actions, target_mask):
-    new_actions = []
-    for action in actions:
-        if grasping.is_target_neighbor(target_mask, action, threshold=100):
-            new_actions.append(action)
-            print(action)
-
-    return new_actions
-
-def get_closest_neighbor(actions, target_mask):
-    new_actions = []
-    for action in actions:
-        new_actions.append((grasping.get_distance(grasping.get_object_centroid(target_mask), (action[0], action[1])), action))
-
-    return min(new_actions, key=lambda x: x[0])[1]
-
-def get_obstacle_id(raw_masks, target_id, prev_node_id):
-    _, edges = grasping.build_graph(raw_masks)
-    if len(edges) > 0:
-        optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
-        # print("optimal_nodes:", optimal_nodes)
-
-        if len(optimal_nodes) > 0:
-            node_id = optimal_nodes[0]
-            if prev_node_id == node_id and len(optimal_nodes) > 1:
-                node_id = optimal_nodes[1]
-                
-        else: # if target is not occluded
-            node_id = target_id
-
-    else: # if target is not occluded
-        print("Object is not occluded")
-        node_id = target_id
-
-    # print("node_id:", node_id)
-    prev_node_id = node_id
-
-    return node_id, prev_node_id
 
 class Logger:
     def __init__(self, log_dir):
