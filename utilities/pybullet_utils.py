@@ -9,7 +9,7 @@ import numpy as np
 import os
 import time
 
-from utils.orientation import Quaternion
+from utilities.orientation import Quaternion
 
 
 def get_joint_indices(names, body_unique_id=0):

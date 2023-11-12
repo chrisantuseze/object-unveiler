@@ -11,7 +11,7 @@ from env.environment import Environment
 from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 import utilities.general_utils as general_utils
-from utils.constants import *
+from utilities.constants import *
 import policy.grasping as grasping
 
 import utilities.logger as logging

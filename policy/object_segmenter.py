@@ -7,7 +7,7 @@ from torchvision.transforms import functional as TF
 # from skimage.transform import resize
 
 from vision.train_maskrcnn import get_model_instance_segmentation
-from utils.constants import *
+from utilities.constants import *
 import utilities.logger as logging
 
 class ObjectSegmenter:

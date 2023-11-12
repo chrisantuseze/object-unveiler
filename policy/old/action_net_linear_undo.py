@@ -6,7 +6,7 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import utilities.logger as logging
-from utils.constants import *
+from utilities.constants import *
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):

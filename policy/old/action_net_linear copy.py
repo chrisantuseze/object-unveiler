@@ -7,7 +7,7 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import utilities.logger as logging
-from utils.constants import *
+from utilities.constants import *
 from collections import OrderedDict
 
 class ActionNet(nn.Module):

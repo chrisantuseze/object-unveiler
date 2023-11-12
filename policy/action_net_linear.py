@@ -2,7 +2,7 @@ from policy.models import ResidualBlock, conv3x3
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.constants import *
+from utilities.constants import *
 
 class ActionNet(nn.Module):
     def __init__(self, args, is_train=True):

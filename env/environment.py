@@ -5,7 +5,7 @@ import cv2
 
 import pybullet as p
 import numpy as np
-from utils.orientation import Affine3, Quaternion, rot_z
+from utilities.orientation import Affine3, Quaternion, rot_z
 import utilities.pybullet_utils as p_utils
 import utilities.general_utils as general_utils
 import env.env_components as env_components

@@ -20,7 +20,7 @@ from trainer.memory import ReplayBuffer
 
 import utilities.general_utils as general_utils
 import utilities.orientation as ori
-from utils.constants import *
+from utilities.constants import *
 import env.cameras as cameras
 import policy.grasping as grasping
 import utilities.logger as logging

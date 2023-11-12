@@ -4,7 +4,7 @@ import pybullet as p
 
 import utilities.pybullet_utils as p_utils
 import utilities.general_utils as general_utils
-from utils.constants import *
+from utilities.constants import *
 """Camera configs."""
 
 

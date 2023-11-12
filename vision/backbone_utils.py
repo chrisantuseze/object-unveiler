@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torchvision.ops import misc as misc_nn_ops
 from ._utils import IntermediateLayerGetter
 from . import resnet
-from utils.constants import GRIPPER_GRASP_OUTER_DISTANCE_PIXEL, GRIPPER_GRASP_SAFE_WIDTH_PIXEL
+from utilities.constants import GRIPPER_GRASP_OUTER_DISTANCE_PIXEL, GRIPPER_GRASP_SAFE_WIDTH_PIXEL
 from torchvision.models.segmentation.deeplabv3 import DeepLabHead, DeepLabV3
 from torchvision.models.segmentation.fcn import FCN
 

@@ -10,7 +10,7 @@ from PIL import Image
 import torch
 
 import utilities.pybullet_utils as p_utils
-from utils.constants import *
+from utilities.constants import *
 import utilities.logger as logging
 import policy.grasping as grasping
 

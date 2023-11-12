@@ -12,7 +12,7 @@ from scipy import ndimage
 from trainer.memory import ReplayBuffer
 import utilities.general_utils as general_utils
 import utilities.logger as logging
-from utils.constants import *
+from utilities.constants import *
 
 
 class HeightMapDataset(data.Dataset):
