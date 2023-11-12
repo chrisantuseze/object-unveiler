@@ -11,7 +11,7 @@ from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
 from trainer.memory import ReplayBuffer
-import utils.general_utils as general_utils
+import utilities.general_utils as general_utils
 import policy.grasping as grasping
 from utils.constants import *
 import policy.path_planning as pp

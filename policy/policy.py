@@ -18,8 +18,8 @@ from PIL import Image
 import pybullet as p
 from trainer.memory import ReplayBuffer
 
-import utils.general_utils as general_utils
-import utils.orientation as ori
+import utilities.general_utils as general_utils
+import utilities.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
 import policy.grasping as grasping

@@ -9,7 +9,7 @@ import yaml
 from PIL import Image
 import torch
 
-import utils.pybullet_utils as p_utils
+import utilities.pybullet_utils as p_utils
 from utils.constants import *
 import utilities.logger as logging
 import policy.grasping as grasping

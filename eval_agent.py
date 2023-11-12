@@ -10,7 +10,7 @@ from scipy import ndimage
 from env.environment import Environment
 from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
-import utils.general_utils as general_utils
+import utilities.general_utils as general_utils
 from utils.constants import *
 import policy.grasping as grasping
 

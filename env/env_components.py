@@ -5,7 +5,7 @@ import time
 import pybullet as p
 
 from utils.orientation import Quaternion, rot_z, rot_y
-import utils.pybullet_utils as p_utils
+import utilities.pybullet_utils as p_utils
 from utils import urdf_editor
 from utils.robotics import Trajectory
 

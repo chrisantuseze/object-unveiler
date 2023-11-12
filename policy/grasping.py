@@ -4,8 +4,8 @@ import torch
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import utils.object_comparison as compare
-import utils.general_utils as general_utils
+import utilities.object_comparison as compare
+import utilities.general_utils as general_utils
 import utilities.logger as logging
 
 def get_object_centroid(segmentation_mask):

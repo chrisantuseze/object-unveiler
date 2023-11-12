@@ -10,7 +10,7 @@ from skimage import transform, io
 from scipy import ndimage
 
 from trainer.memory import ReplayBuffer
-import utils.general_utils as general_utils
+import utilities.general_utils as general_utils
 import utilities.logger as logging
 from utils.constants import *
 

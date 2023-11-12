@@ -12,7 +12,7 @@ import pycocotools.mask as mask_util
 
 from collections import defaultdict
 
-import utils.old_utils as utils
+import utilities.old_utils as utils
 
 string_classes = (str, bytes)
 
