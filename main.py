@@ -3,7 +3,7 @@ import torch
 import argparse
 from trainer.train_new2 import train_fcn_net, train_regressor
 from eval_agent import eval_agent
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 
 def parse_args():
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     logging.init()
 
     args = parse_args()
-    utils.create_dirs()
+    general_utils.create_dirs()
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"You are using {args.device}")

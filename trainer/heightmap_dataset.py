@@ -10,7 +10,7 @@ from skimage import transform, io
 from scipy import ndimage
 
 from trainer.memory import ReplayBuffer
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 from utils.constants import *
 
@@ -41,15 +41,15 @@ class HeightMapDataset(data.Dataset):
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
-                padded_heightmap, padded_heightmap_width_depth = utils.preprocess_data(heightmap, root=2)
+                padded_heightmap, padded_heightmap_width_depth = general_utils.preprocess_data(heightmap, root=2)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
-                target_mask = utils.resize_mask(transform, target_mask)
-                padded_target_mask, _ = utils.preprocess_data(target_mask, root=2)
+                target_mask = general_utils.resize_mask(transform, target_mask)
+                padded_target_mask, _ = general_utils.preprocess_data(target_mask, root=2)
                 transformed_target_mask = self.data_transform(padded_target_mask)
 
-                obstacle_mask = utils.resize_mask(transform, obstacle_mask)
-                padded_obstacle_mask, _ = utils.preprocess_data(obstacle_mask, root=2)
+                obstacle_mask = general_utils.resize_mask(transform, obstacle_mask)
+                padded_obstacle_mask, _ = general_utils.preprocess_data(obstacle_mask, root=2)
                 transformed_obstacle_mask = self.data_transform(padded_obstacle_mask)
 
             sequence.append((transformed_heightmap, transformed_target_mask, transformed_obstacle_mask))
@@ -102,15 +102,15 @@ class HeightMapDataset(data.Dataset):
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
-                padded_heightmap, padded_heightmap_width_depth = utils.preprocess_data(heightmap)
+                padded_heightmap, padded_heightmap_width_depth = general_utils.preprocess_data(heightmap)
                 transformed_heightmap = self.data_transform(padded_heightmap)
 
-                target_mask = utils.resize_mask(transform, target_mask)
-                padded_target_mask, _ = utils.preprocess_data(target_mask)
+                target_mask = general_utils.resize_mask(transform, target_mask)
+                padded_target_mask, _ = general_utils.preprocess_data(target_mask)
                 transformed_target_mask = self.data_transform(padded_target_mask)
 
-                obstacle_mask = utils.resize_mask(transform, obstacle_mask)
-                padded_obstacle_mask, _ = utils.preprocess_data(obstacle_mask)
+                obstacle_mask = general_utils.resize_mask(transform, obstacle_mask)
+                padded_obstacle_mask, _ = general_utils.preprocess_data(obstacle_mask)
                 transformed_obstacle_mask = self.data_transform(padded_obstacle_mask)
 
             # Combine heightmap and mask into a single tensor and append to the sequence
@@ -172,7 +172,7 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = padded_heightmap.astype(np.float32)
 
         try:
-            target_mask = utils.resize_mask(transform, target_mask)
+            target_mask = general_utils.resize_mask(transform, target_mask)
         except:
             print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
@@ -243,7 +243,7 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = padded_heightmap.astype(np.float32)
 
         try:
-            target_mask = utils.resize_mask(transform, target_mask)
+            target_mask = general_utils.resize_mask(transform, target_mask)
         except:
             print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
@@ -302,7 +302,7 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = padded_heightmap.astype(np.float32)
 
         try:
-            target_mask = utils.resize_mask(transform, target_mask)
+            target_mask = general_utils.resize_mask(transform, target_mask)
         except:
             print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             

@@ -6,7 +6,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from trainer.memory import ReplayBuffer
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 
 class ApertureDataset(data.Dataset):
@@ -83,7 +83,7 @@ class ApertureDataset(data.Dataset):
         aperture_img[1] = cropped_map
         aperture_img[2] = cropped_map
 
-        normalized_aperture = utils.min_max_scale(action[3], range=[0.6, 1.1], target_range=[0, 1])
+        normalized_aperture = general_utils.min_max_scale(action[3], range=[0.6, 1.1], target_range=[0, 1])
 
         return aperture_img, np.array([normalized_aperture])
     
@@ -179,7 +179,7 @@ class ApertureDataset(data.Dataset):
         aperture_img[1] = cropped_map
         aperture_img[2] = cropped_map
 
-        normalized_aperture = utils.min_max_scale(action[3], range=[0.6, 1.1], target_range=[0, 1])
+        normalized_aperture = general_utils.min_max_scale(action[3], range=[0.6, 1.1], target_range=[0, 1])
 
         return aperture_img, np.array([normalized_aperture])
     

@@ -11,7 +11,7 @@ from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
 from trainer.memory import ReplayBuffer
-import utils.utils as utils
+import utils.general_utils as general_utils
 import policy.grasping as grasping
 from utils.constants import *
 import policy.path_planning as pp
@@ -51,7 +51,7 @@ def collect_episodic_dataset(args):
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_scene.png"), pred_mask)
 
         # get a randomly picked target mask from the segmented image
-        target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+        target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
         print("target_id", target_id)
 
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_target_mask.png"), target_mask)
@@ -65,9 +65,9 @@ def collect_episodic_dataset(args):
         # NOTE: During the next iteration you need to search through the masks and identify the target, 
         # then use its id. Don't maintain the old target id because the scene has been resegmented
         while node_id != target_id:
-            utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
+            general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
 
-            node_id, prev_node_id = utils.get_obstacle_id(raw_masks, target_id, prev_node_id)
+            node_id, prev_node_id = general_utils.get_obstacle_id(raw_masks, target_id, prev_node_id)
             cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
 
             state = policy.state_representation(obs)
@@ -97,7 +97,7 @@ def collect_episodic_dataset(args):
             print(grasp_info)
             print('---------')
 
-            utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
+            general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
             if node_id == target_id and grasp_info['stable']:
                 is_target_grasped = True
@@ -156,7 +156,7 @@ def collect_random_target_dataset(args):
 
         for i in range(15):
 
-            utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
+            general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
 
             # get a randomly picked target mask from the segmented image
             target_mask = obs['color'][0] #utils.get_target_mask(segmenter, obs, rng)
@@ -195,7 +195,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    utils.create_dirs()
+    general_utils.create_dirs()
 
     # collect_demonstrations(args)
     collect_episodic_dataset(args)

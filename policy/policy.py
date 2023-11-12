@@ -18,7 +18,7 @@ from PIL import Image
 import pybullet as p
 from trainer.memory import ReplayBuffer
 
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
@@ -79,7 +79,7 @@ class Policy:
         return (flat_objs != len(obs['full_state']))
 
     def state_representation(self, obs):
-        state = utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+        state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
         return state
     
     def preprocess_old(self, state):
@@ -234,7 +234,7 @@ class Policy:
                 if sample_limits[0] / self.pxl_size < np.min(dists) < sample_limits[1] / self.pxl_size:
                     valid_pxl_map[y, x] = 255
 
-        valid_pxl_map = utils.resize_mask(transform, target)
+        valid_pxl_map = general_utils.resize_mask(transform, target)
 
         valid_pxls = np.argwhere(valid_pxl_map == 1)
         valid_ids = np.arange(0, valid_pxls.shape[0])
@@ -307,7 +307,7 @@ class Policy:
         #             valid_pxl_map[y, x] = 255
 
 
-        valid_pxl_map = utils.resize_mask(transform, target_mask)
+        valid_pxl_map = general_utils.resize_mask(transform, target_mask)
 
         valid_pxl_map = np.array(valid_pxl_map, dtype=np.uint8)
 
@@ -393,7 +393,7 @@ class Policy:
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
 
-        resized_target = utils.resize_mask(transform, target_mask)
+        resized_target = general_utils.resize_mask(transform, target_mask)
         target = self.preprocess_old(resized_target)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
@@ -424,7 +424,7 @@ class Policy:
             aperture = self.reg(x).detach().cpu().numpy()[0, 0]
         
             # undo normalization
-            aperture = utils.min_max_scale(aperture, range=[0, 1], 
+            aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
                                         target_range=[self.aperture_limits[0], 
                                                         self.aperture_limits[1]])
 
@@ -447,7 +447,7 @@ class Policy:
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
 
-        resized_target = utils.resize_mask(transform, target_mask)
+        resized_target = general_utils.resize_mask(transform, target_mask)
         target = self.preprocess_old(resized_target)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
@@ -470,7 +470,7 @@ class Policy:
         aperture = self.reg(x).detach().cpu().numpy()[0, 0]
        
         # undo normalization
-        aperture = utils.min_max_scale(aperture, range=[0, 1], 
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
                                        target_range=[self.aperture_limits[0], 
                                                      self.aperture_limits[1]])
 
@@ -544,7 +544,7 @@ class Policy:
         x = torch.FloatTensor(aperture_img, theta=action[2]).unsqueeze(0).to(self.device)
         
         # normalize aperture to range 0-1
-        normalized_aperture = utils.min_max_scale(action[3],
+        normalized_aperture = general_utils.min_max_scale(action[3],
                                                   range=[self.aperture_limits[0], self.aperture_limits[1]],
                                                   target_range=[0, 1])
         gt_aperture = torch.FloatTensor(np.array([normalized_aperture])).unsqueeze(0).to(self.device)
@@ -627,7 +627,7 @@ def plot_maps(state, out_prob):
         min_prob = np.min(out_prob[i][0])
         max_prob = np.max(out_prob[i][0])
 
-        prediction_vis = utils.min_max_scale(out_prob[i][0],
+        prediction_vis = general_utils.min_max_scale(out_prob[i][0],
                                              range=(min_prob, max_prob),
                                              target_range=(0, 1))
         best_pt = np.unravel_index(prediction_vis.argmax(), prediction_vis.shape)

@@ -12,7 +12,7 @@ from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
 from policy.old.action_net_linear_undo import ActionNet
 
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 
 def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True):
@@ -36,7 +36,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 y = batch[2]
                 pred = model(x, rotations)
 
-                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                y = general_utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
 
                 # print("y.shape:", y.shape)  #torch.Size([4, 1, 1, 224, 224])
             else:
@@ -68,7 +68,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 y = batch[2]
                 pred = model(x, rotations)
 
-                y = utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                y = general_utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
             else:
                 x = batch[0].to(args.device, dtype=torch.float32)
                 y = batch[1].to(args.device, dtype=torch.float32)

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 
 def get_object_centroid(segmentation_mask):
@@ -95,7 +95,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
     step_angle = 2 * np.pi / rotations
     discrete_theta = round(theta / step_angle) * step_angle
 
-    discrete_theta = utils.rad_to_deg(discrete_theta)
+    discrete_theta = general_utils.rad_to_deg(discrete_theta)
 
     p1[0] *= 0.225 #0.22 #0.175 #0.175
     p1[1] *= 0.215 #0.21 #0.19 #0.18
@@ -127,7 +127,7 @@ def compute_grasping_point_for_object1(segmentation_masks, object_id, aperture_l
         
     # logging.info("discrete_theta:", discrete_theta)
 
-    discrete_theta = utils.deg_to_rad(discrete_theta)
+    discrete_theta = general_utils.deg_to_rad(discrete_theta)
 
     action = np.zeros((4,))
     action[0] = p1[0]

@@ -3,7 +3,7 @@ import numpy as np
 import pybullet as p
 
 import utils.pybullet_utils as p_utils
-import utils.utils as utils
+import utils.general_utils as general_utils
 from utils.constants import *
 """Camera configs."""
 

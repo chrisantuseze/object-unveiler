@@ -12,7 +12,7 @@ from trainer.aperture_dataset import ApertureDataset
 from trainer.heightmap_dataset import HeightMapDataset
 from policy.action_net_linear import *
 
-import utils.utils as utils
+import utils.general_utils as general_utils
 import utils.logger as logging
 
 
@@ -66,7 +66,7 @@ def train_fcn_net(args):
             target = batch[1].to(args.device, dtype=torch.float32)
             rotations = batch[2]
             y = batch[3]
-            y = utils.pad_label(y).to(args.device, dtype=torch.float32)
+            y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
             # logging.info("y.shape:", y.shape)
 
             pred = model(x, target, rotations)
@@ -89,7 +89,7 @@ def train_fcn_net(args):
                 target = batch[1].to(args.device)
                 rotations = batch[2]
                 y = batch[3]
-                y = utils.pad_label(y).to(args.device, dtype=torch.float32)
+                y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
 
                 pred = model(x, target, rotations)
                 loss = criterion(pred, y)

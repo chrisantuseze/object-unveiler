@@ -10,7 +10,7 @@ from scipy import ndimage
 from env.environment import Environment
 from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
-import utils.utils as utils
+import utils.general_utils as general_utils
 from utils.constants import *
 import policy.grasping as grasping
 
@@ -37,7 +37,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
@@ -47,7 +47,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
     max_steps = 3
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
@@ -74,7 +74,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
         # action = actions[0]
 
-        action = utils.get_closest_neighbor(actions, target_mask)
+        action = general_utils.get_closest_neighbor(actions, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -97,7 +97,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         print(grasp_info)
         print('---------')
 
-        utils.delete_episodes_misc(TEST_EPISODES_DIR)
+        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
         if policy.is_terminal(next_obs):
             # end_scene = True
@@ -157,7 +157,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
@@ -170,9 +170,9 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
-        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        node_id, prev_node = utils.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
+        node_id, prev_node = general_utils.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
 
         obstacle_mask = processed_masks[node_id]
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
@@ -205,7 +205,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
         print(grasp_info)
         print('---------')
 
-        utils.delete_episodes_misc(TEST_EPISODES_DIR)
+        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
         if node_id == target_id and grasp_info['stable']:
             print(">>>>>>>>>>> Target retrieved! >>>>>>>>>>>>>")
@@ -262,7 +262,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
@@ -270,7 +270,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     count = 0
     max_steps = 5
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         # nodes, edges = grasping.build_graph(raw_masks)
         # if len(edges) > 0:
@@ -303,7 +303,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
         else:
             episode_data['fails'] += 1
 
-        utils.delete_episodes_misc(TEST_EPISODES_DIR)
+        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
         # if policy.is_terminal(next_obs):  # checks if only one object is left in the scene and terminates the episode
         #     break
@@ -359,7 +359,7 @@ def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmente
     
     i = 0
     while episode_data['attempts'] < max_steps:
-        utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
+        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         state = policy.state_representation(obs)
         action = policy.exploit_old(state)

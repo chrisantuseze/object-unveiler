@@ -7,7 +7,7 @@ import pybullet as p
 import numpy as np
 from utils.orientation import Affine3, Quaternion, rot_z
 import utils.pybullet_utils as p_utils
-import utils.utils as utils
+import utils.general_utils as general_utils
 import env.env_components as env_components
 import env.cameras as cameras
 import utils.logger as logging
@@ -126,7 +126,7 @@ class Environment:
             self.simulation.step()
 
         logging.info(">>>>>>>>>> Scene building complete >>>>>>>>>>")
-        utils.recreate_train()
+        general_utils.recreate_train()
 
         return self.get_observation()
 
@@ -272,7 +272,7 @@ class Environment:
             erode_size = int(np.round(get_pxl_distance(meters=max_size)))
 
             obs = self.get_observation()
-            state = utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+            state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
 
             free = np.zeros(state.shape, dtype=np.uint8)
             free[state == 0] = 1
@@ -286,7 +286,7 @@ class Environment:
             if np.sum(free) == 0:
                 return
             
-            pixx = utils.sample_distribution(np.float32(free), self.rng)
+            pixx = general_utils.sample_distribution(np.float32(free), self.rng)
             pix = np.array([pixx[1], pixx[0]])
 
             if i == 0:
