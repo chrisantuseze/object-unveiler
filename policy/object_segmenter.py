@@ -33,6 +33,7 @@ class ObjectSegmenter:
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
+        plot = False
         image = color_image.copy()
 
         # target_size = (100, 100)
@@ -67,8 +68,8 @@ class ObjectSegmenter:
                     pred_mask[img > 0] = 255 - idx * 20
                     name = str(idx) + "mask.png"
                     # cv2.imwrite(os.path.join(dir, name), img)
-        # if plot:
-        #     cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
+        if plot:
+            cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
 
         # logging.info("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
         

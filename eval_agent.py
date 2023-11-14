@@ -74,7 +74,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
 
         # action = actions[0]
 
-        action = general_utils.get_closest_neighbor(actions, target_mask)
+        action = grasping.get_closest_neighbor(actions, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -172,16 +172,15 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     while node_id != target_id:
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        node_id, prev_node = general_utils.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
+        node_id, prev_node = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
 
         obstacle_mask = processed_masks[node_id]
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit(state, obstacle_mask)
+        action = policy.exploit_old(state, obstacle_mask)
 
-        # for action in actions:
-        env_action3d = policy.action3d(actions[0])
+        env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
 
         episode_data['attempts'] += 1
@@ -201,7 +200,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
 
         grasp_status.append(grasp_info['stable'])
 
-        print(actions)
+        print(action)
         print(grasp_info)
         print('---------')
 
@@ -272,19 +271,12 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     while episode_data['attempts'] < max_steps:
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        # nodes, edges = grasping.build_graph(raw_masks)
-        # if len(edges) > 0:
-        #     optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
-        #     if len(optimal_nodes) > 0:
-        #         target_mask = processed_masks[optimal_nodes[0]]            
-
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit_old(state, target_mask)
+        action = policy.exploit_old(state, target_mask)
 
-        # for action in actions:
-        env_action3d = policy.action3d(actions)
+        env_action3d = policy.action3d(action)
         logging.info("env_action3d:", env_action3d)
 
         next_obs, grasp_info = env.step(env_action3d)
@@ -334,8 +326,6 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
         n_prev_masks = len(processed_masks)
 
         i += 1
-
-        # break
 
     logging.info('--------')
     return episode_data, success_count
@@ -415,7 +405,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
+        episode_data, success_count = run_episode_old0(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

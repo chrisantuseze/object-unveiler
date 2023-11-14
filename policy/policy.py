@@ -1,19 +1,15 @@
 import os
 import pickle
-from policy.models_lstm import Regressor, ResFCN
-from policy.action_net_linear import ActionNet
+from policy.models import Regressor, ResFCN
 import torch
 import torch.optim as optim
 import torch.nn as nn
-import torchvision.transforms as transforms
-import torch.nn.functional as F
 
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage import transform, io
-from PIL import Image
+from skimage import transform
 
 import pybullet as p
 from trainer.memory import ReplayBuffer
@@ -22,7 +18,6 @@ import utils.general_utils as general_utils
 import utils.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
-import policy.grasping as grasping
 import utils.logger as logging
 
 class Policy:
@@ -41,11 +36,11 @@ class Policy:
         self.push_distance = 0.12 #0.15 0.10 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
-        # self.fcn = ResFCN().to(self.device)
+        self.fcn = ResFCN().to(self.device)
         # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         # self.fcn_criterion = nn.BCELoss(reduction='None')
 
-        self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
+        # self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 

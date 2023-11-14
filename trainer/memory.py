@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import os
 import cv2
+from policy.object_segmenter import ObjectSegmenter
 import utils.logger as logging
 
 
@@ -40,6 +41,27 @@ class ReplayBuffer:
             data_list.append((heightmap, target_mask, obstacle_mask, action))
 
         return data_list
+    
+    def load_episode_2(self, episode):
+        try:
+            episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+        except Exception as e:
+            logging.info(e, "- Failed episode:", episode)
+
+        data_list = []
+        for data in episode_data:
+            heightmap = data['state']
+            target_mask = data['target_mask']
+            obstacle_mask = data['obstacle_mask']
+            action = data['action']
+
+            data_list.append((heightmap, target_mask, obstacle_mask, action))
+
+        obs = episode_data[0]['obs']
+        segmenter = ObjectSegmenter()
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=None, plot=False)
+        
+        return data_list, pred_mask
     
     def store_episode(self, transition):
         folder_name = os.path.join(self.save_dir, 'episode_' + str(self.count).zfill(5))

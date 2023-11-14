@@ -69,10 +69,11 @@ def train_fcn_net(args):
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
             target = batch[1].to(args.device)
-            rotations = batch[2]
-            y = batch[3].to(args.device, dtype=torch.float)
+            scene = batch[2].to(args.device)
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float)
 
-            pred = model(x, target, rotations)
+            pred = model(x, scene, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -90,10 +91,11 @@ def train_fcn_net(args):
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
                 target = batch[1].to(args.device)
-                rotations = batch[2]
-                y = batch[3].to(args.device, dtype=torch.float)
+                scene = batch[2].to(args.device)
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float)
 
-                pred = model(x, target, rotations)
+                pred = model(x, scene, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)
