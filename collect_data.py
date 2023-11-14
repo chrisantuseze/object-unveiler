@@ -6,6 +6,7 @@ import argparse
 import os
 import cv2
 import torch
+from skimage import transform
 
 from policy.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
@@ -84,10 +85,11 @@ def collect_episodic_dataset(args):
                 break
 
             transition = {
-                'obs': obs, 
+                # 'obs': obs, 
                 'state': state, 
-                'target_mask': processed_masks[target_id], 
-                'obstacle_mask': processed_masks[node_id],
+                'target_mask': general_utils.resize_mask(transform, processed_masks[target_id]), 
+                'obstacle_mask': general_utils.resize_mask(transform, processed_masks[node_id]),
+                'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'action': action, 
                 'label': grasp_info['stable']
             }
@@ -171,7 +173,7 @@ def collect_random_target_dataset(args):
             next_obs, grasp_info = env.step(env_action3d)
 
             if grasp_info['stable']:
-                transition = {'obs': obs, 'state': state, 'target_mask': target_mask, 'action': action, 'label': grasp_info['stable']}
+                transition = {'obs': obs, 'state': state, 'target_mask': general_utils.resize_mask(transform, target_mask), 'action': action, 'label': grasp_info['stable']}
                 memory.store(transition)
 
             print(action)

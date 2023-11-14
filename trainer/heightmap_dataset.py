@@ -2,16 +2,11 @@ import torch
 from torch.utils import data
 import torchvision.transforms as transforms
 import numpy as np
-import cv2
 import os
-import pickle
-import matplotlib.pyplot as plt
-from skimage import transform, io
-from scipy import ndimage
+from skimage import transform
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
-import utils.logger as logging
 from utils.constants import *
 
 
@@ -37,7 +32,7 @@ class HeightMapDataset(data.Dataset):
         sequence = []
         labels, rot_ids = [], []
         for data in episode_data:
-            heightmap, target_mask, obstacle_mask, action = data
+            heightmap, _, target_mask, obstacle_mask, action = data
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
@@ -98,7 +93,7 @@ class HeightMapDataset(data.Dataset):
         sequence = []
         labels, rot_ids = [], []
         for data in episode_data:
-            heightmap, target_mask, obstacle_mask, action = data
+            heightmap, _, target_mask, obstacle_mask, action = data
 
             padded_heightmap, padded_heightmap_width_depth = None, None
             if self.data_transform:
@@ -162,7 +157,7 @@ class HeightMapDataset(data.Dataset):
     # single - input, multi - output
     def __getitem__old3(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, target_mask, _, _ = episode_data[0]
+        heightmap, _, target_mask, _, _ = episode_data[0]
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -171,10 +166,10 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
-        try:
-            target_mask = general_utils.resize_mask(transform, target_mask)
-        except:
-            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
+        # try:
+        #     target_mask = general_utils.resize_mask(transform, target_mask)
+        # except:
+        #     print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
@@ -233,7 +228,7 @@ class HeightMapDataset(data.Dataset):
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, target_mask, _, action = episode_data[0]
+        heightmap, _, target_mask, _, action = episode_data[0]
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -242,10 +237,10 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
-        try:
-            target_mask = general_utils.resize_mask(transform, target_mask)
-        except:
-            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
+        # try:
+        #     target_mask = general_utils.resize_mask(transform, target_mask)
+        # except:
+        #     print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
@@ -287,12 +282,10 @@ class HeightMapDataset(data.Dataset):
     
      # single - input, single - output for ou-dataset with target action
     
-    # single - input, single - output for ou-dataset with obstacle action with scene mask
+    # single - input, single - output for ou-dataset with target action and scene mask
     def __getitem__(self, id):
-        episode_data, scene_mask = self.memory.load_episode_2(self.dir_ids[id])
-        heightmap, target_mask, _, _ = episode_data[0]
-
-        _, _, _, action = episode_data[-1]
+        episode_data = self.memory.load_episode(self.dir_ids[id])
+        heightmap, scene_mask, target_mask, _, action = episode_data[-1]
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -301,11 +294,12 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
-        try:
-            target_mask = general_utils.resize_mask(transform, target_mask)
-            scene_mask = general_utils.resize_mask(transform, scene_mask)
-        except:
-            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
+        # # once new dataset with the logic to handle this at the collection stage iis collected, this becomes redundant
+        # try:
+        #     target_mask = general_utils.resize_mask(transform, target_mask)
+        #     scene_mask = general_utils.resize_mask(transform, scene_mask)
+        # except:
+        #     print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
@@ -356,7 +350,7 @@ class HeightMapDataset(data.Dataset):
 
     # single - input, single - output for ppg-ou-dataset
     def __getitem__old5(self, id):
-        heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
+        heightmap, _, target_mask, action = self.memory.load(self.dir_ids, id)
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -365,10 +359,10 @@ class HeightMapDataset(data.Dataset):
         padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
         padded_heightmap = padded_heightmap.astype(np.float32)
 
-        try:
-            target_mask = general_utils.resize_mask(transform, target_mask)
-        except:
-            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
+        # try:
+        #     target_mask = general_utils.resize_mask(transform, target_mask)
+        # except:
+        #     print(os.path.join(self.dataset_dir, self.dir_ids[id]))
             
         diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
         diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
