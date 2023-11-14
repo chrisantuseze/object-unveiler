@@ -59,7 +59,7 @@ class ReplayBuffer:
 
         obs = episode_data[0]['obs']
         segmenter = ObjectSegmenter()
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=None, plot=False)
+        _, pred_mask, _ = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
         
         return data_list, pred_mask
     
