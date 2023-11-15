@@ -68,7 +68,7 @@ def collect_episodic_dataset(args):
         while node_id != target_id:
             general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
 
-            node_id, prev_node_id = general_utils.get_obstacle_id(raw_masks, target_id, prev_node_id)
+            node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)
             cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
 
             state = policy.state_representation(obs)

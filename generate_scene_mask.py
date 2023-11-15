@@ -12,9 +12,10 @@ from policy.object_segmenter import ObjectSegmenter
 from trainer.memory import ReplayBuffer
 import utils.logger as logging
 import utils.general_utils as general_utils
+import policy.grasping as grasping
 
-dataset_dir = 'save/ou-dataset-consolidated'
-# dataset_dir = 'save/ppg-dataset-'
+# dataset_dir = 'save/ou-dataset-consolidated'
+dataset_dir = 'save/ppg-dataset-'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
@@ -26,11 +27,17 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
     for data in episode_data:
         obs = data['obs']
         segmenter = ObjectSegmenter()
-        processed_masks, pred_mask, _ = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
 
         new_masks = []
         for mask in processed_masks:
             new_masks.append(general_utils.resize_mask(transform, mask))
+
+        _, edges = grasping.build_graph(raw_masks)
+        optimal_nodes = []
+        if len(edges) > 0:
+            target_id = grasping.get_target_id(data['target_mask'], processed_masks)
+            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
     
         transition = {
             'color_obs': obs['color'][1],
@@ -41,7 +48,8 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
             'scene_mask': general_utils.resize_mask(transform, pred_mask),
             'object_masks': new_masks,
             'action': data['action'], 
-            'label': data['label']
+            'label': data['label'],
+            'optimal_nodes': optimal_nodes
         }
         episode_data_list.append(transition)
 

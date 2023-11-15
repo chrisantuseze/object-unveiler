@@ -338,6 +338,13 @@ def is_target_neighbor(target, action, threshold):
     # print(dist)
     return dist < threshold
 
+def get_target_id(target, processed_masks):
+    for index, mask in enumerate(processed_masks):
+        dist = get_distance(get_object_centroid(target), get_object_centroid(mask))
+        if dist < 20:
+            return index
+    return -1
+    
 def evaluate_actions(actions, target_mask):
     new_actions = []
     for action in actions:
