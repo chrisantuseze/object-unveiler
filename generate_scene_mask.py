@@ -14,8 +14,8 @@ import utils.logger as logging
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 
-# dataset_dir = 'save/ou-dataset-consolidated'
-dataset_dir = 'save/ppg-dataset-'
+dataset_dir = 'save/ou-dataset-consolidated'
+# dataset_dir = 'save/ppg-dataset-'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
