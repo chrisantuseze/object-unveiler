@@ -85,7 +85,8 @@ def collect_episodic_dataset(args):
                 break
 
             transition = {
-                'obs': obs['color'][1], 
+                'color_obs': obs['color'][1], 
+                'depth_obs': obs['depth'][1], 
                 'state': state, 
                 'target_mask': general_utils.resize_mask(transform, processed_masks[target_id]), 
                 'obstacle_mask': general_utils.resize_mask(transform, processed_masks[node_id]),

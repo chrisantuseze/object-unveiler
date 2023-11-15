@@ -29,7 +29,8 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
         _, pred_mask, _ = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
     
         transition = {
-            'obs': obs['color'][1],
+            'color_obs': obs['color'][1],
+            'depth_obs': obs['depth'][1],
             'state': data['state'], 
             'target_mask': general_utils.resize_mask(transform, data['target_mask']), 
             'obstacle_mask': general_utils.resize_mask(transform, data['obstacle_mask']),
