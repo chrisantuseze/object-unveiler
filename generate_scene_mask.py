@@ -16,7 +16,7 @@ import utils.general_utils as general_utils
 dataset_dir = 'save/ou-dataset-consolidated'
 # dataset_dir = 'save/ppg-dataset-'
 
-def modify_episode(memory: ReplayBuffer, episode_dir):
+def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -29,6 +29,7 @@ def modify_episode(memory: ReplayBuffer, episode_dir):
         _, pred_mask, _ = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
     
         transition = {
+            'obs': obs['color'][1],
             'state': data['state'], 
             'target_mask': general_utils.resize_mask(transform, data['target_mask']), 
             'obstacle_mask': general_utils.resize_mask(transform, data['obstacle_mask']),
@@ -39,7 +40,7 @@ def modify_episode(memory: ReplayBuffer, episode_dir):
         episode_data_list.append(transition)
 
     memory.store_episode(episode_data_list)
-    logging.info(f"Episode with dir {episode_dir} updated...")
+    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -57,8 +58,8 @@ if __name__ == "__main__":
         if not file_.startswith("episode"):
             episode_dirs.remove(file_)
 
-    for episode_dir in episode_dirs:
-         modify_episode(memory, episode_dir)
+    for i, episode_dir in enumerate(episode_dirs):
+         modify_episode(memory, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
