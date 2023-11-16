@@ -148,7 +148,7 @@ class VisionTransformer(nn.Module):
 
         out = out[:, :5]
         # convert to one hot encoding
-        out = torch.eye(self.args.num_patches + 1, dtype=torch.float, requires_grad=True).to(self.args.device)[(out - 1).long()]
+        out = torch.eye(self.args.num_patches, dtype=torch.float, requires_grad=True).to(self.args.device)[(out - 1).long()]
 
         # print("out.shape:", out.shape)
         return out
