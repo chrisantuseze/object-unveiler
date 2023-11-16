@@ -50,6 +50,10 @@ class OcclusionDataset(data.Dataset):
             label[:len(optimal_nodes)] = np.array(optimal_nodes, dtype=np.int32)
         else:
             label = np.array(optimal_nodes[:self.args.sequence_length] , dtype=np.int32)
+
+        assert (
+            len(label) == self.args.sequence_length
+        ), "Length of label should be same as the sequence length"
         
         # Convert to one-hot encoded list
         label = np.eye(self.args.num_patches)[label.astype(int)]
