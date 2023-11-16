@@ -26,8 +26,11 @@ class OcclusionDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     def __getitem__(self, id):
-        scene_masks, target_mask, action = self.memory.load_occlusion_data(self.dir_ids[id])
+        scene_masks, target_mask, optimal_nodes = self.memory.load_occlusion_data(self.dir_ids[id])
 
+        optimal_nodes.sort()
+
+        return scene_masks, target_mask, optimal_nodes
 
     def __len__(self):
         return len(self.dir_ids)

@@ -37,9 +37,9 @@ class ReplayBuffer:
             target_mask = data['target_mask']
             obstacle_mask = data['obstacle_mask']
             action = data['action']
-            scene_mask = data['scene_mask']
+            scene_depth = data['depth_obs']
 
-            data_list.append((heightmap, scene_mask, target_mask, obstacle_mask, action))
+            data_list.append((heightmap, scene_depth, target_mask, obstacle_mask, action))
 
         return data_list
     
@@ -53,10 +53,10 @@ class ReplayBuffer:
         # heightmap = data['state']
         target_mask = data['target_mask']
         # obstacle_mask = data['obstacle_mask']
-        action = data['action']
+        optimal_nodes = data['optimal_nodes']
         scene_masks = data['object_masks']
 
-        return scene_masks, target_mask, action
+        return scene_masks, target_mask, optimal_nodes
     
     def store_episode(self, transition):
         folder_name = os.path.join(self.save_dir, 'episode_' + str(self.count).zfill(5))

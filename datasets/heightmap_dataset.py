@@ -285,7 +285,7 @@ class HeightMapDataset(data.Dataset):
     # single - input, single - output for ou-dataset with target action and scene mask
     def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, scene_mask, target_mask, _, action = episode_data[-1]
+        heightmap, scene_depth, target_mask, _, action = episode_data[-1]
 
         # add extra padding (to handle rotations inside the network)
         diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
@@ -307,11 +307,11 @@ class HeightMapDataset(data.Dataset):
         padded_target_mask = np.pad(target_mask, padding_width_target, 'constant', constant_values=-0.01)
         padded_target_mask = padded_target_mask.astype(np.float32)
 
-        diagonal_length_scene = float(target_mask.shape[0]) * np.sqrt(2)
+        diagonal_length_scene = float(scene_depth.shape[0]) * np.sqrt(2)
         diagonal_length_scene = np.ceil(diagonal_length_scene / 16) * 16
-        padding_width_scene = int((diagonal_length_scene - target_mask.shape[0]) / 2)
-        padded_scene_mask = np.pad(scene_mask, padding_width_scene, 'constant', constant_values=-0.01)
-        padded_scene_mask = padded_scene_mask.astype(np.float32)
+        padding_width_scene = int((diagonal_length_scene - scene_depth.shape[0]) / 2)
+        padded_scene_depth = np.pad(scene_depth, padding_width_scene, 'constant', constant_values=-0.01)
+        padded_scene_depth = padded_scene_depth.astype(np.float32)
 
         # normalize heightmap
         image_mean = 0.01
@@ -345,7 +345,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
-        return padded_heightmap, padded_target_mask, padded_scene_mask, rot_id, label
+        return padded_heightmap, padded_target_mask, padded_scene_depth, rot_id, label
     
 
     # single - input, single - output for ppg-ou-dataset

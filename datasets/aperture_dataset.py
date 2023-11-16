@@ -92,7 +92,7 @@ class ApertureDataset(data.Dataset):
 
         aperture_imgs, norm_apertures = [], []
         for data in episode_data:
-            heightmap, scene_mask, target_mask, obstacle_mask, action = data
+            heightmap, scene_depth, target_mask, obstacle_mask, action = data
 
             aperture_img, norm_aperture = self._get_single_aperture(heightmap, action)
             aperture_imgs.append(aperture_img)
