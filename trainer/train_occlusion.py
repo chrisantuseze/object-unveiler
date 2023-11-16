@@ -57,11 +57,12 @@ def train_vit(args):
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
-            scene_masks = batch[0]
+            scene_masks = batch[0].to(args.device)
             target_mask = batch[1].to(args.device)
             label = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(scene_masks, target_mask).float()
+            pred = model(scene_masks, target_mask)
+            pred = pred.float()
             # print(pred)
             # # print("\n")
             # print(label)
