@@ -81,7 +81,7 @@ def train_vit(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                scene_masks = batch[0]
+                scene_masks = batch[0].to(args.device)
                 target_mask = batch[1].to(args.device)
                 label = batch[2].to(args.device, dtype=torch.float)
 
