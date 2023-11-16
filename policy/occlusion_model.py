@@ -147,7 +147,7 @@ class VisionTransformer(nn.Module):
             out[i] = torch.ShortTensor(sorted_nodes).to(self.args.device)
 
         # convert to one hot encoding
-        out = torch.eye(self.args.num_patches, dtype=torch.float, requires_grad=True)[(out - 1).long()]
+        out = torch.eye(self.args.num_patches, dtype=torch.float, requires_grad=True).to(self.args.device)[(out - 1).long()]
         out = out[:, :5, :]
 
         # out = out[:, :5]
