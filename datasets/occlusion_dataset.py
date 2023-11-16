@@ -56,7 +56,7 @@ class OcclusionDataset(data.Dataset):
         ), "Length of label should be same as the sequence length"
         
         # Convert to one-hot encoded list
-        label = np.eye(self.args.num_patches)[label.astype(int)]
+        label = np.eye(self.args.num_patches+1)[label.astype(int)]
         return scene_masks, target_mask, label
 
     def __len__(self):
