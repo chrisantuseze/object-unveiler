@@ -27,10 +27,27 @@ class OcclusionDataset(data.Dataset):
 
     def __getitem__(self, id):
         scene_masks, target_mask, optimal_nodes = self.memory.load_occlusion_data(self.dir_ids[id])
+        
+        # Convert the list of numpy arrays to a list of PyTorch tensors
+        P = self.args.patch_size
+        scene_masks = [torch.tensor(general_utils.resize_mask(transform, mask, new_size=(P, P))) for mask in scene_masks]
+        required_len = self.args.num_patches - len(scene_masks)
+        scene_masks = scene_masks + [torch.zeros_like(scene_masks[0]) for _ in range(required_len)]
+        scene_masks = torch.stack(scene_masks)
 
-        optimal_nodes.sort()
+        target_mask = general_utils.resize_mask(transform, target_mask, new_size=(P, P))
 
-        return scene_masks, target_mask, optimal_nodes
+        # TODO remember to substract by one to get the actual node indices
+        optimal_nodes = [val + 1 for val in optimal_nodes]
+
+        # Pad the list to the desired size
+        label = np.zeros(self.args.sequence_length)
+        label[:len(optimal_nodes)] = optimal_nodes \
+              if len(optimal_nodes) <= self.args.sequence_length else optimal_nodes[:self.args.sequence_length]
+        
+        # Convert to one-hot encoded list
+        label = np.eye(self.args.num_patches)[label.astype(int)]
+        return scene_masks, target_mask, label
 
     def __len__(self):
         return len(self.dir_ids)

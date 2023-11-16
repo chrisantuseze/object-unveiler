@@ -7,6 +7,26 @@ import os
 with zipfile.ZipFile("ou-dataset-consolidated2.zip", 'r') as zip_ref:
     zip_ref.extractall("ou-dataset-consolidated2")
 
+# import torch
+# import torch.nn as nn
+
+# # Example usage of nn.Softmax(dim=-1)
+# softmax = nn.Softmax(dim=-1)
+# input_tensor = torch.randn(3, 4, 5)  # Example tensor with shape (3, 4, 5)
+# print(input_tensor)
+# output = softmax(input_tensor)
+# print("================")
+# print(output)
+
+# import torch
+# import torch.nn as nn
+
+# # Example usage of nn.Softmax(dim=1)
+# softmax = nn.Softmax(dim=1)
+# input_tensor = torch.randn(3, 4, 5)  # Example tensor with shape (3, 4, 5)
+# output = softmax(input_tensor)
+# print("================")
+# print(output)
 
 # arr = [3,1,4,5,5,1,42,13,8,6]
 # le = len(arr)

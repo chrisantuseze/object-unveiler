@@ -5,7 +5,9 @@ Unveiling the Unseen: Smart Grasping through Occlusion-Aware Semantic Segmentati
 <!-- python3 main.py --mode 'eval' --fcn_model 'downloads/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
 python3 main.py --mode 'eval' --fcn_model 'save/fcn/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 20
 
-python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 100 --batch_size 5
+python3 main.py --dataset_dir 'save/ou-dataset-consolidated2' --mode 'fcn' --epochs 100 --batch_size 4 --lr 0.0001
+
+python3 main.py --dataset_dir 'save/ou-dataset-consolidated2' --mode 'vit' --epochs 100 --batch_size 4 --lr 0.0001
 
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 

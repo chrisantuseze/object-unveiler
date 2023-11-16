@@ -2,6 +2,7 @@
 import torch
 import argparse
 from trainer.train_new2 import train_fcn_net, train_regressor
+from trainer.train_occlusion import train_vit
 from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
@@ -25,7 +26,9 @@ def parse_args():
     parser.add_argument('--batch_size', default=1, type=int, help='')
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')
 
-    parser.add_argument('--sequence_length', default=4, type=int, help='')
+    parser.add_argument('--sequence_length', default=5, type=int, help='')
+    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--num_patches', default=12, type=int, help='')
     parser.add_argument('--step', default=200, type=int, help='')
 
     return parser.parse_args()
@@ -47,6 +50,9 @@ if __name__ == "__main__":
         
     elif args.mode == 'reg':
         train_regressor(args)
+
+    elif args.mode == 'vit':
+        train_vit(args)
     
     elif args.mode == 'eval':
         eval_agent(args)

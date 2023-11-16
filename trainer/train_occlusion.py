@@ -10,7 +10,7 @@ from policy.occlusion_model import VisionTransformer
 import utils.logger as logging
 
 
-def train_fcn_net(args):
+def train_vit(args):
     save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
@@ -49,23 +49,25 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = VisionTransformer(args).to(args.device)
+    model = VisionTransformer(args=args).to(args.device)
+    model = model.float()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCEWithLogitsLoss()
 
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
-            scene_masks = batch[0].to(args.device)
-            target = batch[1].to(args.device)
-            scene = batch[2].to(args.device)
-            rotations = batch[3]
-            y = batch[4].to(args.device, dtype=torch.float)
+            scene_masks = batch[0]
+            target_mask = batch[1].to(args.device)
+            label = batch[2].to(args.device, dtype=torch.float)
 
-            pred = model(x, scene, target, rotations)
+            pred = model(scene_masks, target_mask).float()
+            # print(pred)
+            # # print("\n")
+            # print(label)
 
             # Compute loss in the whole scene
-            loss = criterion(pred, y)
+            loss = criterion(pred, label)
             loss = torch.sum(loss)
 
             # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
@@ -78,14 +80,12 @@ def train_fcn_net(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                x = batch[0].to(args.device)
-                target = batch[1].to(args.device)
-                scene = batch[2].to(args.device)
-                rotations = batch[3]
-                y = batch[4].to(args.device, dtype=torch.float)
+                scene_masks = batch[0]
+                target_mask = batch[1].to(args.device)
+                label = batch[2].to(args.device, dtype=torch.float)
 
-                pred = model(x, scene, target, rotations)
-                loss = criterion(pred, y)
+                pred = model(scene_masks, target_mask)
+                loss = criterion(pred, label)
 
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
@@ -97,4 +97,4 @@ def train_fcn_net(args):
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path,  f'occlusion_model.pt'))
