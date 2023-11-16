@@ -318,12 +318,12 @@ class HeightMapDataset(data.Dataset):
         image_std = 0.03
         padded_heightmap = (padded_heightmap - image_mean)/image_std
         padded_target_mask = (padded_target_mask - image_mean)/image_std
-        padded_scene_mask = (padded_scene_mask - image_mean)/image_std
+        padded_scene_depth = (padded_scene_depth - image_mean)/image_std
 
         # add extra channel
         padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
         padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
-        padded_scene_mask = np.expand_dims(padded_scene_mask, axis=0)
+        padded_scene_depth = np.expand_dims(padded_scene_depth, axis=0)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)

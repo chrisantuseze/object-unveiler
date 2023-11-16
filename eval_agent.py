@@ -178,7 +178,7 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_old(state, pred_mask, obstacle_mask)
+        action = policy.exploit_old(state, obs['depth'][1], obstacle_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)

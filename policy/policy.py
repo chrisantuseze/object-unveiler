@@ -437,7 +437,7 @@ class Policy:
 
         return actions
     
-    def exploit_old(self, state, scene_mask=None, target_mask=None):
+    def exploit_old(self, state, scene_depth, target_mask):
 
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
@@ -446,13 +446,13 @@ class Policy:
         target = self.preprocess_old(resized_target)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        resized_scene = general_utils.resize_mask(transform, scene_mask)
-        scene = self.preprocess_old(resized_scene)
-        scene = torch.FloatTensor(scene).unsqueeze(0).to(self.device)
+        resized_scene = general_utils.resize_mask(transform, scene_depth)
+        scene_depth = self.preprocess_old(resized_scene)
+        scene_depth = torch.FloatTensor(scene_depth).unsqueeze(0).to(self.device)
 
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(x, scene, target, is_volatile=True)
+        out_prob = self.fcn(x, target, scene_depth, is_volatile=True)
         out_prob = self.postprocess_old(out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)

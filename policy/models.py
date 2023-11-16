@@ -92,10 +92,8 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def forward(self, depth_heightmap, target_mask=None, scene_depth=None, specific_rotation=-1, is_volatile=[]):
-        if target_mask is not None:
-            target_mask = target_mask.float()
-
+    def forward(self, depth_heightmap, target_mask, scene_depth, specific_rotation=-1, is_volatile=[]):
+        target_mask = target_mask.float()
         scene_depth = scene_depth.float()
 
         if is_volatile:
