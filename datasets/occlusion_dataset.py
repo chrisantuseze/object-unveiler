@@ -47,9 +47,9 @@ class OcclusionDataset(data.Dataset):
         # Pad the list to the desired size
         label = np.zeros(self.args.sequence_length)
         if len(optimal_nodes) <= self.args.sequence_length:
-            label[:len(optimal_nodes)] = optimal_nodes
+            label[:len(optimal_nodes)] = np.array(optimal_nodes, dtype=np.int32)
         else:
-            label = optimal_nodes[:self.args.sequence_length]   
+            label = np.array(optimal_nodes[:self.args.sequence_length] , dtype=np.int32)
         
         # Convert to one-hot encoded list
         label = np.eye(self.args.num_patches)[label.astype(int)]
