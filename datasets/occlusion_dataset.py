@@ -32,7 +32,11 @@ class OcclusionDataset(data.Dataset):
         P = self.args.patch_size
         scene_masks = [torch.tensor(general_utils.resize_mask(transform, mask, new_size=(P, P))) for mask in scene_masks]
         required_len = self.args.num_patches - len(scene_masks)
-        scene_masks = scene_masks + [torch.zeros_like(scene_masks[0]) for _ in range(required_len)]
+        if len(scene_masks) < self.args.num_patches:
+            scene_masks = scene_masks + [torch.zeros_like(scene_masks[0]) for _ in range(required_len)]
+        else:
+            scene_masks = scene_masks[:self.args.num_patches]
+
         scene_masks = torch.stack(scene_masks)
 
         target_mask = general_utils.resize_mask(transform, target_mask, new_size=(P, P))
@@ -42,8 +46,10 @@ class OcclusionDataset(data.Dataset):
 
         # Pad the list to the desired size
         label = np.zeros(self.args.sequence_length)
-        label[:len(optimal_nodes)] = optimal_nodes \
-              if len(optimal_nodes) <= self.args.sequence_length else optimal_nodes[:self.args.sequence_length]
+        if len(optimal_nodes) <= self.args.sequence_length:
+            label[:len(optimal_nodes)] = optimal_nodes
+        else:
+            label = optimal_nodes[:self.args.sequence_length]   
         
         # Convert to one-hot encoded list
         label = np.eye(self.args.num_patches)[label.astype(int)]
