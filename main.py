@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')
 
     parser.add_argument('--sequence_length', default=5, type=int, help='')
-    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--patch_size', default=32, type=int, help='')
     parser.add_argument('--num_patches', default=14, type=int, help='')
     parser.add_argument('--step', default=200, type=int, help='')
 
