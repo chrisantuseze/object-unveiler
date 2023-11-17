@@ -27,7 +27,7 @@ def preprocess_image(preprocess, mask):
 
 def object_compare(mask1, mask2):
     # Load the pre-trained ResNet18 model
-    model = models.resnet34(pretrained=True)
+    model = models.resnet18(pretrained=True)
     model = nn.Sequential(*list(model.children())[:-1])  # Remove the classification layer
 
     # Set the model to evaluation mode

@@ -383,3 +383,11 @@ def get_obstacle_id(raw_masks, target_id, prev_node_id):
     prev_node_id = node_id
 
     return node_id, prev_node_id
+
+def get_obstacles(raw_masks, target_id):
+    _, edges = build_graph(raw_masks)
+    optimal_nodes = []
+    if len(edges) > 0:
+        optimal_nodes = get_optimal_target_path(edges, target_id)
+    
+    return optimal_nodes

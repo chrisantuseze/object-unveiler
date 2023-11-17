@@ -4,8 +4,8 @@ import zipfile
 import pickle
 import os
 
-with zipfile.ZipFile("ou-dataset-consolidated2.zip", 'r') as zip_ref:
-    zip_ref.extractall("ou-dataset-consolidated2")
+# with zipfile.ZipFile("ou-dataset-consolidated2.zip", 'r') as zip_ref:
+#     zip_ref.extractall("ou-dataset-consolidated2")
 
 # import torch
 # import torch.nn as nn
@@ -28,59 +28,135 @@ with zipfile.ZipFile("ou-dataset-consolidated2.zip", 'r') as zip_ref:
 # print("================")
 # print(output)
 
-# arr = [3,1,4,5,5,1,42,13,8,6]
-# le = len(arr)
 
-# f1 = le//3
+# one_hot_encoded_vectors = [
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+#     # Add more vectors as needed
+# ]
 
-# approx = f1 * 3
-# split_index = int(0.9*approx)
-# train_ids = arr[:split_index]
-# val_ids = arr[split_index:]
+# one_hot_encoded_vectors = [[[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+#          [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]]
 
-# print(split_index, train_ids, val_ids)
+# one_hot_encoded_vectors = [[0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.], 
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]
 
-# folder_path = "save/ppg-dataset"
-# for filename in os.listdir(folder_path):
-#     if os.path.isfile(os.path.join(folder_path, filename)):
-# #         # Construct the new name for the file (modify this as needed)
-#         try:
-#             episode_data = pickle.load(open(os.path.join(folder_path, filename), 'rb'))
-#         except:
-#             os.remove(os.path.join(folder_path, filename))
-#             print(filename)
+# # one_hot_encoded_vectors = one_hot_encoded_vectors[0]
+
+# original_values = []
+
+# for vector in one_hot_encoded_vectors:
+#     index_of_one = vector.index(1)
+#     original_values.append(index_of_one)
+
+# print("Original values:", original_values)
+
+# import torch
+# def one_hot_encoding_tensor(tensor, max_value):
+#         # Create an identity matrix with size (max_value + 1)
+#         identity_matrix = torch.eye(max_value + 1)
+
+#         # Use tensor indexing to get the one-hot encoded representation
+#         one_hot_encoded_tensor = identity_matrix[tensor]
+
+#         return one_hot_encoded_tensor
+
+# # Example usage:
+# input_tensor = torch.tensor([2, 0, 5, 11])
+# max_value = 13
+# result_tensor = one_hot_encoding_tensor(input_tensor, max_value)
+
+# print(result_tensor)
 
 
-# directory = "/Users/chrisantuseze/Research/robot-learning/ppg-datasets/ppg-dataset/"
-# for root, dirs, files in os.walk(directory, topdown=False):
-#     for dir in dirs:
-#         dir_path = os.path.join(root, dir)
-#         if not os.listdir(dir_path):
-#             os.rmdir(dir_path)
-#             print(f"Removed empty directory: {dir_path}")
+# import torch
+
+# def decode_one_hot_tensor(one_hot_tensor):
+#     # Use torch.argmax to find the index of the maximum value along the second axis
+#     decoded_tensor = torch.argmax(one_hot_tensor, dim=1)
+
+#     # Convert the tensor to a Python list
+#     decoded_list = decoded_tensor.tolist()
+
+#     return decoded_list
+
+# # Example usage:
+# # one_hot_encoded_tensor = torch.tensor([
+# #     [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+# #     [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+# #     [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+# #     [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]
+# # ])
+
+# d = torch.tensor([[[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+#          [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.]],
+
+#         [[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.]],
+
+#         [[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+#          [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]],
+
+#         [[0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
+#          [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+#          [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.]]])
+
+# decoded_list = decode_one_hot_tensor(d)
+
+# print(decoded_list)
+
+import torch
+
+# Assuming your input tensor is a torch tensor
+# input_tensor = torch.tensor([2, 0, 5, 11])
+
+input_tensor = torch.tensor([[ 0, 10, 11,  2, 12],
+        [ 0,  6,  1, 10,  9]])
+
+# Define the maximum possible value
+max_value = 14
+
+# Use torch.nn.functional.one_hot to perform one-hot encoding
+one_hot_encoded = torch.tensor(torch.nn.functional.one_hot(input_tensor, num_classes=max_value), dtype=torch.float, requires_grad=True)
+
+print(one_hot_encoded)
 
 
+# import torch
 
-# import numpy as np
+# Assuming you have a one-hot encoded tensor
+# one_hot_encoded = torch.tensor([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#                                 [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#                                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+#                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]])
 
-# # Sample list of tuples, each containing three tensors
-# tensor_tuple_list = [(np.array([1, 2, 3]), np.array([4, 5, 6]), np.array([7, 8, 9])),
-#                     (np.array([1, 2, 3, 4]), np.array([5, 6, 7]), np.array([8, 9, 10]))]
+# o = torch.tensor([[0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#         [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+#         [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+#         [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
 
-# # Get the size of the tensors in the first tuple to compare with others
-# first_tuple_sizes = [len(tensor) for tensor in tensor_tuple_list[0]]
 
-# # Initialize a list to store the indices of tuples with different sizes
-# indices_of_different_sizes = []
+for item in one_hot_encoded:
+    # Use torch.argmax to find the indices of the maximum values along the specified axis
+    original_indices = torch.argmax(item, dim=1)
 
-# for i, tuple_elem in enumerate(tensor_tuple_list):
-#     if not all(len(tensor) == size for tensor, size in zip(tuple_elem, first_tuple_sizes)):
-#         indices_of_different_sizes.append(i)
+    # Convert the tensor back to a Python list
+    original_list = original_indices.tolist()
 
-# if not indices_of_different_sizes:
-#     print("All tuples have tensors with equal sizes.")
-# else:
-#     print("Tuples with different-sized tensors:")
-#     for idx in indices_of_different_sizes:
-#         print(f"Tuple at index {idx}: {tensor_tuple_list[idx]}")
-
+    print(original_list)

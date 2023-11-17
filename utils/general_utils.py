@@ -213,13 +213,13 @@ def get_target_mask(processed_masks, obs, rng):
 
 def delete_episodes_misc(path):
     # Try to remove the tree; if it fails, throw an error using try...except.
-    # try:
-    #     shutil.rmtree(path)
-    # except OSError as e:
-    #     logging.info("Error: %s - %s." % (e.filename, e.strerror))
+    try:
+        shutil.rmtree(path)
+    except OSError as e:
+        logging.info("Error: %s - %s." % (e.filename, e.strerror))
 
-    # if not os.path.exists(path):
-    #     os.mkdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)
     pass
 
 def recreate_train():
@@ -235,7 +235,7 @@ def recreate_train():
         os.makedirs(path)
 
 def recreate_test():
-    path = TEST_DIR
+    path = TEST_EPISODES_DIR
 
     # Try to remove the tree; if it fails, throw an error using try...except.
     try:

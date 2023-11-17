@@ -51,7 +51,10 @@ def train_vit(args):
 
     model = VisionTransformer(args=args).to(args.device)
     model = model.float()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+
+    # TODO: Hard setting the lr
+    args.lr = 1e-5
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     criterion = nn.BCEWithLogitsLoss()
 
     for epoch in range(args.epochs):
@@ -98,4 +101,4 @@ def train_vit(args):
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'occlusion_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path,  f'vit_model.pt'))

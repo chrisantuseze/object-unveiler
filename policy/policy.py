@@ -1,6 +1,7 @@
 import os
 import pickle
 from policy.models import Regressor, ResFCN
+from policy.occlusion_model import VisionTransformer
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -37,12 +38,11 @@ class Policy:
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
-        # self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
-        # self.fcn_criterion = nn.BCELoss(reduction='None')
-
         # self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
+
+        self.vit = VisionTransformer(args).to(self.device)
 
         self.reg = Regressor().to(self.device)
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
@@ -437,7 +437,39 @@ class Policy:
 
         return actions
     
-    def exploit_old(self, state, scene_depth, target_mask):
+    def get_obstacles(self, scene_masks, target_mask):
+        # Convert the list of numpy arrays to a list of PyTorch tensors
+        P = self.args.patch_size
+        scene_masks = [torch.tensor(general_utils.resize_mask(transform, mask, new_size=(P, P))) for mask in scene_masks]
+        required_len = self.args.num_patches - len(scene_masks)
+        if len(scene_masks) < self.args.num_patches:
+            scene_masks = scene_masks + [torch.zeros_like(scene_masks[0]) for _ in range(required_len)]
+        else:
+            scene_masks = scene_masks[:self.args.num_patches]
+
+        scene_masks = torch.stack(scene_masks).unsqueeze(0).to(self.device)
+
+        target = general_utils.resize_mask(transform, target_mask, new_size=(P, P))
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
+        out_prob = self.vit(scene_masks, target)
+
+        out_prob = self.decode_one_hot(out_prob)
+        return out_prob
+        
+    def decode_one_hot(self, one_hot_tensor):
+        decoded_tensor_list = []
+        for item in one_hot_tensor:
+            # Use torch.argmax to find the index of the maximum value along the second axis
+            decoded_tensor = torch.argmax(item, dim=1)
+
+            # Convert the tensor to a Python list
+            decoded_list = decoded_tensor.tolist()
+            decoded_tensor_list.append(decoded_list)
+
+        return decoded_tensor_list
+    
+    def exploit_old(self, state, target_mask):
 
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
@@ -446,13 +478,9 @@ class Policy:
         target = self.preprocess_old(resized_target)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        resized_scene = general_utils.resize_mask(transform, scene_depth)
-        scene_depth = self.preprocess_old(resized_scene)
-        scene_depth = torch.FloatTensor(scene_depth).unsqueeze(0).to(self.device)
-
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(x, target, scene_depth, is_volatile=True)
+        out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = self.postprocess_old(out_prob)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
@@ -589,12 +617,15 @@ class Policy:
         self.info['learn_step_counter'] = self.learn_step_counter
         pickle.dump(self.info, open(os.path.join(folder_name, 'info'), 'wb'))
 
-    def load(self, fcn_model, reg_model):
+    def load(self, fcn_model, reg_model, vit_model):
         self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
         self.fcn.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
+
+        self.vit.load_state_dict(torch.load(vit_model, map_location=self.device))
+        self.vit.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

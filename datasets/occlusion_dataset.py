@@ -41,9 +41,6 @@ class OcclusionDataset(data.Dataset):
 
         target_mask = general_utils.resize_mask(transform, target_mask, new_size=(P, P))
 
-        # TODO remember to substract by one to get the actual node indices
-        optimal_nodes = [val + 1 for val in optimal_nodes]
-
         # Pad the list to the desired size
         label = np.zeros(self.args.sequence_length)
         if len(optimal_nodes) <= self.args.sequence_length:
@@ -55,11 +52,26 @@ class OcclusionDataset(data.Dataset):
             len(label) == self.args.sequence_length
         ), "Length of label should be same as the sequence length"
         
-        # print(np.unique(label))
-
         # Convert to one-hot encoded list
-        label = np.eye(self.args.num_patches)[(label-1).astype(int)]
+        # label = np.eye(self.args.num_patches)[(label-1).astype(int)]
+        label = np.array(self.one_hot_encoding(label, self.args.num_patches))
+        # print(label)
         return scene_masks, target_mask, label
+    
+    def one_hot_encoding(self, lst, max_value):
+        # Initialize an empty list to store the one-hot encoded vectors
+        one_hot_encoded_list = []
+
+        # Iterate through each value in the input list
+        for value in lst:
+            # Create a new one-hot encoded vector
+            one_hot_encoded = [0] * max_value
+            one_hot_encoded[int(value)] = 1
+
+            # Append the one-hot encoded vector to the result list
+            one_hot_encoded_list.append(one_hot_encoded)
+
+        return one_hot_encoded_list
 
     def __len__(self):
         return len(self.dir_ids)

@@ -67,7 +67,7 @@ class ObjectSegmenter:
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20
                     name = str(idx) + "mask.png"
-                    # cv2.imwrite(os.path.join(dir, name), img)
+                    cv2.imwrite(os.path.join(dir, name), img)
         # if plot:
         #     cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
 

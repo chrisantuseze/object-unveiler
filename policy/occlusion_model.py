@@ -76,7 +76,8 @@ class TransformerBlock(nn.Module):
 
 class VisionTransformer(nn.Module):
     def __init__(
-        self, args, embed_size=768, num_heads=12, num_blocks=12, ff_hidden_dim=3072, dropout=0.1
+        # self, args, embed_size=768, num_heads=12, num_blocks=12, ff_hidden_dim=3072, dropout=0.1
+        self, args, embed_size=4096, num_heads=8, num_blocks=8, ff_hidden_dim=768, dropout=0.1
     ):
         super(VisionTransformer, self).__init__()
 
@@ -103,6 +104,7 @@ class VisionTransformer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, scene_masks, target_mask, mask=None):
+        # print(scene_masks.shape, target_mask.shape)
         scene_masks = scene_masks.float() #torch.Size([4, N, 64, 64])
         target_mask = target_mask.float() #torch.Size([4, 64, 64])
 
@@ -133,8 +135,8 @@ class VisionTransformer(nn.Module):
         x = torch.mean(target_embeds, dim=1)
         x = self.mlp(x)
 
-        nodes = [i for i in range(1, self.args.num_patches + 1)]
-        out = torch.zeros((B, N), dtype=torch.int16).to(self.args.device)
+        nodes = list(range(self.args.num_patches))
+        out = torch.zeros((B, N), dtype=torch.long).to(self.args.device)
         for i, probs in enumerate(x):
             # Pair nodes with their probabilities using zip
             node_prob_pairs = zip(nodes, probs)
@@ -144,11 +146,15 @@ class VisionTransformer(nn.Module):
 
             # Extract the sorted nodes
             sorted_nodes = [pair[0] for pair in sorted_node_prob_pairs]
-            out[i] = torch.ShortTensor(sorted_nodes).to(self.args.device)
+            out[i] = torch.LongTensor(sorted_nodes).to(self.args.device)
 
         out = out[:, :5]
-        # convert to one hot encoding
-        out = torch.eye(self.args.num_patches, dtype=torch.float, requires_grad=True).to(self.args.device)[(out - 1).long()]
-
+        out = self.one_hot_encoding_tensor(out, self.args.num_patches)
+        # print(out)
         # print("out.shape:", out.shape)
         return out
+
+    def one_hot_encoding_tensor(self, tensor, max_value):
+        one_hot_encoded = torch.tensor(torch.nn.functional.one_hot(tensor, num_classes=max_value), dtype=torch.float, requires_grad=True)
+        return one_hot_encoded
+
