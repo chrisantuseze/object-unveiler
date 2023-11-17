@@ -59,9 +59,11 @@ class ResFCN(nn.Module):
         self.rb1 = self.make_layer(64, 128)
         self.rb2 = self.make_layer(128, 256)
         self.rb3 = self.make_layer(256, 512)
-        self.rb4 = self.make_layer(512, 256)
-        self.rb5 = self.make_layer(256, 128)
-        self.rb6 = self.make_layer(128, 64)
+        self.rb4 = self.make_layer(512, 1024)
+        self.rb5 = self.make_layer(1024, 512)
+        self.rb6 = self.make_layer(512, 256)
+        self.rb7 = self.make_layer(256, 128)
+        self.rb8 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
@@ -84,17 +86,18 @@ class ResFCN(nn.Module):
         x = self.rb3(x)
         x = self.rb4(x)
         x = self.rb5(x)
+        x = self.rb6(x)
+        x = self.rb7(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb6(x)
+        x = self.rb8(x)
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         return out
     
-    def forward(self, depth_heightmap, target_mask, scene_depth, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, specific_rotation=-1, is_volatile=[]):
         target_mask = target_mask.float()
-        scene_depth = scene_depth.float()
 
         if is_volatile:
             # rotations x channel x h x w
@@ -105,10 +108,6 @@ class ResFCN(nn.Module):
             batch_rot_target = torch.zeros((self.nr_rotations, 1,
                                            target_mask.shape[3],
                                            target_mask.shape[3])).to(self.device)
-            
-            batch_rot_scene = torch.zeros((self.nr_rotations, 1,
-                                           scene_depth.shape[3],
-                                           scene_depth.shape[3])).to(self.device)
             
             for rot_id in range(self.nr_rotations):
                 # Compute sample grid for rotation before neural network
@@ -128,19 +127,14 @@ class ResFCN(nn.Module):
                 rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
                 
-                rotate_scene_depth = F.grid_sample(Variable(scene_depth, requires_grad=False).to(self.device),
-                    flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-
                 batch_rot_depth[rot_id] = rotate_depth[0]
                 batch_rot_target[rot_id] = rotate_target_mask[0]
-                batch_rot_scene[rot_id] = rotate_scene_depth[0]
 
             # compute rotated feature maps            
             prob_depth = self.predict(batch_rot_depth)
-            prob_scene = self.predict(batch_rot_scene)
             prob_target = self.predict(batch_rot_target)
 
-            prob = torch.cat((prob_depth, prob_scene, prob_target), dim=1)
+            prob = torch.cat((prob_depth, prob_target), dim=1)
             prob = torch.mean(prob, dim=1, keepdim=True)
 
             # undo rotation
@@ -183,15 +177,11 @@ class ResFCN(nn.Module):
             rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
-            rotate_scene_depth = F.grid_sample(Variable(scene_depth, requires_grad=False).to(self.device),
-                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-
             # Compute intermediate features
             prob_depth = self.predict(rotate_depth)
-            prob_scene = self.predict(rotate_scene_depth)
             prob_target = self.predict(rotate_target_mask)
 
-            prob = torch.cat((prob_depth, prob_scene, prob_target), dim=1)
+            prob = torch.cat((prob_depth, prob_target), dim=1)
             prob = torch.mean(prob, dim=1, keepdim=True)
 
             # Compute sample grid for rotation after branches

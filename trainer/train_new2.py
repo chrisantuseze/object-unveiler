@@ -21,18 +21,12 @@ def train_fcn_net(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    # transition_dirs = next(os.walk(args.dataset_dir))[1]
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
     
-    # for file_ in transition_dirs:
-    #     if not file_.startswith("transition"):
-    #         print(file_)
-    #         transition_dirs.remove(file_)
-
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
@@ -61,7 +55,6 @@ def train_fcn_net(args):
 
     model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
@@ -69,11 +62,10 @@ def train_fcn_net(args):
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
             target = batch[1].to(args.device)
-            scene_depth = batch[2].to(args.device)
-            rotations = batch[3]
-            y = batch[4].to(args.device, dtype=torch.float)
+            rotations = batch[2]
+            y = batch[3].to(args.device, dtype=torch.float)
 
-            pred = model(x, target, scene_depth, rotations)
+            pred = model(x, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -91,11 +83,10 @@ def train_fcn_net(args):
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
                 target = batch[1].to(args.device)
-                scene_depth = batch[2].to(args.device)
-                rotations = batch[3]
-                y = batch[4].to(args.device, dtype=torch.float)
+                rotations = batch[2]
+                y = batch[3].to(args.device, dtype=torch.float)
 
-                pred = model(x, target, scene_depth, rotations)
+                pred = model(x, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)
