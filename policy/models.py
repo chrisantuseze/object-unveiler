@@ -59,11 +59,9 @@ class ResFCN(nn.Module):
         self.rb1 = self.make_layer(64, 128)
         self.rb2 = self.make_layer(128, 256)
         self.rb3 = self.make_layer(256, 512)
-        self.rb4 = self.make_layer(512, 1024)
-        self.rb5 = self.make_layer(1024, 512)
-        self.rb6 = self.make_layer(512, 256)
-        self.rb7 = self.make_layer(256, 128)
-        self.rb8 = self.make_layer(128, 64)
+        self.rb4 = self.make_layer(512, 256)
+        self.rb5 = self.make_layer(256, 128)
+        self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
@@ -86,11 +84,9 @@ class ResFCN(nn.Module):
         x = self.rb3(x)
         x = self.rb4(x)
         x = self.rb5(x)
-        x = self.rb6(x)
-        x = self.rb7(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb8(x)
+        x = self.rb6(x)
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
