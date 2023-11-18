@@ -5,8 +5,8 @@ import shutil
 dir = "/Users/chrisantuseze/Research/robot-learning/ou-datasets/"
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "ou-datasets/"
-id = 8831
+folder_path = "fresh ones/"
+id = 17610
 
 
 folder_path = dir + folder_path

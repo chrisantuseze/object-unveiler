@@ -48,7 +48,7 @@ def collect_episodic_dataset(args):
             obs = env.reset()
 
         id = 1
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TRAIN_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR, plot=True)
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_scene.png"), pred_mask)
 
         # get a randomly picked target mask from the segmented image
@@ -113,7 +113,7 @@ def collect_episodic_dataset(args):
 
             obs = copy.deepcopy(next_obs)
 
-            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], obs['depth'][id], dir=TRAIN_EPISODES_DIR, plot=True)
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR, plot=True)
             target_id, target_mask = grasping.find_target(processed_masks, target_mask)
             if target_id == -1:
                 print("Target is no longer available in the scene.")

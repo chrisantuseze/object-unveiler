@@ -29,14 +29,11 @@ class ObjectSegmenter:
         self.mask_model.eval()
 
     @torch.no_grad()
-    def from_maskrcnn(self, color_image, depth_image, dir=TRAIN_EPISODES_DIR, plot=False):
+    def from_maskrcnn(self, color_image, dir=TRAIN_EPISODES_DIR, plot=False):
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
-
-        # target_size = (100, 100)
-        # image = resize(image, target_size, mode='reflect', anti_aliasing=True, preserve_range=True).astype(np.float32)
 
         image = TF.to_tensor(image)
         prediction = self.mask_model([image.to(self.device)])[0]

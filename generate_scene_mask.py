@@ -14,8 +14,7 @@ import utils.logger as logging
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 
-dataset_dir = 'save/ou-dataset-consolidated'
-# dataset_dir = 'save/ppg-dataset-'
+dataset_dir = 'save/new'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
@@ -27,7 +26,7 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
     for data in episode_data:
         obs = data['obs']
         segmenter = ObjectSegmenter()
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], obs['depth'][1], dir=None, plot=False)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], plot=True)
 
         new_masks = []
         for mask in processed_masks:
