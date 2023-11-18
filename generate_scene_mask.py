@@ -69,6 +69,7 @@ if __name__ == "__main__":
     
     for file_ in episode_dirs:
         if not file_.startswith("episode"):
+            print(file_)
             episode_dirs.remove(file_)
 
     for i, episode_dir in enumerate(episode_dirs):
