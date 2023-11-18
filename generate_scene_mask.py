@@ -18,11 +18,7 @@ dataset_dir = 'save/new'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
-        dir = os.path.join(dataset_dir, episode_dir) 
-        if not dir.startswith("episode"):
-            return
-
-        episode_data = pickle.load(open(dir), 'rb')     
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
 
