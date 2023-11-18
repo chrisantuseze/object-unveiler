@@ -33,7 +33,6 @@ class ObjectSegmenter:
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
-        plot = True
         image = color_image.copy()
 
         # target_size = (100, 100)

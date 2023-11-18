@@ -52,8 +52,6 @@ def train_vit(args):
     model = VisionTransformer(args=args).to(args.device)
     model = model.float()
 
-    # TODO: Hard setting the lr
-    args.lr = 1e-5
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     criterion = nn.BCEWithLogitsLoss()
 

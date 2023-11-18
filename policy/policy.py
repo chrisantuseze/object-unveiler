@@ -454,7 +454,7 @@ class Policy:
 
         out_prob = self.vit(scene_masks, target)
 
-        out_prob = self.decode_one_hot(out_prob)
+        out_prob = self.decode_one_hot(out_prob)[0]
         return out_prob
         
     def decode_one_hot(self, one_hot_tensor):
