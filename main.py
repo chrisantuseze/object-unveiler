@@ -32,14 +32,14 @@ def parse_args():
     parser.add_argument('--num_patches', default=14, type=int, help='')
     parser.add_argument('--step', default=200, type=int, help='')
 
-    parser.add_argument('--no_logging', default=0, type=int, help='0 for logging, and 1 for no logging')
+    parser.add_argument('--log', default=1, type=int, help='0 for logging, and 1 for no logging')
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    logging.init(args.no_logging)
+    logging.init(args.log)
 
     general_utils.create_dirs()
 

@@ -2,10 +2,8 @@ import logging
 import os
 import sys
 
-disable_logging = 0
-def init(disable=0):
-    if disable == 1:
-        disable_logging = 1
+def init(log=1):
+    if log == 0:
         return
     
     logger = logging.getLogger(__name__)
