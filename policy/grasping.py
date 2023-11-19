@@ -365,7 +365,7 @@ def get_obstacle_id(raw_masks, target_id, prev_node_id):
     _, edges = build_graph(raw_masks)
     if len(edges) > 0:
         optimal_nodes = get_optimal_target_path(edges, target_id)
-        # print("optimal_nodes:", optimal_nodes)
+        print("optimal_nodes:", optimal_nodes)
 
         if len(optimal_nodes) > 0:
             node_id = optimal_nodes[0]

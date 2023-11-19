@@ -223,7 +223,7 @@ def delete_episodes_misc(path):
     pass
 
 def recreate_train():
-    path = TRAIN_DIR
+    path = TRAIN_EPISODES_DIR
 
     # Try to remove the tree; if it fails, throw an error using try...except.
     try:

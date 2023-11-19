@@ -14,8 +14,8 @@ from policy.policy import Policy
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
+import policy.grasping2 as grasping2
 from utils.constants import *
-import policy.path_planning as pp
 
 def collect_episodic_dataset(args):
     save_dir = 'save/ppg-dataset'
@@ -68,8 +68,17 @@ def collect_episodic_dataset(args):
         while node_id != target_id:
             general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
 
+            objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
+            print("\nobjects_to_remove:", objects_to_remove)
+
+            grasping2.get_distances_to_edge(processed_masks)
+
             node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)
+
+            node_id = objects_to_remove[0]
             cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
+
+            print("target id:", target_id)
 
             state = policy.state_representation(obs)
             # action = policy.guided_exploration(state, processed_masks[node_id])
