@@ -2,8 +2,12 @@ import logging
 import os
 import sys
 
-
-def init():
+disable_logging = 0
+def init(disable=0):
+    if disable == 1:
+        disable_logging = 1
+        return
+    
     logger = logging.getLogger(__name__)
     handler = logging.StreamHandler(stream=sys.stdout)
     logger.addHandler(handler)

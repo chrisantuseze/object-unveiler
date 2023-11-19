@@ -32,13 +32,15 @@ def parse_args():
     parser.add_argument('--num_patches', default=14, type=int, help='')
     parser.add_argument('--step', default=200, type=int, help='')
 
+    parser.add_argument('--no_logging', default=0, type=int, help='0 for logging, and 1 for no logging')
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    logging.init()
-
     args = parse_args()
+    logging.init(args.no_logging)
+
     general_utils.create_dirs()
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

@@ -116,27 +116,51 @@ def distance_to_edge(mask, workspace_size):
 #         print(i, "-", distance_to_edge(mask, workspace_size))
 
 
+# def get_distances_to_edge(segmentation_masks, workspace_size=(100, 100)):
+#     distances = []
+#     print("Method 2")
+
+#     # Iterate over each segmentation mask
+#     for i, mask in enumerate(segmentation_masks):
+#         # Find the indices of non-zero elements in the mask
+#         non_zero_indices = np.nonzero(mask)
+
+#         # Calculate the bounding box coordinates
+#         min_x, min_y = np.min(non_zero_indices, axis=1)
+#         max_x, max_y = np.max(non_zero_indices, axis=1)
+
+#         # Calculate the distance from the object to each edge
+#         distance_top = min(min_y, workspace_size[1] - max_y)
+#         distance_bottom = min(max_y, workspace_size[1] - min_y)
+#         distance_left = min(min_x, workspace_size[0] - max_x)
+#         distance_right = min(max_x, workspace_size[0] - min_x)
+
+#         # Choose the minimum distance to any edge
+#         min_distance = min(distance_top, distance_bottom, distance_left, distance_right)
+
+#         distances.append(min_distance)
+#         print(i, "-", min_distance)
+
 def get_distances_to_edge(segmentation_masks, workspace_size=(100, 100)):
-    distances = []
+    distances_list = []
+    print(segmentation_masks[0].shape)
     print("Method 2")
 
-    # Iterate over each segmentation mask
     for i, mask in enumerate(segmentation_masks):
-        # Find the indices of non-zero elements in the mask
-        non_zero_indices = np.nonzero(mask)
+        # Find the coordinates of the pixels in the object
+        object_pixels = np.transpose(np.nonzero(mask))
 
-        # Calculate the bounding box coordinates
-        min_x, min_y = np.min(non_zero_indices, axis=1)
-        max_x, max_y = np.max(non_zero_indices, axis=1)
+        # Calculate distances to the closest edges
+        distances_top = object_pixels[:, 0]
+        distances_bottom = workspace_size[0] - object_pixels[:, 0] - 1
+        distances_left = object_pixels[:, 1]
+        distances_right = workspace_size[1] - object_pixels[:, 1] - 1
 
-        # Calculate the distance from the object to each edge
-        distance_top = min(min_y, workspace_size[1] - max_y)
-        distance_bottom = min(max_y, workspace_size[1] - min_y)
-        distance_left = min(min_x, workspace_size[0] - max_x)
-        distance_right = min(max_x, workspace_size[0] - min_x)
+        # Find the minimum distance for each pixel in the object
+        min_distances = np.min([distances_top, distances_bottom, distances_left, distances_right], axis=0)
 
-        # Choose the minimum distance to any edge
-        min_distance = min(distance_top, distance_bottom, distance_left, distance_right)
+        # Find the overall minimum distance for the object
+        min_distance = np.min(min_distances)
 
-        distances.append(min_distance)
+        distances_list.append(min_distance)
         print(i, "-", min_distance)
