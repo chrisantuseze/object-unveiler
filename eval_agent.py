@@ -13,6 +13,7 @@ from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
 import policy.grasping as grasping
+import policy.grasping2 as grasping2
 
 import utils.logger as logging
 
@@ -276,14 +277,14 @@ def run_episode_old0(policy: Policy, env: Environment, segmenter: ObjectSegmente
     while node_id != target_id:
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
-        obstacle_nodes = grasping.get_obstacles(raw_masks, target_id)
-        print("heuristics:", obstacle_nodes)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
+        print("heuristics:", objects_to_remove)
 
         obstacle_nodes = policy.get_obstacles(processed_masks, target_mask)
         print("vit:", obstacle_nodes)
-        obstacle_nodes = [node for node in obstacle_nodes if node < len(processed_masks)]
+        # obstacle_nodes = [node for node in obstacle_nodes if node < len(processed_masks)]
 
-        node_id = obstacle_nodes[0]
+        node_id = objects_to_remove[0]
 
         print("target id:", target_id, " -obstacle id:", node_id)
 

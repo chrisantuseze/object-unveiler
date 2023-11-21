@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--num_patches', default=14, type=int, help='')
     parser.add_argument('--step', default=200, type=int, help='')
 
-    parser.add_argument('--log', default=1, type=int, help='0 for logging, and 1 for no logging')
+    parser.add_argument('--log', default=1, type=int, help='1 for logging, and 0 for no logging')
 
     return parser.parse_args()
 

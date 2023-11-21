@@ -71,8 +71,6 @@ def collect_episodic_dataset(args):
             objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
             print("\nobjects_to_remove:", objects_to_remove)
 
-            grasping2.get_distances_to_edge(processed_masks)
-
             node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)
 
             node_id = objects_to_remove[0]
@@ -201,6 +199,11 @@ def parse_args():
     parser.add_argument('--n_samples', default=10000, type=int, help='')
     parser.add_argument('--seed', default=1, type=int, help='')
     parser.add_argument('--singulation_condition', action='store_true', default=False, help='')
+
+    # not needed for this operation, but if its not here, it causes problem in policy.py
+    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--num_patches', default=14, type=int, help='')
+    
     return parser.parse_args()
 
 
