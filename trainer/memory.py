@@ -105,7 +105,8 @@ class ReplayBuffer:
                 target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
                 action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
                 break
-            except:
+            except Exception as e:
+                logging.info(e)
                 idx += 1
 
         return heightmap, target_mask, action
