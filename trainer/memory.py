@@ -98,16 +98,16 @@ class ReplayBuffer:
             self.count += 1
 
     def load(self, dir_ids, idx):
-        while True:
-            try:
-                logging.info(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'))
-                heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
-                target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
-                action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
-                break
-            except Exception as e:
-                logging.info(e)
-                idx += 1
+        # while True:
+        try:
+            logging.info(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'))
+            heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
+            target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
+            action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
+            # break
+        except Exception as e:
+            logging.info(e)
+            idx += 1
 
         return heightmap, target_mask, action
 
