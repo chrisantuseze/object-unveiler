@@ -64,6 +64,8 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
+        self.fcn = nn.Linear(2*144*144, 144*144)
+
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
@@ -131,7 +133,12 @@ class ResFCN(nn.Module):
             prob_target = self.predict(batch_rot_target)
 
             prob = torch.cat((prob_depth, prob_target), dim=1)
-            prob = torch.mean(prob, dim=1, keepdim=True)
+            B, C, H, W = prob.shape
+            prob = torch.flatten(prob, 1) #torch.Size([16, 41472])
+            prob = self.fcn(prob)
+            prob = prob.view(B, 1, H, W)
+
+            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3))
@@ -177,8 +184,13 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(rotate_depth)
             prob_target = self.predict(rotate_target_mask)
 
-            prob = torch.cat((prob_depth, prob_target), dim=1)
-            prob = torch.mean(prob, dim=1, keepdim=True)
+            prob = torch.cat((prob_depth, prob_target), dim=1) #torch.Size([4, 2, 144, 144])
+            B, C, H, W = prob.shape
+            prob = torch.flatten(prob, 1) #torch.Size([4, 41472])
+            prob = self.fcn(prob)
+            prob = prob.view(B, 1, H, W)
+
+            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
