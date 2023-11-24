@@ -37,9 +37,9 @@ class ReplayBuffer:
             target_mask = data['target_mask']
             obstacle_mask = data['obstacle_mask']
             action = data['action']
-            scene_depth = data['depth_obs']
+            # scene_depth = data['depth_obs']
 
-            data_list.append((heightmap, scene_depth, target_mask, obstacle_mask, action))
+            data_list.append((heightmap, None, target_mask, obstacle_mask, action))
 
         return data_list
     
