@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
+from collections import OrderedDict
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -129,15 +130,10 @@ class ResFCN(nn.Module):
                 batch_rot_target[rot_id] = rotate_target_mask[0]
 
             # compute rotated feature maps            
-            prob_depth = self.predict(batch_rot_depth)
-            prob_target = self.predict(batch_rot_target)
+            interm_grasp_depth_feat = self.predict(batch_rot_depth)
+            interm_grasp_target_feat = self.predict(batch_rot_target)
 
-            prob = torch.cat((prob_depth, prob_target), dim=1)
-            B, C, H, W = prob.shape
-            prob = torch.flatten(prob, 1) #torch.Size([16, 41472])
-            prob = self.fcn(prob)
-            prob = prob.view(B, 1, H, W)
-
+            interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
             # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # undo rotation
@@ -152,9 +148,13 @@ class ResFCN(nn.Module):
                 affine_after[rot_id] = affine_mat_after
 
             flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
-                                            prob.size(), align_corners=True)
-            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+                                            interm_grasp_feat.data.size(), align_corners=True)
+            out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
 
+            B, C, H, W = out_prob.shape
+            prob = torch.flatten(out_prob, 1) #torch.Size([4, 41472])
+            prob = self.fcn(prob)
+            out_prob = prob.view(B, 1, H, W)
 
             return out_prob
         
@@ -181,15 +181,10 @@ class ResFCN(nn.Module):
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
-            prob_depth = self.predict(rotate_depth)
-            prob_target = self.predict(rotate_target_mask)
+            interm_grasp_depth_feat = self.predict(rotate_depth)
+            interm_grasp_target_feat = self.predict(rotate_target_mask)
 
-            prob = torch.cat((prob_depth, prob_target), dim=1) #torch.Size([4, 2, 144, 144])
-            B, C, H, W = prob.shape
-            prob = torch.flatten(prob, 1) #torch.Size([4, 41472])
-            prob = self.fcn(prob)
-            prob = prob.view(B, 1, H, W)
-
+            interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
             # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # Compute sample grid for rotation after branches
@@ -203,10 +198,17 @@ class ResFCN(nn.Module):
                 affine_after[i] = affine_mat_after
 
             flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
-                                            prob.size(), align_corners=True)
+                                            interm_grasp_feat.data.size(), align_corners=True)
 
             # Forward pass through branches, undo rotation on output predictions, upsample results
-            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+            out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
+
+            B, C, H, W = out_prob.shape
+            prob = torch.flatten(out_prob, 1) #torch.Size([4, 41472])
+            prob = self.fcn(prob)
+            out_prob = prob.view(B, 1, H, W)
+
+            # print("out_prob.shape:", out_prob.shape)
 
             # Image-wide softmax
             output_shape = out_prob.shape
