@@ -149,7 +149,12 @@ class ResFCN(nn.Module):
                                             interm_grasp_feat.data.size(), align_corners=True)
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
 
+            B, C, H, W = out_prob.shape
+
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
+            # out_prob = out_prob.squeeze(1)
+            # print(out_prob.shape)
+            # out_prob = out_prob.reshape(B, 1, H, W)
 
             return out_prob
         
@@ -199,6 +204,8 @@ class ResFCN(nn.Module):
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
 
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
+            # out_prob = out_prob.squeeze(1)
+            # out_prob = out_prob.reshape(4, 1, 144, 144)
 
             # print("out_prob.shape:", out_prob.shape)
 
