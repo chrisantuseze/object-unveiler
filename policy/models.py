@@ -65,8 +65,6 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.fcn = nn.Linear(2*144*144, 144*144)
-
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
@@ -151,10 +149,7 @@ class ResFCN(nn.Module):
                                             interm_grasp_feat.data.size(), align_corners=True)
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
 
-            B, C, H, W = out_prob.shape
-            prob = torch.flatten(out_prob, 1) #torch.Size([4, 41472])
-            prob = self.fcn(prob)
-            out_prob = prob.view(B, 1, H, W)
+            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
 
             return out_prob
         
@@ -203,10 +198,7 @@ class ResFCN(nn.Module):
             # Forward pass through branches, undo rotation on output predictions, upsample results
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
 
-            B, C, H, W = out_prob.shape
-            prob = torch.flatten(out_prob, 1) #torch.Size([4, 41472])
-            prob = self.fcn(prob)
-            out_prob = prob.view(B, 1, H, W)
+            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
 
             # print("out_prob.shape:", out_prob.shape)
 
