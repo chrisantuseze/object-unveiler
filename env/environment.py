@@ -28,15 +28,19 @@ class Simulation:
         # self.names_button.show_names(self.objects) TODO: Uncomment
 
 class Environment:
-    def __init__(self, assets_root = "assets/", objects_set="seen") -> None:
+    def __init__(self, params, assets_root = "assets/", objects_set="seen") -> None:
         self.objects = []
 
         self.assets_root = assets_root
         self.objects_set = objects_set
         self.workspace_pos = np.array([0.0, 0.0, 0.0])
         hz = 240
-        self.pxl_size = 0.005
-        self.bounds = np.array([[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]])  # workspace limits
+
+        self.rotations = params['agent']['fcn']['rotations']
+        self.aperture_limits = params['agent']['regressor']['aperture_limits']
+        self.pxl_size = params['env']['pixel_size']
+        self.bounds = np.array(params['env']['workspace']['bounds'])
+
         self.nr_objects = [6, 9] #[5, 8]
 
 

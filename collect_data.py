@@ -17,14 +17,14 @@ import policy.grasping as grasping
 import policy.grasping2 as grasping2
 from utils.constants import *
 
-def collect_episodic_dataset(args):
+def collect_episodic_dataset(args, stream):
     save_dir = 'save/ppg-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
 
     # create the environment for the agent
-    env = Environment()
+    env = Environment(stream)
     env.singulation_condition = args.singulation_condition
 
     with open('yaml/bhand.yml', 'r') as stream:
@@ -134,14 +134,14 @@ def collect_episodic_dataset(args):
         else:
             print("Episode was not successful.")
 
-def collect_random_target_dataset(args):
+def collect_random_target_dataset(args, stream):
     save_dir = 'save/ppg-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
 
     # create the environment for the agent
-    env = Environment()
+    env = Environment(stream)
     env.singulation_condition = args.singulation_condition
 
     with open('yaml/bhand.yml', 'r') as stream:
@@ -212,5 +212,8 @@ if __name__ == "__main__":
 
     general_utils.create_dirs()
 
-    # collect_demonstrations(args)
-    collect_episodic_dataset(args)
+    with open('yaml/bhand.yml', 'r') as stream:
+        params = yaml.safe_load(stream)
+
+    # collect_demonstrations(args, stream)
+    collect_episodic_dataset(args, stream)

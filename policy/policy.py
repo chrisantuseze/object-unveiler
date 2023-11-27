@@ -34,7 +34,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.12 #0.15 0.10 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
@@ -409,10 +409,6 @@ class Policy:
             p1 = np.array([best_actions[i][3], best_actions[i][2]])
             theta = best_actions[i][0] * 2 * np.pi/self.rotations
 
-            p2 = np.array([0, 0])
-            p2[0] = p1[0] + 20 * np.cos(theta)
-            p2[1] = p1[1] - 20 * np.sin(theta)
-
             # find optimal aperture
             aperture_img = self.preprocess_aperture_image(state, p1, theta)
             x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
@@ -486,10 +482,6 @@ class Policy:
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
         p1 = np.array([best_action[3], best_action[2]])
         theta = best_action[0] * 2 * np.pi/self.rotations
-
-        p2 = np.array([0, 0])
-        p2[0] = p1[0] + 20 * np.cos(theta)
-        p2[1] = p1[1] - 20 * np.sin(theta)
 
         # find optimal aperture
         aperture_img = self.preprocess_aperture_image(state, p1, theta)
