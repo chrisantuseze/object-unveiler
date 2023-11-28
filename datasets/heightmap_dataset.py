@@ -155,7 +155,7 @@ class HeightMapDataset(data.Dataset):
         return sequence, rot_ids, labels
 
     # single - input, multi - output
-    def __getitem__old3(self, id):
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, _ = episode_data[0]
 
@@ -189,7 +189,7 @@ class HeightMapDataset(data.Dataset):
 
         labels, rot_ids = [], []
         for data in episode_data:
-            _, _, _, action = data
+            _, _, _, _, action = data
 
             # convert theta to range 0-360 and then compute the rot_id
             angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -278,7 +278,7 @@ class HeightMapDataset(data.Dataset):
      # single - input, single - output for ou-dataset with target action
     
     # single - input, single - output for ou-dataset with target action
-    def __getitem__(self, id):
+    def __getitem__old5(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
@@ -329,7 +329,7 @@ class HeightMapDataset(data.Dataset):
     
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__old5(self, id):
+    def __getitem__old6(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
         # add extra padding (to handle rotations inside the network)

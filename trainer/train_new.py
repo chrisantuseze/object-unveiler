@@ -8,8 +8,8 @@ import torch.nn as nn
 from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer.aperture_dataset import ApertureDataset
-from trainer.heightmap_dataset import HeightMapDataset
+from datasets.aperture_dataset import ApertureDataset
+from datasets.heightmap_dataset import HeightMapDataset
 from policy.action_net_linear import *
 
 import utils.general_utils as general_utils
@@ -31,6 +31,8 @@ def train_fcn_net(args):
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
+
+    transition_dirs = transition_dirs[:12000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]

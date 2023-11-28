@@ -37,8 +37,8 @@ class Policy:
         self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.1 # distance of the floating hand from the table (vertical distance)
 
-        self.fcn = ResFCN().to(self.device)
-        # self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
+        # self.fcn = ResFCN().to(self.device)
+        self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 

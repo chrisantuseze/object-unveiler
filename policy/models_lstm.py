@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
+import matplotlib.pyplot as plt
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -138,7 +139,7 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(batch_rot_depth)
             prob_target = self.predict(batch_rot_target)
             prob = torch.cat((prob_depth, prob_target), dim=1)
-            prob = torch.mean(prob, dim=1, keepdim=True)
+            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # print("prob.shape", prob.shape)
 
@@ -204,17 +205,20 @@ class ResFCN(nn.Module):
             prob_depth = self.predict(rotate_depth)
             prob_target = self.predict(rotate_target_mask)
             prob = torch.cat((prob_depth, prob_target), dim=1)
-            prob = torch.mean(prob, dim=1, keepdim=True)
+            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # print("prob.shape", prob.shape)
+            B, C, H, W = prob.shape
 
             decode_out = self.decode(prob)
 
-            # print("decode_out.shape", decode_out.shape)
+            print("decode_out.shape", decode_out.shape)
 
             outs = []
             for i in range(self.args.sequence_length):
                 prob = decode_out[i]
+                # print("prob.shape", prob.shape)
+                prob = prob.view(B, C, H, W)
 
                 # Compute sample grid for rotation after branches
                 affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
@@ -232,34 +236,25 @@ class ResFCN(nn.Module):
                 # Forward pass through branches, undo rotation on output predictions, upsample results
                 out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-                # print("out_prob.shape", out_prob.shape)
-
-                # out_prob = out_prob.view(self.args.sequence_length, self.args.batch_size, 1, self.image_size, self.image_size)
-
-                # print("view out_prob.shape", out_prob.shape)
-
-                # Image-wide softmax
-                # output_shape = out_prob.shape
-                # out_prob = out_prob.view(output_shape[0], -1)
-                # out_prob = torch.softmax(out_prob, dim=1)
-                # out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-
-                # print("out_prob.shape", out_prob.shape)
+                print("out_prob.shape", out_prob.shape)
 
                 outs.append(out_prob)
 
             out_prob = torch.stack(outs, dim=0)
+            out_prob = torch.mean(out_prob, dim=2, keepdim=True)
 
+            # Image-wide softmax
             output_shape = out_prob.shape
             out_prob = out_prob.view(output_shape[0], -1)
             out_prob = torch.softmax(out_prob, dim=1)
             out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-            # print("stack out_prob.shape", out_prob.shape)
+            print("stack out_prob.shape", out_prob.shape)
 
             return out_prob
         
     def decode(self, decoder_input, actions=None):
         dim2 = self.nr_rotations if self.is_eval else self.args.batch_size
+        dim2 *= 2
 
         decoder_input = decoder_input.view(1, dim2, self.cnn_output)
         # print("decoder_input.shape:", decoder_input.shape)
@@ -290,11 +285,6 @@ class ResFCN(nn.Module):
             else:
                 # Without teacher forcing: use its own predictions as the next input
                 decoder_input = fc_output
-
-        # print("outputs.shape:", outputs.shape)
-
-        # outputs = outputs.squeeze()
-        # print("squeeze outputs.shape:", outputs.shape)
 
         return outputs
 
