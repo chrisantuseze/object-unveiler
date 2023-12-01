@@ -267,7 +267,7 @@ class ResFCN(nn.Module):
         B, N, C, H, W = normalized_overlapped_objs.shape
         reshaped_overlapped = normalized_overlapped_objs.view(B * N, H * W)
         out_prob = self.box_regression(reshaped_overlapped)
-        print("out_prob.shape", out_prob.shape)
+        # print("out_prob.shape", out_prob.shape)
 
         # Image-wide softmax
         output_shape = out_prob.shape
