@@ -138,7 +138,7 @@ class ResFCN(nn.Module):
         processed_masks_all = []
 
         for i in range(B):
-            color_image = color_images[i].numpy()
+            color_image = color_images[i].cpu().numpy()
             # print("color_image.shape", color_image.shape)
 
             processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_image, plot=True)
@@ -190,7 +190,7 @@ class ResFCN(nn.Module):
         scene_feats = self.predict(scene_masks)
         # print("scene_feats.shape", scene_feats.shape)
 
-        target_mask = target_mask.numpy()
+        target_mask = target_mask.cpu().numpy()
         # print("target_mask.shape", target_mask.shape)
 
         masks = []
@@ -239,7 +239,7 @@ class ResFCN(nn.Module):
             # print("x.shape", x.shape) # Should be (4, 400, 400)
             objs.append(x)
 
-        overlapped_objs = torch.stack(objs).to(self.device)
+        overlapped_objs = torch.stack(objs)
         # print("overlapped_objs.shape", overlapped_objs.shape)
 
         ########################### VIZ ################################
