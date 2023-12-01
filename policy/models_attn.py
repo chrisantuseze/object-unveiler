@@ -249,7 +249,7 @@ class ResFCN(nn.Module):
         ################################################################
 
         objs_2 = []
-        overlapped_objs = overlapped_objs.numpy()
+        overlapped_objs = overlapped_objs.cpu().numpy()
         for i in range(overlapped_objs.shape[0]):
             objs_1 = []
             for j in range(overlapped_objs.shape[1]):
