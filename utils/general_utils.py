@@ -8,6 +8,7 @@ import pickle
 import yaml
 from PIL import Image
 import torch
+from skimage import transform
 
 import utils.pybullet_utils as p_utils
 from utils.constants import *
@@ -302,6 +303,27 @@ def preprocess_data(data, root=5):
     padded_data = padded_data.astype(np.float32)
 
     return padded_data, padding_width_data
+
+def preprocess_image(image, skip_transform=False):
+    if skip_transform:
+        image = resize_mask(transform, image)
+
+    # add extra padding (to handle rotations inside the network)
+    diagonal_length = float(image.shape[0]) * np.sqrt(2)
+    diagonal_length = np.ceil(diagonal_length / 16) * 16
+    padding_width = int((diagonal_length - image.shape[0]) / 2)
+    padded_image = np.pad(image, padding_width, 'constant', constant_values=-0.01)
+    padded_image = padded_image.astype(np.float32)
+
+    # normalize heightmap
+    image_mean = 0.01
+    image_std = 0.03
+    padded_image = (padded_image - image_mean)/image_std
+
+    # add extra channel
+    padded_image = np.expand_dims(padded_image, axis=0)
+
+    return padded_image, padding_width
 
 class Logger:
     def __init__(self, log_dir):

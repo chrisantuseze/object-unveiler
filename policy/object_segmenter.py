@@ -9,6 +9,8 @@ from torchvision.transforms import functional as TF
 from vision.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
 import utils.logger as logging
+import utils.general_utils as general_utils
+from skimage import transform
 
 class ObjectSegmenter:
     """
@@ -58,7 +60,7 @@ class ObjectSegmenter:
                 if np.sum(img == 255) < 100:
                     continue
                 
-                processed_masks.append(img)
+                processed_masks.append(general_utils.resize_mask(transform, img))#img)
                 raw_masks.append(mask)
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20

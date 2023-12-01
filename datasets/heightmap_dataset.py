@@ -84,6 +84,7 @@ class HeightMapDataset(data.Dataset):
 
             rot_ids = rot_ids + [0] * required_len
 
+        labels = np.array(labels)
         return sequence, rot_ids, labels
     
     # mult - input, multi - output
@@ -152,40 +153,16 @@ class HeightMapDataset(data.Dataset):
 
             # rot_ids = rot_ids + [0] * required_len
 
+        labels = np.array(labels)
         return sequence, rot_ids, labels
 
     # single - input, multi - output
-    def __getitem__(self, id):
+    def __getitem__old3(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, _ = episode_data[0]
 
-        # add extra padding (to handle rotations inside the network)
-        diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
-        diagonal_length_depth = np.ceil(diagonal_length_depth / 16) * 16
-        padding_width_depth = int((diagonal_length_depth - heightmap.shape[0]) / 2)
-        padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
-        padded_heightmap = padded_heightmap.astype(np.float32)
-
-        # try:
-        #     target_mask = general_utils.resize_mask(transform, target_mask)
-        # except:
-        #     print(os.path.join(self.dataset_dir, self.dir_ids[id]))
-            
-        diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
-        diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
-        padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
-        padded_target_mask = np.pad(target_mask, padding_width_target, 'constant', constant_values=-0.01)
-        padded_target_mask = padded_target_mask.astype(np.float32)
-
-        # normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-        padded_target_mask = (padded_target_mask - image_mean)/image_std
-
-        # add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         labels, rot_ids = [], []
         for data in episode_data:
@@ -223,35 +200,63 @@ class HeightMapDataset(data.Dataset):
 
             rot_ids = rot_ids + [0] * required_len
 
+        labels = np.array(labels)
         return padded_heightmap, padded_target_mask, rot_ids, labels
+
+    # single - input, multi - output for models_attn
+    def __getitem__(self, id):
+        episode_data = self.memory.load_episode(self.dir_ids[id])
+        heightmap, scene_color, target_mask, _, _ = episode_data[0]
+
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
+
+        labels, rot_ids = [], []
+        for data in episode_data:
+            _, _, _, _, action = data
+
+            # convert theta to range 0-360 and then compute the rot_id
+            angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
+            rot_id = round(angle / (2 * np.pi / 16))
+            rot_ids.append(rot_id)
+            
+            action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
+
+            if int(action[1]) > 99 or int(action[0]):
+                i = min(int(action[1]) * 0.95, 99)
+                j = min(int(action[0]) * 0.95, 99)
+            else:
+                i = action[1]
+                j = action[0]
+
+            action_area[int(i), int(j)] = 1.0
+            label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+            label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
+                    padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
+            
+            labels.append(label)
+
+        # pad dataset
+        seq_len = self.args.sequence_length
+        if len(episode_data) < seq_len:
+            required_len = seq_len - len(labels)
+            c, h, w = padded_heightmap.shape
+
+            empty_array = np.zeros((c, w, h))
+            labels = labels + [empty_array] * required_len
+
+            rot_ids = rot_ids + [0] * required_len
+
+        labels = np.array(labels)
+        return scene_color, target_mask, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[0]
 
-        # add extra padding (to handle rotations inside the network)
-        diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
-        diagonal_length_depth = np.ceil(diagonal_length_depth / 16) * 16
-        padding_width_depth = int((diagonal_length_depth - heightmap.shape[0]) / 2)
-        padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
-        padded_heightmap = padded_heightmap.astype(np.float32)
-
-        diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
-        diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
-        padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
-        padded_target_mask = np.pad(target_mask, padding_width_target, 'constant', constant_values=-0.01)
-        padded_target_mask = padded_target_mask.astype(np.float32)
-
-        # normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-        padded_target_mask = (padded_target_mask - image_mean)/image_std
-
-        # add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -273,6 +278,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
+        labels = np.array(labels)
         return padded_heightmap, padded_target_mask, rot_id, label
     
      # single - input, single - output for ou-dataset with target action
@@ -282,28 +288,8 @@ class HeightMapDataset(data.Dataset):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
-        # add extra padding (to handle rotations inside the network)
-        diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
-        diagonal_length_depth = np.ceil(diagonal_length_depth / 16) * 16
-        padding_width_depth = int((diagonal_length_depth - heightmap.shape[0]) / 2)
-        padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
-        padded_heightmap = padded_heightmap.astype(np.float32)
-            
-        diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
-        diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
-        padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
-        padded_target_mask = np.pad(target_mask, padding_width_target, 'constant', constant_values=-0.01)
-        padded_target_mask = padded_target_mask.astype(np.float32)
-
-        # normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-        padded_target_mask = (padded_target_mask - image_mean)/image_std
-
-        # add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -325,6 +311,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
+        labels = np.array(labels)
         return padded_heightmap, padded_target_mask, rot_id, label
     
 
@@ -332,33 +319,8 @@ class HeightMapDataset(data.Dataset):
     def __getitem__old6(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
-        # add extra padding (to handle rotations inside the network)
-        diagonal_length_depth = float(heightmap.shape[0]) * np.sqrt(2)
-        diagonal_length_depth = np.ceil(diagonal_length_depth / 16) * 16
-        padding_width_depth = int((diagonal_length_depth - heightmap.shape[0]) / 2)
-        padded_heightmap = np.pad(heightmap, padding_width_depth, 'constant', constant_values=-0.01)
-        padded_heightmap = padded_heightmap.astype(np.float32)
-
-        try:
-            target_mask = general_utils.resize_mask(transform, target_mask)
-        except:
-            print(os.path.join(self.dataset_dir, self.dir_ids[id]))
-            
-        diagonal_length_target = float(target_mask.shape[0]) * np.sqrt(2)
-        diagonal_length_target = np.ceil(diagonal_length_target / 16) * 16
-        padding_width_target = int((diagonal_length_target - target_mask.shape[0]) / 2)
-        padded_target_mask = np.pad(target_mask, padding_width_target, 'constant', constant_values=-0.01)
-        padded_target_mask = padded_target_mask.astype(np.float32)
-
-        # normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-        padded_target_mask = (padded_target_mask - image_mean)/image_std
-
-        # add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-        padded_target_mask = np.expand_dims(padded_target_mask, axis=0)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -380,6 +342,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
+        labels = np.array(labels)
         return padded_heightmap, padded_target_mask, rot_id, label
     
     def __len__(self):
