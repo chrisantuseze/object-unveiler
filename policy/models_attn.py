@@ -198,7 +198,7 @@ class ResFCN(nn.Module):
             mask, _ = general_utils.preprocess_image(mask)
             # print("mask.shape", mask.shape)
             masks.append(mask)
-        normalized_target_mask = torch.tensor(masks).to(self.device)
+        normalized_target_mask = torch.tensor(np.array(masks)).to(self.device)
         # print("normalized_target_mask.shape", normalized_target_mask.shape)
 
         target_feat = self.predict(normalized_target_mask)
@@ -257,7 +257,7 @@ class ResFCN(nn.Module):
                 # print("obj.shape", obj.shape)
                 objs_1.append(obj)
 
-            objs = torch.tensor(objs_1)
+            objs = torch.tensor(np.array(objs_1))
             objs_2.append(objs)
             
         normalized_overlapped_objs = torch.stack(objs_2).to(self.device)
