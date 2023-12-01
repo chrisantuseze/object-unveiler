@@ -60,7 +60,7 @@ class ObjectSegmenter:
                 if np.sum(img == 255) < 100:
                     continue
                 
-                processed_masks.append(general_utils.resize_mask(transform, img))#img)
+                processed_masks.append(img)
                 raw_masks.append(mask)
                 if plot:
                     pred_mask[img > 0] = 255 - idx * 20

@@ -305,7 +305,7 @@ def preprocess_data(data, root=5):
     return padded_data, padding_width_data
 
 def preprocess_image(image, skip_transform=False):
-    if skip_transform:
+    if not skip_transform:
         image = resize_mask(transform, image)
 
     # add extra padding (to handle rotations inside the network)

@@ -178,7 +178,7 @@ class ResFCN(nn.Module):
         processed_masks_all = np.array(processed_masks_all)
         obj_masks = torch.from_numpy(processed_masks_all).float().to(self.device)
 
-        self.show_images2(obj_masks)
+        # self.show_images2(obj_masks)
         return scene_masks, obj_features, obj_masks
 
     def forward(self, color_image, target_mask, specific_rotation=-1, is_volatile=[]):
@@ -244,7 +244,7 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        self.show_images(overlapped_objs, target_mask, color_image)
+        # self.show_images(overlapped_objs, target_mask, color_image)
 
         ################################################################
 
