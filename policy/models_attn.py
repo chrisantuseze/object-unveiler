@@ -167,14 +167,16 @@ class ResFCN(nn.Module):
                 # Pad the tensor along the first dimension
                 obj_feats = torch.nn.functional.pad(obj_feats, (0, 0, 0, padding_needed))
                 # print("obj_feats.shape", obj_feats.shape)
+
+                h, w = processed_masks[0].shape
+                empty_array = np.zeros((w, h))
+                processed_masks = processed_masks + [empty_array] * padding_needed
             else:
                 obj_feats = obj_feats[:self.args.num_patches]
+                processed_masks = processed_masks[:self.args.num_patches]
 
             obj_features[i] = obj_feats
-
-            h, w = processed_masks[0].shape
-            empty_array = np.zeros((w, h))
-            processed_masks = processed_masks + [empty_array] * padding_needed
+            
             processed_masks = np.array(processed_masks)
             processed_masks_all.append(processed_masks)
         
