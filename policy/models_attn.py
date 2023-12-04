@@ -160,12 +160,15 @@ class ResFCN(nn.Module):
             scene_masks[i] = scene_mask
 
             # pad obj_features
-            # Calculate the amount of padding needed
-            padding_needed = max(0, self.args.num_patches - obj_feats.size(0))
+            if len(obj_feats) < self.args.num_patches:
+                # Calculate the amount of padding needed
+                padding_needed = max(0, self.args.num_patches - obj_feats.size(0))
 
-            # Pad the tensor along the first dimension
-            obj_feats = torch.nn.functional.pad(obj_feats, (0, 0, 0, padding_needed))
-            # print("obj_feats.shape", obj_feats.shape)
+                # Pad the tensor along the first dimension
+                obj_feats = torch.nn.functional.pad(obj_feats, (0, 0, 0, padding_needed))
+                # print("obj_feats.shape", obj_feats.shape)
+            else:
+                obj_feats = obj_feats[:self.args.num_patches]
 
             obj_features[i] = obj_feats
 
