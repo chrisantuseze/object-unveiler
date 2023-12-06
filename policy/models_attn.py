@@ -104,9 +104,9 @@ class ResFCN(nn.Module):
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         if final_feats:
-            out = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)(x)
+            out = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)(x)
         else:
-            out = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)(x)
+            out = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)(x)
 
         return out
     
