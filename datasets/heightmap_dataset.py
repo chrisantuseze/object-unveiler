@@ -204,7 +204,7 @@ class HeightMapDataset(data.Dataset):
         return padded_heightmap, padded_target_mask, rot_ids, labels
 
     # single - input, multi - output for models_attn
-    def __getitem__(self, id):
+    def __getitem__old31(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, scene_color, target_mask, _, _ = episode_data[0]
 
@@ -249,6 +249,71 @@ class HeightMapDataset(data.Dataset):
 
         labels = np.array(labels)
         return scene_color, target_mask, rot_ids, labels
+
+    # single - input, multi - output for models_attn with processed inputs
+    def __getitem__(self, id):
+        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
+        heightmap, scene_mask, target_mask, object_masks, _ = episode_data[0]
+
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_scene_mask, _ = general_utils.preprocess_image(scene_mask)
+        padded_target_mask, _ = general_utils.preprocess_image(target_mask)
+
+        padded_obj_masks = []
+        for obj_mask in object_masks:
+            padded_obj_mask, _ = general_utils.preprocess_image(obj_mask)
+            padded_obj_masks.append(padded_obj_mask)
+
+        padded_obj_masks = np.array(padded_obj_masks)
+
+        labels, rot_ids = [], []
+        for data in episode_data:
+            _, _, _, _, action = data
+
+            # convert theta to range 0-360 and then compute the rot_id
+            angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
+            rot_id = round(angle / (2 * np.pi / 16))
+            rot_ids.append(rot_id)
+            
+            action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
+
+            if int(action[1]) > 99 or int(action[0]):
+                i = min(int(action[1]) * 0.95, 99)
+                j = min(int(action[0]) * 0.95, 99)
+            else:
+                i = action[1]
+                j = action[0]
+
+            action_area[int(i), int(j)] = 1.0
+            label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+            label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
+                    padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
+            
+            labels.append(label)
+
+        # pad dataset
+        seq_len = self.args.sequence_length
+        if len(episode_data) < seq_len:
+            required_len = seq_len - len(labels)
+            c, h, w = padded_heightmap.shape
+
+            empty_array = np.zeros((c, w, h))
+            labels = labels + [empty_array] * required_len
+
+            rot_ids = rot_ids + [0] * required_len
+
+
+        N, C, H, W = padded_obj_masks.shape
+        new_padded_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=padded_obj_masks.dtype)
+        new_padded_obj_masks[:padded_obj_masks.shape[0], :, :, :] = padded_obj_masks
+
+        object_masks = np.array(object_masks)
+        N, H, W = object_masks.shape
+        new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
+        new_obj_masks[:object_masks.shape[0], :, :] = object_masks
+
+        labels = np.array(labels)
+        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):

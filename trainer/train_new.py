@@ -1,6 +1,6 @@
 import os
 import random
-from policy.models_attn import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -66,12 +66,20 @@ def train_fcn_net(args):
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
             target_mask = batch[1].to(args.device, dtype=torch.float32)
-            rotations = batch[2]
-            y = batch[3].to(args.device, dtype=torch.float32)
-            # y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
-            # logging.info("y.shape:", y.shape)
+            object_masks = batch[2].to(args.device)
 
-            pred = model(x, target_mask, rotations)
+            raw_x = batch[3].to(args.device)
+            raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+            raw_object_masks = batch[5].to(args.device)
+
+            rotations = batch[6]
+            y = batch[7].to(args.device, dtype=torch.float32)
+
+            pred = model(
+                x, target_mask, object_masks, 
+                raw_x, raw_target_mask, raw_object_masks, 
+                rotations
+            )
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -89,11 +97,20 @@ def train_fcn_net(args):
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
-                rotations = batch[2]
-                y = batch[3].to(args.device, dtype=torch.float32)
-                # y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
+                object_masks = batch[2].to(args.device)
 
-                pred = model(x, target_mask, rotations)
+                raw_x = batch[3].to(args.device)
+                raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+                raw_object_masks = batch[5].to(args.device)
+
+                rotations = batch[6]
+                y = batch[7].to(args.device, dtype=torch.float32)
+
+                pred = model(
+                    x, target_mask, object_masks, 
+                    raw_x, raw_target_mask, raw_object_masks, 
+                    rotations
+                )
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)

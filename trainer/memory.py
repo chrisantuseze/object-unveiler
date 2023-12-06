@@ -43,6 +43,25 @@ class ReplayBuffer:
 
         return data_list
     
+    def load_episode_attn(self, episode):
+        try:
+            episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+        except Exception as e:
+            logging.info(e, "- Failed episode:", episode)
+
+        data_list = []
+        for data in episode_data:
+            heightmap = data['state']
+            target_mask = data['target_mask']
+            action = data['action']
+
+            scene_mask = data['scene_mask']
+            object_masks = data['object_masks']
+
+            data_list.append((heightmap, scene_mask, target_mask, object_masks, action))
+
+        return data_list
+    
     def load_occlusion_data(self, episode):
         try:
             episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
