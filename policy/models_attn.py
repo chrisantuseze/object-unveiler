@@ -69,18 +69,11 @@ class ResFCN(nn.Module):
         self.rb4 = self.make_layer(512, 256)
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
-        self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
+        # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Learnable projection matrices  
         self.target_proj = nn.Linear(128, 256)  
         self.obj_proj = nn.Linear(128, 256)
-
-        self.image_size = 144
-        
-        self.box_regression = nn.Linear(
-            self.image_size * self.image_size,
-            self.image_size * self.image_size
-        )
 
         self.segmenter = ObjectSegmenter()
         
@@ -96,7 +89,7 @@ class ResFCN(nn.Module):
 
         return nn.Sequential(*layers)
     
-    def predict(self, depth):
+    def predict(self, depth, final_feats=False):
         x = F.relu(self.conv1(depth))
         x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
@@ -110,7 +103,11 @@ class ResFCN(nn.Module):
         x = self.rb6(x)
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        out = self.final_conv(x)
+        if final_feats:
+            out = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)(x)
+        else:
+            out = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)(x)
+
         return out
     
     def get_obj_feats(self, obj_masks, scene_feats):
@@ -236,7 +233,7 @@ class ResFCN(nn.Module):
 
         # print("obj_masks.shape", obj_masks.shape)
 
-        # Keep overlapped objects
+        ###### Keep overlapped objects #####
         objs = []
         for i in range(B):
             idx = top_indices[i] 
@@ -253,25 +250,32 @@ class ResFCN(nn.Module):
 
         ################################################################
 
+
+        ##### process obj masks and extract features #####
         objs_2 = []
         overlapped_objs = overlapped_objs.cpu().numpy()
-        for i in range(overlapped_objs.shape[0]):
+        for i in range(overlapped_objs.shape[0]): # batch level
             objs_1 = []
-            for j in range(overlapped_objs.shape[1]):
-                obj, _ = general_utils.preprocess_image(overlapped_objs[i][j])
-                # print("obj.shape", obj.shape)
-                objs_1.append(obj)
+            for j in range(overlapped_objs.shape[1]): # channel (num objects) level 
+                normalized_obj, _ = general_utils.preprocess_image(overlapped_objs[i][j])
+                normalized_obj = torch.tensor(normalized_obj).unsqueeze(1).to(self.device)
+                # print("normalized_obj.shape", normalized_obj.shape)
 
-            objs = torch.tensor(np.array(objs_1))
+                obj_feat = self.predict(normalized_obj, final_feats=True)
+                # print("obj_feat.shape", obj_feat.shape)
+
+                objs_1.append(obj_feat)
+
+            objs = torch.stack(objs_1) #torch.tensor(np.array(objs_1))
             objs_2.append(objs)
             
-        normalized_overlapped_objs = torch.stack(objs_2).to(self.device)
-        # print("normalized_overlapped_objs.shape", normalized_overlapped_objs.shape)
+        overlapped_objs_feats = torch.stack(objs_2).squeeze(2).to(self.device)
+        # print("overlapped_objs_feats.shape", overlapped_objs_feats.shape)
 
         # Predict boxes
-        B, N, C, H, W = normalized_overlapped_objs.shape
-        reshaped_overlapped = normalized_overlapped_objs.view(B * N, H * W)
-        out_prob = self.box_regression(reshaped_overlapped)
+        B, N, C, H, W = overlapped_objs_feats.shape
+        reshaped_overlapped = overlapped_objs_feats.view(B * N, H * W)
+        out_prob = reshaped_overlapped
         # print("out_prob.shape", out_prob.shape)
 
         # Image-wide softmax
