@@ -192,7 +192,7 @@ class ResFCN(nn.Module):
             objs.append(x)
 
             raw_x = raw_object_masks[i, idx]
-            print("raw_x.shape", raw_x.shape)
+            # print("raw_x.shape", raw_x.shape)
             raw_objs.append(raw_x)
 
         raw_objs = torch.stack(raw_objs)
@@ -202,7 +202,6 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        print("raw_objs.shape", raw_objs.shape)
         # self.show_images(raw_objs, raw_target_mask, raw_scene_mask)
 
         ################################################################
