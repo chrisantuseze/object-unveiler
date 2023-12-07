@@ -186,7 +186,6 @@ class ResFCN(nn.Module):
         raw_objs = []
         for i in range(B):
             idx = top_indices[i] 
-            print("idx.shape", idx.shape)
 
             x = object_masks[i, idx]
             # print("x.shape", x.shape) # Should be (4, 400, 400)
@@ -196,7 +195,7 @@ class ResFCN(nn.Module):
             print("raw_x.shape", raw_x.shape)
             raw_objs.append(raw_x)
 
-        raw_objs = np.array(raw_objs)
+        raw_objs = torch.stack(raw_objs)
 
         overlapped_objs = torch.stack(objs)
         # print("overlapped_objs.shape", overlapped_objs.shape)
