@@ -318,6 +318,7 @@ class HeightMapDataset(data.Dataset):
             new_obj_masks = object_masks[:self.args.num_patches]
 
         labels = np.array(labels)
+        print("new_obj_masks.shape", new_obj_masks.shape)
         return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
