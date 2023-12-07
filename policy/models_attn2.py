@@ -261,7 +261,7 @@ class ResFCN(nn.Module):
         nan_mask = torch.isnan(attn_scores)
 
         # Replace NaN values with a specific value (e.g., 0.0)
-        attn_scores = torch.where(nan_mask, torch.tensor(0.0), attn_scores)
+        attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
 
         print("attn_scores.shape", attn_scores.shape) # [B,N]
         print("attn_scores", attn_scores)
