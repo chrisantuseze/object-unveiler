@@ -304,13 +304,18 @@ class HeightMapDataset(data.Dataset):
 
 
         N, C, H, W = padded_obj_masks.shape
-        new_padded_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=padded_obj_masks.dtype)
-        new_padded_obj_masks[:padded_obj_masks.shape[0], :, :, :] = padded_obj_masks
+        if N < self.args.num_patches:
+            new_padded_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=padded_obj_masks.dtype)
+            new_padded_obj_masks[:padded_obj_masks.shape[0], :, :, :] = padded_obj_masks
 
-        object_masks = np.array(object_masks)
-        N, H, W = object_masks.shape
-        new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
-        new_obj_masks[:object_masks.shape[0], :, :] = object_masks
+            object_masks = np.array(object_masks)
+            N, H, W = object_masks.shape
+            new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
+            new_obj_masks[:object_masks.shape[0], :, :] = object_masks
+
+        else:
+            new_padded_obj_masks = padded_obj_masks[:self.args.num_patches]
+            new_obj_masks = object_masks[:self.args.num_patches]
 
         labels = np.array(labels)
         return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, rot_ids, labels
