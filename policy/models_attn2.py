@@ -152,7 +152,6 @@ class ResFCN(nn.Module):
 
     def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape)
-        print("raw_object_masks.shape", raw_object_masks.shape)
 
         obj_features = self.preprocess_input(scene_mask, object_masks)
 
@@ -187,11 +186,14 @@ class ResFCN(nn.Module):
         raw_objs = []
         for i in range(B):
             idx = top_indices[i] 
+            print("idx.shape", idx.shape)
+
             x = object_masks[i, idx]
             # print("x.shape", x.shape) # Should be (4, 400, 400)
             objs.append(x)
 
             raw_x = raw_object_masks[i, idx]
+            print("raw_x.shape", raw_x.shape)
             raw_objs.append(raw_x)
 
         raw_objs = np.array(raw_objs)
