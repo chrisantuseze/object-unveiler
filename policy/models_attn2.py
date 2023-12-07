@@ -73,8 +73,14 @@ class ResFCN(nn.Module):
         # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
 
         # Learnable projection matrices  
-        self.target_proj = nn.Linear(self.final_conv_units, 256)  
-        self.obj_proj = nn.Linear(self.final_conv_units, 256)        
+        # self.target_proj = nn.Linear(self.final_conv_units, 256)  
+        # self.obj_proj = nn.Linear(self.final_conv_units, 256)      
+
+        self.mlp = nn.Sequential(
+            nn.Linear(self.final_conv_units, 256),
+            nn.ReLU(), 
+            nn.Linear(256, 1)
+        ) 
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -116,7 +122,7 @@ class ResFCN(nn.Module):
             mask = mask.unsqueeze(0).to(self.device)
             obj_feat = self.predict(mask)
 
-            masked_fmap = scene_feats * obj_feat
+            masked_fmap = obj_feat #scene_feats * obj_feat
             # print("masked_fmap.shape", masked_fmap.shape)
 
             obj_feat = masked_fmap.reshape(1, masked_fmap.shape[1], -1)[:, :, 0]
@@ -156,34 +162,21 @@ class ResFCN(nn.Module):
         target_feats = self.predict(target_mask)
         # print("target_feats.shape", target_feats.shape)
 
-        masked_target_fmap = scene_feats * target_feats
+        masked_target_fmap = target_feats #scene_feats * target_feats
         # print("masked_target_fmap.shape", masked_target_fmap.shape)
 
         masked_target_fmap = masked_target_fmap.reshape(masked_target_fmap.shape[0], masked_target_fmap.shape[1], -1)[:, :, 0]
         # print("masked_target_fmap.shape", masked_target_fmap.shape)
 
         # Project target and object features  
-        projected_target = self.target_proj(masked_target_fmap)
-        # print("projected_target.shape", projected_target.shape)
+        projected_target = masked_target_fmap #self.target_proj(masked_target_fmap)
+        print("projected_target.shape", projected_target.shape)
 
-        projected_objs = self.obj_proj(obj_features)
-        # print("projected_objs.shape", projected_objs.shape)
+        projected_objs = obj_features #self.obj_proj(obj_features)
+        print("projected_objs.shape", projected_objs.shape)
         B, N, C, = projected_objs.shape
 
-        # Scaled dot-product attention
-        # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
-        # attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(C)
-        # attn_scores = F.softmax(attn_scores)
-
-        attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
-
-        print("attn_scores.shape", attn_scores.shape) # [B,N]
-        print("attn_scores", attn_scores)
-
-        # Use torch.topk to get the top k values and their indices
-        top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        print("top_scores", top_scores)
-        print("top_indices", top_indices)
+        top_indices, top_scores = self.get_topk_attn_scores(projected_objs, projected_target, raw_object_masks)
 
         # print("obj_masks.shape", obj_masks.shape)
 
@@ -244,6 +237,41 @@ class ResFCN(nn.Module):
         out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
 
         return out_prob
+    
+    def get_topk_attn_scores(self, projected_objs, projected_target, raw_object_masks):
+        # Scaled dot-product attention
+        # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
+        attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
+
+        # attn_scores = self.mlp(projected_objs + projected_target.unsqueeze(1)).squeeze(2)
+
+        padding_masks = (raw_object_masks.sum(dim=(2, 3)) == 0)
+        # print("padding_masks.shape", padding_masks.shape)
+
+        # Expand the mask to match the shape of A
+        padding_mask_expanded = padding_masks.expand_as(attn_scores)
+
+        # Zero out the corresponding entries in A using the mask
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+
+        attn_scores = F.softmax(attn_scores, dim=0)
+        # attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
+
+        # Create a mask for NaN values
+        nan_mask = torch.isnan(attn_scores)
+
+        # Replace NaN values with a specific value (e.g., 0.0)
+        attn_scores = torch.where(nan_mask, torch.tensor(0.0), attn_scores)
+
+        print("attn_scores.shape", attn_scores.shape) # [B,N]
+        print("attn_scores", attn_scores)
+
+        # Use torch.topk to get the top k values and their indices
+        top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        print("top_scores", top_scores)
+        print("top_indices", top_indices)
+
+        return top_indices, top_scores
     
     def show_images(self, obj_masks, target_mask, scenes):
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
