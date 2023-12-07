@@ -152,6 +152,7 @@ class ResFCN(nn.Module):
 
     def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape)
+        print("raw_object_masks.shape", raw_object_masks.shape)
 
         obj_features = self.preprocess_input(scene_mask, object_masks)
 
