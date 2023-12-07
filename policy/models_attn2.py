@@ -200,7 +200,8 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        self.show_images(raw_objs, raw_target_mask, raw_scene_mask)
+        print("raw_objs.shape", raw_objs.shape)
+        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask)
 
         ################################################################
 
