@@ -151,7 +151,11 @@ class ResFCN(nn.Module):
         return obj_features
 
     def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
-        # print("scene_mask.shape", scene_mask.shape)
+        # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
+        # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
+        # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
+        # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
+
 
         obj_features = self.preprocess_input(scene_mask, object_masks)
 
@@ -248,10 +252,11 @@ class ResFCN(nn.Module):
         # attn_scores = self.mlp(projected_objs + projected_target.unsqueeze(1)).squeeze(2)
 
         padding_masks = (raw_object_masks.sum(dim=(2, 3)) == 0)
-        # print("padding_masks.shape", padding_masks.shape)
+        # print("padding_masks.shape", padding_masks.shape) #torch.Size([2, 12])
 
         # Expand the mask to match the shape of A
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        # print("padding_mask_expanded.shape", padding_mask_expanded.shape) #torch.Size([2, 12])
 
         # Zero out the corresponding entries in A using the mask
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
@@ -279,15 +284,26 @@ class ResFCN(nn.Module):
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
 
         for i in range(obj_masks.shape[0]):
-            ax[i][0].imshow(scenes[i])
+            if obj_masks.shape[0] == 1:
+                ax[i].imshow(scenes[i])
+            else:
+                ax[i][0].imshow(scenes[i])
+
             k = 1
             for j in range(obj_masks.shape[1]):
                 obj_mask = obj_masks[i][j]
                 # print("obj_mask.shape", obj_mask.shape)
-                ax[i][k].imshow(obj_mask)
+
+                if obj_masks.shape[0] == 1:
+                    ax[k].imshow(obj_mask)
+                else:
+                    ax[i][k].imshow(obj_mask)
                 k += 1
 
-            ax[i][k].imshow(target_mask[i])
+            if obj_masks.shape[0] == 1:
+                ax[k].imshow(target_mask[i])
+            else:
+                ax[i][k].imshow(target_mask[i])
         plt.show()
 
     def show_images2(self, obj_masks):

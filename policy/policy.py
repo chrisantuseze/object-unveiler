@@ -1,6 +1,7 @@
 import os
 import pickle
-from policy.models import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+from policy.object_segmenter import ObjectSegmenter
 from policy.occlusion_model import VisionTransformer
 import torch
 import torch.optim as optim
@@ -41,6 +42,8 @@ class Policy:
         self.fcn = ResFCN(args).to(self.device) #ActionNet(args, is_train=False).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
+
+        self.segmenter = ObjectSegmenter()
 
         self.vit = VisionTransformer(args).to(self.device)
 
@@ -465,6 +468,99 @@ class Policy:
 
         return decoded_tensor_list
     
+    def get_inputs(self, color_image, target_mask):
+        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_image, plot=True)
+        # print("processed_masks.shape", processed_masks[0].shape)
+        # print("pred_mask.shape", pred_mask.shape)
+
+        # print("pred_mask.shape", pred_mask.shape)
+        pred_mask = general_utils.resize_mask(transform, pred_mask)
+
+        processed_pred_mask, _ = general_utils.preprocess_image(pred_mask)
+        processed_pred_mask = torch.FloatTensor(processed_pred_mask).unsqueeze(0).to(self.device)
+        # print("processed_pred_mask.shape", processed_pred_mask.shape)
+
+        # print("target_mask.shape", target_mask.shape)
+        target_mask = general_utils.resize_mask(transform, target_mask)
+
+        processed_target, _ = general_utils.preprocess_image(target_mask)
+        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
+        # print("processed_target.shape", processed_target.shape)
+
+        obj_masks = []
+        raw_processed_masks = []
+        for mask in processed_masks:
+            processed_mask = general_utils.resize_mask(transform, mask)
+            raw_processed_masks.append(processed_mask)
+
+            processed_mask, _ = general_utils.preprocess_image(processed_mask)
+            processed_mask = torch.FloatTensor(processed_mask).to(self.device)
+            obj_masks.append(processed_mask)
+
+        processed_obj_masks = torch.stack(obj_masks).unsqueeze(0).to(self.device)
+        padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
+        processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+        # print("processed_obj_masks.shape", processed_obj_masks.shape)
+
+        raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
+        raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
+        raw_processed_mask = torch.FloatTensor(raw_processed_masks).unsqueeze(0).to(self.device)
+        raw_processed_mask = torch.nn.functional.pad(raw_processed_mask, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+        # print("raw_processed_mask.shape", raw_processed_mask.shape)
+
+        return processed_pred_mask, processed_target, processed_obj_masks,\
+              raw_pred_mask, raw_target_mask, raw_processed_mask
+    
+    def exploit_attn(self, state, color_image, target_mask):
+
+        processed_pred_mask, processed_target, processed_obj_masks, raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(color_image, target_mask)
+
+        # find optimal position and orientation
+        heightmap = self.preprocess_old(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        out_prob = self.fcn(
+            processed_pred_mask, processed_target, processed_obj_masks, 
+            raw_pred_mask, raw_target_mask, raw_processed_mask, 
+            is_volatile=True
+        )
+        out_prob = self.postprocess(out_prob)
+
+        best_actions = []
+        actions = []
+        for i in range(out_prob.shape[0]):
+            prob = out_prob[i]
+            best_action = np.unravel_index(np.argmax(prob), prob.shape)
+            best_actions.append(best_action)
+
+
+            p1 = np.array([best_actions[i][3], best_actions[i][2]])
+            theta = best_actions[i][0] * 2 * np.pi/self.rotations
+
+            # find optimal aperture
+            aperture_img = self.preprocess_aperture_image(state, p1, theta)
+            x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+            aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        
+            # undo normalization
+            aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                        target_range=[self.aperture_limits[0], 
+                                                        self.aperture_limits[1]])
+
+            action = np.zeros((4,))
+            action[0] = p1[0]
+            action[1] = p1[1]
+            action[2] = theta
+            action[3] = aperture
+
+            print("action:", action)
+
+            actions.append(action)
+
+        print("\n")
+
+        return actions
+    
     def exploit_old(self, state, target_mask):
 
         # find optimal position and orientation
@@ -616,8 +712,8 @@ class Policy:
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
 
-        self.vit.load_state_dict(torch.load(vit_model, map_location=self.device))
-        self.vit.eval()
+        # self.vit.load_state_dict(torch.load(vit_model, map_location=self.device))
+        # self.vit.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

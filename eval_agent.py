@@ -18,7 +18,7 @@ import policy.grasping2 as grasping2
 import utils.logger as logging
 
 # multi output
-def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -53,7 +53,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit(state, target_mask)
+        actions = policy.exploit_attn(state, obs['color'][1], target_mask)
 
         # evaluates thee actions to check if the actions are for the neighbors or the target
         # attempts = 0
@@ -73,9 +73,9 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
         #     action = policy.guided_exploration(state, processed_masks[obstacle_id])
         #     actions = [action]
 
-        # action = actions[0]
+        action = actions[0]
 
-        action = grasping.get_closest_neighbor(actions, target_mask)
+        # action = grasping.get_closest_neighbor(actions, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -519,7 +519,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode_old0(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
+        episode_data, success_count = run_episode_multi(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
