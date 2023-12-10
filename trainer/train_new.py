@@ -59,7 +59,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.BCEWithLogitsLoss() #nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='none')
 
     for epoch in range(args.epochs):
         model.train()
@@ -71,13 +71,14 @@ def train_fcn_net(args):
             raw_x = batch[3].to(args.device)
             raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
             raw_object_masks = batch[5].to(args.device)
+            optimal_nodes = batch[6].to(args.device)
 
-            rotations = batch[6]
-            y = batch[7].to(args.device, dtype=torch.float32)
+            rotations = batch[7]
+            y = batch[8].to(args.device, dtype=torch.float32)
 
             pred = model(
                 x, target_mask, object_masks, 
-                raw_x, raw_target_mask, raw_object_masks, 
+                raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
                 rotations
             )
 
@@ -102,13 +103,14 @@ def train_fcn_net(args):
                 raw_x = batch[3].to(args.device)
                 raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
                 raw_object_masks = batch[5].to(args.device)
+                optimal_nodes = batch[6].to(args.device)
 
-                rotations = batch[6]
-                y = batch[7].to(args.device, dtype=torch.float32)
+                rotations = batch[7]
+                y = batch[8].to(args.device, dtype=torch.float32)
 
                 pred = model(
                     x, target_mask, object_masks, 
-                    raw_x, raw_target_mask, raw_object_masks, 
+                    raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
                     rotations
                 )
                 loss = criterion(pred, y)

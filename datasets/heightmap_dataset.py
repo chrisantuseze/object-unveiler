@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 import numpy as np
 import os
 from skimage import transform
+import matplotlib.pyplot as plt
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
@@ -253,7 +254,7 @@ class HeightMapDataset(data.Dataset):
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, target_mask, object_masks, _ = episode_data[0]
+        heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
         padded_scene_mask, _ = general_utils.preprocess_image(scene_mask)
@@ -268,7 +269,7 @@ class HeightMapDataset(data.Dataset):
 
         labels, rot_ids = [], []
         for data in episode_data:
-            _, _, _, _, action = data
+            _, _, _, _, _, action = data
 
             # convert theta to range 0-360 and then compute the rot_id
             angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -317,8 +318,18 @@ class HeightMapDataset(data.Dataset):
             new_padded_obj_masks = padded_obj_masks[:self.args.num_patches]
             new_obj_masks = object_masks[:self.args.num_patches]
 
+        if len(optimal_nodes) < self.args.sequence_length:
+            optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
+        else:
+            optimal_nodes = optimal_nodes[:self.args.sequence_length]
+
         labels = np.array(labels)
-        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, rot_ids, labels
+
+        optimal_nodes = np.array(optimal_nodes)
+
+        # self.show_images(new_obj_masks, target_mask, scene_mask, optimal_nodes)
+
+        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, optimal_nodes, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):
@@ -417,3 +428,30 @@ class HeightMapDataset(data.Dataset):
     
     def __len__(self):
         return len(self.dir_ids)
+    
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes):
+        print(optimal_nodes)
+
+        if len(optimal_nodes) < self.args.sequence_length:
+            optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
+        else:
+            optimal_nodes = optimal_nodes[:self.args.sequence_length]
+
+        print(optimal_nodes, "\n")
+
+        obj_masks = obj_masks[optimal_nodes, :, :]
+        print("obj_masks.shape", obj_masks.shape)
+        fig, ax = plt.subplots(obj_masks.shape[0] + 2)
+
+        ax[0].imshow(scenes)
+
+        k = 1
+        for i in range(obj_masks.shape[0]):
+            obj_mask = obj_masks[i]
+            print("obj_mask.shape", obj_mask.shape)
+
+            ax[k].imshow(obj_mask)
+            k += 1
+
+        ax[k].imshow(target_mask)
+        plt.show()

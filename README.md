@@ -9,6 +9,8 @@ python3 main.py --dataset_dir 'save/ou-dataset-consolidated2' --mode 'fcn' --epo
 
 python3 main.py --dataset_dir 'save/ou-dataset' --mode 'vit' --epochs 100 --batch_size 4 --lr 0.0001
 
+python3 main.py --dataset_dir 'save/ou-dataset' --mode 'fcn' --epochs 100 --batch_size 2 --lr 0.0001
+
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
 pete - 2, 6

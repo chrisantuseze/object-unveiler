@@ -58,7 +58,9 @@ class ReplayBuffer:
             scene_mask = data['scene_mask']
             object_masks = data['object_masks']
 
-            data_list.append((heightmap, scene_mask, target_mask, object_masks, action))
+            optimal_nodes = data['optimal_nodes']
+
+            data_list.append((heightmap, scene_mask, target_mask, object_masks, optimal_nodes, action))
 
         return data_list
     
