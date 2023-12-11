@@ -310,13 +310,13 @@ class HeightMapDataset(data.Dataset):
             new_padded_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=padded_obj_masks.dtype)
             new_padded_obj_masks[:padded_obj_masks.shape[0], :, :, :] = padded_obj_masks
 
-            N, H, W = object_masks.shape
-            new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
-            new_obj_masks[:object_masks.shape[0], :, :] = object_masks
+            # N, H, W = object_masks.shape
+            # new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
+            # new_obj_masks[:object_masks.shape[0], :, :] = object_masks
 
         else:
             new_padded_obj_masks = padded_obj_masks[:self.args.num_patches]
-            new_obj_masks = object_masks[:self.args.num_patches]
+            # new_obj_masks = object_masks[:self.args.num_patches]
 
         if len(optimal_nodes) < self.args.sequence_length:
             optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
@@ -327,9 +327,9 @@ class HeightMapDataset(data.Dataset):
 
         optimal_nodes = np.array(optimal_nodes)
 
-        # self.show_images(new_obj_masks, target_mask, scene_mask, optimal_nodes)
+        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, rot_ids, labels
 
-        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, optimal_nodes, rot_ids, labels
+        # return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, optimal_nodes, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):
@@ -429,29 +429,3 @@ class HeightMapDataset(data.Dataset):
     def __len__(self):
         return len(self.dir_ids)
     
-    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes):
-        print(optimal_nodes)
-
-        if len(optimal_nodes) < self.args.sequence_length:
-            optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
-        else:
-            optimal_nodes = optimal_nodes[:self.args.sequence_length]
-
-        print(optimal_nodes, "\n")
-
-        obj_masks = obj_masks[optimal_nodes, :, :]
-        print("obj_masks.shape", obj_masks.shape)
-        fig, ax = plt.subplots(obj_masks.shape[0] + 2)
-
-        ax[0].imshow(scenes)
-
-        k = 1
-        for i in range(obj_masks.shape[0]):
-            obj_mask = obj_masks[i]
-            print("obj_mask.shape", obj_mask.shape)
-
-            ax[k].imshow(obj_mask)
-            k += 1
-
-        ax[k].imshow(target_mask)
-        plt.show()

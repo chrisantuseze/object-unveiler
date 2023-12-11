@@ -68,17 +68,20 @@ def train_fcn_net(args):
             target_mask = batch[1].to(args.device, dtype=torch.float32)
             object_masks = batch[2].to(args.device)
 
-            raw_x = batch[3].to(args.device)
-            raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
-            raw_object_masks = batch[5].to(args.device)
-            optimal_nodes = batch[6].to(args.device)
+            # raw_x = batch[3].to(args.device)
+            # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+            # raw_object_masks = batch[5].to(args.device)
+            # optimal_nodes = batch[6].to(args.device)
 
-            rotations = batch[7]
-            y = batch[8].to(args.device, dtype=torch.float32)
+            # rotations = batch[7]
+            # y = batch[8].to(args.device, dtype=torch.float32)
+
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float32)
 
             pred = model(
                 x, target_mask, object_masks, 
-                raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
+                # raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
                 rotations
             )
 
@@ -100,17 +103,20 @@ def train_fcn_net(args):
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
                 object_masks = batch[2].to(args.device)
 
-                raw_x = batch[3].to(args.device)
-                raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
-                raw_object_masks = batch[5].to(args.device)
-                optimal_nodes = batch[6].to(args.device)
+                # raw_x = batch[3].to(args.device)
+                # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[5].to(args.device)
+                # optimal_nodes = batch[6].to(args.device)
 
-                rotations = batch[7]
-                y = batch[8].to(args.device, dtype=torch.float32)
+                # rotations = batch[7]
+                # y = batch[8].to(args.device, dtype=torch.float32)
+
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float32)
 
                 pred = model(
                     x, target_mask, object_masks, 
-                    raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
+                    # raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
                     rotations
                 )
                 loss = criterion(pred, y)

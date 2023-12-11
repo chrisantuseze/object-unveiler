@@ -149,8 +149,10 @@ class ResFCN(nn.Module):
             
         # self.show_images2(obj_masks)
         return obj_features
+    
+    def forward(self, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
-    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, optimal_nodes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, optimal_nodes, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
         # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
@@ -180,7 +182,7 @@ class ResFCN(nn.Module):
         # print("projected_objs.shape", projected_objs.shape)
         B, N, C, = projected_objs.shape
 
-        top_indices, top_scores = self.get_topk_attn_scores(projected_objs, projected_target, raw_object_masks)
+        top_indices, top_scores = self.get_topk_attn_scores(projected_objs, projected_target, object_masks.squeeze(2)) #raw_object_masks)
 
         # print("obj_masks.shape", obj_masks.shape)
 
@@ -195,11 +197,13 @@ class ResFCN(nn.Module):
             # print("x.shape", x.shape) # Should be (4, 400, 400)
             objs.append(x)
 
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objs.append(raw_x)
+        ############## This is for VIZ ####################
+            # raw_x = raw_object_masks[i, idx]
+            # # print("raw_x.shape", raw_x.shape)
+            # raw_objs.append(raw_x)
 
-        raw_objs = torch.stack(raw_objs)
+        # raw_objs = torch.stack(raw_objs)
+        ###################################################
 
         overlapped_objs = torch.stack(objs)
         # print("overlapped_objs.shape", overlapped_objs.shape)
@@ -244,14 +248,15 @@ class ResFCN(nn.Module):
 
         return out_prob
     
-    def get_topk_attn_scores(self, projected_objs, projected_target, raw_object_masks):
+    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
         # Scaled dot-product attention
         # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
         attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
 
         # attn_scores = self.mlp(projected_objs + projected_target.unsqueeze(1)).squeeze(2)
 
-        padding_masks = (raw_object_masks.sum(dim=(2, 3)) == 0)
+        # print("object_masks.shape", object_masks.shape)
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         # print("padding_masks.shape", padding_masks.shape) #torch.Size([2, 12])
 
         # Expand the mask to match the shape of A
