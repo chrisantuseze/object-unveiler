@@ -34,7 +34,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:2000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -129,8 +129,8 @@ def train_fcn_net(args):
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
-        logging.info('Epoch {}: training loss = {:.4f} '
-              ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+        logging.info('Epoch {}: training loss = {:.6f} '
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
         
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)

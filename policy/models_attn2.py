@@ -63,11 +63,28 @@ class ResFCN(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+
+        # Load the pre-trained ResNet18 model
+        # resnet18 = models.resnet18(pretrained=True)
+
+        # # Modify the input layer to match your desired input size
+        # # Assuming your new input size is (channels, height, width)
+        # new_input_size = (3, 224, 224)  # Example input size
+        # resnet18.conv1 = nn.Conv2d(new_input_size[0], 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # # Modify the output layer to match your desired number of classes
+        # # Assuming your new number of classes is num_classes
+        # num_classes = 10  # Example number of classes
+        # resnet18.fc = nn.Linear(resnet18.fc.in_features, num_classes)
+
         self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.rb1 = self.make_layer(64, 128)
         self.rb2 = self.make_layer(128, 256)
-        self.rb3 = self.make_layer(256, 512)
-        self.rb4 = self.make_layer(512, 256)
+        # self.rb3 = self.make_layer(256, 512)
+        # self.rb4 = self.make_layer(512, 256)
+
+        self.rb3 = self.make_layer(256, 256)
+
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
         # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
@@ -100,7 +117,7 @@ class ResFCN(nn.Module):
         x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb2(x)
         x = self.rb3(x)
-        x = self.rb4(x)
+        # x = self.rb4(x)
         x = self.rb5(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
