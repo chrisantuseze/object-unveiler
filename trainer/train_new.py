@@ -17,6 +17,8 @@ import utils.logger as logging
 
 
 def train_fcn_net(args):
+    writer = SummaryWriter()
+    
     save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
@@ -130,8 +132,12 @@ def train_fcn_net(args):
         logging.info('Epoch {}: training loss = {:.4f} '
               ', validation loss = {:.4f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
+        
+        writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    writer.close()
 
 
 def train_regressor(args):
