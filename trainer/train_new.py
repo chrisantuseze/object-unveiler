@@ -150,7 +150,7 @@ def train_fcn_net(args):
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         # LR decay after every epoch
-        scheduler.step() 
+        # scheduler.step() 
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
