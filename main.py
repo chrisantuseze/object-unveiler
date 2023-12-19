@@ -26,6 +26,8 @@ def parse_args():
     parser.add_argument('--lr', default=0.0001, type=float, help='')
     parser.add_argument('--batch_size', default=1, type=int, help='')
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')
+    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')
+    parser.add_argument('--weight_decay', type=float, default=1e-3, help='Weight decay for optimizer')
 
     parser.add_argument('--sequence_length', default=4, type=int, help='')
     parser.add_argument('--patch_size', default=64, type=int, help='')

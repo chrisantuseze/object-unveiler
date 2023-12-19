@@ -61,9 +61,13 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    optimizer = torch.optim.SGD(model.parameters(), 
+    optimizer = optim.SGD(model.parameters(), 
                             lr=args.lr, 
-                            momentum=0.9)
+                            momentum=args.momentum,
+                            weight_decay=args.weight_decay)
+    
+    # Exponential LR scheduler
+    scheduler = optim.lr_schedulerExponentialLR(optimizer, gamma=0.95)
 
 
     # criterion = nn.SmoothL1Loss(reduction='none')
@@ -144,6 +148,9 @@ def train_fcn_net(args):
 
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+
+        # LR decay after every epoch
+        scheduler.step() 
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
