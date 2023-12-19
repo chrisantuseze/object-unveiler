@@ -64,6 +64,8 @@ def train_fcn_net(args):
     # criterion = nn.BCELoss(reduction='none')
     criterion = nn.MSELoss()
 
+    grad_norms = {'train': [], 'val': []}
+    global_step = {'train': 0, 'val': 0}
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
@@ -92,7 +94,7 @@ def train_fcn_net(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -127,6 +129,14 @@ def train_fcn_net(args):
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
+                grad_norm = calculate_gradient_norm() 
+
+                # grad_norms[phase].append(grad_norm)
+
+                writer.add_scalar("norm/train", grad_norm, global_step[phase])
+                writer.add_scalar("norm/val", grad_norm, global_step[phase])
+                global_step[phase] += 1
+
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
@@ -139,6 +149,16 @@ def train_fcn_net(args):
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
     writer.close()
+
+def calculate_gradient_norm(model):
+    # Calculate gradient norm here
+    grad_norm = 0.0
+    for param in model.parameters():
+        grad_norm += param.grad.data.norm(2) ** 2
+
+    grad_norm = grad_norm ** (1. / 2)
+
+    return grad_norm
 
 
 def train_regressor(args):
