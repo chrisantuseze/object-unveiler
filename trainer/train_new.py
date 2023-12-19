@@ -67,7 +67,7 @@ def train_fcn_net(args):
                             weight_decay=args.weight_decay)
     
     # Exponential LR scheduler
-    scheduler = optim.lr_schedulerExponentialLR(optimizer, gamma=0.95)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
 
     # criterion = nn.SmoothL1Loss(reduction='none')
