@@ -59,7 +59,7 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)#, betas=(0.9, 0.99))
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
     # criterion = nn.MSELoss()

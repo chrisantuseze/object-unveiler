@@ -68,7 +68,7 @@ class ResFCN(nn.Module):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        # nn.init.xavier_uniform_(self.conv1.weight)
+        nn.init.xavier_uniform_(self.conv1.weight)
 
         self.rb1 = self.make_layer(64, 128)
         self.rb2 = self.make_layer(128, 256)
@@ -114,13 +114,13 @@ class ResFCN(nn.Module):
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         if final_feats:
-            conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+            out = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)(x)
             # nn.init.xavier_uniform_(conv2.weight)
-            out = conv2(x)
+            # out = conv2(x)
         else:
-            conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+            out = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)(x)
             # nn.init.xavier_uniform_(conv3.weight)
-            out = conv3(x)
+            # out = conv3(x)
 
         return out
     
