@@ -62,7 +62,7 @@ def train_fcn_net(args):
     # optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
     optimizer = optim.SGD(model.parameters(), 
-                            lr=args.lr, 
+                            lr=0.001,#args.lr, 
                             momentum=args.momentum,
                             weight_decay=args.weight_decay)
     
