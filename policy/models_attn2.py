@@ -77,11 +77,11 @@ class ResFCN(nn.Module):
         # self.target_proj = nn.Linear(self.final_conv_units, 256)  
         # self.obj_proj = nn.Linear(self.final_conv_units, 256) 
 
-        self.mlp = nn.Sequential(
-            nn.Linear(self.final_conv_units, 256),
-            nn.ReLU(), 
-            nn.Linear(256, 1)
-        ) 
+        # self.mlp = nn.Sequential(
+        #     nn.Linear(self.final_conv_units, 256),
+        #     nn.ReLU(), 
+        #     nn.Linear(256, 1)
+        # ) 
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None

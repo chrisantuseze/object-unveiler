@@ -64,9 +64,9 @@ def train_fcn_net(args):
     # criterion = nn.BCELoss(reduction='none')
     criterion = nn.MSELoss()
 
-    grad_norms = {'train': [], 'val': []}
-    global_step = {'train': 0, 'val': 0}
+    global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
+        
         model.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
@@ -100,6 +100,13 @@ def train_fcn_net(args):
             loss.backward()
             optimizer.step()
 
+            debug_params(model)
+
+            grad_norm = calculate_gradient_norm(model) 
+
+            writer.add_scalar("norm/train", grad_norm, global_step)
+            global_step += 1
+
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
@@ -129,14 +136,6 @@ def train_fcn_net(args):
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
-                grad_norm = calculate_gradient_norm(model) 
-
-                # grad_norms[phase].append(grad_norm)
-
-                writer.add_scalar("norm/train", grad_norm, global_step[phase])
-                writer.add_scalar("norm/val", grad_norm, global_step[phase])
-                global_step[phase] += 1
-
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
@@ -154,11 +153,25 @@ def calculate_gradient_norm(model):
     # Calculate gradient norm here
     grad_norm = 0.0
     for param in model.parameters():
-        grad_norm += param.grad.data.norm(2) ** 2
+        if param.grad is None:
+            logging.info(f"{param} grad is None")
+        else:
+            grad_norm += param.grad.data.norm(2) ** 2
 
     grad_norm = grad_norm ** (1. / 2)
 
     return grad_norm
+
+def debug_params(model):
+    for name, param in model.named_parameters():
+        if param.grad is None:  
+            logging.info(name, " gradient is None!")
+            module = name.split('.')[0]   
+            logging.info("Checking module:", module)
+
+            # For example, get parent module with getattr 
+            parent = getattr(model, module) 
+            logging.info("Parent:",parent)
 
 
 def train_regressor(args):
