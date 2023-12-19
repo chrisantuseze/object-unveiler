@@ -264,7 +264,6 @@ class HeightMapDataset(data.Dataset):
         for obj_mask in object_masks:
             padded_obj_mask, _ = general_utils.preprocess_image(obj_mask)
             padded_obj_masks.append(padded_obj_mask)
-
         padded_obj_masks = np.array(padded_obj_masks)
 
         labels, rot_ids = [], []

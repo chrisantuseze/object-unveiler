@@ -27,6 +27,8 @@ class ResidualBlock(nn.Module):
         self.conv2 = conv3x3(out_planes, out_planes)
         self.bn2 = nn.BatchNorm2d(out_planes)
 
+        self.dropout = nn.Dropout(p=0.2)
+
         self.downsample = downsample
 
         # Initialize weights
@@ -43,6 +45,7 @@ class ResidualBlock(nn.Module):
         out = self.conv1(x)
         out = F.relu(self.bn1(out))
         # out = F.relu(out)
+        out = self.dropout(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -163,7 +166,7 @@ class ResFCN(nn.Module):
         obj_features = self.preprocess_input(scene_mask, object_masks)
 
         # compute rotated feature maps            
-        scene_feats = self.predict(scene_mask)
+        # scene_feats = self.predict(scene_mask)
         # print("scene_feats.shape", scene_feats.shape)
 
         target_feats = self.predict(target_mask)
