@@ -94,7 +94,7 @@ def train_fcn_net(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -129,7 +129,7 @@ def train_fcn_net(args):
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
-                grad_norm = calculate_gradient_norm() 
+                grad_norm = calculate_gradient_norm(model) 
 
                 # grad_norms[phase].append(grad_norm)
 
