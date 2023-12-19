@@ -62,12 +62,12 @@ def train_fcn_net(args):
     # optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
     optimizer = optim.SGD(model.parameters(), 
-                            lr=0.1,#args.lr, 
+                            lr=args.lr, 
                             momentum=args.momentum,
                             weight_decay=args.weight_decay)
     
     # Exponential LR scheduler
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
 
     # criterion = nn.SmoothL1Loss(reduction='none')
