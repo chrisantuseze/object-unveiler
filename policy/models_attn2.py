@@ -245,9 +245,9 @@ class ResFCN(nn.Module):
         # print("out_prob.shape", out_prob.shape)
 
         # Image-wide softmax
-        # output_shape = out_prob.shape
-        # out_prob = out_prob.view(output_shape[0], -1)
-        # out_prob = torch.softmax(out_prob, dim=1)
+        output_shape = out_prob.shape
+        out_prob = out_prob.view(output_shape[0], -1)
+        out_prob = torch.softmax(out_prob, dim=1)
         out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
 
         return out_prob
