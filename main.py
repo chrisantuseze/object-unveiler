@@ -23,7 +23,7 @@ def parse_args():
     # args for trainer
     parser.add_argument('--dataset_dir', default='save/ppg-dataset', type=str, help='')
     parser.add_argument('--epochs', default=100, type=int, help='')
-    parser.add_argument('--lr', default=0.0001, type=float, help='')
+    parser.add_argument('--lr', default=0.001, type=float, help='')
     parser.add_argument('--batch_size', default=1, type=int, help='')
     parser.add_argument('--split_ratio', default=0.9, type=float, help='')
     parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')

@@ -110,7 +110,7 @@ def train_fcn_net(args):
             loss.backward()
             optimizer.step()
 
-            debug_params(model)
+            # debug_params(model)
 
             grad_norm = calculate_gradient_norm(model) 
 
