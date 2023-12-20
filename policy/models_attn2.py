@@ -27,8 +27,6 @@ class ResidualBlock(nn.Module):
         self.conv2 = conv3x3(out_planes, out_planes)
         self.bn2 = nn.BatchNorm2d(out_planes)
 
-        self.dropout = nn.Dropout(p=0.2)
-
         self.downsample = downsample
 
         # Initialize weights
@@ -44,8 +42,7 @@ class ResidualBlock(nn.Module):
 
         out = self.conv1(x)
         out = F.relu(self.bn1(out))
-        # out = F.relu(out)
-        out = self.dropout(out)
+        out = F.dropout(out, p=0.2)
 
         out = self.conv2(out)
         out = self.bn2(out)
