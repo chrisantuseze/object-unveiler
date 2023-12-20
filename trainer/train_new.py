@@ -106,6 +106,8 @@ def train_fcn_net(args):
 
             # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
+            print(pred, y)
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
