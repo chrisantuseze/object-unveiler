@@ -163,4 +163,4 @@ def train():
         # Save each image separately in the folder
         for i, image in enumerate(grid):
             image_path = os.path.join(output_folder, f'image_{i + 1}.png')
-            save_image(image, image_path)
+            save_image(torch.tensor(image), image_path)
