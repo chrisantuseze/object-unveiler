@@ -1,5 +1,5 @@
 from cgan.dataset import FashionMNIST
-from cgan.model import Discriminator, Generator
+from cgan.model2 import Discriminator, Generator
 import torch
 import torch.nn as nn
 import numpy as np
