@@ -51,10 +51,10 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
 
     # Disciminating real images
 
-    noise = torch.randn(real_images.shape, requires_grad=True).to(device) * 0.1 # small variance
-    img_noisy = real_images + noise
+    # noise = torch.randn(real_images.shape, requires_grad=True).to(device) * 0.1 # small variance
+    # real_images = real_images + noise
 
-    real_validity = discriminator(img_noisy, labels)
+    real_validity = discriminator(real_images, labels)
 
     # Calculating discrimination loss (real images)
     real_loss = criterion(real_validity, target)

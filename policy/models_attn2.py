@@ -158,7 +158,7 @@ class ResFCN(nn.Module):
     
     def forward(self, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
-    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, optimal_nodes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, optimal_nodes=None, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
         # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
@@ -203,13 +203,13 @@ class ResFCN(nn.Module):
             # print("x.shape", x.shape) # Should be (4, 400, 400)
             objs.append(x)
 
-        ############## This is for VIZ ####################
-            # raw_x = raw_object_masks[i, idx]
-            # # print("raw_x.shape", raw_x.shape)
-            # raw_objs.append(raw_x)
+        #  ############## This is for VIZ ####################
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objs.append(raw_x)
 
         # raw_objs = torch.stack(raw_objs)
-        ###################################################
+        #  ###################################################
 
         overlapped_objs = torch.stack(objs)
         # print("overlapped_objs.shape", overlapped_objs.shape)
@@ -316,37 +316,39 @@ class ResFCN(nn.Module):
             else:
                 ax[i][k].imshow(target_mask[i])
 
-        n = 0
-        for i in range(2, raw_object_masks.shape[0] + 2):
 
-            gt_obj_masks = raw_object_masks[n]
-            # print("gt_obj_masks.shape", gt_obj_masks.shape)
+        if optimal_nodes:
+            n = 0
+            for i in range(2, raw_object_masks.shape[0] + 2):
 
-            gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
-            # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
+                gt_obj_masks = raw_object_masks[n]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape)
 
-            if gt_obj_masks.shape[0] == 1:
-                ax[i][0].imshow(scenes[n]) # this is because of the added gt images
-            else:
-                ax[i][0].imshow(scenes[n])
-
-            k = 1
-            for j in range(obj_masks.shape[1]):
-                gt_obj_mask = gt_obj_masks[j]
-                # print("obj_mask.shape", obj_mask.shape)
+                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
 
                 if gt_obj_masks.shape[0] == 1:
-                    ax[i][k].imshow(gt_obj_mask)
+                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
                 else:
-                    ax[i][k].imshow(gt_obj_mask)
-                k += 1
+                    ax[i][0].imshow(scenes[n])
 
-            if gt_obj_masks.shape[0] == 1:
-                ax[i][k].imshow(target_mask[n])
-            else:
-                ax[i][k].imshow(target_mask[n])
+                k = 1
+                for j in range(obj_masks.shape[1]):
+                    gt_obj_mask = gt_obj_masks[j]
+                    # print("obj_mask.shape", obj_mask.shape)
 
-            n += 1
+                    if gt_obj_masks.shape[0] == 1:
+                        ax[i][k].imshow(gt_obj_mask)
+                    else:
+                        ax[i][k].imshow(gt_obj_mask)
+                    k += 1
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][k].imshow(target_mask[n])
+                else:
+                    ax[i][k].imshow(target_mask[n])
+
+                n += 1
 
         plt.show()
 

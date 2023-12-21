@@ -256,16 +256,17 @@ class HeightMapDataset(data.Dataset):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_scene_mask, _ = general_utils.preprocess_image(scene_mask)
-        padded_target_mask, _ = general_utils.preprocess_image(target_mask)
+        processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        processed_scene_mask, _ = general_utils.preprocess_image(scene_mask)
+        processed_target_mask, _ = general_utils.preprocess_image(target_mask)
 
-        padded_obj_masks = []
+        _processed_obj_masks = []
         for obj_mask in object_masks:
-            padded_obj_mask, _ = general_utils.preprocess_image(obj_mask)
-            padded_obj_masks.append(padded_obj_mask)
-        padded_obj_masks = np.array(padded_obj_masks)
+            processed_obj_mask, _ = general_utils.preprocess_image(obj_mask)
+            _processed_obj_masks.append(processed_obj_mask)
+        _processed_obj_masks = np.array(_processed_obj_masks)
 
+        # get labels and rot_ids
         labels, rot_ids = [], []
         for data in episode_data:
             _, _, _, _, _, action = data
@@ -291,7 +292,7 @@ class HeightMapDataset(data.Dataset):
             
             labels.append(label)
 
-        # pad dataset
+        # pad labels and rot_ids
         seq_len = self.args.sequence_length
         if len(episode_data) < seq_len:
             required_len = seq_len - len(labels)
@@ -303,19 +304,19 @@ class HeightMapDataset(data.Dataset):
             rot_ids = rot_ids + [0] * required_len
 
 
-        N, C, H, W = padded_obj_masks.shape
+        N, C, H, W = _processed_obj_masks.shape
         object_masks = np.array(object_masks)
         if N < self.args.num_patches:
-            new_padded_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=padded_obj_masks.dtype)
-            new_padded_obj_masks[:padded_obj_masks.shape[0], :, :, :] = padded_obj_masks
+            processed_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=_processed_obj_masks.dtype)
+            processed_obj_masks[:_processed_obj_masks.shape[0], :, :, :] = _processed_obj_masks
 
             # N, H, W = object_masks.shape
-            # new_obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
-            # new_obj_masks[:object_masks.shape[0], :, :] = object_masks
+            # obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
+            # obj_masks[:object_masks.shape[0], :, :] = object_masks
 
         else:
-            new_padded_obj_masks = padded_obj_masks[:self.args.num_patches]
-            # new_obj_masks = object_masks[:self.args.num_patches]
+            processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
+            # obj_masks = object_masks[:self.args.num_patches]
 
         if len(optimal_nodes) < self.args.sequence_length:
             optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
@@ -326,9 +327,9 @@ class HeightMapDataset(data.Dataset):
 
         optimal_nodes = np.array(optimal_nodes)
 
-        return padded_scene_mask, padded_target_mask, new_padded_obj_masks, rot_ids, labels
+        return processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
 
-        # return padded_scene_mask, padded_target_mask, new_padded_obj_masks, scene_mask, target_mask, new_obj_masks, optimal_nodes, rot_ids, labels
+        # return processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, optimal_nodes, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):

@@ -487,29 +487,29 @@ class Policy:
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
         # print("processed_target.shape", processed_target.shape)
 
-        obj_masks = []
-        raw_processed_masks = []
+        processed_obj_masks = []
+        raw_obj_masks = []
         for mask in processed_masks:
             processed_mask = general_utils.resize_mask(transform, mask)
-            raw_processed_masks.append(processed_mask)
+            raw_obj_masks.append(processed_mask)
 
             processed_mask, _ = general_utils.preprocess_image(processed_mask)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
-            obj_masks.append(processed_mask)
+            processed_obj_masks.append(processed_mask)
 
-        processed_obj_masks = torch.stack(obj_masks).unsqueeze(0).to(self.device)
+        processed_obj_masks = torch.stack(processed_obj_masks).unsqueeze(0).to(self.device)
         padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
         processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
         # print("processed_obj_masks.shape", processed_obj_masks.shape)
 
         raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
         raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
-        raw_processed_mask = torch.FloatTensor(raw_processed_masks).unsqueeze(0).to(self.device)
-        raw_processed_mask = torch.nn.functional.pad(raw_processed_mask, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
-        # print("raw_processed_mask.shape", raw_processed_mask.shape)
+        raw_obj_masks = torch.FloatTensor(raw_obj_masks).unsqueeze(0).to(self.device)
+        raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+        # print("raw_obj_masks.shape", raw_obj_masks.shape)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_processed_mask
+              raw_pred_mask, raw_target_mask, raw_obj_masks
     
     def exploit_attn(self, state, color_image, target_mask):
 
