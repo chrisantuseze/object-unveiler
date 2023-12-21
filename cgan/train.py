@@ -80,12 +80,6 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
 
     return d_loss.data
 
-def discriminate(model, img, y):
-    noise = torch.randn(img.shape, requires_grad=True) * 0.1 # small variance
-    
-    img_noisy = img + noise
-    return model(img_noisy, y)
-
 def train():
     # Data
     train_data_path = 'save/fashion-mnist_train.csv' # Path of data
@@ -144,7 +138,7 @@ def train():
             generator.train()
 
             # Train discriminator
-            d_loss = discriminator_train_step(len(real_images), z_size, class_num, device, discriminator,
+            d_loss = discriminator_train_step(batch_size, z_size, class_num, device, discriminator,
                                             generator, d_optimizer, criterion, real_images, labels)
 
             # Train generator
