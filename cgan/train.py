@@ -92,7 +92,7 @@ def train():
     z_size = 100
 
     # Training
-    epochs = 30  # Train epochs
+    epochs = 200  # Train epochs
     learning_rate = 1e-4
 
     class_list = ['T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
