@@ -44,7 +44,12 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
     d_optimizer.zero_grad()
 
     # Disciminating real images
-    real_validity = discriminator(real_images, labels)
+
+    noise = torch.randn(real_images.shape, requires_grad=True).to(device) * 0.1 # small variance
+    
+    img_noisy = real_images + noise
+
+    real_validity = discriminator(img_noisy, labels)
 
     # Calculating discrimination loss (real images)
     real_loss = criterion(real_validity, torch.ones((batch_size, 1), requires_grad=True).detach().to(device))
@@ -74,6 +79,12 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
     d_optimizer.step()
 
     return d_loss.data
+
+def discriminate(model, img, y):
+    noise = torch.randn(img.shape, requires_grad=True) * 0.1 # small variance
+    
+    img_noisy = img + noise
+    return model(img_noisy, y)
 
 def train():
     # Data
@@ -115,7 +126,6 @@ def train():
     g_optimizer = torch.optim.Adam(generator.parameters(), lr=learning_rate)
     d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
 
-
     # Create a folder to save the images if it doesn't exist
     output_folder = 'save/output_images'
     os.makedirs(output_folder, exist_ok=True)
@@ -135,8 +145,7 @@ def train():
 
             # Train discriminator
             d_loss = discriminator_train_step(len(real_images), z_size, class_num, device, discriminator,
-                                            generator, d_optimizer, criterion,
-                                            real_images, labels)
+                                            generator, d_optimizer, criterion, real_images, labels)
 
             # Train generator
             g_loss = generator_train_step(batch_size, z_size, class_num, device, discriminator, generator, g_optimizer, criterion)
