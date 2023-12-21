@@ -78,11 +78,15 @@ class Generator(nn.Module):
 
         self.fc = nn.Linear(class_num, class_num * class_num)
 
+        self.rb1 = make_layer(2, 64)
+        self.rb2 = make_layer(64, 128)
+        self.rb3 = make_layer(128, 256)
+
         self.conv_blocks = nn.Sequential(
-            nn.BatchNorm2d(2),
+            nn.BatchNorm2d(256),
 
             nn.Upsample(scale_factor=2),
-            nn.Conv2d(2, 128, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128, 0.8),
             nn.LeakyReLU(0.2, inplace=True),
 
@@ -114,6 +118,15 @@ class Generator(nn.Module):
         x = x.view(bs, 2, self.class_num, self.class_num)
         # print("g2-x.shape:", x.shape)
 
+        x = self.rb1(x)
+        # print("g3-out.shape:", x.shape)
+
+        x = self.rb2(x)
+        # print("g4-out.shape:", x.shape)
+
+        x = self.rb3(x)
+        # print("g5-out.shape:", x.shape)
+
         # Generator out
         out = self.conv_blocks(x)
         # print("g1-out.shape:", out.shape)
@@ -137,8 +150,12 @@ class Discriminator(nn.Module):
 
         self.fc = nn.Linear(class_num, self.img_size * self.img_size)
 
+        self.rb1 = make_layer(2, 64)
+        self.rb2 = make_layer(64, 128)
+        # self.rb3 = make_layer(128, 256)
+
         self.model = nn.Sequential(
-            *self.discriminator_block(2, discriminator_layer_size[0], bn=False),
+            *self.discriminator_block(128, discriminator_layer_size[0], bn=False),
             *self.discriminator_block(discriminator_layer_size[0], discriminator_layer_size[1]),
             *self.discriminator_block(discriminator_layer_size[1], discriminator_layer_size[2]),
             *self.discriminator_block(discriminator_layer_size[2], discriminator_layer_size[3]),
@@ -172,6 +189,15 @@ class Discriminator(nn.Module):
         # Concat image & label
         x = torch.cat((x, c), dim=1)
         # print("d3-x.shape:", x.shape)
+
+        x = self.rb1(x)
+        # print("d4-out.shape:", x.shape)
+
+        x = self.rb2(x)
+        # print("d5-out.shape:", x.shape)
+
+        # x = self.rb3(x)
+        # print("d6-out.shape:", x.shape)
 
         # Discriminator out
         out = self.model(x)
