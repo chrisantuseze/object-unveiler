@@ -6,6 +6,8 @@ import numpy as np
 from torchvision import transforms
 from torch.autograd import Variable
 from torchvision.utils import make_grid, save_image
+import torchvision.datasets as datasets
+
 import matplotlib.pyplot as plt
 import os
 from PIL import Image
@@ -14,6 +16,8 @@ def generator_train_step(batch_size, z_size, class_num, device, discriminator, g
 
     # Init gradient
     g_optimizer.zero_grad()
+
+    target = torch.ones((batch_size, 1), requires_grad=True).detach().to(device) # batch_size x 1
 
     # Building z
     z = torch.randn((batch_size, z_size), requires_grad=True).to(device)
@@ -28,7 +32,7 @@ def generator_train_step(batch_size, z_size, class_num, device, discriminator, g
     validity = discriminator(fake_images, fake_labels)
 
     # Calculating discrimination loss (fake images)
-    g_loss = criterion(validity, torch.ones((batch_size, 1), requires_grad=True).detach().to(device))
+    g_loss = criterion(validity, target)
 
     # Backword propagation
     g_loss.backward()
@@ -43,19 +47,20 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
     # Init gradient
     d_optimizer.zero_grad()
 
+    target = torch.ones((batch_size, 1), requires_grad=True).detach().to(device) # batch_size x 1
+
     # Disciminating real images
 
     noise = torch.randn(real_images.shape, requires_grad=True).to(device) * 0.1 # small variance
-    
     img_noisy = real_images + noise
 
     real_validity = discriminator(img_noisy, labels)
 
     # Calculating discrimination loss (real images)
-    real_loss = criterion(real_validity, torch.ones((batch_size, 1), requires_grad=True).detach().to(device))
+    real_loss = criterion(real_validity, target)
 
     # Building z
-    z = torch.randn((batch_size, z_size), requires_grad=True).to(device)
+    z = torch.randn((batch_size, z_size), requires_grad=True).to(device) # noise
 
     # Building fake labels
     fake_labels = Variable(torch.LongTensor(np.random.randint(0, class_num, batch_size))).to(device)
@@ -67,7 +72,7 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
     fake_validity = discriminator(fake_images, fake_labels)
 
     # Calculating discrimination loss (fake images)
-    fake_loss = criterion(fake_validity, torch.zeros((batch_size, 1), requires_grad=True).detach().to(device))
+    fake_loss = criterion(fake_validity, target)
 
     # Sum two losses
     d_loss = real_loss + fake_loss
@@ -82,10 +87,6 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
 
 def train():
     # Data
-    train_data_path = 'save/fashion-mnist_train.csv' # Path of data
-    print('Train data path:', train_data_path)
-
-    img_size = 28 # Image size
     batch_size = 32  # Batch size
 
     # Model
@@ -95,15 +96,37 @@ def train():
     epochs = 200  # Train epochs
     learning_rate = 1e-4
 
-    class_list = ['T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
-    class_num = len(class_list)
+    data_type = "mnist"
+    
+    if data_type == "fashion_mnist":
 
-    transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, ), std=(0.5, ))
-    ])
+        train_data_path = 'save/fashion-mnist_train.csv' # Path of data
+        print('Train data path:', train_data_path)
 
-    dataset = FashionMNIST(train_data_path, img_size, transform=transform)
+        img_size = 28 # Image size
+        class_list = ['T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+        transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=(0.5, ), std=(0.5, ))
+        ])
+        dataset = FashionMNIST(train_data_path, img_size, transform=transform)
+
+    else:
+
+        train_data_path = 'save/' # Path of data
+        print('Train data path:', train_data_path)
+
+        img_size = 64 # Image size
+        dataset = datasets.MNIST(root=train_data_path, download=True,
+                                transform=transforms.Compose([
+                                    transforms.Resize(img_size),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5,), (0.5,)),
+                                ]))
+
+
+    class_num = 10 #len(class_list)
+
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -157,7 +180,6 @@ def train():
 
         # Generating images
         sample_images = generator(z, labels, bs=labels.shape[0]).unsqueeze(1).data.cpu()
-        print(sample_images.shape)
 
         # Show images
         # grid = make_grid(sample_images.squeeze(1), nrow=3, normalize=True).permute(1,2,0).numpy()

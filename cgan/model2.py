@@ -161,7 +161,7 @@ class Discriminator(nn.Module):
             *self.discriminator_block(discriminator_layer_size[2], discriminator_layer_size[3]),
         )
 
-        self.adv_layer = nn.Sequential(nn.Linear(512, 1), nn.Sigmoid())
+        self.adv_layer = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
 
     def discriminator_block(self, in_filters, out_filters, bn=True):
         block = [
