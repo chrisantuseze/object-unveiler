@@ -106,11 +106,23 @@ def train_fcn_net(args):
 
             # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
-            print(pred, y)
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
+            # try:
+            #     optimizer.zero_grad()
+            #     loss.backward()
+            #     optimizer.step()
+            
+            # except Exception as e:
+            #     logging.info(torch.min(y), torch.max(y))
+            #     logging.info("Exception:", e)
+            #     logging.info(torch.min(pred), torch.max(pred))
+
+            #     optimizer.zero_grad()
+            #     loss.backward()
+            #     optimizer.step()
 
             # debug_params(model)
 

@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from torchvision.utils import make_grid, save_image
 import matplotlib.pyplot as plt
 import os
+from PIL import Image
 
 def generator_train_step(batch_size, z_size, class_num, device, discriminator, generator, g_optimizer, criterion):
 
@@ -156,11 +157,16 @@ def train():
         print(sample_images.shape)
 
         # Show images
-        grid = make_grid(sample_images.squeeze(1), nrow=3, normalize=True).permute(1,2,0).numpy()
+        # grid = make_grid(sample_images.squeeze(1), nrow=3, normalize=True).permute(1,2,0).numpy()
         # plt.imshow(grid)
         # plt.show()
 
         # Save each image separately in the folder
-        for i, image in enumerate(grid):
+        # for i, image in enumerate(grid):
+        for i, image in enumerate(sample_images.squeeze(1)):
             image_path = os.path.join(output_folder, f'image_{i + 1}.png')
             save_image(torch.tensor(image), image_path)
+
+            # Convert the image to a PIL Image before saving
+            # pil_image = Image.fromarray((image * 255).astype(np.uint8))
+            # pil_image.save(image_path)
