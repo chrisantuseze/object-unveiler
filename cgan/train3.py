@@ -143,7 +143,7 @@ def train():
             optimizerG.step()
             
             if i % 500 == 0:
-                print("D_loss:%f\tG_loss:%f" % (d_train_loss, g_train_loss))
+                print("G_Loss: %f\tD_Loss: %f" % (g_train_loss, d_train_loss))
 
             _g_loss = torch.sum(g_train_loss)
             _d_loss = torch.sum(d_train_loss)
@@ -151,7 +151,7 @@ def train():
             g_loss += _g_loss.detach().cpu().numpy()
             d_loss += _d_loss.detach().cpu().numpy()
 
-        print(f"\nEpoch: {epoch}/{epochs}", "\tG_Loss: %f\tD_Loss: %f" % (g_loss/i, d_loss/i))
+        print(f"\nEpoch: {epoch}/{epochs}", "\t\tG_Loss: %f D_Loss: %f" % (g_loss/i, d_loss/i))
 
         # Set generator eval
         netG.eval()
@@ -169,10 +169,9 @@ def train():
 
         # Generating images
         sample_images = netG(z, labels).unsqueeze(1).data.cpu()
-        print("sample_images.shape", sample_images.shape)
-
         for i, image in enumerate(sample_images.squeeze(1)):
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
+            print(type(image))
             save_image(torch.tensor(image), image_path)
 
         if early_stopper.early_stop(g_loss) or early_stopper.early_stop(d_loss):             
