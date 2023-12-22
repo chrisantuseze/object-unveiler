@@ -92,9 +92,9 @@ class Discriminator(nn.Module):
     def __init__(self, n_channel, img_size, n_classes, batch_size):
         super(Discriminator, self).__init__()
         self.n_classes = n_classes
-
         self.img_size = img_size
         self.batch_size = batch_size
+        self.n_channel = n_channel
 
         self.label_emb = nn.Embedding(n_classes, n_classes * n_classes)
         self.label_emb.weight.requires_grad = False
@@ -159,7 +159,7 @@ class Discriminator(nn.Module):
         out = self.main(inp)
         # print("disc out.shape", out.shape)
 
-        return out.view(self.batch_size, 1)
+        return out.view(self.batch_size, self.n_channel)
 
         # out = out.view(self.batch_size, -1)
         # out = self.final_layer(out)

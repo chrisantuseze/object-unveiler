@@ -29,7 +29,7 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    data_type = "mnist"
+    data_type = "fashion_mnist"
     train_data_path = 'save/' # Path of data
 
     # Create a folder to save the images if it doesn't exist
@@ -41,13 +41,14 @@ def train():
     if data_type == "fashion_mnist":
         train_data_path = 'save/fashion-mnist_train.csv' # Path of data
 
-        img_size = 28
+        img_size = 64 #28
         class_list = ['T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
         transform = transforms.Compose([
+                transforms.Resize(img_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=(0.5, ), std=(0.5, ))
         ])
-        dataset = FashionMNIST(train_data_path, img_size, transform=transform)
+        dataset = FashionMNIST(train_data_path, img_size=28, transform=transform)
 
     elif data_type == "mnist":
         img_size = 64
@@ -59,7 +60,7 @@ def train():
                                 ]))
         
     elif data_type == 'cifar10':
-        img_size = 32
+        img_size = 64 #32
         dataset = datasets.CIFAR10(root=train_data_path, download=True,
                             transform=transforms.Compose([
                                 transforms.Resize(img_size),
@@ -85,8 +86,8 @@ def train():
 
     criterion = nn.BCELoss()
 
-    real_label = torch.ones([batch_size, 1], dtype=torch.float).to(device)
-    fake_label = torch.zeros([batch_size, 1], dtype=torch.float).to(device)
+    real_label = torch.ones([batch_size, n_channel], dtype=torch.float).to(device)
+    fake_label = torch.zeros([batch_size, n_channel], dtype=torch.float).to(device)
 
     g_early_stopper = EarlyStopper(patience=3, min_delta=10)
     d_early_stopper = EarlyStopper(patience=3, min_delta=10)
