@@ -29,7 +29,7 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    data_type = "fashion_mnist"
+    data_type = "cifar10"
     train_data_path = 'save/' # Path of data
 
     # Create a folder to save the images if it doesn't exist
@@ -128,8 +128,8 @@ def train():
             '''
                 Update G network: maximize log(D(G(z)))
             '''
-            new_label = torch.LongTensor(batch_size, 1).random_(0, class_num).to(device)
-            new_embed = new_label.view(-1)
+            new_label = torch.LongTensor(batch_size, class_num).random_(0, class_num).to(device)
+            new_embed = new_label[:,0].view(-1)
             # print("new_embed.shape", new_embed.shape)
 
             g_output = netG(fixed_noise, new_embed)
@@ -159,10 +159,11 @@ def train():
 
         # Set generator eval
         netG.eval()
-        z = torch.randn(class_num, z_size, 1, 1, device=device)
+        z = torch.randn(batch_size, z_size, 1, 1, device=device)
 
         # Labels 0 ~ 9
-        labels = torch.LongTensor(class_num, 1).random_(0, class_num).view(-1).to(device)
+        labels = torch.LongTensor(batch_size, class_num).random_(0, class_num).to(device)
+        labels = labels[:,0].view(-1)
         print("labels.shape", labels.shape, "labels", labels)
 
         # Generating images

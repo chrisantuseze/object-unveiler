@@ -52,9 +52,6 @@ class Generator(nn.Module):
             nn.Tanh()
         )
 
-        # in_feat = n_channel * 64 * 64
-        # self.final_layer = nn.Sequential(nn.Linear(in_feat, n_channel * img_size * img_size), nn.Tanh())
-
     def forward(self, z, y):
         # print("g-z.shape", z.shape)
         # print("g-y.shape", y.shape)
@@ -80,13 +77,6 @@ class Generator(nn.Module):
         # print("gen out.shape", out.shape)
 
         return out
-
-        # out = out.view(self.batch_size, -1)
-        # out = self.final_layer(out)
-        # # print("out.shape", out.shape)
-
-        # return out.view(self.batch_size, self.n_channel, self.img_size, self.img_size)
-    
 
 class Discriminator(nn.Module):
     def __init__(self, n_channel, img_size, n_classes, batch_size):
@@ -133,16 +123,6 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
 
-        if img_size == 28:
-            in_feat = 4
-        elif img_size == 32:
-            in_feat = 9
-        elif img_size == 64:
-            in_feat = 121
-
-        in_feat *= n_channel
-        # self.final_layer = nn.Sequential(nn.Linear(in_feat, 1), nn.Sigmoid())
-
     def forward(self, x, y):
         # print("x.shape", x.shape)
 
@@ -160,9 +140,3 @@ class Discriminator(nn.Module):
         # print("disc out.shape", out.shape)
 
         return out.view(self.batch_size, self.n_channel)
-
-        # out = out.view(self.batch_size, -1)
-        # out = self.final_layer(out)
-        # print("out.shape", out.shape)
-        
-        # return out
