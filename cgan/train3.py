@@ -171,8 +171,7 @@ def train():
         sample_images = netG(z, labels).unsqueeze(1).data.cpu()
         for i, image in enumerate(sample_images.squeeze(1)):
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
-            print(type(image))
-            save_image(torch.tensor(image), image_path)
+            save_image(image, image_path)
 
         if early_stopper.early_stop(g_loss) or early_stopper.early_stop(d_loss):             
                 break
