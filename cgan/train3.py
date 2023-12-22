@@ -29,7 +29,7 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    data_type = "cifar10"
+    data_type = "fashion_mnist"
     train_data_path = 'save/' # Path of data
 
     # Create a folder to save the images if it doesn't exist
