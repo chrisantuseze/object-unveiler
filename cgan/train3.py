@@ -29,7 +29,7 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    data_type = "fashion_mnist"
+    data_type = "cifar10"
     train_data_path = 'save/' # Path of data
 
     # Create a folder to save the images if it doesn't exist
@@ -73,7 +73,7 @@ def train():
     # train_data = Data(file_name="cifar-10-batches-py/")
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    netG = Generator(n_channel, z_size, img_size, class_num).to(device)
+    netG = Generator(n_channel, z_size, img_size, class_num, batch_size).to(device)
     netD = Discriminator(n_channel, img_size, class_num, batch_size).to(device)
 
 

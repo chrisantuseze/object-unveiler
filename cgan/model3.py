@@ -6,11 +6,13 @@ import torch.optim as optim
 from PIL import Image
 
 class Generator(nn.Module):
-    def __init__(self, n_channel, z_size, img_size, n_classes):
+    def __init__(self, n_channel, z_size, img_size, n_classes, batch_size):
         super(Generator, self).__init__()
         self.z_size = z_size
         self.n_classes = n_classes
         self.img_size = img_size
+        self.batch_size = batch_size
+        self.n_channel = n_channel
 
         self.label_emb = nn.Embedding(n_classes, z_size)
         self.label_emb.weight.requires_grad = False
@@ -44,8 +46,11 @@ class Generator(nn.Module):
 
             # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(64, n_channel, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.Tanh()
+            # nn.Tanh()
         )
+
+        in_feat = n_channel * 64 * 64
+        self.final_layer = nn.Sequential(nn.Linear(in_feat, n_channel * img_size * img_size), nn.Tanh())
 
     def forward(self, z, y):
         # print("g-z.shape", z.shape)
@@ -68,9 +73,15 @@ class Generator(nn.Module):
         x = x.unsqueeze(2).unsqueeze(3)
         # print("x.shape", x.shape)
 
-        output = self.main(x)
-        # print("gen output.shape", output.shape)
-        return output
+        out = self.main(x)
+        # print("gen out.shape", out.shape)
+
+        out = out.view(self.batch_size, -1)
+
+        out = self.final_layer(out)
+        # print("out.shape", out.shape)
+
+        return out.view(self.batch_size, self.n_channel, self.img_size, self.img_size)
     
 
 class Discriminator(nn.Module):
@@ -87,16 +98,16 @@ class Discriminator(nn.Module):
             
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
-            nn.Conv2d(n_channel + 1, 64, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.Conv2d(n_channel + 1, 64, kernel_size=3, stride=1, padding=0, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (ndf) x 32 x 32
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
 
@@ -105,10 +116,25 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, inplace=True),
 
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+
             # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(512, n_channel, kernel_size=3, stride=1, padding=0, bias=False),
-            nn.Sigmoid()
+            nn.Conv2d(256, n_channel, kernel_size=3, stride=1, padding=0, bias=False),
+            # nn.Sigmoid()
         )
+
+        if img_size == 28:
+            in_feat = 4
+        elif img_size == 32:
+            in_feat = 9
+        elif img_size == 64:
+            in_feat = 121
+
+        in_feat *= n_channel
+        self.final_layer = nn.Sequential(nn.Linear(in_feat, 1), nn.Sigmoid())
 
     def forward(self, x, y):
         # print("x.shape", x.shape)
@@ -123,7 +149,12 @@ class Discriminator(nn.Module):
         inp = torch.cat((x, y), dim=1)
         # print("inp.shape", inp.shape)
 
-        output = self.main(inp)
-        # print("output.shape", output.shape)
+        out = self.main(inp)
+        # print("out.shape", out.shape)
+
+        out = out.view(self.batch_size, -1)
+
+        out = self.final_layer(out)
+        # print("out.shape", out.shape)
         
-        return output.view(-1, 1)
+        return out
