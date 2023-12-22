@@ -46,13 +46,14 @@ class Generator(nn.Module):
 
             # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(64, n_channel, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(1),
-            nn.ReLU(True),
-            # nn.Tanh()
+            # nn.BatchNorm2d(n_channel),
+            # nn.ReLU(True),
+
+            nn.Tanh()
         )
 
-        in_feat = n_channel * 64 * 64
-        self.final_layer = nn.Sequential(nn.Linear(in_feat, n_channel * img_size * img_size), nn.Tanh())
+        # in_feat = n_channel * 64 * 64
+        # self.final_layer = nn.Sequential(nn.Linear(in_feat, n_channel * img_size * img_size), nn.Tanh())
 
     def forward(self, z, y):
         # print("g-z.shape", z.shape)
@@ -78,12 +79,13 @@ class Generator(nn.Module):
         out = self.main(x)
         # print("gen out.shape", out.shape)
 
-        out = out.view(self.batch_size, -1)
+        return out
 
-        out = self.final_layer(out)
-        # print("out.shape", out.shape)
+        # out = out.view(self.batch_size, -1)
+        # out = self.final_layer(out)
+        # # print("out.shape", out.shape)
 
-        return out.view(self.batch_size, self.n_channel, self.img_size, self.img_size)
+        # return out.view(self.batch_size, self.n_channel, self.img_size, self.img_size)
     
 
 class Discriminator(nn.Module):
@@ -127,6 +129,7 @@ class Discriminator(nn.Module):
             nn.Conv2d(256, n_channel, kernel_size=3, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(n_channel),
             nn.LeakyReLU(0.2, inplace=True),
+            
             # nn.Sigmoid()
         )
 

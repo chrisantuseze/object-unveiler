@@ -158,11 +158,10 @@ def train():
 
         # Set generator eval
         netG.eval()
-        z = torch.randn(batch_size, z_size, 1, 1, device=device)
+        z = torch.randn(class_num, z_size, 1, 1, device=device)
 
         # Labels 0 ~ 9
-        labels = torch.LongTensor(batch_size, 1).random_(0, class_num).to(device)
-        labels = labels.view(-1)
+        labels = torch.LongTensor(class_num, 1).random_(0, class_num).view(-1).to(device)
         # print("labels.shape", labels.shape, "labels", labels)
 
         # Generating images
@@ -174,6 +173,21 @@ def train():
         if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):      
             break
 
+def generate_dataset(generator, data_dir, n_classes, z_size):
+    # Create a folder to save the images if it doesn't exist
+    os.makedirs(data_dir, exist_ok=True)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    generator.eval()
+    for i in range(200):
+        z = torch.randn(n_classes, z_size, 1, 1, device=device)
+        labels = torch.LongTensor(n_classes, 1).random_(0, n_classes).view(-1).to(device)
+
+        sample_images = generator(z, labels).unsqueeze(1).data.cpu()
+        for i, image in enumerate(sample_images.squeeze(1)):
+            image_path = os.path.join(data_dir, f'{i}/image_{labels[i]}.png')
+            save_image(image, image_path)
 
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
