@@ -29,7 +29,7 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    data_type = "mnist"
+    data_type = "cifar10"
     train_data_path = 'save/' # Path of data
 
     # Create a folder to save the images if it doesn't exist
@@ -152,18 +152,15 @@ def train():
             g_loss += _g_loss.detach().cpu().numpy()
             d_loss += _d_loss.detach().cpu().numpy()
 
-        print(f"\nEpoch: {epoch}/{epochs}", "\t\tG_Loss: %f\tD_Loss: %f" % (g_loss/i, d_loss/i))
+        g_loss = g_loss/i
+        d_loss = d_loss/i
+        print(f"Epoch: {epoch}/{epochs}", "\t\tG_Loss: %f\tD_Loss: %f\n" % (g_loss, d_loss))
 
         # Set generator eval
         netG.eval()
-
-        # Building z
-        # z = torch.randn((class_num, z_size), requires_grad=True).to(device)
-
         z = torch.randn(batch_size, z_size, 1, 1, device=device)
 
         # Labels 0 ~ 9
-        # labels = Variable(torch.LongTensor(np.arange(class_num))).to(device)
         labels = torch.LongTensor(batch_size, 1).random_(0, class_num).to(device)
         labels = labels.view(-1)
         # print("labels.shape", labels.shape, "labels", labels)
@@ -174,7 +171,7 @@ def train():
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
             save_image(image, image_path)
 
-        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):            
+        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):      
             break
 
 
