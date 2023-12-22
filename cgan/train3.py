@@ -185,8 +185,8 @@ def generate_dataset(generator, data_dir, n_classes, z_size):
         labels = torch.LongTensor(n_classes, 1).random_(0, n_classes).view(-1).to(device)
 
         sample_images = generator(z, labels).unsqueeze(1).data.cpu()
-        for i, image in enumerate(sample_images.squeeze(1)):
-            image_path = os.path.join(data_dir, f'{i}/image_{labels[i]}.png')
+        for j, image in enumerate(sample_images.squeeze(1)):
+            image_path = os.path.join(data_dir, f'{i}/image_{labels[j]}_{i}.png')
             save_image(image, image_path)
 
 class EarlyStopper:
