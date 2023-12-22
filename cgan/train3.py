@@ -91,8 +91,6 @@ def train():
     early_stopper = EarlyStopper(patience=3, min_delta=10)
 
     for epoch in range(epochs):
-        print(f"\nEpoch: {epoch}/{epochs}")
-        
         g_loss = 0.0
         d_loss = 0.0
 
@@ -152,6 +150,8 @@ def train():
 
             g_loss += _g_loss.detach().cpu().numpy()
             d_loss += _d_loss.detach().cpu().numpy()
+
+        print(f"\nEpoch: {epoch}/{epochs}\n", "D_loss: %f\tG_loss: %f" % (d_train_loss, g_train_loss))
 
         # Set generator eval
         netG.eval()
