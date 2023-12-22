@@ -88,9 +88,14 @@ def train():
     real_label = torch.ones([batch_size, 1], dtype=torch.float).to(device)
     fake_label = torch.zeros([batch_size, 1], dtype=torch.float).to(device)
 
+    early_stopper = EarlyStopper(patience=3, min_delta=10)
 
     for epoch in range(epochs):
         print(f"\nEpoch: {epoch}/{epochs}")
+        
+        g_loss = 0.0
+        d_loss = 0.0
+
         for i, (input_sequence, label) in enumerate(data_loader):
             
             fixed_noise = torch.randn(batch_size, z_size, 1, 1, device=device)
@@ -142,6 +147,12 @@ def train():
             if i % 500 == 0:
                 print("D_loss:%f\tG_loss:%f" % (d_train_loss, g_train_loss))
 
+            _g_loss = torch.sum(g_train_loss)
+            _d_loss = torch.sum(d_train_loss)
+
+            g_loss += _g_loss.detach().cpu().numpy()
+            d_loss += _d_loss.detach().cpu().numpy()
+
         # Set generator eval
         netG.eval()
 
@@ -163,3 +174,25 @@ def train():
         for i, image in enumerate(sample_images.squeeze(1)):
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
             save_image(torch.tensor(image), image_path)
+
+        if early_stopper.early_stop(g_loss) or early_stopper.early_stop(d_loss):             
+                break
+
+
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_loss = float('inf')
+
+    def early_stop(self, loss):
+        if loss < self.min_loss:
+            self.min_loss = loss
+            self.counter = 0
+
+        elif loss > (self.min_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
