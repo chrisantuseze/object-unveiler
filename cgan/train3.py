@@ -174,8 +174,8 @@ def train():
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
             save_image(image, image_path)
 
-        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):             
-                break
+        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):            
+            break
 
 
 class EarlyStopper:
@@ -190,7 +190,7 @@ class EarlyStopper:
             self.min_loss = loss
             self.counter = 0
 
-        elif loss > (self.min_loss + self.min_delta):
+        elif abs(loss - self.min_loss) < 1e-4: #(self.min_loss + self.min_delta):
             self.counter += 1
             if self.counter >= self.patience:
                 return True
