@@ -138,7 +138,7 @@ def train():
             g_train_loss.backward()
             optimizerG.step()
             
-            if i % 100 == 0:
+            if i % 500 == 0:
                 print("D_loss:%f\tG_loss:%f" % (d_train_loss, g_train_loss))
 
         # Set generator eval
