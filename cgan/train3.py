@@ -151,7 +151,7 @@ def train():
             g_loss += _g_loss.detach().cpu().numpy()
             d_loss += _d_loss.detach().cpu().numpy()
 
-        print(f"\nEpoch: {epoch}/{epochs}\n", "D_loss: %f\tG_loss: %f" % (d_train_loss, g_train_loss))
+        print(f"\nEpoch: {epoch}/{epochs}", "\tG_Loss: %f\tD_Loss: %f" % (g_loss/i, d_loss/i))
 
         # Set generator eval
         netG.eval()
