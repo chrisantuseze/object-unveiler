@@ -14,7 +14,7 @@ from PIL import Image
 
 def train():
     # Data
-    batch_size = 32  # Batch size
+    batch_size = 200 #32  # Batch size
 
     # Model
     z_size = 100
@@ -61,6 +61,7 @@ def train():
         
     elif data_type == 'cifar10':
         img_size = 64 #32
+        class_list = ["airplanes", "cars", "birds", "cats", "deer", "dogs", "frogs", "horses", "ships", "trucks"]
         dataset = datasets.CIFAR10(root=train_data_path, download=True,
                             transform=transforms.Compose([
                                 transforms.Resize(img_size),
@@ -164,7 +165,7 @@ def train():
         # Labels 0 ~ 9
         labels = torch.LongTensor(batch_size, class_num).random_(0, class_num).to(device)
         labels = labels[:,0].view(-1)
-        print("labels.shape", labels.shape, "labels", labels)
+        # print("labels.shape", labels.shape, "labels", labels)
 
         # Generating images
         sample_images = netG(z, labels).unsqueeze(1).data.cpu()
@@ -172,8 +173,8 @@ def train():
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
             save_image(image, image_path)
 
-        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):      
-            break
+        # if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):      
+            # break
 
 def generate_dataset(generator, data_dir, n_classes, z_size):
     # Create a folder to save the images if it doesn't exist
