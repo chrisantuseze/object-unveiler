@@ -163,7 +163,7 @@ def train():
 
         # Labels 0 ~ 9
         labels = torch.LongTensor(class_num, 1).random_(0, class_num).view(-1).to(device)
-        # print("labels.shape", labels.shape, "labels", labels)
+        print("labels.shape", labels.shape, "labels", labels)
 
         # Generating images
         sample_images = netG(z, labels).unsqueeze(1).data.cpu()
