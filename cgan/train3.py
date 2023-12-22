@@ -88,7 +88,8 @@ def train():
     real_label = torch.ones([batch_size, 1], dtype=torch.float).to(device)
     fake_label = torch.zeros([batch_size, 1], dtype=torch.float).to(device)
 
-    early_stopper = EarlyStopper(patience=3, min_delta=10)
+    g_early_stopper = EarlyStopper(patience=3, min_delta=10)
+    d_early_stopper = EarlyStopper(patience=3, min_delta=10)
 
     for epoch in range(epochs):
         g_loss = 0.0
@@ -151,7 +152,7 @@ def train():
             g_loss += _g_loss.detach().cpu().numpy()
             d_loss += _d_loss.detach().cpu().numpy()
 
-        print(f"\nEpoch: {epoch}/{epochs}", "\t\tG_Loss: %f D_Loss: %f" % (g_loss/i, d_loss/i))
+        print(f"\nEpoch: {epoch}/{epochs}", "\t\tG_Loss: %f\tD_Loss: %f" % (g_loss/i, d_loss/i))
 
         # Set generator eval
         netG.eval()
@@ -173,7 +174,7 @@ def train():
             image_path = os.path.join(output_folder, f'image_{labels[i]}.png')
             save_image(image, image_path)
 
-        if early_stopper.early_stop(g_loss) or early_stopper.early_stop(d_loss):             
+        if g_early_stopper.early_stop(g_loss) or d_early_stopper.early_stop(d_loss):             
                 break
 
 
