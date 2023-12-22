@@ -46,6 +46,8 @@ class Generator(nn.Module):
 
             # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(64, n_channel, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(1),
+            nn.ReLU(True),
             # nn.Tanh()
         )
 
@@ -123,6 +125,8 @@ class Discriminator(nn.Module):
 
             # state size. (ndf*8) x 4 x 4
             nn.Conv2d(256, n_channel, kernel_size=3, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(n_channel),
+            nn.LeakyReLU(0.2, inplace=True),
             # nn.Sigmoid()
         )
 
