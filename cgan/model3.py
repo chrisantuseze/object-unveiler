@@ -6,89 +6,124 @@ import torch.optim as optim
 from PIL import Image
 
 class Generator(nn.Module):
-    def __init__(self, n_classes, ):
+    def __init__(self, n_channel, z_size, img_size, n_classes):
         super(Generator, self).__init__()
+        self.z_size = z_size
+        self.n_classes = n_classes
+        self.img_size = img_size
 
-        self.yz = nn.Sequential(
-            nn.Linear(100, 200),
-            nn.ReLU(True)
-        )
+        self.label_emb = nn.Embedding(n_classes, z_size)
+        self.label_emb.weight.requires_grad = False
+        self.fc = nn.Linear(z_size, z_size)
 
-        self.label_emb = nn.Embedding(n_classes, n_classes)
-        self.fc = nn.Linear(n_classes, n_classes * n_classes)
+        self.linear = nn.Linear(2 * z_size, z_size)
         
         self.main = nn.Sequential(
-            nn.ConvTranspose2d(1200, ngf * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * 8),
+            nn.ConvTranspose2d(100, 64*8, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(64*8),
             nn.ReLU(True),
+
             # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
+            nn.ConvTranspose2d(64*8, 64*4, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64*4),
             nn.ReLU(True),
-            # state size. (ngf*4) x 8 x 8
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
+
+            # # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose2d(64*4, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
             nn.ReLU(True),
-            # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d(ngf * 2,ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf),
+
+            # # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
+
+            # nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1, padding=0, bias=False),
+            # nn.BatchNorm2d(64),
+            # nn.ReLU(True),
+
             # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d(ngf,nc, 4, 2, 1, bias=False),
-            nn.Sigmoid()
-            # state size. (nc) x 64 x 64
+            nn.ConvTranspose2d(64, n_channel, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Tanh()
         )
 
     def forward(self, z, y):
+        # print("g-z.shape", z.shape)
+        # print("g-y.shape", y.shape)
         
-        #mapping noise and label
-        z = self.yz(z)
-
         y = self.label_emb(y)
+        # print("y.shape", y.shape)
         y = self.fc(y)
+        # # print("y.shape", y.shape)
         
-        #mapping concatenated input to the main generator network
-        inp = torch.cat((z,y), dim=1)
-        inp = inp.view(-1, 1200, 1, 1)
-        output = self.main(inp)
+        z = z.view(-1, self.z_size)
+        # print("z.shape", z.shape)
 
+        x = torch.cat([z, y], dim=1)
+        # print("x.shape", x.shape)
+
+        x = self.linear(x)
+        # print("x.shape", x.shape)
+
+        x = x.unsqueeze(2).unsqueeze(3)
+        # print("x.shape", x.shape)
+
+        output = self.main(x)
+        # print("gen output.shape", output.shape)
         return output
     
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, n_channel, img_size, n_classes, batch_size):
         super(Discriminator, self).__init__()
+        self.n_classes = n_classes
+
+        self.img_size = img_size
+        self.batch_size = batch_size
+
+        self.label_emb = nn.Embedding(n_classes, n_classes * n_classes)
+        self.label_emb.weight.requires_grad = False
+        self.fc = nn.Linear(n_classes * n_classes, self.img_size * self.img_size)
             
-        self.ylabel=nn.Sequential(
-            nn.Linear(120,64*64*1),
-            nn.ReLU(True)
-        )
-        
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
-            nn.Conv2d(nc+1, ndf, 4, 2, 1, bias=False),
+            nn.Conv2d(n_channel + 1, 64, kernel_size=3, stride=2, padding=0, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
+
             # state size. (ndf) x 32 x 32
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
+
             # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
+
             # state size. (ndf*4) x 8 x 8
-            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 8),
+            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=0, bias=False),
+            nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, inplace=True),
+
             # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(512, n_channel, kernel_size=3, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
 
-    def forward(self, x,y):
-        y=self.ylabel(y)
-        y=y.view(-1,1,64,64)
-        inp=torch.cat([x,y],1)
+    def forward(self, x, y):
+        # print("x.shape", x.shape)
+
+        y = self.label_emb(y)
+        y = self.fc(y)
+        # print("y.shape", y.shape)
+
+        y = y.view(self.batch_size, 1, self.img_size, self.img_size)
+        # print("y.shape", y.shape)
+
+        inp = torch.cat((x, y), dim=1)
+        # print("inp.shape", inp.shape)
+
         output = self.main(inp)
+        # print("output.shape", output.shape)
         
-        return output.view(-1, 1).squeeze(1)
+        return output.view(-1, 1)

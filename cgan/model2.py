@@ -75,7 +75,6 @@ class Generator(nn.Module):
         self.class_num = class_num
 
         self.label_emb = nn.Embedding(class_num, class_num)
-
         self.fc = nn.Linear(class_num, class_num * class_num)
 
         self.rb1 = make_layer(2, 64)

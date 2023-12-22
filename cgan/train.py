@@ -1,5 +1,5 @@
 from cgan.dataset import FashionMNIST
-from cgan.model2 import Discriminator, Generator
+from cgan.model3 import Discriminator, Generator
 import torch
 import torch.nn as nn
 import numpy as np
@@ -54,6 +54,8 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
     # noise = torch.randn(real_images.shape, requires_grad=True).to(device) * 0.1 # small variance
     # real_images = real_images + noise
 
+    print("real_images.shape", real_images.shape)
+
     real_validity = discriminator(real_images, labels)
 
     # Calculating discrimination loss (real images)
@@ -67,6 +69,8 @@ def discriminator_train_step(batch_size, z_size, class_num, device, discriminato
 
     # Generating fake images
     fake_images = generator(z, fake_labels)
+
+    print("fake_images.shape", fake_images.shape)
 
     # Disciminating fake images
     fake_validity = discriminator(fake_images, fake_labels)
@@ -93,8 +97,8 @@ def train():
     z_size = 100
 
     # Training
-    epochs = 200  # Train epochs
-    learning_rate = 1e-4
+    epochs = 500  # Train epochs
+    learning_rate = 2e-4
 
     data_type = "mnist"
     
@@ -140,8 +144,8 @@ def train():
     criterion = nn.BCELoss()
 
     # Optimizer
-    g_optimizer = torch.optim.Adam(generator.parameters(), lr=learning_rate)
-    d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
+    g_optimizer = torch.optim.Adam(generator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+    d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
     # Create a folder to save the images if it doesn't exist
     output_folder = 'save/output_images'

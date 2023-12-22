@@ -286,9 +286,9 @@ class HeightMapDataset(data.Dataset):
                 j = action[0]
 
             action_area[int(i), int(j)] = 1.0
-            label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
-            label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
-                    padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
+            label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+            label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
+                    padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
             
             labels.append(label)
 
@@ -296,7 +296,7 @@ class HeightMapDataset(data.Dataset):
         seq_len = self.args.sequence_length
         if len(episode_data) < seq_len:
             required_len = seq_len - len(labels)
-            c, h, w = padded_heightmap.shape
+            c, h, w = processed_heightmap.shape
 
             empty_array = np.zeros((c, w, h))
             labels = labels + [empty_array] * required_len
@@ -327,9 +327,9 @@ class HeightMapDataset(data.Dataset):
 
         optimal_nodes = np.array(optimal_nodes)
 
-        return processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
+        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
 
-        # return processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, optimal_nodes, rot_ids, labels
+        # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, optimal_nodes, rot_ids, labels
 
     # single - input, single - output for ou-dataset with obstacle action
     def __getitem__old4(self, id):
@@ -365,7 +365,7 @@ class HeightMapDataset(data.Dataset):
      # single - input, single - output for ou-dataset with target action
     
     # single - input, single - output for ou-dataset with target action
-    def __getitem__old5(self, id):
+    def __getitem__5(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
@@ -392,7 +392,6 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
-        labels = np.array(labels)
         return padded_heightmap, padded_target_mask, rot_id, label
     
 
