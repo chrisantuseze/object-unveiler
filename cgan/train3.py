@@ -97,6 +97,7 @@ def train():
 
             input_sequence = input_sequence.to(device)
             label_embed = label.to(device)
+            # print("label_embed.shape", label_embed.shape, "label_embed", label_embed)
             
             '''
                 Update D network: maximize log(D(x)) + log(1 - D(G(z)))
@@ -124,7 +125,7 @@ def train():
             '''
             new_label = torch.LongTensor(batch_size, class_num).random_(0, class_num).to(device)
             new_embed = new_label[:, 0].view(-1)
-            # print("new_embed.shape", new_embed.shape)
+            print("new_embed.shape", new_embed.shape)
 
             g_output = netG(fixed_noise, new_embed)
 
@@ -153,11 +154,12 @@ def train():
         # labels = Variable(torch.LongTensor(np.arange(class_num))).to(device)
         labels = torch.LongTensor(batch_size, class_num).random_(0, class_num).to(device)
         labels = new_label[:, 0].view(-1)
+        print("labels.shape", labels.shape, "labels", labels)
 
         # Generating images
         sample_images = netG(z, labels).unsqueeze(1).data.cpu()
         print("sample_images.shape", sample_images.shape)
 
         for i, image in enumerate(sample_images.squeeze(1)):
-            image_path = os.path.join(output_folder, f'image_{i + 1}.png')
+            image_path = os.path.join(output_folder, f'image_{labels[i + 1]}.png')
             save_image(torch.tensor(image), image_path)
