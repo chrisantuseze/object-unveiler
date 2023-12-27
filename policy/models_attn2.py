@@ -252,25 +252,25 @@ class ResFCN(nn.Module):
         # out_prob = torch.softmax(out_prob, dim=1)
         # out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
 
-        out_probs = torch.zeros((B, N, C, H, W), requires_grad=True).to(self.device)
-        for i, target_mask in enumerate(overlapped_objs_feats):
-            # print("target_mask.shape", target_mask.shape)
-
-            print("specific_rotation", specific_rotation)
-            out_probs[i] = self.get_predictions(depth_heightmap, target_mask, specific_rotation, is_volatile)
+        out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
+        # print(specific_rotation)
+        for batch in range(len(overlapped_objs_feats)):
+            for n, target_mask in enumerate(overlapped_objs_feats[batch]):
+                # print("specific_rotation[n][batch]", specific_rotation[n][batch])
+                out_probs[batch][n] = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
 
         if not is_volatile:
             # Image-wide softmax
             out_probs = out_probs.view(B * N, H * W)
 
-            output_shape = out_prob.shape
-            out_prob = out_prob.view(output_shape[0], -1)
-            out_prob = torch.softmax(out_prob, dim=1)
-            out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
+            output_shape = out_probs.shape
+            out_probs = out_probs.view(output_shape[0], -1)
+            out_probs = torch.softmax(out_probs, dim=1)
+            out_probs = out_probs.view(B, N, C, H, W).to(dtype=torch.float)
 
-        print("out_prob.shape", out_prob.shape)
+        # print("out_prob.shape", out_probs.shape)
 
-        return out_prob
+        return out_probs
     
     def get_predictions(self, depth_heightmap, target_mask, specific_rotation, is_volatile):
         if is_volatile:
@@ -336,7 +336,7 @@ class ResFCN(nn.Module):
             return out_prob
         
         else:
-            thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
+            thetas = np.radians(specific_rotation * (360 / self.nr_rotations)).unsqueeze(0)
             affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3))
             for i in range(len(thetas)):
                 # Compute sample grid for rotation before neural network
