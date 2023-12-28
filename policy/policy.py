@@ -519,7 +519,7 @@ class Policy:
         heightmap = self.preprocess_old(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(
+        out_prob = self.fcn(x,
             processed_pred_mask, processed_target, processed_obj_masks, 
             raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True

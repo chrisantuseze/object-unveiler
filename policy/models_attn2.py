@@ -204,11 +204,11 @@ class ResFCN(nn.Module):
             objs.append(x)
 
         #  ############## This is for VIZ ####################
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objs.append(raw_x)
+            raw_x = raw_object_masks[i, idx]
+            # print("raw_x.shape", raw_x.shape)
+            raw_objs.append(raw_x)
 
-        # raw_objs = torch.stack(raw_objs)
+        raw_objs = torch.stack(raw_objs)
         #  ###################################################
 
         overlapped_objs = torch.stack(objs)
@@ -216,7 +216,7 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
+        self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
 
         ################################################################
 
@@ -252,17 +252,22 @@ class ResFCN(nn.Module):
         # out_prob = torch.softmax(out_prob, dim=1)
         # out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
 
-        out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
-        # print(specific_rotation)
-        for batch in range(len(overlapped_objs_feats)):
-            for n, target_mask in enumerate(overlapped_objs_feats[batch]):
-                # print("specific_rotation[n][batch]", specific_rotation[n][batch])
-                out_probs[batch][n] = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
+        if is_volatile:
+            out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
+            for n, target_mask in enumerate(overlapped_objs_feats[0]):
+                out_prob = self.get_predictions(depth_heightmap, target_mask.unsqueeze(0), specific_rotation, is_volatile)
+                out_probs[n] = out_prob
+        
+        else:
+            out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
+            for batch in range(len(overlapped_objs_feats)):
+                for n, target_mask in enumerate(overlapped_objs_feats[batch]):
+                    # print("specific_rotation[n][batch]", specific_rotation[n][batch])
+                    out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
+                    out_probs[batch][n] = out_prob
 
-        if not is_volatile:
             # Image-wide softmax
             out_probs = out_probs.view(B * N, H * W)
-
             output_shape = out_probs.shape
             out_probs = out_probs.view(output_shape[0], -1)
             out_probs = torch.softmax(out_probs, dim=1)
