@@ -7,6 +7,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
+from torch.utils.tensorboard import SummaryWriter
 from datasets.aperture_dataset import ApertureDataset
 
 from datasets.heightmap_dataset import HeightMapDataset
@@ -15,6 +16,8 @@ import utils.logger as logging
 
 
 def train_fcn_net(args):
+    writer = SummaryWriter()
+
     save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
@@ -101,8 +104,11 @@ def train_fcn_net(args):
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
+        writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    writer.close()
 
 
 def train_regressor(args):
