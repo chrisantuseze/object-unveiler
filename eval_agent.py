@@ -406,7 +406,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode_multi(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
+        episode_data, success_count = run_episode_old1(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
@@ -425,17 +425,3 @@ def eval_agent(args):
                                                           sr_n / attempts,
                                                           objects_removed / len(eval_data)))
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")
-
-# def parse_args():
-#     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-#     parser.add_argument('--fcn_model', default='', type=str, help='')
-#     parser.add_argument('--reg_model', default='', type=str, help='')
-#     parser.add_argument('--seed', default=6, type=int, help='')
-#     parser.add_argument('--n_scenes', default=100, type=int, help='')
-#     parser.add_argument('--object_set', default='seen', type=str, help='')
-#     return parser.parse_args()
-
-
-# if __name__ == "__main__":
-#     args = parse_args()
-#     eval_agent(args)

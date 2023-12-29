@@ -117,8 +117,8 @@ class ResFCN(nn.Module):
                 batch_rot_target[rot_id] = rotate_target_mask[0]
 
             # compute rotated feature maps            
-            depth_feat = self.predict(rotate_depth)
-            target_feat = self.predict(rotate_target_mask)
+            depth_feat = self.predict(batch_rot_depth)
+            target_feat = self.predict(batch_rot_target)
             concat_feat = torch.cat((depth_feat, target_feat), dim=1)
 
             # undo rotation

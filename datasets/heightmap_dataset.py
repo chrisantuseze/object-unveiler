@@ -249,7 +249,7 @@ class HeightMapDataset(data.Dataset):
      # single - input, single - output for ou-dataset with target action
     
     # single - input, single - output for ou-dataset with target action
-    def __getitem__(self, id):
+    def __getitem__old5(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
@@ -280,7 +280,7 @@ class HeightMapDataset(data.Dataset):
     
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__old6(self, id):
+    def __getitem__(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
@@ -306,7 +306,7 @@ class HeightMapDataset(data.Dataset):
         label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
-        labels = np.array(labels)
+        label = np.array(label)
         return padded_heightmap, padded_target_mask, rot_id, label
     
     def __len__(self):
