@@ -1,7 +1,7 @@
 import os
 import random
-from policy.models import Regressor
-from policy.models import ResFCN
+from policy.models_target import Regressor
+from policy.models_target import ResFCN
 
 import torch
 import torch.optim as optim
@@ -10,7 +10,6 @@ from torch.utils import data
 from datasets.aperture_dataset import ApertureDataset
 
 from datasets.heightmap_dataset import HeightMapDataset
-from policy.action_net_linear import *
 
 import utils.logger as logging
 

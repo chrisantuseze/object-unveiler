@@ -119,7 +119,7 @@ class ResFCN(nn.Module):
             # compute rotated feature maps            
             depth_feat = self.predict(rotate_depth)
             target_feat = self.predict(rotate_target_mask)
-            concat_feat = torch.cat((depth_feat, target_feat), dim=1)
+            masked_depth_feat = depth_feat * target_feat
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
@@ -132,11 +132,9 @@ class ResFCN(nn.Module):
                 affine_mat_after = torch.from_numpy(affine_mat_after).permute(2, 0, 1).float()
                 affine_after[rot_id] = affine_mat_after
 
-            flow_grid_after = F.affine_grid(affine_after, concat_feat.data.size(), align_corners=True)
-            out_prob = F.grid_sample(concat_feat, flow_grid_after, mode='nearest', align_corners=True)
+            flow_grid_after = F.affine_grid(affine_after, masked_depth_feat.data.size(), align_corners=True)
+            out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
 
-            B, C, H, W = out_prob.shape
-            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
             return out_prob
         
         else:
@@ -160,7 +158,8 @@ class ResFCN(nn.Module):
             # Compute intermediate features
             depth_feat = self.predict(rotate_depth)
             target_feat = self.predict(rotate_target_mask)
-            concat_feat = torch.cat((depth_feat, target_feat), dim=1)
+            masked_depth_feat = depth_feat * target_feat
+            # print("masked_depth_feat.shape", masked_depth_feat.shape)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
@@ -172,12 +171,10 @@ class ResFCN(nn.Module):
                 affine_mat_after = torch.from_numpy(affine_mat_after).permute(2, 0, 1).float()
                 affine_after[i] = affine_mat_after
 
-            flow_grid_after = F.affine_grid(affine_after, concat_feat.data.size(), align_corners=True)
+            flow_grid_after = F.affine_grid(affine_after, masked_depth_feat.data.size(), align_corners=True)
 
             # Forward pass through branches, undo rotation on output predictions, upsample results
-            out_prob = F.grid_sample(concat_feat, flow_grid_after, mode='nearest', align_corners=True)
-
-            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
+            out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
 
             # Image-wide softmax
             output_shape = out_prob.shape

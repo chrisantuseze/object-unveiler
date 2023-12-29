@@ -136,7 +136,7 @@ class HeightMapDataset(data.Dataset):
         return scene_color, target_mask, rot_ids, labels
 
     # single - input, multi - output for models_attn with processed inputs
-    def __getitem__(self, id):
+    def __getitem__old32(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
 
@@ -249,7 +249,7 @@ class HeightMapDataset(data.Dataset):
      # single - input, single - output for ou-dataset with target action
     
     # single - input, single - output for ou-dataset with target action
-    def __getitem__5(self, id):
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
