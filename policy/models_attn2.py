@@ -204,11 +204,11 @@ class ResFCN(nn.Module):
             objs.append(x)
 
         #  ############## This is for VIZ ####################
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objs.append(raw_x)
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objs.append(raw_x)
 
-        raw_objs = torch.stack(raw_objs)
+        # raw_objs = torch.stack(raw_objs)
         #  ###################################################
 
         overlapped_objs = torch.stack(objs)
@@ -216,7 +216,7 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
+        # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
 
         ################################################################
 
