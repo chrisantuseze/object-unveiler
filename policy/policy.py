@@ -2,7 +2,6 @@ import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
 from policy.object_segmenter import ObjectSegmenter
-from policy.occlusion_model import VisionTransformer
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -44,8 +43,6 @@ class Policy:
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
         self.segmenter = ObjectSegmenter()
-
-        self.vit = VisionTransformer(args).to(self.device)
 
         self.reg = Regressor().to(self.device)
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
@@ -436,38 +433,6 @@ class Policy:
 
         return actions
     
-    def get_obstacles(self, scene_masks, target_mask):
-        # Convert the list of numpy arrays to a list of PyTorch tensors
-        P = self.args.patch_size
-        scene_masks = [torch.tensor(general_utils.resize_mask(transform, mask, new_size=(P, P))) for mask in scene_masks]
-        required_len = self.args.num_patches - len(scene_masks)
-        if len(scene_masks) < self.args.num_patches:
-            scene_masks = scene_masks + [torch.zeros_like(scene_masks[0]) for _ in range(required_len)]
-        else:
-            scene_masks = scene_masks[:self.args.num_patches]
-
-        scene_masks = torch.stack(scene_masks).unsqueeze(0).to(self.device)
-
-        target = general_utils.resize_mask(transform, target_mask, new_size=(P, P))
-        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-
-        out_prob = self.vit(scene_masks, target)
-
-        out_prob = self.decode_one_hot(out_prob)[0]
-        return out_prob
-        
-    def decode_one_hot(self, one_hot_tensor):
-        decoded_tensor_list = []
-        for item in one_hot_tensor:
-            # Use torch.argmax to find the index of the maximum value along the second axis
-            decoded_tensor = torch.argmax(item, dim=1)
-
-            # Convert the tensor to a Python list
-            decoded_list = decoded_tensor.tolist()
-            decoded_tensor_list.append(decoded_list)
-
-        return decoded_tensor_list
-    
     def get_inputs(self, color_image, target_mask):
         processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_image, plot=True)
         # print("processed_masks.shape", processed_masks[0].shape)
@@ -521,7 +486,7 @@ class Policy:
 
         out_prob = self.fcn(x,
             processed_pred_mask, processed_target, processed_obj_masks, 
-            raw_pred_mask, raw_target_mask, raw_processed_mask, 
+            # raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
         out_prob = self.postprocess(out_prob)
@@ -705,15 +670,12 @@ class Policy:
         self.info['learn_step_counter'] = self.learn_step_counter
         pickle.dump(self.info, open(os.path.join(folder_name, 'info'), 'wb'))
 
-    def load(self, fcn_model, reg_model, vit_model):
+    def load(self, fcn_model, reg_model):
         self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
         self.fcn.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
-
-        # self.vit.load_state_dict(torch.load(vit_model, map_location=self.device))
-        # self.vit.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

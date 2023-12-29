@@ -2,7 +2,6 @@
 import torch
 import argparse
 from trainer.train_new import train_fcn_net, train_regressor
-from trainer.train_occlusion import train_vit
 from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
@@ -15,7 +14,6 @@ def parse_args():
     # args for eval_agent
     parser.add_argument('--fcn_model', default='', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
-    parser.add_argument('--vit_model', default='save/fcn/vit_model.pt', type=str, help='')
     parser.add_argument('--seed', default=6, type=int, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')
     parser.add_argument('--object_set', default='seen', type=str, help='')
