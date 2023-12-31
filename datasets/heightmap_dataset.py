@@ -283,7 +283,35 @@ class HeightMapDataset(data.Dataset):
     def __getitem__(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        # Get bounding box
+        y_proj = np.sum(target_mask, axis=1) 
+        x_proj = np.sum(target_mask, axis=0)
+        # print("proj", x_proj, y_proj)
+
+        # ymin, ymax = np.nonzero(y_proj)[[0, -1]]
+        # xmin, xmax = np.nonzero(x_proj)[[0, -1]]
+
+        # ymin, ymax = np.nonzero(y_proj)[0], np.nonzero(y_proj)[-1] 
+        # xmin, xmax = np.nonzero(x_proj)[0], np.nonzero(x_proj)[-1]
+
+        # print("min", xmin, ymin)
+
+        # Crop raw heightmap
+        # crop = heightmap[ymin:ymax, xmin:xmax]
+        # print("crop.shape", crop.shape)
+
+        # Assuming depth_map and target_mask are NumPy arrays
+        tgmask = general_utils.resize_mask(transform, target_mask)
+        cropped_heightmap = heightmap * tgmask
+
+        # fig, ax = plt.subplots(1, 3)
+        # ax[0].imshow(heightmap)
+        # ax[1].imshow(tgmask)
+        # ax[2].imshow(cropped_heightmap)
+        # plt.show()
+        # print("cropped_heightmap.shape", cropped_heightmap.shape)    
+
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(cropped_heightmap, skip_transform=True)
         padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
