@@ -110,15 +110,15 @@ class ResFCN(nn.Module):
                 
                 # Rotate images clockwise
                 rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-                # rotate_target_mask = F.grid_sample(target_mask.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+                rotate_target_mask = F.grid_sample(target_mask.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
                 batch_rot_depth[rot_id] = rotate_depth[0]
-                # batch_rot_target[rot_id] = rotate_target_mask[0]
+                batch_rot_target[rot_id] = rotate_target_mask[0]
 
             # compute rotated feature maps            
             depth_feat = self.predict(batch_rot_depth)
-            # target_feat = self.predict(batch_rot_target)
-            masked_depth_feat = depth_feat #* target_feat
+            target_feat = self.predict(batch_rot_target)
+            masked_depth_feat = depth_feat * target_feat
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
@@ -152,12 +152,12 @@ class ResFCN(nn.Module):
 
             # Rotate image clockwise_
             rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-            # rotate_target_mask = F.grid_sample(target_mask.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            rotate_target_mask = F.grid_sample(target_mask.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
             depth_feat = self.predict(rotate_depth)
-            # target_feat = self.predict(rotate_target_mask)
-            masked_depth_feat = depth_feat #* target_feat
+            target_feat = self.predict(rotate_target_mask)
+            masked_depth_feat = depth_feat * target_feat
             # print("masked_depth_feat.shape", masked_depth_feat.shape)
 
             # Compute sample grid for rotation after branches

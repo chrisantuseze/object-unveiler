@@ -311,8 +311,8 @@ class HeightMapDataset(data.Dataset):
         # plt.show()
         # print("cropped_heightmap.shape", cropped_heightmap.shape)    
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(cropped_heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(cropped_heightmap)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
