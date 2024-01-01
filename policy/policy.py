@@ -533,7 +533,15 @@ class Policy:
         heightmap = self.preprocess_old(state)
 
         resized_target = general_utils.resize_mask(transform, target_mask)
-        target = self.preprocess_old(resized_target)
+        cropped_heightmap = state * resized_target
+
+        # fig, ax = plt.subplots(1, 3)
+        # ax[0].imshow(heightmap)
+        # ax[1].imshow(tgmask)
+        # ax[2].imshow(cropped_heightmap)
+        # plt.show()
+
+        target = self.preprocess_old(cropped_heightmap)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
