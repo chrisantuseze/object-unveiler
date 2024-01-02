@@ -134,6 +134,7 @@ class ResFCN(nn.Module):
 
             flow_grid_after = F.affine_grid(affine_after, masked_depth_feat.data.size(), align_corners=True)
             out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
+            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
 
             return out_prob
         
@@ -177,6 +178,8 @@ class ResFCN(nn.Module):
             # Forward pass through branches, undo rotation on output predictions, upsample results
             out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
 
+            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
+            
             # Image-wide softmax
             output_shape = out_prob.shape
             out_prob = out_prob.view(output_shape[0], -1)

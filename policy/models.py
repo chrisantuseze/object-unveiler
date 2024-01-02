@@ -135,7 +135,6 @@ class ResFCN(nn.Module):
             flow_grid_after = F.affine_grid(affine_after, concat_feat.data.size(), align_corners=True)
             out_prob = F.grid_sample(concat_feat, flow_grid_after, mode='nearest', align_corners=True)
 
-            B, C, H, W = out_prob.shape
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
             return out_prob
         
