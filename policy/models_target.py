@@ -156,8 +156,8 @@ class ResFCN(nn.Module):
 
             # Compute intermediate features
             depth_feat = self.predict(rotate_depth)
-            # target_feat = self.predict(rotate_target_mask)
-            masked_depth_feat = depth_feat #* target_feat
+            target_feat = self.predict(rotate_target_mask)
+            masked_depth_feat = depth_feat * target_feat
             # print("masked_depth_feat.shape", masked_depth_feat.shape)
 
             # Compute sample grid for rotation after branches

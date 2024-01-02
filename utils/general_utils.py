@@ -325,25 +325,7 @@ def preprocess_image(image, skip_transform=False):
 
     return padded_image, padding_width
 
-class Logger:
-    def __init__(self, log_dir):
-        self.log_dir = log_dir
-
-        # Create the log directory
-        if os.path.exists(log_dir):
-            logging.info('Directory ', log_dir, 'exists, do you want to remove it? (y/n)')
-            answer = input('')
-            if answer == 'y':
-                shutil.rmtree(log_dir)
-                os.mkdir(log_dir)
-            else:
-                exit()
-        else:
-            os.mkdir(log_dir)
-
-    def log_data(self, data, filename):
-        pickle.dump(data, open(os.path.join(self.log_dir, filename), 'wb'))
-
-    def log_yml(self, dict, filename):
-        with open(os.path.join(self.log_dir, filename + '.yml'), 'w') as stream:
-            yaml.dump(dict, stream)
+def get_index(index, min):
+    if min:
+        return index if index < 1 else index - 2
+    return index if index > 98 else index + 2
