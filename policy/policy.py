@@ -535,18 +535,18 @@ class Policy:
         resized_target = general_utils.resize_mask(transform, target_mask)
         # cropped_heightmap = state * resized_target
 
-        # non_zero_indices = np.nonzero(resized_target)
-        # xmin = general_utils.get_index(np.min(non_zero_indices[1]), min=True)
-        # xmax = general_utils.get_index(np.max(non_zero_indices[1]), min=False)
-        # ymin = general_utils.get_index(np.min(non_zero_indices[0]), min=True)
-        # ymax = general_utils.get_index(np.max(non_zero_indices[0]), min=False)
-        # bounding_box = (xmin, ymin, xmax, ymax)
+        non_zero_indices = np.nonzero(resized_target)
+        xmin = general_utils.get_index(np.min(non_zero_indices[1]), min=True)
+        xmax = general_utils.get_index(np.max(non_zero_indices[1]), min=False)
+        ymin = general_utils.get_index(np.min(non_zero_indices[0]), min=True)
+        ymax = general_utils.get_index(np.max(non_zero_indices[0]), min=False)
+        bounding_box = (xmin, ymin, xmax, ymax)
 
         # crop = state[ymin:ymax, xmin:xmax]
 
         # # Resize using OpenCV
-        # full_crop = np.zeros((100, 100))
-        # full_crop[ymin:ymax, xmin:xmax] = state[ymin:ymax, xmin:xmax]
+        full_crop = np.zeros((100, 100))
+        full_crop[ymin:ymax, xmin:xmax] = state[ymin:ymax, xmin:xmax]
 
         # # Assuming img is your NumPy array representing the image
         # np.savetxt('state.txt', state, fmt='%d')
@@ -556,14 +556,13 @@ class Policy:
         # print("Bounding Box:", bounding_box)
         # print("crop.shape", crop.shape)
 
-        # fig, ax = plt.subplots(1, 4)
-        # ax[0].imshow(state)
-        # ax[1].imshow(resized_target)
-        # ax[2].imshow(crop)
-        # ax[3].imshow(full_crop)
-        # plt.show()
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(state)
+        ax[1].imshow(resized_target)
+        ax[2].imshow(full_crop)
+        plt.show()
 
-        target = self.preprocess_old(resized_target)
+        target = self.preprocess_old(full_crop)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
