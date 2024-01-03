@@ -71,6 +71,8 @@ def get_aligned_point_cloud(color, depth, seg, configs, bounds, pixel_size, plot
         
         full_point_cloud += point_cloud
 
+        break
+
     # full_point_cloud.estimate_normals()
     if plot:
         mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
@@ -329,3 +331,83 @@ def get_index(index, min):
     if min:
         return index if index < 1 else index - 2
     return index if index > 98 else index + 2
+
+
+def get_pointcloud_(color_img, depth_img, camera_intrinsics):
+
+    # Get depth image size
+    im_h = depth_img.shape[0]
+    im_w = depth_img.shape[1]
+
+    # Project depth into 3D point cloud in camera coordinates
+    pix_x,pix_y = np.meshgrid(np.linspace(0,im_w-1,im_w), np.linspace(0,im_h-1,im_h))
+    cam_pts_x = np.multiply(pix_x-camera_intrinsics[2],depth_img/camera_intrinsics[0])
+    cam_pts_y = np.multiply(pix_y-camera_intrinsics[5],depth_img/camera_intrinsics[4])
+    cam_pts_z = depth_img.copy()
+    cam_pts_x.shape = (im_h*im_w,1)
+    cam_pts_y.shape = (im_h*im_w,1)
+    cam_pts_z.shape = (im_h*im_w,1)
+
+    # Reshape image into colors for 3D point cloud
+    rgb_pts_r = color_img[:,:,0]
+    rgb_pts_g = color_img[:,:,1]
+    rgb_pts_b = color_img[:,:,2]
+    rgb_pts_r.shape = (im_h*im_w,1)
+    rgb_pts_g.shape = (im_h*im_w,1)
+    rgb_pts_b.shape = (im_h*im_w,1)
+
+    cam_pts = np.concatenate((cam_pts_x, cam_pts_y, cam_pts_z), axis=1)
+    rgb_pts = np.concatenate((rgb_pts_r, rgb_pts_g, rgb_pts_b), axis=1)
+
+    return cam_pts, rgb_pts
+
+
+def get_heightmap_(obs, configs, bounds, pix_size):
+    color_img, depth_img = obs['color'][0], obs['depth'][0]
+    cam_intrinsics = configs[0]['intrinsics']
+
+    # Compute heightmap size
+    heightmap_size = np.round(((bounds[1][1] - bounds[1][0]) / pix_size,
+                               (bounds[0][1] - bounds[0][0]) / pix_size)).astype(int)
+
+    # Get 3D point cloud from RGB-D images
+    surface_pts, color_pts = get_pointcloud_(color_img, depth_img, cam_intrinsics)
+
+    cam_pose = p_utils.get_camera_pose(configs[0]['pos'], configs[0]['target_pos'], configs[0]['up_vector'])
+
+    # Transform 3D point cloud from camera coordinates to robot coordinates
+    surface_pts = np.transpose(np.dot(cam_pose[0:3,0:3],np.transpose(surface_pts)) + np.tile(cam_pose[0:3,3:],(1,surface_pts.shape[0])))
+
+    # Sort surface points by z value
+    sort_z_ind = np.argsort(surface_pts[:,2])
+    surface_pts = surface_pts[sort_z_ind]
+    color_pts = color_pts[sort_z_ind]
+
+    # Filter out surface points outside heightmap boundaries
+    heightmap_valid_ind = np.logical_and(np.logical_and(np.logical_and(np.logical_and(surface_pts[:,0] >= bounds[0][0], 
+                                                                                      surface_pts[:,0] < bounds[0][1]), 
+                                                                                      surface_pts[:,1] >= bounds[1][0]), 
+                                                                                      surface_pts[:,1] < bounds[1][1]), surface_pts[:,2] < bounds[2][1])
+    surface_pts = surface_pts[heightmap_valid_ind]
+    color_pts = color_pts[heightmap_valid_ind]
+
+    # Create orthographic top-down-view RGB-D heightmaps
+    color_heightmap_r = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    color_heightmap_g = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    color_heightmap_b = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    depth_heightmap = np.zeros(heightmap_size)
+    heightmap_pix_x = np.floor((surface_pts[:,0] - bounds[0][0])/pix_size).astype(int)
+    heightmap_pix_y = np.floor((surface_pts[:,1] - bounds[1][0])/pix_size).astype(int)
+    color_heightmap_r[heightmap_pix_y,heightmap_pix_x] = color_pts[:,[0]]
+    color_heightmap_g[heightmap_pix_y,heightmap_pix_x] = color_pts[:,[1]]
+    color_heightmap_b[heightmap_pix_y,heightmap_pix_x] = color_pts[:,[2]]
+    color_heightmap = np.concatenate((color_heightmap_r, color_heightmap_g, color_heightmap_b), axis=2)
+    depth_heightmap[heightmap_pix_y,heightmap_pix_x] = surface_pts[:,2]
+    z_bottom = bounds[2][0]
+    depth_heightmap = depth_heightmap - z_bottom
+    depth_heightmap[depth_heightmap < 0] = 0
+    depth_heightmap[depth_heightmap == -z_bottom] = np.nan
+
+    color_heightmap, depth_heightmap = cv2.flip(color_heightmap, 1), cv2.flip(depth_heightmap, 1)
+
+    return color_heightmap, depth_heightmap

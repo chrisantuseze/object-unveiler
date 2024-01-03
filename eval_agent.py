@@ -127,6 +127,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
             # end_scene = True
             break
 
+        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         n_prev_masks = len(processed_masks)
 
@@ -235,6 +236,7 @@ def run_episode_old0_(policy: Policy, env: Environment, segmenter: ObjectSegment
 
             break
 
+        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         n_prev_masks = len(processed_masks)
 
@@ -272,6 +274,7 @@ def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmente
     while episode_data['attempts'] < max_steps:
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
+        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)

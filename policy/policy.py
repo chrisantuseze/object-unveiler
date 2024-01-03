@@ -76,6 +76,15 @@ class Policy:
 
     def state_representation(self, obs):
         state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+        color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+
+        print(color_heightmap.shape, depth_heightmap.shape)
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(state)
+        ax[1].imshow(color_heightmap)
+        ax[2].imshow(depth_heightmap)
+        plt.show()
+
         return state
     
     def preprocess_old(self, state):
