@@ -36,7 +36,7 @@ class Policy:
 
         self.crop_size = 32
         self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
-        self.z = 0.1 # distance of the floating hand from the table (vertical distance)
+        self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN().to(self.device)
         # self.fcn = ResFCN(args).to(self.device)
