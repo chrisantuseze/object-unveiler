@@ -30,7 +30,6 @@ class HeightMapDataset(data.Dataset):
     # single - input, single - output for ppg-ou-dataset
     def __getitem__(self, id):
         heightmap, depth_heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
-        heightmap = depth_heightmap
 
         resized_target = general_utils.resize_mask(transform, target_mask)
         full_crop = general_utils.extract_target_crop(resized_target, heightmap)

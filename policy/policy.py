@@ -543,7 +543,7 @@ class Policy:
         resized_target = general_utils.resize_mask(transform, target_mask)
         # cropped_heightmap = state * resized_target
 
-        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
+        full_crop = general_utils.extract_target_crop(resized_target, state)
 
         # # Assuming img is your NumPy array representing the image
         # np.savetxt('state.txt', state, fmt='%d')
