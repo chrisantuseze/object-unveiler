@@ -86,7 +86,6 @@ class ReplayBuffer:
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
         cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
-        cv2.imwrite(os.path.join(folder_name, 'obstacle_mask.png'), transition['obstacle_mask'])
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
 
         # Save everything that obs contains
@@ -109,8 +108,6 @@ class ReplayBuffer:
 
             color = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'color_0.png'), -1)
             depth = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'depth_0.exr'), -1)
-            # logging.info("color", color)
-            # logging.info("depth", depth)
 
             obs = {
                 'color': [color],

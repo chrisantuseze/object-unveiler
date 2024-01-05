@@ -12,9 +12,10 @@ from policy.object_segmenter import ObjectSegmenter
 from trainer.memory import ReplayBuffer
 import utils.logger as logging
 import utils.general_utils as general_utils
+import env.cameras as cameras
 import policy.grasping as grasping
 
-dataset_dir = 'save/new'
+dataset_dir = 'save/ppg-ou-dataset' #'save/new'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
@@ -55,6 +56,38 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
+def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
+    heightmap = cv2.imread(os.path.join(dataset_dir, transition_dir, 'heightmap.exr'), -1)
+    target_mask = cv2.imread(os.path.join(dataset_dir, transition_dir, 'target_mask.png'), -1)
+    action = pickle.load(open(os.path.join(dataset_dir, transition_dir, 'action'), 'rb'))
+    full_state = action #pickle.load(open(os.path.join(dataset_dir, transition_dir, 'full_state'), 'rb'))
+
+    color = cv2.imread(os.path.join(dataset_dir, transition_dir, 'color_0.png'), -1)
+    depth = cv2.imread(os.path.join(dataset_dir, transition_dir, 'depth_0.exr'), -1)
+    seg = cv2.imread(os.path.join(dataset_dir, transition_dir, 'seg_0.png'), -1)
+
+    obs = {
+        'color': [color],
+        'depth': [depth],
+        'seg': [seg],
+        'full_state': full_state,
+    }
+    bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
+    pxl_size = 0.005
+    color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
+
+    transition = {
+        'state': heightmap,
+        'target_mask': target_mask,
+        'action': action,
+        'obs': obs,
+        'depth_heightmap': depth_heightmap,
+        'color_heightmap': color_heightmap,
+    }
+    memory.store(transition)
+    logging.info(f"{idx} - Episode with dir {transition_dir} updated...")
+
+
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -68,12 +101,16 @@ if __name__ == "__main__":
     episode_dirs = os.listdir(dataset_dir)
     
     for file_ in episode_dirs:
-        if not file_.startswith("episode"):
-            print(file_)
+        # if not file_.startswith("episode"):
+        #     print(file_)
+        #     episode_dirs.remove(file_)
+
+        if not file_.startswith("transition"):
             episode_dirs.remove(file_)
 
     for i, episode_dir in enumerate(episode_dirs):
-         modify_episode(memory, episode_dir, i)
+        #  modify_episode(memory, episode_dir, i)
+        modify_transitions(memory, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
