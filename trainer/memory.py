@@ -102,15 +102,15 @@ class ReplayBuffer:
             self.count += 1
 
     def load(self, dir_ids, idx):
-        # while True:
         try:
-            # logging.info(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'))
             heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
             target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
             action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
 
             color = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'color_0.png'), -1)
             depth = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'depth_0.exr'), -1)
+            print("color", color)
+            print("depth", depth)
 
             obs = {
                 'color': [color],
@@ -118,15 +118,12 @@ class ReplayBuffer:
             }
             bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
             pxl_size = 0.005
-            # print("Here", obs['color'][0], obs['depth'][0])
-            # color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
+            color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
 
-            # break
         except Exception as e:
             logging.info(e)
             idx += 1
 
-        depth_heightmap = None
         return heightmap, depth_heightmap, target_mask, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
