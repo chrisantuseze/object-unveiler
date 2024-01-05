@@ -28,13 +28,13 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__old1(self, id):
-        heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
+    def __getitem__(self, id):
+        heightmap, depth_heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
+        heightmap = depth_heightmap
+        # print("depth_heightmap.shape", depth_heightmap.shape)
 
         resized_target = general_utils.resize_mask(transform, target_mask)
-        # cropped_heightmap = heightmap * tgmask
-
-        full_crop = self.extract_target_crop(resized_target, heightmap)
+        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
         padded_target_mask, padding_width_target = general_utils.preprocess_image(full_crop, skip_transform=True)
@@ -61,16 +61,14 @@ class HeightMapDataset(data.Dataset):
         
         label = np.array(label)
         return padded_heightmap, padded_target_mask, rot_id, label
-    
-    def __getitem__(self, id):
-        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, _, target_mask, _, _, action = episode_data[-1]
 
-        resized_target = general_utils.resize_mask(transform, target_mask)
-        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
+    # single - input, single - output for ou-dataset with target action
+    def __getitem__old2(self, id):
+        episode_data = self.memory.load_episode(self.dir_ids[id])
+        heightmap, _, target_mask, _, action = episode_data[-1]
 
-        processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        processed_target_mask, _ = general_utils.preprocess_image(full_crop, skip_transform=True)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -88,12 +86,11 @@ class HeightMapDataset(data.Dataset):
 
         action_area[int(i), int(j)] = 1.0
         
-        label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2]))
-        label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
-                 padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
+        label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
+        label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
+                 padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
-        label = np.array(label)
-        return processed_heightmap, processed_target_mask, rot_id, label
+        return padded_heightmap, padded_target_mask, rot_id, label
 
     
     def __len__(self):

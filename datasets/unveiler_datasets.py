@@ -147,15 +147,16 @@ class UnveilerDataset(data.Dataset):
 
         # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, optimal_nodes, rot_ids, labels
 
-     # single - input, multi - output for models_attn with processed inputs
     
-    # single - input, single - output for ou-dataset with obstacle action
-    def __getitem__old3(self, id):
-        episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, _, target_mask, _, action = episode_data[0]
+    def __getitem__old5(self, id):
+        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
+        heightmap, _, target_mask, _, _, action = episode_data[-1]
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
+        resized_target = general_utils.resize_mask(transform, target_mask)
+        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
+
+        processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        processed_target_mask, _ = general_utils.preprocess_image(full_crop, skip_transform=True)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -173,45 +174,12 @@ class UnveilerDataset(data.Dataset):
 
         action_area[int(i), int(j)] = 1.0
         
-        label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
-        label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
-                 padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
+        label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2]))
+        label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
+                 padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
         
-        labels = np.array(labels)
-        return padded_heightmap, padded_target_mask, rot_id, label
-    
-     # single - input, single - output for ou-dataset with target action
-    
-    # single - input, single - output for ou-dataset with target action
-    def __getitem__old4(self, id):
-        episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, _, target_mask, _, action = episode_data[-1]
-
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
-
-        # convert theta to range 0-360 and then compute the rot_id
-        angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
-        rot_id = round(angle / (2 * np.pi / 16))
-
-        action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
-        # action_area[int(action[1]), int(action[0])] = 1.0
-
-        if int(action[1]) > 99 or int(action[0]):
-            i = min(int(action[1]) * 0.95, 99)
-            j = min(int(action[0]) * 0.95, 99)
-        else:
-            i = action[1]
-            j = action[0]
-
-        action_area[int(i), int(j)] = 1.0
-        
-        label = np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) # this was np.zeros((1, padded_heightmap.shape[1], padded_heightmap.shape[2])) before
-        label[0, padding_width_depth:padded_heightmap.shape[1] - padding_width_depth,
-                 padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
-        
-        return padded_heightmap, padded_target_mask, rot_id, label
-
+        label = np.array(label)
+        return processed_heightmap, processed_target_mask, rot_id, label
     
     def __len__(self):
         return len(self.dir_ids)

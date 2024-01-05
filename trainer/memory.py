@@ -5,9 +5,9 @@ import numpy as np
 import pickle
 import os
 import cv2
-from policy.object_segmenter import ObjectSegmenter
 import utils.logger as logging
-
+import utils.general_utils as general_utils
+import env.cameras as cameras
 
 class ReplayBuffer:
     def __init__(self, save_dir, buffer_size=100000) -> None:
@@ -51,33 +51,18 @@ class ReplayBuffer:
 
         data_list = []
         for data in episode_data:
-            heightmap = data['state']
+            heightmap = data['depth_heightmap']
             target_mask = data['target_mask']
             action = data['action']
 
             scene_mask = data['scene_mask']
             object_masks = data['object_masks']
 
-            optimal_nodes = data['optimal_nodes']
+            optimal_nodes = [] #data['optimal_nodes']
 
             data_list.append((heightmap, scene_mask, target_mask, object_masks, optimal_nodes, action))
 
         return data_list
-    
-    def load_occlusion_data(self, episode):
-        try:
-            episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
-        except Exception as e:
-            logging.info(e, "- Failed episode:", episode)
-
-        data = episode_data[0]
-        # heightmap = data['state']
-        target_mask = data['target_mask']
-        # obstacle_mask = data['obstacle_mask']
-        optimal_nodes = data['optimal_nodes']
-        scene_masks = data['object_masks']
-
-        return scene_masks, target_mask, optimal_nodes
     
     def store_episode(self, transition):
         folder_name = os.path.join(self.save_dir, 'episode_' + str(self.count).zfill(5))
@@ -110,8 +95,6 @@ class ReplayBuffer:
             cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
             cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
 
-            # cv2.imwrite(os.path.join(folder_name, 'mask_' + str(i) + '.png'), transition['masks'][i])
-
         pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 
         self.buffer_ids.append(self.count)
@@ -125,12 +108,25 @@ class ReplayBuffer:
             heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
             target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
             action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
+
+            color = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'color_0.png'), -1)
+            depth = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'depth_0.exr'), -1)
+
+            obs = {
+                'color': [color],
+                'depth': [depth],
+            }
+            bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
+            pxl_size = 0.005
+            # print("Here", obs['color'][0], obs['depth'][0])
+            color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
+
             # break
         except Exception as e:
             logging.info(e)
             idx += 1
 
-        return heightmap, target_mask, action
+        return heightmap, depth_heightmap, target_mask, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
         batch_size = self.count if self.count < given_batch_size else given_batch_size
