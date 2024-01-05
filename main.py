@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import torch
 import argparse
-from trainer.train_new2 import train_fcn_net, train_regressor
+from trainer.train_new import train_fcn_net, train_regressor
 from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
@@ -54,9 +54,6 @@ if __name__ == "__main__":
     elif args.mode == 'reg':
         train_regressor(args)
 
-    elif args.mode == 'vit':
-        train_vit(args)
-    
     elif args.mode == 'eval':
         eval_agent(args)
 

@@ -71,8 +71,6 @@ def get_aligned_point_cloud(color, depth, seg, configs, bounds, pixel_size, plot
         
         full_point_cloud += point_cloud
 
-        break
-
     # full_point_cloud.estimate_normals()
     if plot:
         mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)

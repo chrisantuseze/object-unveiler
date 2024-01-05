@@ -72,19 +72,17 @@ def collect_episodic_dataset(args, params):
 
             node_id = objects_to_remove[0]
             cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
-
             print("target id:", target_id)
 
-            state = policy.state_representation(obs)
-            # action = policy.guided_exploration_old(state, processed_masks[node_id])
-
+            state, depth_heightmap = policy.get_state_representation(obs)
             try:
                 # Select action
-                action = policy.guided_exploration_old(state, processed_masks[node_id])
+                action = policy.guided_exploration_old(depth_heightmap, processed_masks[node_id])
             except Exception as e:
                 obs = env.reset()
                 print("Resetting environment:", e)
                 continue
+
             # action = grasping.compute_grasping_point_for_object1(processed_masks, node_id, policy.aperture_limits, policy.rotations, rng)
             print(action)
 
@@ -113,6 +111,7 @@ def collect_episodic_dataset(args, params):
                     'color_obs': obs['color'][1], 
                     'depth_obs': obs['depth'][1], 
                     'state': state, 
+                    'depth_heightmap': depth_heightmap,
                     'target_mask': general_utils.resize_mask(transform, processed_masks[target_id]), 
                     'obstacle_mask': general_utils.resize_mask(transform, mask),
                     'scene_mask': general_utils.resize_mask(transform, pred_mask),
