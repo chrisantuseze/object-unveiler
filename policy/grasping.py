@@ -391,3 +391,18 @@ def get_obstacles(raw_masks, target_id):
         optimal_nodes = get_optimal_target_path(edges, target_id)
     
     return optimal_nodes
+
+def get_grasped_object(processed_masks, action):
+
+    for id, mask in enumerate(processed_masks):
+        dist = get_distance(get_object_centroid(mask), (action[0], action[1]))
+        print(dist)
+        if dist < 250:
+            return id, mask
+
+    return -1, None
+
+def is_target(target_mask, object_mask):
+    dist = get_distance(get_object_centroid(target_mask), get_object_centroid(object_mask))
+    print(dist)
+    return dist < 150

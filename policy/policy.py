@@ -76,14 +76,14 @@ class Policy:
 
     def state_representation(self, obs):
         state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
-        color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+        # color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
 
-        print(color_heightmap.shape, depth_heightmap.shape)
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(state)
-        ax[1].imshow(color_heightmap)
-        ax[2].imshow(depth_heightmap)
-        plt.show()
+        # print(color_heightmap.shape, depth_heightmap.shape)
+        # fig, ax = plt.subplots(1, 3)
+        # ax[0].imshow(state)
+        # ax[1].imshow(color_heightmap)
+        # ax[2].imshow(depth_heightmap)
+        # plt.show()
 
         return state
     
@@ -228,7 +228,7 @@ class Policy:
         action[3] = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
         return action
 
-    def guided_exploration(self, state, target, sample_limits=[0.1, 0.15]):
+    def guided_exploration(self, state, sample_limits=[0.1, 0.15]):        
         obj_ids = np.argwhere(state > self.z)
 
         # Sample initial position.
@@ -238,8 +238,6 @@ class Policy:
                 dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1)
                 if sample_limits[0] / self.pxl_size < np.min(dists) < sample_limits[1] / self.pxl_size:
                     valid_pxl_map[y, x] = 255
-
-        valid_pxl_map = general_utils.resize_mask(transform, target)
 
         valid_pxls = np.argwhere(valid_pxl_map == 1)
         valid_ids = np.arange(0, valid_pxls.shape[0])
@@ -294,30 +292,27 @@ class Policy:
         action[2] = discrete_theta
         action[3] = aperture
 
-        # if not grasping.is_grasped_object(target, action):
-        #     self.guided_exploration(state, target)
-
         return action
 
     def guided_exploration_old(self, state, target_mask, sample_limits=[0.1, 0.15]):
+        resized_target = general_utils.resize_mask(transform, target_mask)
+
+        full_crop = general_utils.extract_target_crop(resized_target, state)
+        state = full_crop
+
         obj_ids = np.argwhere(state > self.z)
 
         # sample initial position
-        # valid_pxl_map = np.zeros(state.shape)
-        # for x in range(state.shape[0]):
-        #     for y in range(state.shape[1]):
-        #         dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
+        valid_pxl_map = np.zeros(state.shape)
+        for x in range(state.shape[0]):
+            for y in range(state.shape[1]):
+                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
 
-        #         if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
-        #             valid_pxl_map[y, x] = 255
-
-
-        valid_pxl_map = general_utils.resize_mask(transform, target_mask)
+                if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
+                    valid_pxl_map[y, x] = 255
 
         valid_pxl_map = np.array(valid_pxl_map, dtype=np.uint8)
-
-        # Finds the indices of yellow pixels (where the value is 1)
-        valid_pxls = np.argwhere(valid_pxl_map == 1) # gets indices of the pixels with values equal to 255
+        valid_pxls = np.argwhere(valid_pxl_map == 255) # gets indices of the pixels with values equal to 255
         valid_ids = np.arange(0, valid_pxls.shape[0]) # creates an array containing values from 0 - valid_pxls.shape[0]
 
         objects_mask = np.zeros(state.shape)
@@ -544,33 +539,12 @@ class Policy:
         resized_target = general_utils.resize_mask(transform, target_mask)
         # cropped_heightmap = state * resized_target
 
-        non_zero_indices = np.nonzero(resized_target)
-        xmin = general_utils.get_index(np.min(non_zero_indices[1]), min=True)
-        xmax = general_utils.get_index(np.max(non_zero_indices[1]), min=False)
-        ymin = general_utils.get_index(np.min(non_zero_indices[0]), min=True)
-        ymax = general_utils.get_index(np.max(non_zero_indices[0]), min=False)
-        bounding_box = (xmin, ymin, xmax, ymax)
-
-        # crop = state[ymin:ymax, xmin:xmax]
-
-        # # Resize using OpenCV
-        full_crop = np.zeros((100, 100))
-        full_crop[ymin:ymax, xmin:xmax] = state[ymin:ymax, xmin:xmax]
+        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
 
         # # Assuming img is your NumPy array representing the image
         # np.savetxt('state.txt', state, fmt='%d')
         # np.savetxt('resized_target.txt', resized_target, fmt='%d')
         # np.savetxt('full_crop.txt', full_crop, fmt='%d')
-
-        # print("Bounding Box:", bounding_box)
-        # print("crop.shape", crop.shape)
-
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(state)
-        ax[1].imshow(resized_target)
-        ax[2].imshow(full_crop)
-        plt.show()
-
         target = self.preprocess_old(full_crop)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 

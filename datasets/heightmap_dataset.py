@@ -321,7 +321,7 @@ class HeightMapDataset(data.Dataset):
         heightmap, _, target_mask, _, _, action = episode_data[-1]
 
         resized_target = general_utils.resize_mask(transform, target_mask)
-        full_crop = self.extract_target_crop(resized_target, heightmap)
+        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
         processed_target_mask, _ = general_utils.preprocess_image(full_crop, skip_transform=True)
@@ -352,24 +352,3 @@ class HeightMapDataset(data.Dataset):
     
     def __len__(self):
         return len(self.dir_ids)
-    
-    def extract_target_crop(self, resized_target, heightmap):
-        non_zero_indices = np.nonzero(resized_target)
-        xmin = general_utils.get_index(np.min(non_zero_indices[1]), min=True)
-        xmax = general_utils.get_index(np.max(non_zero_indices[1]), min=False)
-        ymin = general_utils.get_index(np.min(non_zero_indices[0]), min=True)
-        ymax = general_utils.get_index(np.max(non_zero_indices[0]), min=False)
-        # bounding_box = (xmin, ymin, xmax, ymax)
-        # print("Bounding Box:", bounding_box)
-
-        # # Resize using OpenCV
-        full_crop = np.zeros((100, 100))
-        full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
-
-        # fig, ax = plt.subplots(1, 3)
-        # ax[0].imshow(heightmap)
-        # ax[1].imshow(resized_target)
-        # ax[2].imshow(full_crop)
-        # plt.show()   
-
-        return full_crop

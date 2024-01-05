@@ -1,4 +1,4 @@
-# import open3d as o3d
+import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -331,6 +331,27 @@ def get_index(index, min):
     if min:
         return index if index < 1 else index - 2
     return index if index > 98 else index + 2
+
+def extract_target_crop(resized_target, heightmap):
+        non_zero_indices = np.nonzero(resized_target)
+        xmin = get_index(np.min(non_zero_indices[1]), min=True)
+        xmax = get_index(np.max(non_zero_indices[1]), min=False)
+        ymin = get_index(np.min(non_zero_indices[0]), min=True)
+        ymax = get_index(np.max(non_zero_indices[0]), min=False)
+        # bounding_box = (xmin, ymin, xmax, ymax)
+        # print("Bounding Box:", bounding_box)
+
+        # # Resize using OpenCV
+        full_crop = np.zeros((100, 100))
+        full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
+
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(heightmap)
+        ax[1].imshow(resized_target)
+        ax[2].imshow(full_crop)
+        plt.show()   
+
+        return full_crop
 
 
 def get_pointcloud_(color_img, depth_img, camera_intrinsics):
