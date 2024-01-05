@@ -31,7 +31,6 @@ class HeightMapDataset(data.Dataset):
     def __getitem__(self, id):
         heightmap, depth_heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
         heightmap = depth_heightmap
-        # print("depth_heightmap.shape", depth_heightmap.shape)
 
         resized_target = general_utils.resize_mask(transform, target_mask)
         full_crop = general_utils.extract_target_crop(resized_target, heightmap)
