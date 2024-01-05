@@ -76,11 +76,14 @@ def collect_episodic_dataset(args, params):
             print("target id:", target_id)
 
             state = policy.state_representation(obs)
+            # action = policy.guided_exploration_old(state, processed_masks[node_id])
+
             try:
                 # Select action
-                action = policy.guided_exploration(state, processed_masks[node_id])
-            except:
+                action = policy.guided_exploration_old(state, processed_masks[node_id])
+            except Exception as e:
                 obs = env.reset()
+                print("Resetting environment:", e)
                 continue
             # action = grasping.compute_grasping_point_for_object1(processed_masks, node_id, policy.aperture_limits, policy.rotations, rng)
             print(action)
