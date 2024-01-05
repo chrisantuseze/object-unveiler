@@ -119,13 +119,14 @@ class ReplayBuffer:
             bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
             pxl_size = 0.005
             # print("Here", obs['color'][0], obs['depth'][0])
-            color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
+            # color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
 
             # break
         except Exception as e:
             logging.info(e)
             idx += 1
 
+        depth_heightmap = None
         return heightmap, depth_heightmap, target_mask, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
