@@ -96,12 +96,6 @@ class ReplayBuffer:
 
         pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 
-        pickle.dump(transition['depth_heightmap'], open(os.path.join(folder_name, 'depth_heightmap'), 'wb'))
-        pickle.dump(transition['color_heightmap'], open(os.path.join(folder_name, 'color_heightmap'), 'wb'))
-        
-        # cv2.imwrite(os.path.join(folder_name, 'depth_heightmap.exr'), transition['depth_heightmap'])
-        # cv2.imwrite(os.path.join(folder_name, 'color_heightmap.exr'), transition['color_heightmap'])
-
         self.buffer_ids.append(self.count)
         if self.count < self.buffer_size:
             self.count += 1
@@ -111,19 +105,11 @@ class ReplayBuffer:
             heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
             target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
             action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
-
-
-            depth_heightmap = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'depth_heightmap'), 'rb'))
-            color_heightmap = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'color_heightmap'), 'rb'))
-            
-            # depth_heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'depth_heightmap.exr'), -1)
-            # color_heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'color_heightmap.png'), -1)
-
         except Exception as e:
             logging.info(e)
             idx += 1
 
-        return heightmap, depth_heightmap, target_mask, action
+        return heightmap, target_mask, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
         batch_size = self.count if self.count < given_batch_size else given_batch_size

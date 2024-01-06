@@ -343,11 +343,11 @@ def extract_target_crop(resized_target, heightmap):
         full_crop = np.zeros((100, 100))
         full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
 
-        # fig, ax = plt.subplots(1, 3)
-        # ax[0].imshow(heightmap)
-        # ax[1].imshow(resized_target)
-        # ax[2].imshow(full_crop)
-        # plt.show()   
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(heightmap)
+        ax[1].imshow(resized_target)
+        ax[2].imshow(full_crop)
+        plt.show()   
 
         return full_crop
 
