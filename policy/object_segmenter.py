@@ -23,7 +23,7 @@ class ObjectSegmenter:
     }
     """
     def __init__(self) -> None:
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cpu") #torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         self.mask_model = get_model_instance_segmentation(2)
         self.mask_model.load_state_dict(torch.load("downloads/maskrcnn.pth", map_location=self.device))
