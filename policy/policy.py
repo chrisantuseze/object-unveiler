@@ -302,7 +302,13 @@ class Policy:
         resized_target = general_utils.resize_mask(transform, target_mask)
 
         full_crop = general_utils.extract_target_crop(resized_target, state)
-        state = full_crop
+        if np.all(full_crop == 0):
+            r = np.random.randint(0, 100)
+            cv2.imwrite(os.path.join(TRAIN_DIR, f"state_{r}.png"), state)
+            cv2.imwrite(os.path.join(TRAIN_DIR, f"resized_target_{r}.png"), resized_target)
+            state = resized_target
+        else:
+            state = full_crop
 
         obj_ids = np.argwhere(state > self.z)
 
@@ -311,6 +317,8 @@ class Policy:
         for x in range(state.shape[0]):
             for y in range(state.shape[1]):
                 dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1) # gets the distances of the pixels (objs) to the vertical pos of the hand
+                if len(dists) < 1:
+                    continue
 
                 if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size: # pixel/obj with shortest distance gets picked
                     valid_pxl_map[y, x] = 255

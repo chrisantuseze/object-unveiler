@@ -75,6 +75,7 @@ def collect_episodic_dataset(args, params):
             print("target id:", target_id)
 
             state, depth_heightmap = policy.get_state_representation(obs)
+            # action = policy.guided_exploration_old(depth_heightmap, processed_masks[node_id])
             try:
                 # Select action
                 action = policy.guided_exploration_old(depth_heightmap, processed_masks[node_id])

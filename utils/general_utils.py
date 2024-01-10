@@ -339,7 +339,6 @@ def extract_target_crop(resized_target, heightmap):
         # bounding_box = (xmin, ymin, xmax, ymax)
         # print("Bounding Box:", bounding_box)
 
-        # # Resize using OpenCV
         full_crop = np.zeros((100, 100))
         full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
 
