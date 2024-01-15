@@ -1,5 +1,6 @@
 import os
 import random
+from datasets.unveiler_datasets import UnveilerDataset
 from policy.models_target import Regressor
 from policy.models_target import ResFCN
 
@@ -48,10 +49,10 @@ def train_fcn_net(args):
     data_length = (len(val_ids)//args.batch_size) * args.batch_size
     val_ids = val_ids[:data_length]
     
-    train_dataset = HeightMapDataset(args, train_ids)
+    train_dataset = UnveilerDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True, shuffle=True)
 
-    val_dataset = HeightMapDataset(args, val_ids)
+    val_dataset = UnveilerDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))

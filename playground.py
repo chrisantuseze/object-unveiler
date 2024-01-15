@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import zipfile
 
-with zipfile.ZipFile("ppg-dataset.zip", 'r') as zip_ref:
-    zip_ref.extractall("ppg-dataset")
+with zipfile.ZipFile("new-proc-ou-datasets.zip", 'r') as zip_ref:
+    zip_ref.extractall("new-ou-dataset")
 
 
 # import torch
