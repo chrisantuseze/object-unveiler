@@ -312,9 +312,7 @@ class ResFCN(nn.Module):
             # compute rotated feature maps            
             interm_grasp_depth_feat = self.predict(batch_rot_depth)
             interm_grasp_target_feat = self.predict(batch_rot_target)
-
             interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
-            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # undo rotation
             affine_after = torch.zeros((self.nr_rotations, 2, 3))
@@ -330,14 +328,8 @@ class ResFCN(nn.Module):
             flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
                                             interm_grasp_feat.data.size(), align_corners=True)
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
-
-            B, C, H, W = out_prob.shape
-
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
-            # out_prob = out_prob.squeeze(1)
-            # print(out_prob.shape)
-            # out_prob = out_prob.reshape(B, 1, H, W)
-
+            
             return out_prob
         
         else:
@@ -365,9 +357,7 @@ class ResFCN(nn.Module):
             # Compute intermediate features
             interm_grasp_depth_feat = self.predict(rotate_depth)
             interm_grasp_target_feat = self.predict(rotate_target_mask)
-
             interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
-            # prob = torch.mean(prob, dim=1, keepdim=True)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
@@ -384,19 +374,8 @@ class ResFCN(nn.Module):
 
             # Forward pass through branches, undo rotation on output predictions, upsample results
             out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
-
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
-            # out_prob = out_prob.squeeze(1)
-            # out_prob = out_prob.reshape(4, 1, 144, 144)
-
-            # print("out_prob.shape:", out_prob.shape)
-
-            # Image-wide softmax
-            # output_shape = out_prob.shape
-            # out_prob = out_prob.view(output_shape[0], -1)
-            # out_prob = torch.softmax(out_prob, dim=1)
-            # out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-
+            
             return out_prob
     
     def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):

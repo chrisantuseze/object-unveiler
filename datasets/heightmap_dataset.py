@@ -28,7 +28,7 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__(self, id):
+    def __getitem__old1(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
         resized_target = general_utils.resize_mask(transform, target_mask)
@@ -90,6 +90,39 @@ class HeightMapDataset(data.Dataset):
         
         return padded_heightmap, padded_target_mask, rot_id, label
 
+    # single - input, single - output for new-ou-dataset with target action
+    def __getitem__(self, id):
+        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
+        heightmap, _, target_mask, _, _, action = episode_data[-1]
+
+        resized_target = general_utils.resize_mask(transform, target_mask)
+        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
+
+        processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
+        processed_target_mask, _ = general_utils.preprocess_image(full_crop, skip_transform=True)
+
+        # convert theta to range 0-360 and then compute the rot_id
+        angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
+        rot_id = round(angle / (2 * np.pi / 16))
+
+        action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
+        # action_area[int(action[1]), int(action[0])] = 1.0
+
+        if int(action[1]) > 99 or int(action[0]):
+            i = min(int(action[1]) * 0.95, 99)
+            j = min(int(action[0]) * 0.95, 99)
+        else:
+            i = action[1]
+            j = action[0]
+
+        action_area[int(i), int(j)] = 1.0
+        
+        label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2]))
+        label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
+                 padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
+        
+        label = np.array(label)
+        return processed_heightmap, processed_target_mask, rot_id, label
     
     def __len__(self):
         return len(self.dir_ids)

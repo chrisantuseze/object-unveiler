@@ -17,7 +17,7 @@ import policy.grasping2 as grasping2
 
 import utils.logger as logging
 
-# multi output
+# multi output using attn
 def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
@@ -243,7 +243,7 @@ def run_episode_old0_(policy: Policy, env: Environment, segmenter: ObjectSegment
     logging.info('--------')
     return episode_data, success_count
 
-# single output with heuristics for evaluating direct target grasping 
+# single output for evaluating direct target grasping 
 def run_episode_old1(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()

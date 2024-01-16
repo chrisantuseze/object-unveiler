@@ -544,7 +544,6 @@ class Policy:
         return actions
     
     def exploit_old(self, state, target_mask):
-
         # find optimal position and orientation
         heightmap = self.preprocess_old(state)
 
@@ -553,10 +552,6 @@ class Policy:
 
         full_crop = general_utils.extract_target_crop(resized_target, state)
 
-        # # Assuming img is your NumPy array representing the image
-        # np.savetxt('state.txt', state, fmt='%d')
-        # np.savetxt('resized_target.txt', resized_target, fmt='%d')
-        # np.savetxt('full_crop.txt', full_crop, fmt='%d')
         target = self.preprocess_old(full_crop)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
