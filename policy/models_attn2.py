@@ -145,9 +145,9 @@ class ResFCN(nn.Module):
         # self.show_images2(obj_masks)
         return obj_features
     
-    # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
-    def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
         # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
@@ -193,11 +193,11 @@ class ResFCN(nn.Module):
             objs.append(x)
 
         #  ############## This is for VIZ ####################
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objs.append(raw_x)
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objs.append(raw_x)
 
-        raw_objs = torch.stack(raw_objs)
+        # raw_objs = torch.stack(raw_objs)
         #  ###################################################
 
         overlapped_objs = torch.stack(objs)
@@ -205,8 +205,8 @@ class ResFCN(nn.Module):
 
         ########################### VIZ ################################
 
-        # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None)
+        # # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
+        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None)
 
         ################################################################
 

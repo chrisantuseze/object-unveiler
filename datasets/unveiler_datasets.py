@@ -114,9 +114,9 @@ class UnveilerDataset(data.Dataset):
         # pad object masks
         processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks(_processed_obj_masks, object_masks, optimal_nodes)
 
-        # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
+        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
 
-        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
+        # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
     
     def __len__(self):
         return len(self.dir_ids)
