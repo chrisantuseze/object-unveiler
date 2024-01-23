@@ -1,4 +1,4 @@
-# import open3d as o3d
+import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -277,34 +277,134 @@ def pad_label(labels):
 
     return labels
 
-def preprocess_data(data, root=5):
+
+def postprocess_single(q_maps, padding_width):
     """
-    Pre-process data (padding and normalization)
+    Remove extra padding
     """
-    # logging.info("preprocess() - data.shape:", data.shape)
 
-    # add extra padding (to handle rotations inside the network)
-    diagonal_length_data = float(data.shape[0]) * np.sqrt(root)
-    diagonal_length_data = np.ceil(diagonal_length_data / 16) * 16
-    padding_width_data = int((diagonal_length_data - data.shape[0]) / 2)
-    padded_data = np.pad(data, padding_width_data, 'constant', constant_values=-0.01)
+    w = int(q_maps.shape[2] - 2 * padding_width)
+    h = int(q_maps.shape[3] - 2 * padding_width)
+    remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], w, h))
 
-    # logging.info("preprocess() - padded_data.shape:", padded_data.shape)
+    for i in range(q_maps.shape[0]):
+        for j in range(q_maps.shape[1]):
 
-    # normalize data
+            # remove extra padding
+            q_map = q_maps[i, j, padding_width:int(q_maps.shape[2] - padding_width),
+                            padding_width:int(q_maps.shape[3] - padding_width)]
+            
+            remove_pad[i][j] = q_map.detach().cpu().numpy()
+
+    return remove_pad
+
+def postprocess_multi(q_maps, padding_width):
+    """
+    Remove extra padding
+    """
+
+    w = int(q_maps.shape[3] - 2 * padding_width)
+    h = int(q_maps.shape[4] - 2 * padding_width)
+
+    remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], q_maps.shape[2], w, h))
+
+    for i in range(q_maps.shape[0]):
+        for j in range(q_maps.shape[1]):
+            for k in range(q_maps.shape[2]):
+                # remove extra padding
+                q_map = q_maps[i, j, k, padding_width:int(q_maps.shape[3] - padding_width),
+                            padding_width:int(q_maps.shape[4] - padding_width)]
+                
+                remove_pad[i][j][k] = q_map.detach().cpu().numpy()
+
+    return remove_pad
+
+def preprocess_aperture_image(state, p1, theta, crop_size, plot=False):
+    """
+    Add extra padding, rotate image so the push always points to the right, crop around
+    the initial push (something like attention) and finally normalize the cropped image.
+    """
+
+    # add extra padding (to handle rotations inside network)
+    diag_length = float(state.shape[0]) * np.sqrt(2)
+    diag_length = np.ceil(diag_length/16) * 16
+    padding_width = int((diag_length - state.shape[0])/2)
+    depth_heightmap = np.pad(state, padding_width, 'constant')
+    padded_shape = depth_heightmap.shape
+
+    p1 += padding_width
+    action_theta = -((theta + (2 * np.pi)) % (2 * np.pi))
+    
+    # rotate image (push always on the right)
+    rot = cv2.getRotationMatrix2D((int(padded_shape[0] / 2), int(padded_shape[1] / 2)),
+                                    action_theta * 180 / np.pi, 1.0)
+    rotated_heightmap = cv2.warpAffine(depth_heightmap, rot, (padded_shape[0], padded_shape[1]))
+
+    # compute the position of p1 on the rotated heightmap
+    rotated_pt = np.dot(rot, (p1[0], p1[1], 1.0))
+    rotated_pt = (int(rotated_pt[0]), int(rotated_pt[1]))
+
+        # crop heightmap
+    cropped_map = np.zeros((2 * crop_size, 2 * crop_size), dtype=np.float32)
+    y_start = max(0, rotated_pt[1] - crop_size)
+    y_end = min(padded_shape[0], rotated_pt[1] + crop_size)
+    x_start = rotated_pt[0]
+    x_end = min(padded_shape[0], rotated_pt[0] + 2 * crop_size)
+    cropped_map[0:y_end - y_start, 0:x_end - x_start] = rotated_heightmap[y_start: y_end, x_start: x_end]
+
+    # logging.info( action['opening']['min_width'])
+    if plot:
+        p2 = np.array([0, 0])
+        p2[0] = p1[0] + 20 * np.cos(theta)
+        p2[1] = p1[1] - 20 * np.sin(theta)
+
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(depth_heightmap)
+        ax[0].plot(p1[0], p1[1], 'o', 2)
+        ax[0].plot(p2[0], p2[1], 'x', 2)
+        ax[0].arrow(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1], width=1)
+
+        rotated_p2 = np.array([0, 0])
+        rotated_p2[0] = rotated_pt[0] + 20 * np.cos(0)
+        rotated_p2[1] = rotated_pt[1] - 20 * np.sin(0)
+        ax[1].imshow(rotated_heightmap)
+        ax[1].plot(rotated_pt[0], rotated_pt[1], 'o', 2)
+        ax[1].plot(rotated_p2[0], rotated_p2[1], 'x', 2)
+        ax[1].arrow(rotated_pt[0], rotated_pt[1], rotated_p2[0] - rotated_pt[0], rotated_p2[1] - rotated_pt[1],
+                    width=1)
+
+        ax[2].imshow(cropped_map)
+        plt.show()
+
+    # normalize maps 
     image_mean = 0.01
     image_std = 0.03
-    padded_data = (padded_data - image_mean)/image_std
+    cropped_map = (cropped_map - image_mean)/image_std
+    cropped_map = np.expand_dims(cropped_map, axis=0)
 
-    # add extra channel
-    # padded_data = np.expand_dims(padded_data, axis=0)
+    three_channel_img = np.zeros((3, cropped_map.shape[1], cropped_map.shape[2]))
+    three_channel_img[0], three_channel_img[1], three_channel_img[2] = cropped_map, cropped_map, cropped_map
+    
+    p1 -= padding_width
+    
+    return three_channel_img
 
-    # ensure data is float32 to prevent 'TypeError: Input type float64 is not supported' error
-    padded_data = padded_data.astype(np.float32)
+def preprocess_heightmap(heightmap):
+    return preprocess_image(heightmap, skip_transform=True)
 
-    return padded_data, padding_width_data
+def preprocess_target(target, state=None):
+    if state is not None:
+        resized_target = resize_mask(transform, target)
+        full_crop = extract_target_crop(resized_target, state)
+        return preprocess_image(full_crop, skip_transform=True)[0]
+
+    return preprocess_image(target, skip_transform=False)[0]
 
 def preprocess_image(image, skip_transform=False):
+    """
+        Pre-process heightmap (padding and normalization)
+    """
+    
     if not skip_transform:
         image = resize_mask(transform, image)
 

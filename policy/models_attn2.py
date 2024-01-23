@@ -75,16 +75,6 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
 
-        # Learnable projection matrices  
-        # self.target_proj = nn.Linear(self.final_conv_units, 256)  
-        # self.obj_proj = nn.Linear(self.final_conv_units, 256) 
-
-        # self.mlp = nn.Sequential(
-        #     nn.Linear(self.final_conv_units, 256),
-        #     nn.ReLU(), 
-        #     nn.Linear(256, 1)
-        # ) 
-
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
@@ -138,7 +128,6 @@ class ResFCN(nn.Module):
     
     def preprocess_input(self, scene_masks, object_masks):
         B, H, W, C = scene_masks.shape
-
         obj_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
 
         for i in range(B):
@@ -156,9 +145,9 @@ class ResFCN(nn.Module):
         # self.show_images2(obj_masks)
         return obj_features
     
-    def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
-    # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, optimal_nodes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
         # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
@@ -204,11 +193,11 @@ class ResFCN(nn.Module):
             objs.append(x)
 
         #  ############## This is for VIZ ####################
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objs.append(raw_x)
+            raw_x = raw_object_masks[i, idx]
+            # print("raw_x.shape", raw_x.shape)
+            raw_objs.append(raw_x)
 
-        # raw_objs = torch.stack(raw_objs)
+        raw_objs = torch.stack(raw_objs)
         #  ###################################################
 
         overlapped_objs = torch.stack(objs)
@@ -217,6 +206,7 @@ class ResFCN(nn.Module):
         ########################### VIZ ################################
 
         # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
+        self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None)
 
         ################################################################
 
@@ -415,8 +405,10 @@ class ResFCN(nn.Module):
 
         return top_indices, top_scores
     
-    def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
-        fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+    # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None):
+        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
 
         for i in range(obj_masks.shape[0]):
             if obj_masks.shape[0] == 1:

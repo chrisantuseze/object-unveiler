@@ -79,20 +79,18 @@ def train_fcn_net(args):
             target_mask = batch[2].to(args.device, dtype=torch.float32)
             object_masks = batch[3].to(args.device)
 
-            # raw_x = batch[4].to(args.device)
-            # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-            # raw_object_masks = batch[6].to(args.device)
-            # optimal_nodes = batch[7].to(args.device)
+            raw_x = batch[4].to(args.device)
+            raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+            raw_object_masks = batch[6].to(args.device)
+            rotations = batch[7]
+            y = batch[8].to(args.device, dtype=torch.float32)
 
-            # rotations = batch[8]
-            # y = batch[9].to(args.device, dtype=torch.float32)
-
-            rotations = batch[4]
-            y = batch[5].to(args.device, dtype=torch.float32)
+            # rotations = batch[4]
+            # y = batch[5].to(args.device, dtype=torch.float32)
 
             pred = model(
                 x, scene, target_mask, object_masks, 
-                # raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
+                raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
 
@@ -100,27 +98,11 @@ def train_fcn_net(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
-            # try:
-            #     optimizer.zero_grad()
-            #     loss.backward()
-            #     optimizer.step()
-            
-            # except Exception as e:
-            #     logging.info(torch.min(y), torch.max(y))
-            #     logging.info("Exception:", e)
-            #     logging.info(torch.min(pred), torch.max(pred))
-
-            #     optimizer.zero_grad()
-            #     loss.backward()
-            #     optimizer.step()
-
-            # debug_params(model)
 
             grad_norm = calculate_gradient_norm(model) 
 
@@ -136,20 +118,18 @@ def train_fcn_net(args):
                 target_mask = batch[2].to(args.device, dtype=torch.float32)
                 object_masks = batch[3].to(args.device)
 
-                # raw_x = batch[4].to(args.device)
-                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-                # raw_object_masks = batch[6].to(args.device)
-                # optimal_nodes = batch[7].to(args.device)
+                raw_x = batch[4].to(args.device)
+                raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+                raw_object_masks = batch[6].to(args.device)
+                rotations = batch[7]
+                y = batch[8].to(args.device, dtype=torch.float32)
 
-                # rotations = batch[8]
-                # y = batch[9].to(args.device, dtype=torch.float32)
-
-                rotations = batch[4]
-                y = batch[5].to(args.device, dtype=torch.float32)
+                # rotations = batch[4]
+                # y = batch[5].to(args.device, dtype=torch.float32)
 
                 pred = model(
                     x, scene, target_mask, object_masks, 
-                    # raw_x, raw_target_mask, raw_object_masks, optimal_nodes,
+                    raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
                 loss = criterion(pred, y)

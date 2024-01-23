@@ -1,7 +1,7 @@
 import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
-from policy.models_target import Regressor, ResFCN
+# from policy.models_target import Regressor, ResFCN
 from policy.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -38,8 +38,8 @@ class Policy:
         self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
-        self.fcn = ResFCN().to(self.device)
-        # self.fcn = ResFCN(args).to(self.device)
+        # self.fcn = ResFCN().to(self.device)
+        self.fcn = ResFCN(args).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
@@ -90,139 +90,6 @@ class Policy:
         # plt.show()
 
         return state, depth_heightmap
-    
-    def preprocess_old(self, state):
-        """
-        Pre-process heightmap (padding and normalization)
-        """
-        # Pad heightmap.
-        diagonal_length = float(state.shape[0]) * np.sqrt(2)
-        diagonal_length = np.ceil(diagonal_length/16) * 16
-        self.padding_width = int((diagonal_length - state.shape[0])/2)
-        padded_heightmap = np.pad(state, self.padding_width, 'constant', constant_values=-0.01)
-
-        # Normalize heightmap
-        image_mean = 0.01
-        image_std = 0.03
-        padded_heightmap = (padded_heightmap - image_mean)/image_std
-
-        # Add extra channel
-        padded_heightmap = np.expand_dims(padded_heightmap, axis=0)
-
-        padded_heightmap = padded_heightmap.astype(np.float32)
-        return padded_heightmap
-    
-    
-    def postprocess_old(self, q_maps):
-        """
-        Remove extra padding
-        """
-
-        w = int(q_maps.shape[2] - 2 * self.padding_width)
-        h = int(q_maps.shape[3] - 2 * self.padding_width)
-        remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], w, h))
-
-        for i in range(q_maps.shape[0]):
-            for j in range(q_maps.shape[1]):
-
-                # remove extra padding
-                q_map = q_maps[i, j, self.padding_width:int(q_maps.shape[2] - self.padding_width),
-                               self.padding_width:int(q_maps.shape[3] - self.padding_width)]
-                
-                remove_pad[i][j] = q_map.detach().cpu().numpy()
-
-        return remove_pad
-    
-    def postprocess(self, q_maps):
-        """
-        Remove extra padding
-        """
-
-        w = int(q_maps.shape[3] - 2 * self.padding_width)
-        h = int(q_maps.shape[4] - 2 * self.padding_width)
-
-        remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], q_maps.shape[2], w, h))
-
-        for i in range(q_maps.shape[0]):
-            for j in range(q_maps.shape[1]):
-                for k in range(q_maps.shape[2]):
-                    # remove extra padding
-                    q_map = q_maps[i, j, k, self.padding_width:int(q_maps.shape[3] - self.padding_width),
-                                self.padding_width:int(q_maps.shape[4] - self.padding_width)]
-                    
-                    remove_pad[i][j][k] = q_map.detach().cpu().numpy()
-
-        return remove_pad
-    
-    def preprocess_aperture_image(self, state, p1, theta, plot=False):
-        """
-        Add extra padding, rotate image so the push always points to the right, crop around
-        the initial push (something like attention) and finally normalize the cropped image.
-        """
-
-        # add extra padding (to handle rotations inside network)
-        diag_length = float(state.shape[0]) * np.sqrt(2)
-        diag_length = np.ceil(diag_length/16) * 16
-        padding_width = int((diag_length - state.shape[0])/2)
-        depth_heightmap = np.pad(state, padding_width, 'constant')
-        padded_shape = depth_heightmap.shape
-
-        p1 += padding_width
-        action_theta = -((theta + (2 * np.pi)) % (2 * np.pi))
-        
-        # rotate image (push always on the right)
-        rot = cv2.getRotationMatrix2D((int(padded_shape[0] / 2), int(padded_shape[1] / 2)),
-                                      action_theta * 180 / np.pi, 1.0)
-        rotated_heightmap = cv2.warpAffine(depth_heightmap, rot, (padded_shape[0], padded_shape[1]))
-
-        # compute the position of p1 on the rotated heightmap
-        rotated_pt = np.dot(rot, (p1[0], p1[1], 1.0))
-        rotated_pt = (int(rotated_pt[0]), int(rotated_pt[1]))
-
-         # crop heightmap
-        cropped_map = np.zeros((2 * self.crop_size, 2 * self.crop_size), dtype=np.float32)
-        y_start = max(0, rotated_pt[1] - self.crop_size)
-        y_end = min(padded_shape[0], rotated_pt[1] + self.crop_size)
-        x_start = rotated_pt[0]
-        x_end = min(padded_shape[0], rotated_pt[0] + 2 * self.crop_size)
-        cropped_map[0:y_end - y_start, 0:x_end - x_start] = rotated_heightmap[y_start: y_end, x_start: x_end]
-
-        # logging.info( action['opening']['min_width'])
-        if plot:
-            p2 = np.array([0, 0])
-            p2[0] = p1[0] + 20 * np.cos(theta)
-            p2[1] = p1[1] - 20 * np.sin(theta)
-
-            fig, ax = plt.subplots(1, 3)
-            ax[0].imshow(depth_heightmap)
-            ax[0].plot(p1[0], p1[1], 'o', 2)
-            ax[0].plot(p2[0], p2[1], 'x', 2)
-            ax[0].arrow(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1], width=1)
-
-            rotated_p2 = np.array([0, 0])
-            rotated_p2[0] = rotated_pt[0] + 20 * np.cos(0)
-            rotated_p2[1] = rotated_pt[1] - 20 * np.sin(0)
-            ax[1].imshow(rotated_heightmap)
-            ax[1].plot(rotated_pt[0], rotated_pt[1], 'o', 2)
-            ax[1].plot(rotated_p2[0], rotated_p2[1], 'x', 2)
-            ax[1].arrow(rotated_pt[0], rotated_pt[1], rotated_p2[0] - rotated_pt[0], rotated_p2[1] - rotated_pt[1],
-                        width=1)
-
-            ax[2].imshow(cropped_map)
-            plt.show()
-
-        # normalize maps 
-        image_mean = 0.01
-        image_std = 0.03
-        cropped_map = (cropped_map - image_mean)/image_std
-        cropped_map = np.expand_dims(cropped_map, axis=0)
-
-        three_channel_img = np.zeros((3, cropped_map.shape[1], cropped_map.shape[2]))
-        three_channel_img[0], three_channel_img[1], three_channel_img[2] = cropped_map, cropped_map, cropped_map
-        
-        p1 -= padding_width
-        
-        return three_channel_img
     
     def random_sample(self, state):
         action = np.zeros((4,))
@@ -372,48 +239,15 @@ class Policy:
     
     def exploit(self, state, target_mask):
 
-        # data_transform = transforms.Compose([
-        #     transforms.ToPILImage(),
-        #     transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
-        #     transforms.ToTensor(),
-        #     # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        #     transforms.Normalize(mean=(0.449), std=(0.226))
-        # ])
-        
-        # # find optimal position and orientation
-        # heightmap, self.padding_width = utils.preprocess_data(state)
-        # # x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-
-        # x = data_transform(heightmap).to(self.device)
-        # x = x.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
-
-        # # Resize the image using seam carving to match with the heightmap
-        # resized_target = utils.resize_mask(transform, target_mask)
-        # target, self.padding_width = utils.preprocess_data(resized_target) # this is might not be necessary
-
-        # # target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-        # target = data_transform(target).to(self.device)
-        # target = target.view(1, 1, IMAGE_SIZE, IMAGE_SIZE)
-
-        # # combine the two features into a list
-        # sequence = [(x, target, target)]
-        # # sequence = [(x, target)]
-        
-        # out_prob = self.fcn(sequence, is_volatile=True)
-        # logging.info("out_prob.shape:", out_prob.shape)
-
         # find optimal position and orientation
-        heightmap = self.preprocess_old(state)
+        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        target = general_utils.preprocess_target(target_mask)
 
-        resized_target = general_utils.resize_mask(transform, target_mask)
-        target = self.preprocess_old(resized_target)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         out_prob = self.fcn(x, target, is_volatile=True)
-
-        out_prob = self.postprocess(out_prob)
+        out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
         best_actions = []
         actions = []
@@ -427,7 +261,7 @@ class Policy:
             theta = best_actions[i][0] * 2 * np.pi/self.rotations
 
             # find optimal aperture
-            aperture_img = self.preprocess_aperture_image(state, p1, theta)
+            aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.crop_size)
             x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
             aperture = self.reg(x).detach().cpu().numpy()[0, 0]
         
@@ -450,22 +284,16 @@ class Policy:
 
         return actions
     
-    def get_inputs(self, color_image, target_mask):
+    def get_inputs(self, state, color_image, target_mask):
         processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_image, plot=True)
         # print("processed_masks.shape", processed_masks[0].shape)
         # print("pred_mask.shape", pred_mask.shape)
 
-        # print("pred_mask.shape", pred_mask.shape)
-        pred_mask = general_utils.resize_mask(transform, pred_mask)
-
-        processed_pred_mask, _ = general_utils.preprocess_image(pred_mask)
+        processed_pred_mask = general_utils.preprocess_target(pred_mask)
         processed_pred_mask = torch.FloatTensor(processed_pred_mask).unsqueeze(0).to(self.device)
         # print("processed_pred_mask.shape", processed_pred_mask.shape)
 
-        # print("target_mask.shape", target_mask.shape)
-        target_mask = general_utils.resize_mask(transform, target_mask)
-
-        processed_target, _ = general_utils.preprocess_image(target_mask)
+        processed_target = general_utils.preprocess_target(target_mask, state)
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
         # print("processed_target.shape", processed_target.shape)
 
@@ -475,7 +303,7 @@ class Policy:
             processed_mask = general_utils.resize_mask(transform, mask)
             raw_obj_masks.append(processed_mask)
 
-            processed_mask, _ = general_utils.preprocess_image(processed_mask)
+            processed_mask = general_utils.preprocess_target(mask, state)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
@@ -494,11 +322,11 @@ class Policy:
               raw_pred_mask, raw_target_mask, raw_obj_masks
     
     def exploit_attn(self, state, color_image, target_mask):
-
-        processed_pred_mask, processed_target, processed_obj_masks, raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(color_image, target_mask)
+        processed_pred_mask, processed_target, processed_obj_masks,\
+        raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(state, color_image, target_mask)
 
         # find optimal position and orientation
-        heightmap = self.preprocess_old(state)
+        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         out_prob = self.fcn(x,
@@ -506,7 +334,7 @@ class Policy:
             # raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
-        out_prob = self.postprocess(out_prob)
+        out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
         best_actions = []
         actions = []
@@ -520,7 +348,7 @@ class Policy:
             theta = best_actions[i][0] * 2 * np.pi/self.rotations
 
             # find optimal aperture
-            aperture_img = self.preprocess_aperture_image(state, p1, theta)
+            aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.crop_size)
             x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
             aperture = self.reg(x).detach().cpu().numpy()[0, 0]
         
@@ -545,27 +373,21 @@ class Policy:
     
     def exploit_old(self, state, target_mask):
         # find optimal position and orientation
-        heightmap = self.preprocess_old(state)
-
-        resized_target = general_utils.resize_mask(transform, target_mask)
-        # cropped_heightmap = state * resized_target
-
-        full_crop = general_utils.extract_target_crop(resized_target, state)
-
-        target = self.preprocess_old(full_crop)
-        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
-
+        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
+        target = general_utils.preprocess_target(target_mask, state)
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
         out_prob = self.fcn(x, target, is_volatile=True)
-        out_prob = self.postprocess_old(out_prob)
+        out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
         p1 = np.array([best_action[3], best_action[2]])
         theta = best_action[0] * 2 * np.pi/self.rotations
 
         # find optimal aperture
-        aperture_img = self.preprocess_aperture_image(state, p1, theta)
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
         x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
         aperture = self.reg(x).detach().cpu().numpy()[0, 0]
        
@@ -640,7 +462,7 @@ class Policy:
         self.fcn_optimizer.step()
 
         # update regression network
-        aperture_img = self.preprocess_aperture_image(state, p1=np.array([action[0], action[1]]))
+        aperture_img = general_utils.preprocess_aperture_image(state, p1=np.array([action[0], action[1]]), crop_size=self.crop_size)
         x = torch.FloatTensor(aperture_img, theta=action[2]).unsqueeze(0).to(self.device)
         
         # normalize aperture to range 0-1
