@@ -52,7 +52,6 @@ class ReplayBuffer:
         data_list = []
         for data in episode_data:
             heightmap = data['state']
-            depth_heightmap = data['depth_heightmap']
             target_mask = data['target_mask']
             action = data['action']
 

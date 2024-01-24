@@ -75,6 +75,7 @@ def modify_episode2(episode_dir, index):
             'color_obs': data['color_obs'],
             'depth_obs': data['depth_obs'],
             'state': data['state'], 
+            'depth_heightmap': data['depth_heightmap'],
             'target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
             'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
             'scene_mask': data['scene_mask'],
