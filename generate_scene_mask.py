@@ -56,6 +56,38 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
+def modify_episode2(episode_dir, index):
+    try:
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
+    except Exception as e:
+        logging.info(e, "- Failed episode:", episode_dir)
+
+    episode_data_list = []
+    for data in episode_data:
+        heightmap = data['state']
+        object_masks = data['object_masks']
+
+        new_masks = []
+        for mask in object_masks:
+            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
+
+        transition = {
+            'color_obs': data['color_obs'],
+            'depth_obs': data['depth_obs'],
+            'state': data['state'], 
+            'target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
+            'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
+            'scene_mask': data['scene_mask'],
+            'object_masks': new_masks,
+            'action': data['action'], 
+            'label': data['label'],
+        }
+        episode_data_list.append(transition)
+
+    memory.store_episode(episode_data_list)
+    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
+
+
 def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
     heightmap = cv2.imread(os.path.join(dataset_dir, transition_dir, 'heightmap.exr'), -1)
     target_mask = cv2.imread(os.path.join(dataset_dir, transition_dir, 'target_mask.png'), -1)
@@ -101,16 +133,18 @@ if __name__ == "__main__":
     episode_dirs = os.listdir(dataset_dir)
     
     for file_ in episode_dirs:
-        # if not file_.startswith("episode"):
-        #     print(file_)
-        #     episode_dirs.remove(file_)
-
-        if not file_.startswith("transition"):
+        if not file_.startswith("episode"):
+            print(file_)
             episode_dirs.remove(file_)
+
+        # if not file_.startswith("transition"):
+        #     episode_dirs.remove(file_)
 
     for i, episode_dir in enumerate(episode_dirs):
         #  modify_episode(memory, episode_dir, i)
-        modify_transitions(memory, episode_dir, i)
+        # modify_transitions(memory, episode_dir, i)
+
+        modify_episode2(episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
