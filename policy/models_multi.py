@@ -101,8 +101,8 @@ class ResFCN(nn.Module):
                 out_probs[n] = out_prob
 
         else:
-            out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
             B, N, C, H, W = depth_heightmaps.shape
+            out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
             for batch in range(B):
                 for n, target_mask in enumerate(target_masks[batch]):
                     # print("specific_rotation[n][batch]", specific_rotation[n][batch])
