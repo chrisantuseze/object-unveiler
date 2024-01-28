@@ -2,15 +2,10 @@ import torch
 import numpy as np
 import cv2
 import os
-import imutils
 from torchvision.transforms import functional as TF
-# from skimage.transform import resize
 
 from vision.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
-import utils.logger as logging
-import utils.general_utils as general_utils
-from skimage import transform
 
 class ObjectSegmenter:
     """
@@ -36,7 +31,6 @@ class ObjectSegmenter:
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
-
         image = TF.to_tensor(image)
         prediction = self.mask_model([image.to(self.device)])[0]
         processed_masks = []

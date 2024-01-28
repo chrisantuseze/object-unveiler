@@ -331,7 +331,7 @@ class Policy:
 
         out_prob = self.fcn(x,
             processed_pred_mask, processed_target, processed_obj_masks, 
-            # raw_pred_mask, raw_target_mask, raw_processed_mask, 
+            raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
         out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)

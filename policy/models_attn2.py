@@ -4,12 +4,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
-from collections import OrderedDict
-from policy.object_segmenter import ObjectSegmenter
-import policy.grasping as grasping
-import utils.general_utils as general_utils
 import matplotlib.pyplot as plt
-import utils.logger as logging
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -187,9 +182,7 @@ class ResFCN(nn.Module):
         raw_objs = []
         for i in range(B):
             idx = top_indices[i] 
-
-            x = object_masks[i, idx]
-            # print("x.shape", x.shape) # Should be (4, 400, 400)
+            x = object_masks[i, idx] # x should be (4, 400, 400)
             objs.append(x)
 
         #  ############## This is for VIZ ####################
@@ -206,7 +199,7 @@ class ResFCN(nn.Module):
         ########################### VIZ ################################
 
         # # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None)
+        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=is_volatile)
 
         ################################################################
 
@@ -236,12 +229,6 @@ class ResFCN(nn.Module):
         # out_prob = reshaped_overlapped
         # print("out_prob.shape", out_prob.shape)
 
-        # Image-wide softmax
-        # output_shape = out_prob.shape
-        # out_prob = out_prob.view(output_shape[0], -1)
-        # out_prob = torch.softmax(out_prob, dim=1)
-        # out_prob = out_prob.view(B, N, C, H, W).to(dtype=torch.float)
-
         if is_volatile:
             out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
             for n, target_mask in enumerate(overlapped_objs_feats[0]):
@@ -252,7 +239,7 @@ class ResFCN(nn.Module):
             out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
             for batch in range(len(overlapped_objs_feats)):
                 for n, target_mask in enumerate(overlapped_objs_feats[batch]):
-                    # print("specific_rotation[n][batch]", specific_rotation[n][batch])
+                    print("specific_rotation[n][batch]", specific_rotation[n][batch])
                     out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
                     out_probs[batch][n] = out_prob
 
@@ -406,13 +393,13 @@ class ResFCN(nn.Module):
         return top_indices, top_scores
     
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
-    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None):
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
         # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
 
         for i in range(obj_masks.shape[0]):
             if obj_masks.shape[0] == 1:
-                ax[i][0].imshow(scenes[i]) # this is because of the added gt images
+                ax[i].imshow(scenes[i]) # this is because of the added gt images
             else:
                 ax[i][0].imshow(scenes[i])
 
@@ -422,13 +409,13 @@ class ResFCN(nn.Module):
                 # print("obj_mask.shape", obj_mask.shape)
 
                 if obj_masks.shape[0] == 1:
-                    ax[i][k].imshow(obj_mask)
+                    ax[k].imshow(obj_mask)
                 else:
                     ax[i][k].imshow(obj_mask)
                 k += 1
 
             if obj_masks.shape[0] == 1:
-                ax[i][k].imshow(target_mask[i])
+                ax[k].imshow(target_mask[i])
             else:
                 ax[i][k].imshow(target_mask[i])
 

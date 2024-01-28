@@ -16,6 +16,7 @@ import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
 import utils.logger as logging
+from skimage import transform
 
 # multi output using attn
 def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
@@ -33,8 +34,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
                     'objects_removed': 0,
                     'objects_in_scene': len(obs['full_state'])}
     
-    id = 1
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, plot=True)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -44,7 +44,6 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
     i = 0
     n_prev_masks = 0
     count = 0
-    end_scene = False
 
     max_steps = 3
     while episode_data['attempts'] < max_steps:
@@ -55,27 +54,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         state = policy.state_representation(obs)
         actions = policy.exploit_attn(state, obs['color'][1], target_mask)
 
-        # evaluates thee actions to check if the actions are for the neighbors or the target
-        # attempts = 0
-        # while attempts < 2:
-        #     actions = policy.exploit(state, target_mask)
-        #     actions = utils.evaluate_actions(actions, target_mask)
-        #     if len(actions) > 0:
-        #         break
-        #     state, target_mask = ndimage.rotate(state, 45, reshape=False), ndimage.rotate(target_mask, 45, reshape=False)
-        #     attempts += 1
-
-        # # switching to heuristics
-        # print("Generating grasp action using heuristics...")
-        # if len(actions) == 0:
-        #     obstacle_id, _ = utils.get_obstacle_id(raw_masks, target_id, prev_node_id=-1)
-        #     # action = grasping.compute_grasping_point_for_object1(processed_masks, obstacle_id, policy.aperture_limits, policy.rotations, rng)
-        #     action = policy.guided_exploration(state, processed_masks[obstacle_id])
-        #     actions = [action]
-
         action = actions[0]
-
-        # action = grasping.get_closest_neighbor(actions, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -101,12 +80,11 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
         if policy.is_terminal(next_obs):
-            # end_scene = True
             break
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, plot=True)
         if len(processed_masks) == n_prev_masks:
             count += 1
 
@@ -123,17 +101,11 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
             print('------------------------------------------')
-
-            # end_scene = True
             break
 
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         n_prev_masks = len(processed_masks)
-
-        # episode_data['attempts'] += 1
-        # if end_scene:
-        #     break
 
     logging.info('--------')
     return episode_data, success_count

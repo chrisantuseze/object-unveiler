@@ -1,4 +1,4 @@
-# import open3d as o3d
+import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -436,24 +436,47 @@ def extract_target_crop(resized_target, heightmap):
         xmax = get_index(np.max(non_zero_indices[1]), min=False)
         ymin = get_index(np.min(non_zero_indices[0]), min=True)
         ymax = get_index(np.max(non_zero_indices[0]), min=False)
-        # bounding_box = (xmin, ymin, xmax, ymax)
-        # print("Bounding Box:", bounding_box)
 
         full_crop = np.zeros((100, 100))
         full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
 
+        if np.all(full_crop == 0):
+            full_crop = heightmap
+
         # # Assuming img is your NumPy array representing the image
         # np.savetxt('state.txt', state, fmt='%d')
         # np.savetxt('resized_target.txt', resized_target, fmt='%d')
-        # np.savetxt('full_crop.txt', full_crop, fmt='%d')
+        # np.savetxt('full_crop.txt', full_crop, fmt='%d')        
 
-        # fig, ax = plt.subplots(1, 3)
+        # fig, ax = plt.subplots(1, 5)
         # ax[0].imshow(heightmap)
         # ax[1].imshow(resized_target)
         # ax[2].imshow(full_crop)
+
+        # bg1, bg2 = overlay_images(heightmap, resized_target)
+        # ax[3].imshow(bg1)
+        # ax[4].imshow(bg2)
         # plt.show()   
+        # plt.close('all')
 
         return full_crop
+
+def overlay_images(heightmap, overlay):
+    import copy
+
+    # Deep copy
+    background1 = copy.deepcopy(heightmap)
+    background2 = copy.deepcopy(heightmap)
+
+    # Overlay the images
+    for i in range(100):
+        for j in range(100):
+            if overlay[i, j] != 0:
+                background1[i, j] = overlay[i, j]
+            else:
+                background2[i, j] = overlay[i, j]
+
+    return background1, background2
 
 
 def get_pointcloud_(color_img, depth_img, camera_intrinsics):
