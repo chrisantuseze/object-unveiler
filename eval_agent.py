@@ -13,7 +13,6 @@ from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
 import policy.grasping as grasping
-import policy.grasping2 as grasping2
 
 import utils.logger as logging
 from skimage import transform

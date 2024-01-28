@@ -93,17 +93,16 @@ class ResFCN(nn.Module):
         return out
     
     def forward(self, depth_heightmaps, target_masks, specific_rotation=-1, is_volatile=[]):
-        B, N, C, H, W = depth_heightmaps.shape
-
         if is_volatile:
+            N, C, H, W = depth_heightmaps.shape
             out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
-            for n, target_mask in enumerate(target_masks[0]):
-                out_prob = self.get_predictions(depth_heightmaps[n], target_mask.unsqueeze(0), specific_rotation, is_volatile)
+            for n in range(N):
+                out_prob = self.get_predictions(depth_heightmaps[n].unsqueeze(0), target_masks[n].unsqueeze(0), specific_rotation, is_volatile)
                 out_probs[n] = out_prob
 
         else:
             out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
-
+            B, N, C, H, W = depth_heightmaps.shape
             for batch in range(B):
                 for n, target_mask in enumerate(target_masks[batch]):
                     # print("specific_rotation[n][batch]", specific_rotation[n][batch])
@@ -123,12 +122,12 @@ class ResFCN(nn.Module):
         if is_volatile:
             # rotations x channel x h x w
             batch_rot_depth = torch.zeros((self.nr_rotations, 1,
-                                           depth_heightmap.shape[3],
-                                           depth_heightmap.shape[3])).to(self.device)
+                                           depth_heightmap.shape[-1],
+                                           depth_heightmap.shape[-1])).to(self.device)
             
             batch_rot_target = torch.zeros((self.nr_rotations, 1,
-                                           target_mask.shape[3],
-                                           target_mask.shape[3])).to(self.device)
+                                           target_mask.shape[-1],
+                                           target_mask.shape[-1])).to(self.device)
             
             for rot_id in range(self.nr_rotations):
                 # Compute sample grid for rotation before neural network
