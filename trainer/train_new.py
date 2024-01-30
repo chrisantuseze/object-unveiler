@@ -33,7 +33,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:8000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -58,16 +58,15 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)#, betas=(0.9, 0.99))
 
-    optimizer = optim.SGD(model.parameters(), 
-                            lr=args.lr, 
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay)
+    # optimizer = optim.SGD(model.parameters(), 
+    #                         lr=args.lr, 
+    #                         momentum=args.momentum,
+    #                         weight_decay=args.weight_decay)
     
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
-    # criterion = nn.MSELoss()
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):

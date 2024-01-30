@@ -330,17 +330,17 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        # out_prob = self.fcn(x,
-        #     processed_pred_mask, processed_target, processed_obj_masks, 
-        #     raw_pred_mask, raw_target_mask, raw_processed_mask, 
-        #     is_volatile=True
-        # )
-        x = torch.cat((x, x, x), dim=0)
-        processed_target = torch.cat((processed_target, processed_target, processed_target), dim=0)
-        out_prob = self.fcn(x, 
-            processed_target, 
+        out_prob = self.fcn(x,
+            processed_pred_mask, processed_target, processed_obj_masks, 
+            raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
+        # x = torch.cat((x, x, x), dim=0)
+        # processed_target = torch.cat((processed_target, processed_target, processed_target), dim=0)
+        # out_prob = self.fcn(x, 
+        #     processed_target, 
+        #     is_volatile=True
+        # )
         out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
         best_actions = []
