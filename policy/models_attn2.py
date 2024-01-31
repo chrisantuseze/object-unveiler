@@ -239,7 +239,6 @@ class ResFCN(nn.Module):
             out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
             for batch in range(len(overlapped_objs_feats)):
                 for n, target_mask in enumerate(overlapped_objs_feats[batch]):
-                    print("specific_rotation[n][batch]", specific_rotation[n][batch])
                     out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
                     out_probs[batch][n] = out_prob
 
