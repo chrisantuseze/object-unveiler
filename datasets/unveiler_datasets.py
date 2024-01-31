@@ -68,7 +68,7 @@ class UnveilerDataset(data.Dataset):
         return scene_color, target_mask, rot_ids, labels
 
     # single - input, multi - output for models_attn with processed inputs
-    def __getitem__2(self, id):
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
 
@@ -119,7 +119,7 @@ class UnveilerDataset(data.Dataset):
         # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
     
     # single - input, multi - output for models_multi
-    def __getitem__(self, id):
+    def __getitem__3(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
 
         labels, rot_ids = [], []
