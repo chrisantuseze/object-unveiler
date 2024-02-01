@@ -90,16 +90,13 @@ class HeightMapDataset(data.Dataset):
         
         return padded_heightmap, padded_target_mask, rot_id, label
 
-    # single - input, single - output for new-ou-dataset with target action
+    # single - input, single - output for real-ou-dataset with target action
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         heightmap, _, target_mask, _, _, action = episode_data[-1]
 
-        resized_target = general_utils.resize_mask(transform, target_mask)
-        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
-
-        processed_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        processed_target_mask, _ = general_utils.preprocess_image(full_crop, skip_transform=True)
+        processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
+        processed_target_mask = general_utils.preprocess_target(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)

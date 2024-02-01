@@ -95,6 +95,10 @@ class ResFCN(nn.Module):
     def forward(self, depth_heightmaps, target_masks, specific_rotation=-1, is_volatile=[]):
         if is_volatile:
             N, C, H, W = depth_heightmaps.shape
+
+            #TODO: remove
+            N = 1
+
             out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
             for n in range(N):
                 out_prob = self.get_predictions(depth_heightmaps[n].unsqueeze(0), target_masks[n].unsqueeze(0), specific_rotation, is_volatile)
@@ -102,12 +106,19 @@ class ResFCN(nn.Module):
 
         else:
             B, N, C, H, W = depth_heightmaps.shape
+
+            #TODO: remove
+            N = 1
+
             out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
             for batch in range(B):
                 for n, target_mask in enumerate(target_masks[batch]):
                     # print("specific_rotation[n][batch]", specific_rotation[n][batch])
                     out_prob = self.get_predictions(depth_heightmaps[batch][n].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
                     out_probs[batch][n] = out_prob
+
+                    #TODO: remove
+                    break
 
             # Image-wide softmax
             out_probs = out_probs.view(B * N, H * W)
