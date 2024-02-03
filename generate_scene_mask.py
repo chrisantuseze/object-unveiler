@@ -15,7 +15,7 @@ import utils.general_utils as general_utils
 import env.cameras as cameras
 import policy.grasping as grasping
 
-dataset_dir = 'save/real-ou-dataset' #'save/new'
+dataset_dir = 'save/ppg-dataset' #'save/new'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
@@ -124,7 +124,7 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = dataset_dir + "2"
+    new_dir = 'save/real-ou-dataset2'
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
