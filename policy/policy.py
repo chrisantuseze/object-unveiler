@@ -344,6 +344,9 @@ class Policy:
             processed_target, 
             is_volatile=True
         )
+
+        out_prob = torch.cat((out_prob, out_prob, out_prob), dim=0)
+        print(out_prob.shape)
         out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
         best_actions = []
