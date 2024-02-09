@@ -71,40 +71,48 @@ def train_fcn_net(args):
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
-            x = batch[0].to(args.device)
-            target = batch[1].to(args.device)
-            rotations = batch[2]
-            y = batch[3].to(args.device, dtype=torch.float)
-
-            pred = model(x, target, rotations)
-
-            # Compute loss in the whole scene
-            loss = criterion(pred, y)
-            loss = torch.sum(loss)
-
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        model.eval()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['train', 'val']:
-            for step, batch in enumerate(data_loaders[phase]):
+            try:
                 x = batch[0].to(args.device)
                 target = batch[1].to(args.device)
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
                 pred = model(x, target, rotations)
+
+                # Compute loss in the whole scene
                 loss = criterion(pred, y)
-
                 loss = torch.sum(loss)
-                epoch_loss[phase] += loss.detach().cpu().numpy()
 
-                if step % args.step == 0:
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+            except Exception as e:
+                logging.info(batch, "-", e)
+
+        model.eval()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
+            for step, batch in enumerate(data_loaders[phase]):
+                try:
+                    x = batch[0].to(args.device)
+                    target = batch[1].to(args.device)
+                    rotations = batch[2]
+                    y = batch[3].to(args.device, dtype=torch.float)
+
+                    pred = model(x, target, rotations)
+                    loss = criterion(pred, y)
+
+                    loss = torch.sum(loss)
+                    epoch_loss[phase] += loss.detach().cpu().numpy()
+
+                    if step % args.step == 0:
+                        logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                
+                except Exception as e:
+                    logging.info(batch, "-", e)
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
