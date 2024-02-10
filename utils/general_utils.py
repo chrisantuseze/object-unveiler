@@ -448,16 +448,16 @@ def extract_target_crop(resized_target, heightmap):
         # np.savetxt('resized_target.txt', resized_target, fmt='%d')
         # np.savetxt('full_crop.txt', full_crop, fmt='%d')        
 
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(heightmap)
-        ax[1].imshow(resized_target)
-        ax[2].imshow(full_crop)
+        # fig, ax = plt.subplots(1, 3)
+        # ax[0].imshow(heightmap)
+        # ax[1].imshow(resized_target)
+        # ax[2].imshow(full_crop)
 
-        # bg1, bg2 = overlay_images(heightmap, resized_target)
-        # ax[3].imshow(bg1)
-        # ax[4].imshow(bg2)
-        plt.show()   
-        # plt.close('all')
+        # # bg1, bg2 = overlay_images(heightmap, resized_target)
+        # # ax[3].imshow(bg1)
+        # # ax[4].imshow(bg2)
+        # plt.show()   
+        # # plt.close('all')
 
         return full_crop
 
