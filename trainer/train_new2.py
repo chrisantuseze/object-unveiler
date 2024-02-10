@@ -60,11 +60,11 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN().to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    optimizer = optim.SGD(model.parameters(), 
-                            lr=args.lr, 
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # optimizer = optim.SGD(model.parameters(), 
+    #                         lr=args.lr, 
+    #                         momentum=args.momentum,
+    #                         weight_decay=args.weight_decay)
     
     criterion = nn.BCELoss(reduction='none')
 
