@@ -118,7 +118,6 @@ class ResFCN(nn.Module):
             # compute rotated feature maps            
             depth_feat = self.predict(batch_rot_depth)
             target_feat = self.predict(batch_rot_target)
-            # masked_depth_feat = depth_feat * target_feat
             masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
 
             # undo rotation
@@ -159,9 +158,7 @@ class ResFCN(nn.Module):
             # Compute intermediate features
             depth_feat = self.predict(rotate_depth)
             target_feat = self.predict(rotate_target_mask)
-            # masked_depth_feat = depth_feat * target_feat
             masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
-            # print("masked_depth_feat.shape", masked_depth_feat.shape)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)

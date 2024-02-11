@@ -17,14 +17,6 @@ class HeightMapDataset(data.Dataset):
         self.args = args
         self.dataset_dir = args.dataset_dir
         self.dir_ids = dir_ids
-        self.data_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),  # Resize to the input size expected by ResNet (can be adjusted)
-            transforms.ToTensor(),
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            transforms.Normalize(mean=(0.449), std=(0.226))
-        ])
-
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset

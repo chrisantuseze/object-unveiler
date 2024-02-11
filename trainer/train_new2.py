@@ -35,8 +35,6 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:8000]
-
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
@@ -61,10 +59,6 @@ def train_fcn_net(args):
 
     model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # optimizer = optim.SGD(model.parameters(), 
-    #                         lr=args.lr, 
-    #                         momentum=args.momentum,
-    #                         weight_decay=args.weight_decay)
     
     criterion = nn.BCELoss(reduction='none')
 
