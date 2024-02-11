@@ -1,7 +1,7 @@
 import os
 import random
-# from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+# from policy.models_multi import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -15,7 +15,7 @@ from datasets.unveiler_datasets import UnveilerDataset
 import utils.general_utils as general_utils
 import utils.logger as logging
 
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -142,7 +142,7 @@ def train_fcn_net(args):
     writer.close()
 
 
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -185,12 +185,12 @@ def train_fcn_net1(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    optimizer = optim.SGD(model.parameters(), 
-                            lr=args.lr, 
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay)
+    # optimizer = optim.SGD(model.parameters(), 
+    #                         lr=args.lr, 
+    #                         momentum=args.momentum,
+    #                         weight_decay=args.weight_decay)
     
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')

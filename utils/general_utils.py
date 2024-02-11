@@ -443,11 +443,6 @@ def extract_target_crop(resized_target, heightmap):
         if np.all(full_crop == 0):
             full_crop = heightmap
 
-        # # Assuming img is your NumPy array representing the image
-        # np.savetxt('state.txt', state, fmt='%d')
-        # np.savetxt('resized_target.txt', resized_target, fmt='%d')
-        # np.savetxt('full_crop.txt', full_crop, fmt='%d')        
-
         # fig, ax = plt.subplots(1, 3)
         # ax[0].imshow(heightmap)
         # ax[1].imshow(resized_target)
