@@ -76,11 +76,11 @@ class UnveilerDataset(data.Dataset):
         processed_scene_mask = general_utils.preprocess_target(scene_mask)
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
-        processed_target_mask = general_utils.preprocess_target(target_mask, heightmap)
+        processed_target_mask = general_utils.preprocess_target(target_mask)#, heightmap)
 
         _processed_obj_masks = []
         for obj_mask in object_masks:
-            processed_obj_mask = general_utils.preprocess_target(obj_mask, heightmap)
+            processed_obj_mask = general_utils.preprocess_target(obj_mask)#, heightmap)
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
 

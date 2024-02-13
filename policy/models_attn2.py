@@ -173,8 +173,6 @@ class ResFCN(nn.Module):
         B, N, C, = projected_objs.shape
 
         top_indices, top_scores = self.get_topk_attn_scores(projected_objs, projected_target, object_masks.squeeze(2)) #raw_object_masks)
-        print("top_indices", top_indices)
-
         # print("obj_masks.shape", obj_masks.shape)
 
         ###### Keep overlapped objects #####
@@ -199,7 +197,7 @@ class ResFCN(nn.Module):
         ################################################################
 
         processed_objects = torch.stack(processed_objects)
-        print("processed_objects.shape", processed_objects.shape)
+        # print("processed_objects.shape", processed_objects.shape)
 
         # Predict boxes
         B, N, C, H, W = processed_objects.shape
