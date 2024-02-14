@@ -73,7 +73,6 @@ class UnveilerDataset(data.Dataset):
         heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
-        processed_scene_mask = general_utils.preprocess_target(scene_mask)
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
         processed_target_mask = general_utils.preprocess_target(target_mask)#, heightmap)
@@ -120,9 +119,9 @@ class UnveilerDataset(data.Dataset):
         # pad object masks
         processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks(_processed_obj_masks, object_masks, optimal_nodes)
 
-        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids
+        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids
 
-        # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
+        # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
     
     # single - input, multi - output for models_multi
     def __getitem__3(self, id):

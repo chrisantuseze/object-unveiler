@@ -105,42 +105,30 @@ class ResFCN(nn.Module):
             out = conv3(x)
         return out
     
-    def get_obj_feats(self, obj_masks, scene_feats):
-        obj_features = []
-        for mask in obj_masks:
-            # print("mask.shape", mask.shape)
-
-            mask = mask.unsqueeze(0).to(self.device)
-            obj_feat = self.predict(mask)
-
-            masked_fmap = obj_feat #scene_feats * obj_feat
-            # print("masked_fmap.shape", masked_fmap.shape)
-
-            obj_feat = masked_fmap.reshape(1, masked_fmap.shape[1], -1)[:, :, 0]
-            obj_features.append(obj_feat)
-
-        return torch.cat(obj_features)
-    
-    def preprocess_input(self, scene_masks, object_masks):
-        B, H, W, C = scene_masks.shape
-        obj_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
+    def preprocess_input(self, object_masks):
+        B = object_masks.shape[0]
+        # print("object_masks.shape", object_masks.shape)
+        object_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
 
         for i in range(B):
-            scene_mask = scene_masks[i].unsqueeze(0).to(self.device)
-            object_mask = object_masks[i].to(self.device)
+            object_masks_ = object_masks[i].to(self.device)
 
-            scene_feat = self.predict(scene_mask)
-            # print("scene_feat.shape", scene_feat.shape)
+            obj_features = []
+            for mask in object_masks_:
+                # print("mask.shape", mask.shape)
 
-            obj_feats = self.get_obj_feats(object_mask, scene_feat)
-            # print("obj_feats.shape", obj_feats.shape)
+                mask = mask.unsqueeze(0).to(self.device)
+                obj_feat = self.predict(mask)
+
+                obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
+                obj_features.append(obj_feat)
+
+            obj_features = torch.cat(obj_features)
+            object_features[i] = obj_features
             
-            obj_features[i] = obj_feats
-            
-        # self.show_images2(obj_masks)
-        return obj_features
+        return object_features
     
-    def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
     # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("scene_mask.shape", scene_mask.shape) #torch.Size([2, 1, 144, 144])
@@ -149,30 +137,17 @@ class ResFCN(nn.Module):
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
-        obj_features = self.preprocess_input(scene_mask, object_masks)
-
-        # compute rotated feature maps            
-        # scene_feats = self.predict(scene_mask)
-        # print("scene_feats.shape", scene_feats.shape)
+        obj_features = self.preprocess_input(object_masks)
 
         target_feats = self.predict(target_mask)
         # print("target_feats.shape", target_feats.shape)
 
-        masked_target_fmap = target_feats #scene_feats * target_feats
+        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
         # print("masked_target_fmap.shape", masked_target_fmap.shape)
 
-        masked_target_fmap = masked_target_fmap.reshape(masked_target_fmap.shape[0], masked_target_fmap.shape[1], -1)[:, :, 0]
-        # print("masked_target_fmap.shape", masked_target_fmap.shape)
+        B, N, C, = obj_features.shape
 
-        # Project target and object features  
-        projected_target = masked_target_fmap #self.target_proj(masked_target_fmap)
-        # print("projected_target.shape", projected_target.shape)
-
-        projected_objs = obj_features #self.obj_proj(obj_features)
-        # print("projected_objs.shape", projected_objs.shape)
-        B, N, C, = projected_objs.shape
-
-        top_indices, top_scores = self.get_topk_attn_scores(projected_objs, projected_target, object_masks.squeeze(2)) #raw_object_masks)
+        top_indices, top_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2)) #raw_object_masks)
         # print("obj_masks.shape", obj_masks.shape)
 
         ###### Keep overlapped objects #####

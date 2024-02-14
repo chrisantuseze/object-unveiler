@@ -93,28 +93,24 @@ def train_fcn_net(args):
         model.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
-            scene = batch[1].to(args.device)
-            target_mask = batch[2].to(args.device, dtype=torch.float32)
-            object_masks = batch[3].to(args.device)
+            target_mask = batch[1].to(args.device, dtype=torch.float32)
+            object_masks = batch[2].to(args.device)
 
-            # raw_x = batch[4].to(args.device)
-            # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-            # raw_object_masks = batch[6].to(args.device)
-            # rotations = batch[7]
-            # y = batch[8].to(args.device, dtype=torch.float32)
+            # raw_x = batch[3].to(args.device)
+            # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+            # raw_object_masks = batch[5].to(args.device)
+            # rotations = batch[6]
+            # y = batch[7].to(args.device, dtype=torch.float32)
 
-            rotations = batch[4]
-            y = batch[5].to(args.device, dtype=torch.float32)
-            obstacle_ids = batch[6].to(args.device, dtype=torch.float32)
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float32)
+            obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
 
             obstacle_logits, pred = model(
-                x, scene, target_mask, object_masks, 
+                x, target_mask, object_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
-
-            # Compute loss in the whole scene
-            # loss = criterion(pred, y)
 
             loss = multi_task_loss(
                 grasp_criterion, obstacle_criterion, 
@@ -138,28 +134,24 @@ def train_fcn_net(args):
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
-                scene = batch[1].to(args.device)
-                target_mask = batch[2].to(args.device, dtype=torch.float32)
-                object_masks = batch[3].to(args.device)
+                target_mask = batch[1].to(args.device, dtype=torch.float32)
+                object_masks = batch[2].to(args.device)
 
-                # raw_x = batch[4].to(args.device)
-                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-                # raw_object_masks = batch[6].to(args.device)
-                # rotations = batch[7]
-                # y = batch[8].to(args.device, dtype=torch.float32)
+                # raw_x = batch[3].to(args.device)
+                # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[5].to(args.device)
+                # rotations = batch[6]
+                # y = batch[7].to(args.device, dtype=torch.float32)
 
-                rotations = batch[4]
-                y = batch[5].to(args.device, dtype=torch.float32)
-                obstacle_ids = batch[6].to(args.device, dtype=torch.float32)
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float32)
+                obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
 
                 obstacle_logits, pred = model(
-                    x, scene, target_mask, object_masks, 
+                    x, target_mask, object_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
-
-                # Compute loss in the whole scene
-                # loss = criterion(pred, y)
 
                 loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, pred, obstacle_ids, y)
                 loss = torch.sum(loss)
@@ -241,21 +233,20 @@ def train_fcn_net1(args):
         model.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
-            scene = batch[1].to(args.device)
-            target_mask = batch[2].to(args.device, dtype=torch.float32)
-            object_masks = batch[3].to(args.device)
+            target_mask = batch[1].to(args.device, dtype=torch.float32)
+            object_masks = batch[2].to(args.device)
 
-            # raw_x = batch[4].to(args.device)
-            # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-            # raw_object_masks = batch[6].to(args.device)
-            # rotations = batch[7]
-            # y = batch[8].to(args.device, dtype=torch.float32)
+            # raw_x = batch[3].to(args.device)
+            # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+            # raw_object_masks = batch[5].to(args.device)
+            # rotations = batch[6]
+            # y = batch[7].to(args.device, dtype=torch.float32)
 
-            rotations = batch[4]
-            y = batch[5].to(args.device, dtype=torch.float32)
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float32)
 
             pred = model(
-                x, scene, target_mask, object_masks, 
+                x, target_mask, object_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
@@ -280,26 +271,25 @@ def train_fcn_net1(args):
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
-                scene = batch[1].to(args.device)
-                target_mask = batch[2].to(args.device, dtype=torch.float32)
-                object_masks = batch[3].to(args.device)
+                target_mask = batch[1].to(args.device, dtype=torch.float32)
+                object_masks = batch[2].to(args.device)
 
-                # raw_x = batch[4].to(args.device)
-                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-                # raw_object_masks = batch[6].to(args.device)
-                # rotations = batch[7]
-                # y = batch[8].to(args.device, dtype=torch.float32)
+                # raw_x = batch[3].to(args.device)
+                # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[5].to(args.device)
+                # rotations = batch[6]
+                # y = batch[7].to(args.device, dtype=torch.float32)
 
-                rotations = batch[4]
-                y = batch[5].to(args.device, dtype=torch.float32)
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float32)
 
                 pred = model(
-                    x, scene, target_mask, object_masks, 
+                    x, target_mask, object_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
+                
                 loss = criterion(pred, y)
-
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 

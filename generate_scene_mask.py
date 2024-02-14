@@ -74,7 +74,7 @@ def modify_episode2(episode_dir, index):
 
         # get optimal nodes
         objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], data['object_masks'])
-        print("\nobjects_to_remove:", objects_to_remove)
+        # print("\nobjects_to_remove:", objects_to_remove)
 
         transition = {
             'color_obs': data['color_obs'],
