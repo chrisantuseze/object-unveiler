@@ -16,8 +16,7 @@ import env.cameras as cameras
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
-# dataset_dir = 'save/real-ou-dataset'
-dataset_dir = 'save/ppg-dataset'
+dataset_dir = 'save/real-ou-dataset'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
