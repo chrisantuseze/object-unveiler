@@ -85,9 +85,12 @@ class UnveilerDataset(data.Dataset):
         _processed_obj_masks = np.array(_processed_obj_masks)
 
         # get labels and rot_ids
-        labels, rot_ids = [], []
+        labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, _, _, action = data
+            _, _, _, _, optimal_nodes, action = data
+
+            # we need one obstacle per episode
+            obstacle_ids.append(optimal_nodes[0])
 
             # convert theta to range 0-360 and then compute the rot_id
             angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -111,12 +114,13 @@ class UnveilerDataset(data.Dataset):
             labels.append(label)
 
         # pad labels and rot_ids
-        labels, rot_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids)
+        labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
+        # print("obstacle_ids", obstacle_ids)
 
         # pad object masks
         processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks(_processed_obj_masks, object_masks, optimal_nodes)
 
-        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels
+        return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids
 
         # return processed_heightmap, processed_scene_mask, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
     
@@ -171,7 +175,7 @@ class UnveilerDataset(data.Dataset):
     def __len__(self):
         return len(self.dir_ids)
     
-    def pad_labels_and_rot(self, episode_len, processed_heightmap, labels, rot_ids):
+    def pad_labels_and_rot(self, episode_len, processed_heightmap, labels, rot_ids, obstacle_ids):
         seq_len = self.args.sequence_length
         if episode_len < seq_len:
             required_len = seq_len - len(labels)
@@ -182,8 +186,9 @@ class UnveilerDataset(data.Dataset):
 
             rot_ids = rot_ids + [0] * required_len
 
-        labels = np.array(labels)
-        return labels, rot_ids
+            obstacle_ids = obstacle_ids + [0] * required_len
+
+        return np.array(labels), rot_ids, np.array(obstacle_ids)
     
     def pad_heightmap_and_target(self, heightmaps, target_masks):
         N, C, H, W = heightmaps.shape

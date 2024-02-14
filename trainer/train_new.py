@@ -1,12 +1,13 @@
 import os
 import random
-from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi import Regressor, ResFCN
+# from policy.models_attn2 import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
+import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 from datasets.aperture_dataset import ApertureDataset
@@ -15,7 +16,30 @@ from datasets.unveiler_datasets import UnveilerDataset
 import utils.general_utils as general_utils
 import utils.logger as logging
 
-def train_fcn_net1(args):
+# Loss function
+def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, grasp_coords, obstacle_gt, grasp_gt):
+    # print("obstacle_logits", obstacle_logits, "\nobstacle_gt", obstacle_gt)
+
+    # Obstacle loss
+    obstacle_loss = obstacle_criterion(obstacle_logits, obstacle_gt)
+    
+    # Grasp loss 
+    grasp_loss = grasp_criterion(grasp_coords, grasp_gt)
+
+    # print(torch.sum(obstacle_loss), torch.sum(grasp_loss))
+    
+    # Weighted sum
+    w1 = 1
+    w2 = 0.5
+
+    B, N = obstacle_loss.shape
+    obstacle_loss = obstacle_loss.reshape(B, N, 1, 1, 1)
+
+    total_loss =  w1*obstacle_loss + w2*grasp_loss
+    
+    return total_loss
+
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -33,7 +57,7 @@ def train_fcn_net1(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs
+    transition_dirs = transition_dirs[:6000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -58,15 +82,10 @@ def train_fcn_net1(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)#, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    optimizer = optim.SGD(model.parameters(), 
-                            lr=args.lr, 
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay)
-    
-    # criterion = nn.SmoothL1Loss(reduction='none')
-    criterion = nn.BCELoss(reduction='none')
+    obstacle_criterion = nn.SmoothL1Loss(reduction='none')
+    grasp_criterion = nn.BCELoss(reduction='none')
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
@@ -74,22 +93,33 @@ def train_fcn_net1(args):
         model.train()
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
-            target_mask = batch[1].to(args.device, dtype=torch.float32)
+            scene = batch[1].to(args.device)
+            target_mask = batch[2].to(args.device, dtype=torch.float32)
+            object_masks = batch[3].to(args.device)
 
-            rotations = batch[2]
+            # raw_x = batch[4].to(args.device)
+            # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+            # raw_object_masks = batch[6].to(args.device)
+            # rotations = batch[7]
+            # y = batch[8].to(args.device, dtype=torch.float32)
 
-            y = batch[3].to(args.device, dtype=torch.float32)
+            rotations = batch[4]
+            y = batch[5].to(args.device, dtype=torch.float32)
+            obstacle_ids = batch[6].to(args.device, dtype=torch.float32)
 
-            # TODO: remove
-            y = y[:, 0, :, :, :].unsqueeze(1)
-
-            pred = model(
-                x, target_mask, 
+            obstacle_logits, pred = model(
+                x, scene, target_mask, object_masks, 
+                # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
 
             # Compute loss in the whole scene
-            loss = criterion(pred, y)
+            # loss = criterion(pred, y)
+
+            loss = multi_task_loss(
+                grasp_criterion, obstacle_criterion, 
+                obstacle_logits, pred, obstacle_ids, y
+            )
             loss = torch.sum(loss)
 
             # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
@@ -108,21 +138,32 @@ def train_fcn_net1(args):
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
-                target_mask = batch[1].to(args.device, dtype=torch.float32)
+                scene = batch[1].to(args.device)
+                target_mask = batch[2].to(args.device, dtype=torch.float32)
+                object_masks = batch[3].to(args.device)
 
-                rotations = batch[2]
-                y = batch[3].to(args.device, dtype=torch.float32)
+                # raw_x = batch[4].to(args.device)
+                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[6].to(args.device)
+                # rotations = batch[7]
+                # y = batch[8].to(args.device, dtype=torch.float32)
 
-                # TODO: remove
-                y = y[:, 0, :, :, :].unsqueeze(1)
+                rotations = batch[4]
+                y = batch[5].to(args.device, dtype=torch.float32)
+                obstacle_ids = batch[6].to(args.device, dtype=torch.float32)
 
-                pred = model(
-                    x, target_mask, 
+                obstacle_logits, pred = model(
+                    x, scene, target_mask, object_masks, 
+                    # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
-                loss = criterion(pred, y)
 
+                # Compute loss in the whole scene
+                # loss = criterion(pred, y)
+
+                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, pred, obstacle_ids, y)
                 loss = torch.sum(loss)
+
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
@@ -141,8 +182,7 @@ def train_fcn_net1(args):
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
     writer.close()
 
-
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'

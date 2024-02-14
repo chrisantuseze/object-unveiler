@@ -14,8 +14,10 @@ import utils.logger as logging
 import utils.general_utils as general_utils
 import env.cameras as cameras
 import policy.grasping as grasping
+import policy.grasping2 as grasping2
 
-dataset_dir = 'save/real-ou-dataset' #'save/new'
+# dataset_dir = 'save/real-ou-dataset'
+dataset_dir = 'save/ppg-dataset'
 
 def modify_episode(memory: ReplayBuffer, episode_dir, index):
     try:
@@ -71,6 +73,10 @@ def modify_episode2(episode_dir, index):
         for mask in object_masks:
             new_masks.append(general_utils.extract_target_crop(mask, heightmap))
 
+        # get optimal nodes
+        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], data['object_masks'])
+        print("\nobjects_to_remove:", objects_to_remove)
+
         transition = {
             'color_obs': data['color_obs'],
             'depth_obs': data['depth_obs'],
@@ -80,7 +86,8 @@ def modify_episode2(episode_dir, index):
             'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
             'scene_mask': data['scene_mask'],
             'object_masks': new_masks,
-            'action': data['action'], 
+            'action': data['action'],
+            'optimal_nodes': objects_to_remove,
             'label': data['label'],
         }
         episode_data_list.append(transition)

@@ -199,7 +199,6 @@ class ResFCN(nn.Module):
         processed_objects = torch.stack(processed_objects)
         # print("processed_objects.shape", processed_objects.shape)
 
-        # Predict boxes
         B, N, C, H, W = processed_objects.shape
 
         if is_volatile:

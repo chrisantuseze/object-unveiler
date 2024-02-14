@@ -49,7 +49,7 @@ class ReplayBuffer:
         except Exception as e:
             logging.info(e, "- Failed episode:", episode)
 
-        data_list = []
+        data_list = []        
         for data in episode_data:
             heightmap = data['state']
             target_mask = data['target_mask']
@@ -58,7 +58,7 @@ class ReplayBuffer:
             scene_mask = data['scene_mask']
             object_masks = data['object_masks']
 
-            optimal_nodes = [] #data['optimal_nodes']
+            optimal_nodes = data['optimal_nodes']
 
             data_list.append((heightmap, scene_mask, target_mask, object_masks, optimal_nodes, action))
 
