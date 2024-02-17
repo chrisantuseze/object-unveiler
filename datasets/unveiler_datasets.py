@@ -121,7 +121,7 @@ class UnveilerDataset(data.Dataset):
 
         return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids
 
-        # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels
+        # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids
     
     # single - input, multi - output for models_multi
     def __getitem__3(self, id):

@@ -1,8 +1,8 @@
 import os
 import pickle
 # from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi import Regressor, ResFCN
-from policy.models_target import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_target import Regressor, ResFCN
 from policy.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -39,8 +39,7 @@ class Policy:
         self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
-        self.fcn = ResFCN().to(self.device)
-        # self.fcn = ResFCN(args).to(self.device)
+        self.fcn = ResFCN(args).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
@@ -327,21 +326,12 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        # processed_pred_mask, processed_target, processed_obj_masks,\
-        # raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(state, color_image, target_mask)
+        processed_pred_mask, processed_target, processed_obj_masks,\
+        raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(state, color_image, target_mask)
 
-        # out_prob = self.fcn(x,
-        #     processed_pred_mask, processed_target, processed_obj_masks, 
-        #     raw_pred_mask, raw_target_mask, raw_processed_mask, 
-        #     is_volatile=True
-        # )
-
-        processed_target = general_utils.preprocess_target(target_mask, state)
-        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
-        x = torch.cat((x, x, x), dim=0)
-        processed_target = torch.cat((processed_target, processed_target, processed_target), dim=0)
-        out_prob = self.fcn(x, 
-            processed_target, 
+        object_logits, out_prob = self.fcn(x,
+            processed_target, processed_obj_masks, 
+            # raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
 

@@ -2,7 +2,8 @@
 import torch
 import argparse
 from trainer.train_new import train_fcn_net, train_regressor
-from eval_agent_target import eval_agent
+# from eval_agent_target import eval_agent
+from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
 

@@ -50,7 +50,7 @@ class ResidualBlock(nn.Module):
         return out
 
 class ResFCN(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super(ResFCN, self).__init__()
         self.nr_rotations = 16
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

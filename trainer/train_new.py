@@ -1,7 +1,8 @@
 import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
+from policy.models_obstacle import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -19,6 +20,7 @@ import utils.logger as logging
 # Loss function
 def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, grasp_coords, obstacle_gt, grasp_gt):
     # print("obstacle_logits", obstacle_logits, "\nobstacle_gt", obstacle_gt)
+    # print("grasp_coords", grasp_coords, "\grasp_gt", grasp_gt)
 
     # Obstacle loss
     obstacle_loss = obstacle_criterion(obstacle_logits, obstacle_gt)
@@ -39,6 +41,145 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, grasp_
     
     return total_loss
 
+# models_multi_task
+def train_fcn_net1(args):
+    writer = SummaryWriter()
+    
+    save_path = 'save/fcn'
+
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    transition_dirs = os.listdir(args.dataset_dir)
+    
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    # split data to training/validation
+    random.seed(0)
+    random.shuffle(transition_dirs)
+
+    # transition_dirs = transition_dirs[:6000]
+
+    split_index = int(args.split_ratio * len(transition_dirs))
+    train_ids = transition_dirs[:split_index]
+    val_ids = transition_dirs[split_index:]
+
+    # this ensures that the split is done properly without causing input mismatch error
+    data_length = (len(train_ids)//args.batch_size) * args.batch_size
+    train_ids = train_ids[:data_length]
+
+    data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    val_ids = val_ids[:data_length]
+    
+    train_dataset = UnveilerDataset(args, train_ids)
+    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=8, pin_memory=True, shuffle=True)
+
+    val_dataset = UnveilerDataset(args, val_ids)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=8, pin_memory=True)
+
+    args.step = int(len(train_ids)/(4*args.batch_size))
+
+    data_loaders = {'train': data_loader_train, 'val': data_loader_val}
+    logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
+
+    model = ResFCN(args).to(args.device)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+
+    obstacle_criterion = nn.SmoothL1Loss(reduction='none')
+    grasp_criterion = nn.BCELoss(reduction='none')
+
+    global_step = 0 #{'train': 0, 'val': 0}
+    for epoch in range(args.epochs):
+        
+        model.train()
+        for step, batch in enumerate(data_loader_train):
+            x = batch[0].to(args.device)
+            target_mask = batch[1].to(args.device, dtype=torch.float32)
+            object_masks = batch[2].to(args.device)
+
+            # raw_x = batch[3].to(args.device)
+            # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+            # raw_object_masks = batch[5].to(args.device)
+            # rotations = batch[6]
+            # y = batch[7].to(args.device, dtype=torch.float32)
+            # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float32)
+            obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+
+            obstacle_logits, pred = model(
+                x, target_mask, object_masks, 
+                # raw_x, raw_target_mask, raw_object_masks,
+                rotations
+            )
+
+            loss = multi_task_loss(
+                grasp_criterion, obstacle_criterion, 
+                obstacle_logits, pred, obstacle_ids, y
+            )
+            loss = torch.sum(loss)
+
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            grad_norm = calculate_gradient_norm(model) 
+
+            writer.add_scalar("norm/train", grad_norm, global_step)
+            global_step += 1
+
+        model.eval()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
+            for step, batch in enumerate(data_loaders[phase]):
+                x = batch[0].to(args.device)
+                target_mask = batch[1].to(args.device, dtype=torch.float32)
+                object_masks = batch[2].to(args.device)
+
+                # raw_x = batch[3].to(args.device)
+                # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[5].to(args.device)
+                # rotations = batch[6]
+                # y = batch[7].to(args.device, dtype=torch.float32)
+                # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float32)
+                obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+
+                obstacle_logits, pred = model(
+                    x, target_mask, object_masks, 
+                    # raw_x, raw_target_mask, raw_object_masks,
+                    rotations
+                )
+
+                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, pred, obstacle_ids, y)
+                loss = torch.sum(loss)
+
+                epoch_loss[phase] += loss.detach().cpu().numpy()
+
+                if step % args.step == 0:
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+
+        # LR decay after every epoch
+        # scheduler.step() 
+
+        logging.info('Epoch {}: training loss = {:.6f} '
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+                                                  epoch_loss['val'] / len(data_loaders['val'])))
+        
+        writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
+
+    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    writer.close()
+
+# models_obstacle
 def train_fcn_net(args):
     writer = SummaryWriter()
     
@@ -101,24 +242,22 @@ def train_fcn_net(args):
             # raw_object_masks = batch[5].to(args.device)
             # rotations = batch[6]
             # y = batch[7].to(args.device, dtype=torch.float32)
+            # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
 
             rotations = batch[3]
             y = batch[4].to(args.device, dtype=torch.float32)
             obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
 
-            obstacle_logits, pred = model(
+            obstacle_logits = model(
                 x, target_mask, object_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
 
-            loss = multi_task_loss(
-                grasp_criterion, obstacle_criterion, 
-                obstacle_logits, pred, obstacle_ids, y
-            )
+            loss = obstacle_criterion(obstacle_logits, obstacle_ids)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -142,18 +281,19 @@ def train_fcn_net(args):
                 # raw_object_masks = batch[5].to(args.device)
                 # rotations = batch[6]
                 # y = batch[7].to(args.device, dtype=torch.float32)
+                # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
 
                 rotations = batch[3]
                 y = batch[4].to(args.device, dtype=torch.float32)
                 obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
 
-                obstacle_logits, pred = model(
+                obstacle_logits = model(
                     x, target_mask, object_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
 
-                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, pred, obstacle_ids, y)
+                loss = obstacle_criterion(obstacle_logits, obstacle_ids)
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
@@ -174,7 +314,8 @@ def train_fcn_net(args):
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
     writer.close()
 
-def train_fcn_net1(args):
+# models_attn
+def train_fcn_net3(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
