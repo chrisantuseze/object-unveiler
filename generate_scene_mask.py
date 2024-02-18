@@ -73,7 +73,7 @@ def modify_episode2(episode_dir, index):
             new_masks.append(general_utils.extract_target_crop(mask, heightmap))
 
         # get optimal nodes
-        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], data['object_masks'])
+        objects_to_remove = grasping2.get_target_objects_distance(data['target_mask'], data['object_masks'])
         # print("\nobjects_to_remove:", objects_to_remove)
 
         transition = {

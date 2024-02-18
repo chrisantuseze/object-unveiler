@@ -100,7 +100,7 @@ class ObstacleHead(nn.Module):
         # Zero out the corresponding entries in A using the mask
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
 
-        attn_scores = F.softmax(attn_scores, dim=0)
+        attn_scores = F.softmax(attn_scores, dim=1)
         # attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
 
         # Create a mask for NaN values
@@ -268,7 +268,7 @@ class ObstacleHead(nn.Module):
         processed_objects = torch.stack(processed_objects)
         # print("processed_objects.shape", processed_objects.shape)
 
-        return processed_objects, Variable(top_indices.float().data, requires_grad=True)
+        return processed_objects, Variable(top_indices.float().data, requires_grad=True), all_scores
    
 
 class ResFCN(nn.Module):
@@ -336,10 +336,10 @@ class ResFCN(nn.Module):
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
-        processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks)
+        processed_objects, objects_indices, object_scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
-        return objects_indices
+        return object_scores
     
 
 class Regressor(nn.Module):

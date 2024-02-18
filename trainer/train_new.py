@@ -18,21 +18,21 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 
 # Loss function
-def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, grasp_coords, obstacle_gt, grasp_gt):
-    # print("obstacle_logits", obstacle_logits, "\nobstacle_gt", obstacle_gt)
-    # print("grasp_coords", grasp_coords, "\grasp_gt", grasp_gt)
+def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt):
+    # print("obstacle_pred", obstacle_pred, "\n obstacle_gt", obstacle_gt)
+    # print("grasp_pred", grasp_pred, "\grasp_gt", grasp_gt)
 
     # Obstacle loss
-    obstacle_loss = obstacle_criterion(obstacle_logits, obstacle_gt)
+    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     
     # Grasp loss 
-    grasp_loss = grasp_criterion(grasp_coords, grasp_gt)
+    grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
     # print(torch.sum(obstacle_loss), torch.sum(grasp_loss))
     
     # Weighted sum
     w1 = 1
-    w2 = 0.5
+    w2 = 0.65
 
     B, N = obstacle_loss.shape
     obstacle_loss = obstacle_loss.reshape(B, N, 1, 1, 1)
@@ -108,9 +108,9 @@ def train_fcn_net1(args):
 
             rotations = batch[3]
             y = batch[4].to(args.device, dtype=torch.float32)
-            obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+            obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
-            obstacle_logits, pred = model(
+            obstacle_pred, pred = model(
                 x, target_mask, object_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
@@ -118,7 +118,7 @@ def train_fcn_net1(args):
 
             loss = multi_task_loss(
                 grasp_criterion, obstacle_criterion, 
-                obstacle_logits, pred, obstacle_ids, y
+                obstacle_pred, pred, obstacle_gt, y
             )
             loss = torch.sum(loss)
 
@@ -150,15 +150,15 @@ def train_fcn_net1(args):
 
                 rotations = batch[3]
                 y = batch[4].to(args.device, dtype=torch.float32)
-                obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+                obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
-                obstacle_logits, pred = model(
+                obstacle_preds, pred = model(
                     x, target_mask, object_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
 
-                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_logits, pred, obstacle_ids, y)
+                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_preds, pred, obstacle_gt, y)
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
@@ -225,8 +225,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    obstacle_criterion = nn.SmoothL1Loss(reduction='none')
-    grasp_criterion = nn.BCELoss(reduction='none')
+    obstacle_criterion = nn.MSELoss()
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
@@ -246,27 +245,31 @@ def train_fcn_net(args):
 
             rotations = batch[3]
             y = batch[4].to(args.device, dtype=torch.float32)
-            obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+            obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
-            obstacle_logits = model(
+            obstacle_pred = model(
                 x, target_mask, object_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
 
-            loss = obstacle_criterion(obstacle_logits, obstacle_ids)
+            # logging.info("obstacle_pred", obstacle_pred, "\nobstacle_gt", obstacle_gt)
+
+            loss = obstacle_criterion(obstacle_pred, obstacle_gt)
             loss = torch.sum(loss)
 
-            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)
             optimizer.step()
 
-            grad_norm = calculate_gradient_norm(model) 
+            # debug_params(model)
 
-            writer.add_scalar("norm/train", grad_norm, global_step)
-            global_step += 1
+            # grad_norm = calculate_gradient_norm(model) 
+
+            # writer.add_scalar("norm/train", grad_norm, global_step)
+            # global_step += 1
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -285,15 +288,15 @@ def train_fcn_net(args):
 
                 rotations = batch[3]
                 y = batch[4].to(args.device, dtype=torch.float32)
-                obstacle_ids = batch[5].to(args.device, dtype=torch.float32)
+                obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
-                obstacle_logits = model(
+                obstacle_pred = model(
                     x, target_mask, object_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
 
-                loss = obstacle_criterion(obstacle_logits, obstacle_ids)
+                loss = obstacle_criterion(obstacle_pred, obstacle_gt)
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()

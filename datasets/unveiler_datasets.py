@@ -112,16 +112,16 @@ class UnveilerDataset(data.Dataset):
             
             labels.append(label)
 
-        # pad labels and rot_ids
+        # pad labels and rot_ids. The object_ids are not required anymore
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
         # print("obstacle_ids", obstacle_ids)
 
         # pad object masks
         processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks(_processed_obj_masks, object_masks, optimal_nodes)
 
-        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids
+        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, optimal_nodes
 
-        # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids
+        # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels, optimal_nodes
     
     # single - input, multi - output for models_multi
     def __getitem__3(self, id):
@@ -221,11 +221,28 @@ class UnveilerDataset(data.Dataset):
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
 
-        if len(optimal_nodes) < self.args.sequence_length:
-            optimal_nodes = optimal_nodes + [0] * (self.args.sequence_length - len(optimal_nodes))
+        optimal_nodes = self.apply_softmax(optimal_nodes)
+        if len(optimal_nodes) < self.args.num_patches:
+            # Calculate the number of zeros needed for padding
+            num_zeros = self.args.num_patches - len(optimal_nodes)
+            padded_optimal_nodes = np.pad(optimal_nodes, (0, num_zeros), mode='constant', constant_values=0)
+
         else:
-            optimal_nodes = optimal_nodes[:self.args.sequence_length]
+            padded_optimal_nodes = optimal_nodes[:self.args.num_patches]
 
-        optimal_nodes = np.array(optimal_nodes)
+        return processed_obj_masks, obj_masks, padded_optimal_nodes
+    
+    def apply_softmax(self, optimal_nodes):
+        # Find the indices of non-zero elements
+        non_zero_indices = np.nonzero(optimal_nodes)
 
-        return processed_obj_masks, obj_masks, optimal_nodes
+        # Extract non-zero elements
+        non_zero_values = optimal_nodes[non_zero_indices]
+
+        # Apply softmax to non-zero elements
+        softmax_values = np.exp(non_zero_values) / np.sum(np.exp(non_zero_values))
+
+        # Replace non-zero elements with softmax values in the original tensor
+        optimal_nodes[non_zero_indices] = softmax_values
+
+        return optimal_nodes

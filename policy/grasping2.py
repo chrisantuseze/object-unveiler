@@ -18,6 +18,29 @@ def find_obstacles_to_remove(target_mask, all_masks):
 
     return obstacles_to_remove
 
+def get_target_objects_distance(target_mask, all_masks):
+    weights = []
+
+    for object_mask in all_masks:
+        weights.append(get_target_object_distance(object_mask, target_mask))
+
+    # Find the minimum and maximum values in the tensor
+    min_value = np.min(weights)
+    max_value = np.max(weights)
+
+    # Invert the list
+    inverted_weights = [min_value + max_value - x for x in weights]
+
+    inverted_weights -= min_value
+    
+    epsilon = 1e-6  # Small positive value to avoid division by zero
+    normalized_weights = inverted_weights / (max_value - min_value + epsilon)
+
+    # Step 4: Add a small positive value to ensure the values are above 0
+    normalized_weights += epsilon
+
+    return normalized_weights
+
 # Implement the helper functions as needed
 
 def sort_objects_by_distance(distances):
@@ -32,13 +55,17 @@ def mask_overlaps_with_target(object_mask, target_mask):
 
     return overlap
 
-def mask_is_close_to_target(object_idx, object_mask, target_mask, distance_threshold=95):
+def get_target_object_distance(object_mask, target_mask):
     # Calculate the centroids of the object and target masks
     object_centroid = calculate_centroid(object_mask)
     target_centroid = calculate_centroid(target_mask)
 
     # Calculate the distance between centroids
     distance = np.linalg.norm(object_centroid - target_centroid)
+    return distance
+
+def mask_is_close_to_target(object_idx, object_mask, target_mask, distance_threshold=95):
+    distance = get_target_object_distance(object_mask, target_mask)
     # print("object_idx:", object_idx, "distance:", distance)
 
     # Check if the distance is below the threshold
