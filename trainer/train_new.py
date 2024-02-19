@@ -34,7 +34,7 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     w2 = 0.04
     total_loss =  obstacle_loss + w2 * grasp_loss
 
-    print("obstacle_loss:", torch.sum(obstacle_loss), "grasp_loss:", torch.sum(grasp_loss), "total_loss", torch.sum(total_loss))
+    print("obstacle_loss:", torch.sum(obstacle_loss).detach().cpu().numpy(), "grasp_loss:", torch.sum(grasp_loss).detach().cpu().numpy(), "total_loss", torch.sum(total_loss).detach().cpu().numpy())
     
     return total_loss
 
