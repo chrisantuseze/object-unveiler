@@ -23,7 +23,7 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     # print("grasp_pred", grasp_pred, "\grasp_gt", grasp_gt)
 
     # Obstacle loss
-    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    # obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     
     # Grasp loss 
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
@@ -34,10 +34,10 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     w1 = 1
     w2 = 0.01
 
-    obstacle_loss = torch.sum(obstacle_loss)
+    # obstacle_loss = torch.sum(obstacle_loss)
     grasp_loss = torch.sum(grasp_loss)
 
-    total_loss =  w1*obstacle_loss + w2*grasp_loss
+    total_loss = grasp_loss #w1*obstacle_loss + w2*grasp_loss
     
     return total_loss
 
