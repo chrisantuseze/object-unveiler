@@ -267,7 +267,7 @@ class ObstacleHead(nn.Module):
         processed_objects = torch.stack(processed_objects)
         # print("processed_objects.shape", processed_objects.shape)
 
-        return processed_objects, Variable(top_indices.float().data, requires_grad=True)
+        return processed_objects, Variable(top_indices.float().data, requires_grad=True), all_scores
     
 
 class GraspHead(nn.Module):
@@ -473,12 +473,12 @@ class ResFCN(nn.Module):
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
-        processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks)
+        processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 
-        return objects_indices, out_probs
+        return scores, out_probs
     
 
 class Regressor(nn.Module):

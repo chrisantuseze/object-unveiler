@@ -218,7 +218,7 @@ def parse_args():
 
     # not needed for this operation, but if its not here, it causes problem in policy.py
     parser.add_argument('--patch_size', default=64, type=int, help='')
-    parser.add_argument('--num_patches', default=14, type=int, help='')
+    parser.add_argument('--num_patches', default=10, type=int, help='')
     
     return parser.parse_args()
 

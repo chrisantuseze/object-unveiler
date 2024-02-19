@@ -1,8 +1,8 @@
 import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
-from policy.models_obstacle import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_obstacle import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -32,17 +32,17 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     
     # Weighted sum
     w1 = 1
-    w2 = 0.65
+    w2 = 0.01
 
-    B, N = obstacle_loss.shape
-    obstacle_loss = obstacle_loss.reshape(B, N, 1, 1, 1)
+    obstacle_loss = torch.sum(obstacle_loss)
+    grasp_loss = torch.sum(grasp_loss)
 
     total_loss =  w1*obstacle_loss + w2*grasp_loss
     
     return total_loss
 
 # models_multi_task
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -122,7 +122,7 @@ def train_fcn_net1(args):
             )
             loss = torch.sum(loss)
 
-            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -169,8 +169,8 @@ def train_fcn_net1(args):
         # LR decay after every epoch
         # scheduler.step() 
 
-        logging.info('Epoch {}: training loss = {:.6f} '
-              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+        logging.info('Epoch {}: training loss = {:.8f} '
+              ', validation loss = {:.8f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
         
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
@@ -180,7 +180,7 @@ def train_fcn_net1(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -258,7 +258,7 @@ def train_fcn_net(args):
             loss = obstacle_criterion(obstacle_pred, obstacle_gt)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward(retain_graph=True)

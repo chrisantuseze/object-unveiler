@@ -117,7 +117,7 @@ class UnveilerDataset(data.Dataset):
         # print("obstacle_ids", obstacle_ids)
 
         # pad object masks
-        processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks(_processed_obj_masks, object_masks, optimal_nodes)
+        processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, optimal_nodes)
 
         return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, optimal_nodes
 
@@ -206,7 +206,7 @@ class UnveilerDataset(data.Dataset):
         return padded_heightmaps, padded_target_masks
 
 
-    def pad_object_masks(self, _processed_obj_masks, object_masks, optimal_nodes):
+    def pad_object_masks_and_nodes(self, _processed_obj_masks, object_masks, optimal_nodes):
         N, C, H, W = _processed_obj_masks.shape
         object_masks = np.array(object_masks)
         if N < self.args.num_patches:
