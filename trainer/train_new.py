@@ -23,21 +23,18 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     # print("grasp_pred", grasp_pred, "\grasp_gt", grasp_gt)
 
     # Obstacle loss
-    # obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     
     # Grasp loss 
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
-    # print(torch.sum(obstacle_loss), torch.sum(grasp_loss))
+    obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
     
     # Weighted sum
-    w1 = 1
-    w2 = 0.01
+    w2 = 0.04
+    total_loss =  obstacle_loss + w2 * grasp_loss
 
-    # obstacle_loss = torch.sum(obstacle_loss)
-    grasp_loss = torch.sum(grasp_loss)
-
-    total_loss = grasp_loss #w1*obstacle_loss + w2*grasp_loss
+    print("obstacle_loss:", torch.sum(obstacle_loss), "grasp_loss:", torch.sum(grasp_loss), "total_loss", torch.sum(total_loss))
     
     return total_loss
 
@@ -111,7 +108,7 @@ def train_fcn_net(args):
             obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
             obstacle_pred, pred = model(
-                x, target_mask, object_masks, obstacle_gt,
+                x, target_mask, object_masks,
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
@@ -153,7 +150,7 @@ def train_fcn_net(args):
                 obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
                 obstacle_preds, pred = model(
-                    x, target_mask, object_masks, obstacle_gt,
+                    x, target_mask, object_masks,
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
