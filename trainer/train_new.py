@@ -18,7 +18,7 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 
 # Loss function
-def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt):
+def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
     # print("obstacle_pred", obstacle_pred, "\n obstacle_gt", obstacle_gt)
     # print("grasp_pred", grasp_pred, "\grasp_gt", grasp_gt)
 
@@ -31,10 +31,11 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
     
     # Weighted sum
-    w2 = 0.04
+    w2 = 0.0025
     total_loss =  obstacle_loss + w2 * grasp_loss
 
-    print("obstacle_loss:", torch.sum(obstacle_loss).detach().cpu().numpy(), "grasp_loss:", torch.sum(grasp_loss).detach().cpu().numpy(), "total_loss", torch.sum(total_loss).detach().cpu().numpy())
+    if step % 200 == 0:
+        print("obstacle_loss:", torch.sum(obstacle_loss).detach().cpu().numpy(), "grasp_loss:", torch.sum(grasp_loss).detach().cpu().numpy(), "total_loss", torch.sum(total_loss).detach().cpu().numpy())
     
     return total_loss
 
@@ -115,7 +116,8 @@ def train_fcn_net(args):
 
             loss = multi_task_loss(
                 grasp_criterion, obstacle_criterion, 
-                obstacle_pred, pred, obstacle_gt, y
+                obstacle_pred, pred, obstacle_gt, y,
+                step
             )
             loss = torch.sum(loss)
 
@@ -149,13 +151,17 @@ def train_fcn_net(args):
                 y = batch[4].to(args.device, dtype=torch.float32)
                 obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
-                obstacle_preds, pred = model(
+                obstacle_pred, pred = model(
                     x, target_mask, object_masks,
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
 
-                loss = multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_preds, pred, obstacle_gt, y)
+                loss = multi_task_loss(
+                    grasp_criterion, obstacle_criterion, 
+                    obstacle_pred, pred, obstacle_gt, y,
+                    step
+                )
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
