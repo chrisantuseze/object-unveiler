@@ -465,7 +465,7 @@ class ResFCN(nn.Module):
             out = conv3(x)
         return out
    
-    def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, object_nodes, specific_rotation=-1, is_volatile=[]):
 
     # def forward(self, depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
@@ -473,9 +473,17 @@ class ResFCN(nn.Module):
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
-        processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks)
+        processed_objects_, objects_indices, scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
+        top_scores, top_indices = torch.topk(object_nodes, k=self.args.sequence_length, dim=1)
+        processed_objects = []
+        for i in range(depth_heightmap.shape[0]):
+            idx = top_indices[i] 
+            x = object_masks[i, idx] # x should be (4, 400, 400)
+            processed_objects.append(x)
+
+        processed_objects = torch.stack(processed_objects)
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 
         return scores, out_probs

@@ -111,7 +111,7 @@ def train_fcn_net(args):
             obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
             obstacle_pred, pred = model(
-                x, target_mask, object_masks, 
+                x, target_mask, object_masks, obstacle_gt,
                 # raw_x, raw_target_mask, raw_object_masks,
                 rotations
             )
@@ -153,7 +153,7 @@ def train_fcn_net(args):
                 obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
 
                 obstacle_preds, pred = model(
-                    x, target_mask, object_masks, 
+                    x, target_mask, object_masks, obstacle_gt,
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
