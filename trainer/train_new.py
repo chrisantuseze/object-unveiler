@@ -31,17 +31,11 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
     # Weighted sum
-    w2 = 0.0025
+    w = 2 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
 
-    if step % 200 == 0:
-        print("obstacle_loss:", torch.sum(obstacle_loss).detach().cpu().numpy(), 
-              "grasp_loss:", torch.sum(grasp_loss).detach().cpu().numpy(), 
-              "unweighted total_loss", torch.sum(obstacle_loss + grasp_loss).detach().cpu().numpy(), 
-              "weighted total_loss", torch.sum(obstacle_loss + w2 * grasp_loss).detach().cpu().numpy())
-    
-    total_loss = obstacle_loss + w2 * grasp_loss
+    total_loss = obstacle_loss + w * grasp_loss
 
-    return total_loss
+    return torch.sum(total_loss)
 
 # models_multi_task
 def train_fcn_net(args):
@@ -123,9 +117,9 @@ def train_fcn_net(args):
                 obstacle_pred, pred, obstacle_gt, y,
                 step
             )
-            loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            if step % (args.step * 2) == 0:
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -166,7 +160,6 @@ def train_fcn_net(args):
                     obstacle_pred, pred, obstacle_gt, y,
                     step
                 )
-                loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
