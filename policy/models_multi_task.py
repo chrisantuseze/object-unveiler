@@ -484,7 +484,6 @@ class ResFCN(nn.Module):
         #     idx = top_indices[i] 
         #     x = object_masks[i, idx] # x should be (4, 400, 400)
         #     processed_objects.append(x)
-
         # processed_objects = torch.stack(processed_objects)
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 

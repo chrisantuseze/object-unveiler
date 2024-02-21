@@ -221,7 +221,7 @@ class UnveilerDataset(data.Dataset):
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
 
-        optimal_nodes = self.apply_softmax(optimal_nodes)
+        optimal_nodes = general_utils.apply_softmax(optimal_nodes)
         if len(optimal_nodes) < self.args.num_patches:
             # Calculate the number of zeros needed for padding
             num_zeros = self.args.num_patches - len(optimal_nodes)
@@ -231,18 +231,3 @@ class UnveilerDataset(data.Dataset):
             padded_optimal_nodes = optimal_nodes[:self.args.num_patches]
 
         return processed_obj_masks, obj_masks, padded_optimal_nodes
-    
-    def apply_softmax(self, optimal_nodes):
-        # Find the indices of non-zero elements
-        non_zero_indices = np.nonzero(optimal_nodes)
-
-        # Extract non-zero elements
-        non_zero_values = optimal_nodes[non_zero_indices]
-
-        # Apply softmax to non-zero elements
-        softmax_values = np.exp(non_zero_values) / np.sum(np.exp(non_zero_values))
-
-        # Replace non-zero elements with softmax values in the original tensor
-        optimal_nodes[non_zero_indices] = softmax_values
-
-        return optimal_nodes

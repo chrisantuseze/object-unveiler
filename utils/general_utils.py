@@ -473,6 +473,20 @@ def overlay_images(heightmap, overlay):
 
     return background1, background2
 
+def apply_softmax(optimal_nodes):
+    # Find the indices of non-zero elements
+    non_zero_indices = np.nonzero(optimal_nodes)
+
+    # Extract non-zero elements
+    non_zero_values = optimal_nodes[non_zero_indices]
+
+    # Apply softmax to non-zero elements
+    softmax_values = np.exp(non_zero_values) / np.sum(np.exp(non_zero_values))
+
+    # Replace non-zero elements with softmax values in the original tensor
+    optimal_nodes[non_zero_indices] = softmax_values
+
+    return np.array(optimal_nodes)
 
 def get_pointcloud_(color_img, depth_img, camera_intrinsics):
 

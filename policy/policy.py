@@ -22,6 +22,7 @@ import utils.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
 import utils.logger as logging
+import policy.grasping2 as grasping2
 
 class Policy:
     def __init__(self, args, params) -> None:
@@ -318,8 +319,16 @@ class Policy:
         raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
         # print("raw_obj_masks.shape", raw_obj_masks.shape)
 
+        objects_to_remove = grasping2.get_target_objects_distance(target_mask, processed_masks)
+        objects_to_remove = general_utils.apply_softmax(objects_to_remove)
+        objects_to_remove = torch.FloatTensor(objects_to_remove).unsqueeze(0).to(self.device)
+
+        print(padding_needed, objects_to_remove.shape)
+        padded_objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
+        print(padded_objects_to_remove)
+
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks
+              raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove
     
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation
@@ -327,15 +336,14 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_processed_mask = self.get_inputs(state, color_image, target_mask)
+        raw_pred_mask, raw_target_mask, raw_processed_mask, objects_to_remove = self.get_inputs(state, color_image, target_mask)
 
         object_logits, out_prob = self.fcn(x,
-            processed_target, processed_obj_masks, 
+            processed_target, processed_obj_masks, objects_to_remove,
             # raw_pred_mask, raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
 
-        out_prob = torch.cat((out_prob, out_prob, out_prob), dim=0)
         print(out_prob.shape)
         out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
