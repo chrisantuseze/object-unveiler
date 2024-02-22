@@ -36,7 +36,7 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     except:
         w = 0.0025
         
-    total_loss = grasp_loss #obstacle_loss + w * grasp_loss
+    total_loss = obstacle_loss + w * grasp_loss
 
     return torch.sum(total_loss)
 
@@ -59,7 +59,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:6000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
