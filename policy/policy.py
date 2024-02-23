@@ -323,9 +323,9 @@ class Policy:
         objects_to_remove = general_utils.apply_softmax(objects_to_remove)
         objects_to_remove = torch.FloatTensor(objects_to_remove).unsqueeze(0).to(self.device)
 
-        print(padding_needed, objects_to_remove.shape)
+        # print(padding_needed, objects_to_remove.shape)
         padded_objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
-        print(padded_objects_to_remove)
+        # print(padded_objects_to_remove)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove
@@ -339,8 +339,9 @@ class Policy:
         raw_pred_mask, raw_target_mask, raw_processed_mask, objects_to_remove = self.get_inputs(state, color_image, target_mask)
 
         object_logits, out_prob = self.fcn(x,
-            processed_target, processed_obj_masks, objects_to_remove,
-            # raw_pred_mask, raw_target_mask, raw_processed_mask, 
+            # processed_target, processed_obj_masks, objects_to_remove,
+            processed_target, processed_obj_masks,
+            raw_target_mask, raw_processed_mask, 
             is_volatile=True
         )
 

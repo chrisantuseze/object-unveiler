@@ -185,8 +185,7 @@ class ObstacleHead(nn.Module):
         plt.show()
 
 
-    def visualize_attn(self, scene, target_mask, object_masks, attn_scores):
-
+    def visualize_attn(self, target_mask, object_masks, attn_scores):
         B, N, H, W = object_masks.shape
 
         # Reshape attention to match object masks 
@@ -203,8 +202,7 @@ class ObstacleHead(nn.Module):
 
         # Normalize for visualization
         attended_obj_masks = attended_obj_masks / attended_obj_masks.max() 
-
-        print("attended_obj_masks.shape", attended_obj_masks.shape)
+        # print("attended_obj_masks.shape", attended_obj_masks.shape)
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
@@ -220,20 +218,33 @@ class ObstacleHead(nn.Module):
         # plt.show()
 
         # Can also visualize attention weights directly as heatmap
-        fig, axs = plt.subplots(B, N+2, figsize=(13, 9))
-        for i in range(B):
-            axs[i, 0].imshow(target_mask[i])
-            axs[i, 1].imshow(attended_obj_masks[i].detach().numpy()) 
+        # print("target_mask.shape", target_mask.shape, "object_masks.shape", object_masks.shape)
+
+        if B == 1:
+            fig, axs = plt.subplots(B, N+2, figsize=(13, 9))
+            axs[0].imshow(target_mask[0])
+            axs[1].imshow(attended_obj_masks[0].detach().numpy()) 
             k = 2
             for j in range(N):
-                axs[i,k].imshow(object_masks[i,j])
-                axs[i,k].imshow(attn_weights[i,j].detach().numpy(), alpha=0.5, cmap='viridis') 
+                axs[k].imshow(object_masks[0,j])
+                axs[k].imshow(attn_weights[0,j].detach().numpy(), alpha=0.5, cmap='viridis') 
                 k += 1
+
+        else:
+            fig, axs = plt.subplots(B, N+2, figsize=(13, 9))
+            for i in range(B):
+                axs[i, 0].imshow(target_mask[i])
+                axs[i, 1].imshow(attended_obj_masks[i].detach().numpy()) 
+                k = 2
+                for j in range(N):
+                    axs[i,k].imshow(object_masks[i,j])
+                    axs[i,k].imshow(attn_weights[i,j].detach().numpy(), alpha=0.5, cmap='viridis') 
+                    k += 1
 
         plt.show()
 
     def forward(self, target_mask, object_masks):
-    # def forward(self, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+    # def forward(self, target_mask, object_masks, raw_target_mask, raw_object_masks):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
@@ -243,7 +254,7 @@ class ObstacleHead(nn.Module):
 
         top_indices, top_scores, all_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2)) #raw_object_masks)
 
-        # self.visualize_attn(raw_scene_mask, raw_target_mask, raw_object_masks, all_scores)
+        # self.visualize_attn(raw_target_mask, raw_object_masks, all_scores)
 
         ###### Keep overlapped objects #####
         processed_objects = []
@@ -469,14 +480,14 @@ class ResFCN(nn.Module):
    
     def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
         # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
         # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
         processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
+        # processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks)
 
         # top_scores, top_indices = torch.topk(object_nodes, k=self.args.sequence_length, dim=1)
         # processed_objects = []
