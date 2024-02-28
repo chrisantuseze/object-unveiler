@@ -182,6 +182,9 @@ def train_fcn_net(args):
             writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
             writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
+            if epoch % 10 == 0:
+                torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
+
     except Exception as e:
         logging.error(e)
 
