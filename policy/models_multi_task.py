@@ -110,14 +110,12 @@ class ObstacleHead(nn.Module):
 
         # Replace NaN values with a specific value (e.g., 0.0)
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-
-        # print("attn_scores.shape", attn_scores.shape) # [B,N]
-        # print("attn_scores", attn_scores)
+        print("attn_scores", attn_scores)
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         # print("top_scores", top_scores)
-        # print("top_indices", top_indices)
+        print("top_indices", top_indices)
 
         return top_indices, top_scores, attn_scores
     
@@ -184,7 +182,6 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-
     def visualize_attn(self, target_mask, object_masks, attn_scores):
         B, N, H, W = object_masks.shape
 
@@ -206,19 +203,6 @@ class ObstacleHead(nn.Module):
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-
-        print("attn_scores", attn_scores)
-        print("top_scores", top_scores)
-
-        # Visualize attended masks
-        # fig, axs = plt.subplots(B, 2)
-        # for i in range(B):
-        #     axs[i, 0].imshow(target_mask[i])
-        #     axs[i, 1].imshow(attended_obj_masks[i].detach().numpy()) 
-        # plt.show()
-
-        # Can also visualize attention weights directly as heatmap
-        # print("target_mask.shape", target_mask.shape, "object_masks.shape", object_masks.shape)
 
         if B == 1:
             fig, axs = plt.subplots(B, N+2, figsize=(13, 9))

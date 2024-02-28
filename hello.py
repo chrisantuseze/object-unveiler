@@ -6,7 +6,7 @@ dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
 # Specify the path to the folder containing the files you want to rename
 
 folder_path = "real-ou-dataset/"
-id = 0 #12346
+id = 23481
 
 
 folder_path = dir + folder_path
