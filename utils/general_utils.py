@@ -1,4 +1,3 @@
-# import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -13,6 +12,11 @@ from skimage import transform
 import utils.pybullet_utils as p_utils
 from utils.constants import *
 import utils.logger as logging
+
+try:
+    import open3d as o3d
+except:
+    print("Couldn't import open3d")
 
 
 def get_pointcloud(depth, seg, intrinsics):
