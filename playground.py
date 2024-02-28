@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import zipfile
 
-with zipfile.ZipFile("real-ou-dataset.zip", 'r') as zip_ref:
-    zip_ref.extractall("real-ou-dataset")
+with zipfile.ZipFile("pc-ou-dataset.zip", 'r') as zip_ref:
+    zip_ref.extractall("pc-ou-dataset")
 
 
 # import torch
