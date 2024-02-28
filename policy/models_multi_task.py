@@ -110,7 +110,7 @@ class ObstacleHead(nn.Module):
 
         # Replace NaN values with a specific value (e.g., 0.0)
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-        print("attn_scores", attn_scores)
+        # print("attn_scores", attn_scores)
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
