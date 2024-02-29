@@ -60,6 +60,11 @@ class ObstacleHead(nn.Module):
         self.feat_extractor = feat_extractor
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.mlp = nn.Sequential(
+            nn.Linear(self.args.batch_size * self.args.num_patches, self.args.num_patches),
+            nn.ReLU(),
+            nn.Linear(self.args.num_patches, self.args.batch_size * self.args.num_patches)
+        )
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -84,12 +89,42 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
+    def get_topk_attn_scores0(self, projected_objs, projected_target, object_masks):
+        N = projected_objs.shape[0]
+
+        # Spatial attention 
+        iou_scores = []
+        for i in range(N):
+            intersect = (projected_objs[i] * projected_target).sum() 
+            union = projected_objs[i].sum() + projected_target.sum() - intersect
+            iou = intersect / union
+            iou_scores.append(iou)
+        
+        center_dists = [(projected_objs[i] - projected_target).norm() for i in range(N)]
+
+        s_attn = [a*b for a,b in zip(iou_scores, 1/center_dists)]
+        s_attn = torch.softmax(s_attn, dim=0)
+
+        # Depth attention
+        depth_values = torch.randn(N) # sample depth for each mask
+        d_attn = 1/depth_values
+        d_attn = torch.softmax(d_attn, dim=0) 
+
+        # Combine attention
+        combo_attn = s_attn * d_attn
+        top_scores, top_indices = torch.topk(combo_attn, k=self.args.sequence_length, dim=1)
+
+        return top_indices, top_scores, combo_attn
+
     def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
         # Scaled dot-product attention
         # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
         attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
 
-        # attn_scores = self.mlp(projected_objs + projected_target.unsqueeze(1)).squeeze(2)
+        # print("attn_scores:", attn_scores)
+        attn_scores = self.mlp(attn_scores.reshape(-1))
+        attn_scores = attn_scores.reshape(self.args.batch_size, self.args.num_patches)
+        # print("attn_scores:", attn_scores)
 
         # print("object_masks.shape", object_masks.shape)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
@@ -103,7 +138,7 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
 
         attn_scores = F.softmax(attn_scores, dim=0)
-        # attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
+        # print("attn_scores:", attn_scores)
 
         # Create a mask for NaN values
         nan_mask = torch.isnan(attn_scores)
@@ -264,7 +299,7 @@ class ObstacleHead(nn.Module):
         processed_objects = torch.stack(processed_objects)
         # print("processed_objects.shape", processed_objects.shape)
 
-        return processed_objects, Variable(top_indices.float().data, requires_grad=True), all_scores
+        return processed_objects, top_indices.float().data, all_scores
     
 
 class GraspHead(nn.Module):
