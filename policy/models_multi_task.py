@@ -89,7 +89,7 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
-    def get_topk_attn_scores0(self, projected_objs, projected_target, object_masks):
+    def get_topk_attn_scores0(self, projected_objs, projected_target):
         N = projected_objs.shape[0]
 
         # Spatial attention 
@@ -116,36 +116,25 @@ class ObstacleHead(nn.Module):
 
         return top_indices, top_scores, combo_attn
 
-    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
+    def get_topk_attn_scores(self, projected_objs, projected_target):
         # Scaled dot-product attention
         # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
         attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
+        # print("attn_scores 1:", attn_scores)
 
-        # print("attn_scores:", attn_scores)
         attn_scores = self.mlp(attn_scores)
         attn_scores = attn_scores.reshape(self.args.batch_size, self.args.num_patches)
-        # print("attn_scores:", attn_scores)
+        # print("attn_scores 2:", attn_scores)
 
-        # print("object_masks.shape", object_masks.shape)
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        # print("padding_masks.shape", padding_masks.shape) #torch.Size([2, 12])
-
-        # Expand the mask to match the shape of A
-        padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        # print("padding_mask_expanded.shape", padding_mask_expanded.shape) #torch.Size([2, 12])
-
-        # Zero out the corresponding entries in A using the mask
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-
-        attn_scores = F.softmax(attn_scores, dim=0)
-        # print("attn_scores:", attn_scores)
+        attn_scores = F.softmax(attn_scores, dim=1)
+        # print("softmax attn_scores 3:", attn_scores)
 
         # Create a mask for NaN values
         nan_mask = torch.isnan(attn_scores)
 
         # Replace NaN values with a specific value (e.g., 0.0)
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-        # print("attn_scores", attn_scores)
+        # print("attn_scores 4:", attn_scores)
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
@@ -271,7 +260,7 @@ class ObstacleHead(nn.Module):
 
         B, N, C, = obj_features.shape
 
-        top_indices, top_scores, all_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2)) #raw_object_masks)
+        top_indices, top_scores, all_scores = self.get_topk_attn_scores(obj_features, target_feats)
 
         # self.visualize_attn(raw_target_mask, raw_object_masks, all_scores)
 
@@ -297,9 +286,7 @@ class ObstacleHead(nn.Module):
         # ###############################################################
             
         processed_objects = torch.stack(processed_objects)
-        # print("processed_objects.shape", processed_objects.shape)
-
-        return processed_objects, top_indices.float().data, all_scores
+        return processed_objects, all_scores
     
 
 class GraspHead(nn.Module):
@@ -500,21 +487,9 @@ class ResFCN(nn.Module):
     def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
 
     # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
-        # print("object_masks.shape", object_masks.shape) #torch.Size([2, 12, 1, 144, 144])
-        # print("raw_object_masks.shape", raw_object_masks.shape) #torch.Size([2, 12, 100, 100])
-        # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
+        processed_objects, scores = self.obstacle_head(target_mask, object_masks)
+        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks)
 
-
-        processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, objects_indices, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks)
-
-        # top_scores, top_indices = torch.topk(object_nodes, k=self.args.sequence_length, dim=1)
-        # processed_objects = []
-        # for i in range(depth_heightmap.shape[0]):
-        #     idx = top_indices[i] 
-        #     x = object_masks[i, idx] # x should be (4, 400, 400)
-        #     processed_objects.append(x)
-        # processed_objects = torch.stack(processed_objects)
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 
         return scores, out_probs
