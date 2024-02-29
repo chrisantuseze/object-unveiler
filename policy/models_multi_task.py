@@ -61,9 +61,9 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.mlp = nn.Sequential(
-            nn.Linear(self.args.batch_size * self.args.num_patches, self.args.num_patches),
+            nn.Linear(self.args.num_patches, self.args.num_patches),
             nn.ReLU(),
-            nn.Linear(self.args.num_patches, self.args.batch_size * self.args.num_patches)
+            nn.Linear(self.args.num_patches, self.args.num_patches)
         )
      
     def preprocess_input(self, object_masks):
@@ -122,7 +122,7 @@ class ObstacleHead(nn.Module):
         attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
 
         # print("attn_scores:", attn_scores)
-        attn_scores = self.mlp(attn_scores.reshape(-1))
+        attn_scores = self.mlp(attn_scores)
         attn_scores = attn_scores.reshape(self.args.batch_size, self.args.num_patches)
         # print("attn_scores:", attn_scores)
 
