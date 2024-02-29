@@ -169,7 +169,6 @@ def train_fcn_net(args):
                     epoch_loss[phase] += loss.detach().cpu().numpy()
 
                     if step % args.step == 0:
-                        logging.info("obstacle scores:", obstacle_pred)
                         logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
             # LR decay after every epoch
