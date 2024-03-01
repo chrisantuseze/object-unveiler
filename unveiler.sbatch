@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p bullet
-#SBATCH -t 120:00:00
+#SBATCH -t 72:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=10
 #SBATCH --mail-user=chrisantus.eze@okstate.edu

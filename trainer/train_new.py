@@ -29,10 +29,11 @@ def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pr
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+    # print(torch.sum(obstacle_loss).detach().cpu().numpy(), torch.sum(grasp_loss).detach().cpu().numpy())
 
     # Weighted sum
     try:
-        w = 2 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     except:
         w = 0.0025
         
