@@ -325,7 +325,7 @@ class Policy:
 
         # print(padding_needed, objects_to_remove.shape)
         padded_objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
-        # print(padded_objects_to_remove)
+        print("ground truth:", padded_objects_to_remove)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove
@@ -341,7 +341,7 @@ class Policy:
         object_logits, out_prob = self.fcn(x,
             # processed_target, processed_obj_masks, objects_to_remove,
             processed_target, processed_obj_masks,
-            # raw_target_mask, raw_processed_mask, 
+            raw_target_mask, raw_processed_mask, raw_pred_mask, 
             is_volatile=True
         )
 

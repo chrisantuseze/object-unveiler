@@ -65,6 +65,8 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
             nn.Linear(self.args.num_patches, self.args.num_patches)
         )
+        self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units//2)
+        self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units//2)
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -103,15 +105,20 @@ class ObstacleHead(nn.Module):
         center_dists = [(projected_objs[i] - projected_target).norm() for i in range(N)]
 
         s_attn = [a*b for a,b in zip(iou_scores, 1/center_dists)]
-        s_attn = torch.softmax(s_attn, dim=0)
+        print("attn_scores 1:", s_attn)
+        s_attn = torch.softmax(s_attn, dim=1)
+        print("softmax attn_scores 1:", s_attn)
 
         # Depth attention
         depth_values = torch.randn(N) # sample depth for each mask
         d_attn = 1/depth_values
-        d_attn = torch.softmax(d_attn, dim=0) 
+        print("attn_scores 2:", d_attn)
+        d_attn = torch.softmax(d_attn, dim=1)
+        print("softmax attn_scores 2:", s_attn)
 
         # Combine attention
         combo_attn = s_attn * d_attn
+        print("combine attn_scores:", s_attn)
         top_scores, top_indices = torch.topk(combo_attn, k=self.args.sequence_length, dim=1)
 
         return top_indices, top_scores, combo_attn
@@ -119,7 +126,10 @@ class ObstacleHead(nn.Module):
     def get_topk_attn_scores(self, projected_objs, projected_target):
         # Scaled dot-product attention
         # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
-        attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
+        projected_target = self.target_proj(projected_target)
+        projected_objs = self.objects_proj(projected_objs.reshape(projected_objs.shape[0], -1))
+        # print(projected_objs.shape, projected_target.shape)
+        attn_scores = (projected_target.unsqueeze(1) * projected_objs.reshape(projected_objs.shape[0], self.args.num_patches, -1)).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
         # print("attn_scores 1:", attn_scores)
 
         attn_scores = self.mlp(attn_scores)
@@ -154,7 +164,12 @@ class ObstacleHead(nn.Module):
             else:
                 ax[i][0].imshow(scenes[i])
 
-            k = 1
+            if obj_masks.shape[0] == 1:
+                ax[i+1].imshow(target_mask[i])
+            else:
+                ax[i][1].imshow(target_mask[i])
+
+            k = 2
             for j in range(obj_masks.shape[1]):
                 obj_mask = obj_masks[i][j]
                 # print("obj_mask.shape", obj_mask.shape)
@@ -164,11 +179,6 @@ class ObstacleHead(nn.Module):
                 else:
                     ax[i][k].imshow(obj_mask)
                 k += 1
-
-            if obj_masks.shape[0] == 1:
-                ax[k].imshow(target_mask[i])
-            else:
-                ax[i][k].imshow(target_mask[i])
 
 
         if optimal_nodes:
@@ -252,7 +262,7 @@ class ObstacleHead(nn.Module):
         plt.show()
 
     def forward(self, target_mask, object_masks):
-    # def forward(self, target_mask, object_masks, raw_target_mask, raw_object_masks):
+    # def forward(self, target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
@@ -276,12 +286,12 @@ class ObstacleHead(nn.Module):
         # ################### THIS IS FOR VISUALIZATION ####################
         #     raw_x = raw_object_masks[i, idx]
         #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objs.append(raw_x)
+        #     raw_objects.append(raw_x)
 
-        # raw_objs = torch.stack(raw_objs)
+        # raw_objects = torch.stack(raw_objects)
             
         # # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=is_volatile)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=B==1)
 
         # ###############################################################
             
@@ -485,10 +495,10 @@ class ResFCN(nn.Module):
         return out
    
     def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask, specific_rotation=-1, is_volatile=[]):
+        
         processed_objects, scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks)
+        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
 
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 
