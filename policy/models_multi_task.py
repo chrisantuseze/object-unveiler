@@ -139,14 +139,13 @@ class ObstacleHead(nn.Module):
 
         attn_scores = F.softmax(attn_scores, dim=1)
         attn_scores = self.dropout(attn_scores)
-        print("softmax attn_scores 3:", attn_scores)
 
         # Create a mask for NaN values
         nan_mask = torch.isnan(attn_scores)
 
         # Replace NaN values with a specific value (e.g., 0.0)
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-        # print("attn_scores 4:", attn_scores)
+        print_msg(attn_scores.shape[0], "attn_scores 4:", attn_scores)
 
         # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
@@ -508,6 +507,12 @@ class ResFCN(nn.Module):
 
         return scores, out_probs
     
+
+def print_msg(B, *args):
+    if B != 1:
+        return
+    result = ' '.join(map(str, args))
+    print(result)
 
 class Regressor(nn.Module):
     def __init__(self):

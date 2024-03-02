@@ -186,6 +186,10 @@ class UnveilerDataset(data.Dataset):
             rot_ids = rot_ids + [0] * required_len
 
             obstacle_ids = obstacle_ids + [0] * required_len
+        else:
+            labels = labels[:seq_len]
+            rot_ids = rot_ids[:seq_len]
+            obstacle_ids = obstacle_ids[:seq_len]
 
         return np.array(labels), rot_ids, np.array(obstacle_ids)
     

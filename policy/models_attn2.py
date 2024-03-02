@@ -319,7 +319,7 @@ class ResFCN(nn.Module):
         # Zero out the corresponding entries in A using the mask
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
 
-        attn_scores = F.softmax(attn_scores, dim=0)
+        attn_scores = F.softmax(attn_scores, dim=1)
         # attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
 
         # Create a mask for NaN values
