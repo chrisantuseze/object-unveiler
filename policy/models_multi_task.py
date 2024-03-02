@@ -262,8 +262,8 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    def forward(self, target_mask, object_masks):
-    # def forward(self, target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask):
+    # def forward(self, target_mask, object_masks):
+    def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
@@ -460,7 +460,7 @@ class ResFCN(nn.Module):
         # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
 
         self.obstacle_head = ObstacleHead(args, self.predict) 
-        self.grasp_head = GraspHead(args, self.predict)
+        # self.grasp_head = GraspHead(args, self.predict)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -497,13 +497,13 @@ class ResFCN(nn.Module):
             out = conv3(x)
         return out
    
-    def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, specific_rotation=-1, is_volatile=[]):
         
-        processed_objects, scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
+        # processed_objects, scores = self.obstacle_head(target_mask, object_masks)
+        processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
 
-        out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
+        out_probs = None #self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 
         return scores, out_probs
     

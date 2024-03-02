@@ -29,7 +29,7 @@ def debug(*args):
 
 def info(*args):
     result = ' '.join(map(str, args))
-    print(result)
+    # print(result)
     logging.info(result)
 
 def warn(*args):
