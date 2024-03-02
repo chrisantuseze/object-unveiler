@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')
     parser.add_argument('--weight_decay', type=float, default=1e-3, help='Weight decay for optimizer')
 
-    parser.add_argument('--sequence_length', default=1, type=int, help='')
+    parser.add_argument('--sequence_length', default=3, type=int, help='')
     parser.add_argument('--patch_size', default=64, type=int, help='')
     parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 8')
     parser.add_argument('--step', default=200, type=int, help='')
