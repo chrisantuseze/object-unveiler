@@ -67,6 +67,7 @@ class ObstacleHead(nn.Module):
         )
         self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units//2)
         self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units//2)
+        self.dropout = nn.Dropout(p=0.3)
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -137,7 +138,8 @@ class ObstacleHead(nn.Module):
         # print("attn_scores 2:", attn_scores)
 
         attn_scores = F.softmax(attn_scores, dim=1)
-        # print("softmax attn_scores 3:", attn_scores)
+        attn_scores = self.dropout(attn_scores)
+        print("softmax attn_scores 3:", attn_scores)
 
         # Create a mask for NaN values
         nan_mask = torch.isnan(attn_scores)
@@ -266,7 +268,9 @@ class ObstacleHead(nn.Module):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
+        # print("target_feats.shape", target_feats.shape)
         target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
+        # print("target_feats.shape", target_feats.shape)
 
         B, N, C, = obj_features.shape
 
@@ -296,7 +300,7 @@ class ObstacleHead(nn.Module):
         # ###############################################################
             
         processed_objects = torch.stack(processed_objects)
-        return processed_objects, all_scores
+        return Variable(processed_objects, requires_grad=True).to(self.device), all_scores
     
 
 class GraspHead(nn.Module):
