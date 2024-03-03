@@ -18,7 +18,18 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 
 # Loss function
-def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
+def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
+    # Annealing coefficient 
+    annealing_coef = 0.5
+    max_epochs = 10
+    p = annealing_coef * epoch / max_epochs  
+
+    # Sample noise
+    noise = torch.randn_like(obstacle_pred)
+
+    # Mix in noise
+    obstacle_pred = p * obstacle_pred + (1 - p) * noise
+
     obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
@@ -52,7 +63,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:7000]
+    transition_dirs = transition_dirs[:5000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -110,7 +121,7 @@ def train_fcn_net(args):
                     rotations
                 )
 
-                loss = multi_task_loss(
+                loss = multi_task_loss(epoch,
                     grasp_criterion, obstacle_criterion, 
                     obstacle_pred, pred, obstacle_gt, y,
                     step
@@ -153,7 +164,7 @@ def train_fcn_net(args):
                         rotations
                     )
 
-                    loss = multi_task_loss(
+                    loss = multi_task_loss(epoch, 
                         grasp_criterion, obstacle_criterion, 
                         obstacle_pred, pred, obstacle_gt, y,
                         step

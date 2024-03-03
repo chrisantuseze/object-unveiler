@@ -345,7 +345,6 @@ class Policy:
             is_volatile=True
         )
 
-        print(out_prob.shape)
         out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
 
         best_actions = []

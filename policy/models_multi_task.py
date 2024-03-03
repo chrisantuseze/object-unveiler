@@ -67,7 +67,15 @@ class ObstacleHead(nn.Module):
         # )
         self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
         self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
-        self.dropout = nn.Dropout(p=0.3)
+        self.dropout = nn.Dropout(p=0.1)
+
+        # Use Xavier normal initialization
+        nn.init.xavier_normal_(self.target_proj.weight)
+        nn.init.xavier_normal_(self.objects_proj.weight) 
+
+        # Normalize weight after init
+        self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
+        self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -143,9 +151,15 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
         # print("attn_scores 2:", attn_scores)
 
+        # Temperature 
+        temp = 10.0
+
+        # Scaled logits
+        attn_scores = attn_scores / temp
+
         attn_scores = F.softmax(attn_scores, dim=1)
+        attn_scores = self.dropout(attn_scores)
         # print("softmax attn_scores 3:", attn_scores)
-        # attn_scores = self.dropout(attn_scores)
 
         # Create a mask for NaN values
         nan_mask = torch.isnan(attn_scores)
@@ -153,6 +167,13 @@ class ObstacleHead(nn.Module):
         # Replace NaN values with a specific value (e.g., 0.0)
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
         print_msg(attn_scores.shape[0], "attn_scores 4:", attn_scores)
+
+        # Sample noise  
+        noise = torch.randn_like(attn_scores) * 0.01
+
+        # Inject noise
+        attn_scores = attn_scores + noise
+        # print("attn_scores 4:", attn_scores)
 
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         return top_indices, attn_scores
