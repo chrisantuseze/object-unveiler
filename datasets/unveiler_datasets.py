@@ -114,7 +114,6 @@ class UnveilerDataset(data.Dataset):
 
         # pad labels and rot_ids. The object_ids are not required anymore
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
-        # print("obstacle_ids", obstacle_ids)
 
         # pad object masks
         processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, optimal_nodes)

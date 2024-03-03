@@ -1,7 +1,7 @@
 import os
 import random
-# from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 
 import torch
