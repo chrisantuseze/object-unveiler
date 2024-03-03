@@ -154,7 +154,6 @@ class ObstacleHead(nn.Module):
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
         print_msg(attn_scores.shape[0], "attn_scores 4:", attn_scores)
 
-        # Use torch.topk to get the top k values and their indices
         top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         return top_indices, attn_scores
     
@@ -271,9 +270,7 @@ class ObstacleHead(nn.Module):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
-        # print("target_feats.shape", target_feats.shape)
         target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
-        # print("target_feats.shape", target_feats.shape)
 
         B, N, C, = obj_features.shape
 
@@ -506,9 +503,9 @@ class ResFCN(nn.Module):
         processed_objects, scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
         
-        out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
-        # B, N, C, H, W = processed_objects.shape
-        # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
+        # out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
+        B, N, C, H, W = processed_objects.shape
+        out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
 
         return scores, out_probs
     
