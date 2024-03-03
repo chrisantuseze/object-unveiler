@@ -506,6 +506,7 @@ class ResFCN(nn.Module):
         # out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
         B, N, C, H, W = processed_objects.shape
         out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
+        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
 
         return scores, out_probs
     
