@@ -19,25 +19,17 @@ import utils.logger as logging
 
 # Loss function
 def multi_task_loss(grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
-    # print("obstacle_pred", obstacle_pred, "\n obstacle_gt", obstacle_gt)
-    # print("grasp_pred", grasp_pred, "\grasp_gt", grasp_gt)
-
-    # Obstacle loss
     obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
-    
-    # Grasp loss 
-    # grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
+    grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
-    # print(torch.sum(obstacle_loss).detach().cpu().numpy(), torch.sum(grasp_loss).detach().cpu().numpy())
 
-    # Weighted sum
-    # try:
-    #     w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
-    # except:
-    #     w = 0.0025
+    try:
+        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    except:
+        w = 0.0025
         
-    total_loss = obstacle_loss #+ w * grasp_loss
+    total_loss = obstacle_loss + w * grasp_loss
 
     return torch.sum(total_loss)
 
