@@ -26,20 +26,20 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
 
     # Sample noise
     noise = torch.randn_like(obstacle_pred)
-
-    # Mix in noise
+    zero_indices = torch.where(obstacle_pred == 0)
+    noise[zero_indices] = 0
     obstacle_pred = p * obstacle_pred + (1 - p) * noise
 
     obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
-    grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
+    # grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
-    try:
-        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
-    except:
-        w = 0.0025
-        
+    # try:
+    #     w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    # except:
+    #     w = 0.0025
+
     total_loss = obstacle_loss #+ w * grasp_loss
 
     return torch.sum(total_loss)
@@ -185,7 +185,7 @@ def train_fcn_net(args):
             writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
             writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-            if epoch % 10 == 0:
+            if epoch % 5 == 0:
                 torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     except Exception as e:

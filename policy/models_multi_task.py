@@ -67,7 +67,7 @@ class ObstacleHead(nn.Module):
         # )
         self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
         self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.4)
 
         # Use Xavier normal initialization
         nn.init.xavier_normal_(self.target_proj.weight)
@@ -132,7 +132,7 @@ class ObstacleHead(nn.Module):
 
         return top_indices, top_scores, combo_attn
 
-    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
+    def attention_head(self, projected_objs, projected_target, object_masks):
         projected_target = self.target_proj(projected_target)
         projected_objs = self.objects_proj(projected_objs.reshape(projected_objs.shape[0], -1))
         projected_objs = projected_objs.reshape(projected_objs.shape[0], self.args.num_patches, -1)
@@ -143,18 +143,12 @@ class ObstacleHead(nn.Module):
 
         # get zero padded objects
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-
-        # Expand the mask to match the shape of A
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
-
-        # Zero out the corresponding entries in A using the mask
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
         # print("attn_scores 2:", attn_scores)
 
         # Temperature 
-        temp = 10.0
-
-        # Scaled logits
+        temp = 50.0
         attn_scores = attn_scores / temp
 
         attn_scores = F.softmax(attn_scores, dim=1)
@@ -168,14 +162,21 @@ class ObstacleHead(nn.Module):
         attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
         print_msg(attn_scores.shape[0], "attn_scores 4:", attn_scores)
 
+        return attn_scores
+
+    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
+        n_heads = 3
+        multi_heads = [self.attention_head(projected_objs, projected_target, object_masks) for _ in range(n_heads)]
+        attn_scores = sum(multi_heads)/n_heads
+        # print("average attn_scores:", attn_scores)
+
         # Sample noise  
-        noise = torch.randn_like(attn_scores) * 0.01
+        # noise = torch.randn_like(attn_scores) * 0.01
+        # zero_indices = torch.where(attn_scores == 0)
+        # noise[zero_indices] = 0
+        # attn_scores = attn_scores + noise
 
-        # Inject noise
-        attn_scores = attn_scores + noise
-        # print("attn_scores 4:", attn_scores)
-
-        top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         return top_indices, attn_scores
     
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
