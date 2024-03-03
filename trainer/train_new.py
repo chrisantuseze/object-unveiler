@@ -45,7 +45,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net(args):
+def train_fcn_net0(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -335,7 +335,7 @@ def train_fcn_net1(args):
     writer.close()
 
 # models_attn
-def train_fcn_net3(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -353,7 +353,7 @@ def train_fcn_net3(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:6000]
+    transition_dirs = transition_dirs[:4000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -380,11 +380,6 @@ def train_fcn_net3(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    # optimizer = optim.SGD(model.parameters(), 
-    #                         lr=args.lr, 
-    #                         momentum=args.momentum,
-    #                         weight_decay=args.weight_decay)
-    
     # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
 
@@ -416,7 +411,8 @@ def train_fcn_net3(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            if step % (args.step * 2) == 0:
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
