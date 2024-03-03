@@ -134,10 +134,12 @@ def train_fcn_net(args):
                 loss.backward()
                 optimizer.step()
 
-                grad_norm = calculate_gradient_norm(model) 
+                debug_params(model)
 
-                writer.add_scalar("norm/train", grad_norm, global_step)
-                global_step += 1
+                # grad_norm = calculate_gradient_norm(model) 
+
+                # writer.add_scalar("norm/train", grad_norm, global_step)
+                # global_step += 1
 
             model.eval()
             epoch_loss = {'train': 0.0, 'val': 0.0}

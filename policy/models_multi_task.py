@@ -287,8 +287,8 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    # def forward(self, target_mask, object_masks):
-    def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
+    def forward(self, target_mask, object_masks):
+    # def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
@@ -530,7 +530,7 @@ class ResFCN(nn.Module):
         # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
         # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
 
-        return scores, out_probs
+        return out_probs, None #scores, out_probs
     
 
 def print_msg(B, *args):
