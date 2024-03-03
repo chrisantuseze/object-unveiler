@@ -30,17 +30,17 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     # noise[zero_indices] = 0
     # obstacle_pred = p * obstacle_pred + (1 - p) * noise
 
-    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    # obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
-    obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+    # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
-    try:
-        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
-    except:
-        w = 0.0025
+    # try:
+    #     w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    # except:
+    #     w = 0.0025
 
-    total_loss = obstacle_loss + w * grasp_loss
+    total_loss = grasp_loss #obstacle_loss + w * grasp_loss
 
     return torch.sum(total_loss)
 
