@@ -20,27 +20,27 @@ import utils.logger as logging
 # Loss function
 def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
     # Annealing coefficient 
-    annealing_coef = 0.5
-    max_epochs = 10
-    p = annealing_coef * epoch / max_epochs  
+    # annealing_coef = 0.5
+    # max_epochs = 10
+    # p = annealing_coef * epoch / max_epochs  
 
-    # Sample noise
-    noise = torch.randn_like(obstacle_pred)
-    zero_indices = torch.where(obstacle_pred == 0)
-    noise[zero_indices] = 0
-    obstacle_pred = p * obstacle_pred + (1 - p) * noise
+    # # Sample noise
+    # noise = torch.randn_like(obstacle_pred)
+    # zero_indices = torch.where(obstacle_pred == 0)
+    # noise[zero_indices] = 0
+    # obstacle_pred = p * obstacle_pred + (1 - p) * noise
 
-    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
-    # grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
+    # obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
-    obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+    # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
     # try:
     #     w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     # except:
     #     w = 0.0025
 
-    total_loss = obstacle_loss #+ w * grasp_loss
+    total_loss = grasp_loss #obstacle_loss + w * grasp_loss
 
     return torch.sum(total_loss)
 

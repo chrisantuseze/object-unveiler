@@ -482,7 +482,7 @@ class ResFCN(nn.Module):
         # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
 
         self.obstacle_head = ObstacleHead(args, self.predict) 
-        # self.grasp_head = GraspHead(args, self.predict)
+        self.grasp_head = GraspHead(args, self.predict)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -525,10 +525,10 @@ class ResFCN(nn.Module):
         processed_objects, scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
         
-        # out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
-        B, N, C, H, W = processed_objects.shape
-        out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
-        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
+        # B, N, C, H, W = processed_objects.shape
+        # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
+        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
 
         return scores, out_probs
     
