@@ -530,7 +530,7 @@ class ResFCN(nn.Module):
         # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
         # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
 
-        return None, out_probs #scores, out_probs
+        return scores, out_probs
     
 
 def print_msg(B, *args):
