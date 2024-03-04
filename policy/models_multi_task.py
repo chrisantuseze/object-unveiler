@@ -52,6 +52,36 @@ class ResidualBlock(nn.Module):
 
         return out
 
+class CausalAttention(nn.Module):
+    def __init__(self, args):
+        super(ObstacleHead, self).__init__()
+        self.args = args
+        self.final_conv_units = 128
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        self.projection = nn.Sequential(
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
+            nn.ReLU(),
+            nn.Linear(256, self.final_conv_units)
+        )
+
+    def forward(self, target_feat, obj_feat, object_masks):
+        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
+        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
+        # print("attn_input.shape", attn_input.shape)
+
+        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+        # print("attention.shape", attention.shape)
+        
+        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+        # print("attended_obj.shape", attended_obj.shape)
+        
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attended_obj)
+        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        print("attended_obj:", attended_obj)
+
+        return attended_obj
 
 class ObstacleHead(nn.Module):
     def __init__(self, args, feat_extractor):
@@ -72,7 +102,7 @@ class ObstacleHead(nn.Module):
         # # Normalize weight after init
         # self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
         # self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
-
+     
         self.projection = nn.Sequential(
             nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
             nn.ReLU(),
@@ -286,7 +316,7 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    def casual_attention(self, target_feat, obj_feat, object_masks):
+    def causal_attention(self, target_feat, obj_feat, object_masks):
         # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
         # print("attn_input.shape", attn_input.shape)
@@ -302,14 +332,10 @@ class ObstacleHead(nn.Module):
         attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
         # print("attended_obj:", attended_obj)
 
-        # top_indices = torch.tensor([[3],
-        # [1],
-        # [2],
-        # [4]])
         _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
 
         return top_indices, attended_obj
-
+    
     def forward(self, target_mask, object_masks):
     # def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
         obj_features = self.preprocess_input(object_masks)
@@ -320,7 +346,7 @@ class ObstacleHead(nn.Module):
         B, N, C, = obj_features.shape
 
         # top_indices, attn_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2))
-        top_indices, attn_scores = self.casual_attention(target_feats, obj_features, object_masks.squeeze(2))
+        top_indices, attn_scores = self.causal_attention(target_feats, obj_features, object_masks.squeeze(2))
 
         # self.visualize_attn(raw_target_mask, raw_object_masks, attn_scores)
 
