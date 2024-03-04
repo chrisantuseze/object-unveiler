@@ -286,7 +286,7 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    def casual_attention(self, target_feat, obj_feat):
+    def casual_attention(self, target_feat, obj_feat, object_masks):
         # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
         # print("attn_input.shape", attn_input.shape)
@@ -296,6 +296,11 @@ class ObstacleHead(nn.Module):
         
         attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
         # print("attended_obj.shape", attended_obj.shape)
+        
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attended_obj)
+        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        # print("attended_obj:", attended_obj)
 
         # top_indices = torch.tensor([[3],
         # [1],
@@ -315,7 +320,7 @@ class ObstacleHead(nn.Module):
         B, N, C, = obj_features.shape
 
         # top_indices, attn_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2))
-        top_indices, attn_scores = self.casual_attention(target_feats, obj_features)
+        top_indices, attn_scores = self.casual_attention(target_feats, obj_features, object_masks.squeeze(2))
 
         # self.visualize_attn(raw_target_mask, raw_object_masks, attn_scores)
 
