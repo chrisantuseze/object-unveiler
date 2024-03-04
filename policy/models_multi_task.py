@@ -60,26 +60,27 @@ class ObstacleHead(nn.Module):
         self.feat_extractor = feat_extractor
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        # self.mlp = nn.Sequential(
-        #     nn.Linear(self.args.num_patches, self.args.num_patches),
-        #     nn.ReLU(),
-        #     nn.Linear(self.args.num_patches, self.args.num_patches)
-        # )
-        self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
-        self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
-        self.dropout = nn.Dropout(p=0.4)
 
-        # Use Xavier normal initialization
-        nn.init.xavier_normal_(self.target_proj.weight)
-        nn.init.xavier_normal_(self.objects_proj.weight) 
+        # self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
+        # self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
+        # self.dropout = nn.Dropout(p=0.4)
 
-        # Normalize weight after init
-        self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
-        self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
+        # # Use Xavier normal initialization
+        # nn.init.xavier_normal_(self.target_proj.weight)
+        # nn.init.xavier_normal_(self.objects_proj.weight) 
+
+        # # Normalize weight after init
+        # self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
+        # self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
+
+        self.projection = nn.Sequential(
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
+            nn.ReLU(),
+            nn.Linear(256, self.final_conv_units)
+        )
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
-        # print("object_masks.shape", object_masks.shape)
         object_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
 
         for i in range(B):
@@ -87,8 +88,6 @@ class ObstacleHead(nn.Module):
 
             obj_features = []
             for mask in object_masks_:
-                # print("mask.shape", mask.shape)
-
                 mask = mask.unsqueeze(0).to(self.device)
                 obj_feat = self.feat_extractor(mask)
 
@@ -287,6 +286,25 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
+    def casual_attention(self, target_feat, obj_feat):
+        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
+        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
+        # print("attn_input.shape", attn_input.shape)
+
+        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+        # print("attention.shape", attention.shape)
+        
+        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+        # print("attended_obj.shape", attended_obj.shape)
+
+        # top_indices = torch.tensor([[3],
+        # [1],
+        # [2],
+        # [4]])
+        _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
+
+        return top_indices, attended_obj
+
     def forward(self, target_mask, object_masks):
     # def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
         obj_features = self.preprocess_input(object_masks)
@@ -296,7 +314,8 @@ class ObstacleHead(nn.Module):
 
         B, N, C, = obj_features.shape
 
-        top_indices, attn_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2))
+        # top_indices, attn_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2))
+        top_indices, attn_scores = self.casual_attention(target_feats, obj_features)
 
         # self.visualize_attn(raw_target_mask, raw_object_masks, attn_scores)
 

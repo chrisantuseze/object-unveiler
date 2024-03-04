@@ -1,7 +1,7 @@
 import os
 import random
-from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_attn2 import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 
 import torch
@@ -30,22 +30,22 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     # noise[zero_indices] = 0
     # obstacle_pred = p * obstacle_pred + (1 - p) * noise
 
-    # obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
-    # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+    obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
-    # try:
-    #     w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
-    # except:
-    #     w = 0.0025
+    try:
+        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    except:
+        w = 0.0025
 
-    total_loss = grasp_loss #obstacle_loss + w * grasp_loss
+    total_loss = obstacle_loss + w * grasp_loss
 
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net0(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -335,7 +335,7 @@ def train_fcn_net1(args):
     writer.close()
 
 # models_attn
-def train_fcn_net(args):
+def train_fcn_net2(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
