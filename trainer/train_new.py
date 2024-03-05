@@ -36,7 +36,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
     try:
-        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+        w = 15 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     except:
         w = 0.0025
 
@@ -63,7 +63,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:6000]
+    transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]

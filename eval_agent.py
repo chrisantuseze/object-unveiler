@@ -49,6 +49,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
+        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
         actions = policy.exploit_attn(state, obs['color'][1], target_mask)
@@ -102,8 +103,6 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
             print('------------------------------------------')
             break
 
-        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
-        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
