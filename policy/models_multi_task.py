@@ -107,10 +107,10 @@ class ObstacleHead(nn.Module):
         # self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
      
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 512),
-            nn.BatchNorm1d(512),
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Linear(256, self.final_conv_units)
