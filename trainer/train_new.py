@@ -18,7 +18,7 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 
 # Loss function
-def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt, step):
+def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, grasp_pred, obstacle_gt, grasp_gt):
     # Annealing coefficient 
     # annealing_coef = 0.5
     # max_epochs = 10
@@ -63,7 +63,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:12000]
+    transition_dirs = transition_dirs[:20000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -123,8 +123,7 @@ def train_fcn_net(args):
 
                 loss = multi_task_loss(epoch,
                     grasp_criterion, obstacle_criterion, 
-                    obstacle_pred, pred, obstacle_gt, y,
-                    step
+                    obstacle_pred, pred, obstacle_gt, y
                 )
 
                 if step % (args.step * 2) == 0:
@@ -168,17 +167,13 @@ def train_fcn_net(args):
 
                     loss = multi_task_loss(epoch, 
                         grasp_criterion, obstacle_criterion, 
-                        obstacle_pred, pred, obstacle_gt, y,
-                        step
+                        obstacle_pred, pred, obstacle_gt, y
                     )
 
                     epoch_loss[phase] += loss.detach().cpu().numpy()
 
                     if step % args.step == 0:
                         logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
-
-            # LR decay after every epoch
-            # scheduler.step() 
 
             logging.info('Epoch {}: training loss = {:.8f} '
                 ', validation loss = {:.8f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),

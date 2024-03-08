@@ -327,8 +327,11 @@ class Policy:
         padded_objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
         print("ground truth:", padded_objects_to_remove)
 
+        ids = torch.topk(objects_to_remove, k=1, dim=1)[1]
+        gt_object = processed_obj_masks[0, ids[0]].unsqueeze(0)
+
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove
+              raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove, gt_object
     
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation
@@ -336,12 +339,12 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_processed_mask, objects_to_remove = self.get_inputs(state, color_image, target_mask)
+        raw_pred_mask, raw_target_mask, raw_processed_mask, objects_to_remove, gt_object = self.get_inputs(state, color_image, target_mask)
 
         object_logits, out_prob = self.fcn(x,
             # processed_target, processed_obj_masks, objects_to_remove,
             processed_target, processed_obj_masks,
-            raw_target_mask, raw_processed_mask, raw_pred_mask, 
+            raw_target_mask, raw_processed_mask, raw_pred_mask, gt_object,
             is_volatile=True
         )
 

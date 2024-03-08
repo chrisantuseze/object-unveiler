@@ -5,6 +5,9 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
+import os
+from utils.constants import TEST_DIR
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -108,6 +111,8 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
             nn.Linear(256, self.final_conv_units)
         )
+        nn.init.xavier_normal_(self.projection.weight)
+        self.projection.weight.data = F.normalize(self.projection.weight.data, dim=0)
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -212,6 +217,11 @@ class ObstacleHead(nn.Module):
     def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
         # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
+
+        #save the top object
+        # Convert to uint8 and scale to [0, 255]
+        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
+        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
 
         for i in range(obj_masks.shape[0]):
             if obj_masks.shape[0] == 1:
@@ -570,7 +580,7 @@ class ResFCN(nn.Module):
         return out
    
     def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
         processed_objects, scores = self.obstacle_head(target_mask, object_masks)
         # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
