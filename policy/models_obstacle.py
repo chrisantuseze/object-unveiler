@@ -63,9 +63,9 @@ class ObstacleHead(nn.Module):
             nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
+            # nn.Linear(256, 256),
+            # nn.BatchNorm1d(256),
+            # nn.ReLU(),
             nn.Linear(256, self.final_conv_units)
         )
      
