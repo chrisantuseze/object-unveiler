@@ -1,8 +1,8 @@
 import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
+from policy.models_obstacle import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -45,7 +45,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net(args):
+def train_fcn_net0(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -192,7 +192,7 @@ def train_fcn_net(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -265,18 +265,17 @@ def train_fcn_net1(args):
                 rotations
             )
 
-            # logging.info("obstacle_pred", obstacle_pred, "\nobstacle_gt", obstacle_gt)
-
             loss = obstacle_criterion(obstacle_pred, obstacle_gt)
             loss = torch.sum(loss)
 
-            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            if step % (args.step * 2) == 0:
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward(retain_graph=True)
             optimizer.step()
 
-            # debug_params(model)
+            debug_params(model)
 
             # grad_norm = calculate_gradient_norm(model) 
 
@@ -316,15 +315,15 @@ def train_fcn_net1(args):
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
-        # LR decay after every epoch
-        # scheduler.step() 
-
         logging.info('Epoch {}: training loss = {:.8f} '
               ', validation loss = {:.8f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
         
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
+
+        if epoch % 5 == 0:
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
     writer.close()

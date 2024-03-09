@@ -58,6 +58,16 @@ class ObstacleHead(nn.Module):
         self.feat_extractor = feat_extractor
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        self.projection = nn.Sequential(
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Linear(256, self.final_conv_units)
+        )
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -82,42 +92,25 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
-    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
-        # Scaled dot-product attention
-        # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
-        attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
+    def causal_attention(self, target_feat, obj_feat, object_masks):
+        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
+        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
+        # print("attn_input.shape", attn_input.shape)
 
-        # attn_scores = self.mlp(projected_objs + projected_target.unsqueeze(1)).squeeze(2)
-
-        # print("object_masks.shape", object_masks.shape)
+        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+        # print("attention.shape", attention.shape)
+        
+        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+        # print("attended_obj.shape", attended_obj.shape)
+        
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        # print("padding_masks.shape", padding_masks.shape) #torch.Size([2, 12])
+        padding_mask_expanded = padding_masks.expand_as(attended_obj)
+        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        # print("attended_obj:", attended_obj)
 
-        # Expand the mask to match the shape of A
-        padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        # print("padding_mask_expanded.shape", padding_mask_expanded.shape) #torch.Size([2, 12])
+        _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
 
-        # Zero out the corresponding entries in A using the mask
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-
-        attn_scores = F.softmax(attn_scores, dim=1)
-        # attn_scores = nn.CosineSimilarity(dim=-1)(projected_target.unsqueeze(1), projected_objs)
-
-        # Create a mask for NaN values
-        nan_mask = torch.isnan(attn_scores)
-
-        # Replace NaN values with a specific value (e.g., 0.0)
-        attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-
-        # print("attn_scores.shape", attn_scores.shape) # [B,N]
-        # print("attn_scores", attn_scores)
-
-        # Use torch.topk to get the top k values and their indices
-        top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top_scores", top_scores)
-        # print("top_indices", top_indices)
-
-        return top_indices, top_scores, attn_scores
+        return top_indices, attended_obj
     
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
     def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
@@ -239,7 +232,7 @@ class ObstacleHead(nn.Module):
 
         B, N, C, = obj_features.shape
 
-        top_indices, top_scores, all_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2)) #raw_object_masks)
+        top_indices, att_weights = self.causal_attention(target_feats, obj_features, object_masks.squeeze(2))
 
         ########### VISUALIZE ATTENTION MAP ################
         # self.visualize_attn(raw_scene_mask, raw_target_mask, raw_object_masks, all_scores)
@@ -268,7 +261,7 @@ class ObstacleHead(nn.Module):
         processed_objects = torch.stack(processed_objects)
         # print("processed_objects.shape", processed_objects.shape)
 
-        return processed_objects, Variable(top_indices.float().data, requires_grad=True), all_scores
+        return att_weights
    
 
 class ResFCN(nn.Module):
@@ -336,8 +329,8 @@ class ResFCN(nn.Module):
         # print("raw_scene_mask.shape", raw_scene_mask.shape) #torch.Size([2, 100, 100])
 
 
-        processed_objects, objects_indices, object_scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, objects_indices = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
+        object_scores = self.obstacle_head(target_mask, object_masks)
+        # object_scores = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
         return object_scores
     
