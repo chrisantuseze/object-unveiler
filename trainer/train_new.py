@@ -182,7 +182,7 @@ def train_fcn_net0(args):
             writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
             writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-            if epoch % 5 == 0:
+            if epoch % 10 == 0:
                 torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     except Exception as e:
@@ -210,7 +210,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:8000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -322,7 +322,7 @@ def train_fcn_net(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))

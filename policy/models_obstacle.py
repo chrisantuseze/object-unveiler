@@ -59,15 +59,16 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+        hidden_dim = 128
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
-            nn.BatchNorm1d(256),
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            # nn.Linear(256, 256),
-            # nn.BatchNorm1d(256),
-            # nn.ReLU(),
-            nn.Linear(256, self.final_conv_units)
+            nn.Linear(hidden_dim, self.final_conv_units)
         )
+
+        self.rnn = nn.LSTM(input_size=self.args.num_patches, hidden_size=hidden_dim, batch_first=True)
+        self.fc_occluding_objects = nn.Linear(hidden_dim, self.args.num_patches)
      
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -92,20 +93,50 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
+    # def causal_attention(self, target_feat, obj_feat, object_masks):
+    #     # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
+    #     attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
+    #     # print("attn_input.shape", attn_input.shape)
+
+    #     attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+    #     # print("attention.shape", attention.shape)
+        
+    #     attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+    #     # print("attended_obj.shape", attended_obj.shape)
+        
+    #     padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+    #     padding_mask_expanded = padding_masks.expand_as(attended_obj)
+    #     attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+    #     # print("attended_obj:", attended_obj)
+
+    #     _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
+
+    #     return top_indices, attended_obj
+
     def causal_attention(self, target_feat, obj_feat, object_masks):
         # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
         # print("attn_input.shape", attn_input.shape)
 
-        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+        energy = torch.tanh(attn_input)
+        # print("energy.shape", energy.shape)
+
+        attention = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
         # print("attention.shape", attention.shape)
         
-        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+        attended_obj = torch.sum(obj_feat * attention.unsqueeze(1), dim=2) 
         # print("attended_obj.shape", attended_obj.shape)
+
+        rnn_output, _ = self.rnn(attended_obj.unsqueeze(0))
+        # print("rnn_output.shape", rnn_output.shape)
+
+        rnn_output = rnn_output.squeeze(0)
+        occluding_objects_output = self.fc_occluding_objects(rnn_output)
+        # print("occluding_objects_output.shape", occluding_objects_output.shape)
         
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        attended_obj = occluding_objects_output.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
         # print("attended_obj:", attended_obj)
 
         _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)

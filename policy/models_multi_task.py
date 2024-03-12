@@ -94,27 +94,16 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        # self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
-        # self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
-        # self.dropout = nn.Dropout(p=0.4)
-
-        # # Use Xavier normal initialization
-        # nn.init.xavier_normal_(self.target_proj.weight)
-        # nn.init.xavier_normal_(self.objects_proj.weight) 
-
-        # # Normalize weight after init
-        # self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
-        # self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
-     
+        hidden_dim = 128
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
-            nn.BatchNorm1d(256),
+            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Linear(256, self.final_conv_units)
+            nn.Linear(hidden_dim, self.final_conv_units)
         )
+
+        self.rnn = nn.LSTM(input_size=self.args.num_patches, hidden_size=hidden_dim, batch_first=True)
+        self.fc_occluding_objects = nn.Linear(hidden_dim, self.args.num_patches)
         
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
@@ -136,10 +125,10 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
-    def get_topk_attn_scores0(self, projected_objs, projected_target):
+    def get_topk_attn_scores0(self, projected_target, projected_objs, object_masks):
         N = projected_objs.shape[0]
 
-        # Spatial attention 
+        # Spatial attention             
         iou_scores = []
         for i in range(N):
             intersect = (projected_objs[i] * projected_target).sum() 
@@ -159,14 +148,14 @@ class ObstacleHead(nn.Module):
         d_attn = 1/depth_values
         print("attn_scores 2:", d_attn)
         d_attn = torch.softmax(d_attn, dim=1)
-        print("softmax attn_scores 2:", s_attn)
+        print("softmax attn_scores 2:", d_attn)
 
         # Combine attention
         combo_attn = s_attn * d_attn
-        print("combine attn_scores:", s_attn)
+        print("combine attn_scores:", combo_attn)
         top_scores, top_indices = torch.topk(combo_attn, k=self.args.sequence_length, dim=1)
 
-        return top_indices, top_scores, combo_attn
+        return top_indices, combo_attn
 
     def attention_head(self, projected_objs, projected_target, object_masks):
         projected_target = self.target_proj(projected_target)
@@ -333,15 +322,25 @@ class ObstacleHead(nn.Module):
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
         # print("attn_input.shape", attn_input.shape)
 
-        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
+        energy = torch.tanh(attn_input)
+        # print("energy.shape", energy.shape)
+
+        attention = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
         # print("attention.shape", attention.shape)
         
-        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
+        attended_obj = torch.sum(obj_feat * attention.unsqueeze(1), dim=2) 
         # print("attended_obj.shape", attended_obj.shape)
+
+        rnn_output, _ = self.rnn(attended_obj.unsqueeze(0))
+        # print("rnn_output.shape", rnn_output.shape)
+
+        rnn_output = rnn_output.squeeze(0)
+        occluding_objects_output = self.fc_occluding_objects(rnn_output)
+        # print("occluding_objects_output.shape", occluding_objects_output.shape)
         
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        attended_obj = occluding_objects_output.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
         # print("attended_obj:", attended_obj)
 
         _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
@@ -588,9 +587,6 @@ class ResFCN(nn.Module):
         # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
         
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
-        # B, N, C, H, W = processed_objects.shape
-        # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
-        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
 
         return scores, out_probs
     
