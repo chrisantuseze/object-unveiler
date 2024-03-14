@@ -5,6 +5,9 @@ import torchvision
 from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
+import os
+from utils.constants import TEST_DIR
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -67,9 +70,6 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim, self.final_conv_units)
         )
 
-        self.rnn = nn.LSTM(input_size=self.args.num_patches, hidden_size=hidden_dim, batch_first=True)
-        self.fc_occluding_objects = nn.Linear(hidden_dim, self.args.num_patches)
-     
     def preprocess_input(self, object_masks):
         B = object_masks.shape[0]
         # print("object_masks.shape", object_masks.shape)
@@ -127,16 +127,9 @@ class ObstacleHead(nn.Module):
         attended_obj = torch.sum(obj_feat * attention.unsqueeze(1), dim=2) 
         # print("attended_obj.shape", attended_obj.shape)
 
-        rnn_output, _ = self.rnn(attended_obj.unsqueeze(0))
-        # print("rnn_output.shape", rnn_output.shape)
-
-        rnn_output = rnn_output.squeeze(0)
-        occluding_objects_output = self.fc_occluding_objects(rnn_output)
-        # print("occluding_objects_output.shape", occluding_objects_output.shape)
-        
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = occluding_objects_output.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
         # print("attended_obj:", attended_obj)
 
         _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
@@ -148,13 +141,23 @@ class ObstacleHead(nn.Module):
         # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
 
+        #save the top object
+        # Convert to uint8 and scale to [0, 255]
+        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
+        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+
         for i in range(obj_masks.shape[0]):
             if obj_masks.shape[0] == 1:
                 ax[i].imshow(scenes[i]) # this is because of the added gt images
             else:
                 ax[i][0].imshow(scenes[i])
 
-            k = 1
+            if obj_masks.shape[0] == 1:
+                ax[i+1].imshow(target_mask[i])
+            else:
+                ax[i][1].imshow(target_mask[i])
+
+            k = 2
             for j in range(obj_masks.shape[1]):
                 obj_mask = obj_masks[i][j]
                 # print("obj_mask.shape", obj_mask.shape)
@@ -164,11 +167,6 @@ class ObstacleHead(nn.Module):
                 else:
                     ax[i][k].imshow(obj_mask)
                 k += 1
-
-            if obj_masks.shape[0] == 1:
-                ax[k].imshow(target_mask[i])
-            else:
-                ax[i][k].imshow(target_mask[i])
 
 
         if optimal_nodes:
@@ -205,7 +203,6 @@ class ObstacleHead(nn.Module):
                 n += 1
 
         plt.show()
-
 
     def visualize_attn(self, scene, target_mask, object_masks, attn_scores):
 
@@ -280,12 +277,14 @@ class ObstacleHead(nn.Module):
         # ################### THIS IS FOR VISUALIZATION ####################
         #     raw_x = raw_object_masks[i, idx]
         #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objs.append(raw_x)
+        #     raw_objects.append(raw_x)
 
-        # raw_objs = torch.stack(raw_objs)
+        # raw_objects = torch.stack(raw_objects)
+        # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
             
-        # # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objs, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=is_volatile)
+        # self.show_images(raw_objects, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
 
         # ###############################################################
             

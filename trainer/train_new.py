@@ -210,7 +210,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:8000]
+    transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -237,7 +237,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    obstacle_criterion = nn.SmoothL1Loss()
+    obstacle_criterion = nn.MSELoss()
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
