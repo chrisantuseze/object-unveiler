@@ -253,7 +253,7 @@ def train_fcn_net(args):
             # raw_object_masks = batch[5].to(args.device)
             # rotations = batch[6]
             # y = batch[7].to(args.device, dtype=torch.float32)
-            # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+            # obstacle_gt = batch[8].to(args.device, dtype=torch.float32)
 
             rotations = batch[3]
             y = batch[4].to(args.device, dtype=torch.float32)
@@ -295,7 +295,7 @@ def train_fcn_net(args):
                 # raw_object_masks = batch[5].to(args.device)
                 # rotations = batch[6]
                 # y = batch[7].to(args.device, dtype=torch.float32)
-                # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+                # obstacle_gt = batch[8].to(args.device, dtype=torch.float32)
 
                 rotations = batch[3]
                 y = batch[4].to(args.device, dtype=torch.float32)

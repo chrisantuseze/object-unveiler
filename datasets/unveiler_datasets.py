@@ -70,7 +70,7 @@ class UnveilerDataset(data.Dataset):
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, target_mask, object_masks, optimal_nodes, _ = episode_data[0]
+        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
@@ -86,7 +86,7 @@ class UnveilerDataset(data.Dataset):
         # get labels and rot_ids
         labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, _, optimal_nodes, action = data
+            _, _, _, _, _, _, optimal_nodes, action = data
 
             # we need one obstacle per episode
             obstacle_ids.append(optimal_nodes[0])
@@ -121,54 +121,6 @@ class UnveilerDataset(data.Dataset):
         return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, optimal_nodes
 
         # return processed_heightmap, processed_target_mask, processed_obj_masks, scene_mask, target_mask, obj_masks, rot_ids, labels, optimal_nodes
-    
-    # single - input, multi - output for models_multi
-    def __getitem__3(self, id):
-        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-
-        labels, rot_ids = [], []
-        heightmaps, target_masks = [], []
-        for data in episode_data:
-            heightmap, _, target_mask, _, _, action = data
-
-            processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
-            processed_target_mask = general_utils.preprocess_target(target_mask)
-
-            heightmaps.append(processed_heightmap)
-            target_masks.append(processed_target_mask)
-
-            # convert theta to range 0-360 and then compute the rot_id
-            angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
-            rot_id = round(angle / (2 * np.pi / 16)) 
-            rot_ids.append(rot_id)
-            
-            action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
-
-            if int(action[1]) > 99 or int(action[0]):
-                i = min(int(action[1]) * 0.95, 99)
-                j = min(int(action[0]) * 0.95, 99)
-            else:
-                i = action[1]
-                j = action[0]
-
-            action_area[int(i), int(j)] = 1.0
-            label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2]))
-            label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
-                    padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
-            
-            labels.append(label)
-
-        # pad labels and rot_ids
-        labels, rot_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids)
-
-        heightmaps = np.array(heightmaps)
-        target_masks = np.array(target_masks)
-
-        # pad heightmaps and target masks
-        padded_heightmaps, padded_target_masks = self.pad_heightmap_and_target(heightmaps, target_masks)
-
-        return padded_heightmaps, padded_target_masks, rot_ids, labels
-
 
     def __len__(self):
         return len(self.dir_ids)

@@ -93,26 +93,6 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
-    # def causal_attention(self, target_feat, obj_feat, object_masks):
-    #     # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
-    #     attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
-    #     # print("attn_input.shape", attn_input.shape)
-
-    #     attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
-    #     # print("attention.shape", attention.shape)
-        
-    #     attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
-    #     # print("attended_obj.shape", attended_obj.shape)
-        
-    #     padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-    #     padding_mask_expanded = padding_masks.expand_as(attended_obj)
-    #     attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
-    #     # print("attended_obj:", attended_obj)
-
-    #     _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
-
-    #     return top_indices, attended_obj
-
     def causal_attention(self, target_feat, obj_feat, object_masks):
         # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
@@ -280,12 +260,11 @@ class ObstacleHead(nn.Module):
         #     raw_objects.append(raw_x)
 
         # raw_objects = torch.stack(raw_objects)
-        # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-            
-        # self.show_images(raw_objects, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
 
+        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+            
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
             
         processed_objects = torch.stack(processed_objects)

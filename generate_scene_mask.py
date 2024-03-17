@@ -77,14 +77,16 @@ def modify_episode2(episode_dir, index):
         # print("\nobjects_to_remove:", objects_to_remove)
 
         transition = {
-            'color_obs': data['color_obs'],
-            'depth_obs': data['depth_obs'],
+            # 'color_obs': data['color_obs'],
+            # 'depth_obs': data['depth_obs'],
             'state': data['state'], 
-            'depth_heightmap': data['depth_heightmap'],
-            'target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
-            'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
+            # 'depth_heightmap': data['depth_heightmap'],
+            'target_mask': data['target_mask'], 
+            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
+            'c_obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
             'scene_mask': data['scene_mask'],
-            'object_masks': new_masks,
+            'c_object_masks': new_masks,
+            'object_masks': object_masks,
             'action': data['action'],
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
