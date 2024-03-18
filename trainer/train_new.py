@@ -239,6 +239,8 @@ def train_fcn_net(args):
 
     obstacle_criterion = nn.MSELoss()
 
+    model.load_state_dict(torch.load("save/fcn/fcn_model_40.pt", map_location=args.device))
+
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
         
