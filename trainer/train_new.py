@@ -210,7 +210,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:14000]
+    transition_dirs = transition_dirs[:7000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -239,7 +239,7 @@ def train_fcn_net(args):
 
     obstacle_criterion = nn.MSELoss()
 
-    model.load_state_dict(torch.load("save/fcn/fcn_model_40.pt", map_location=args.device))
+    # model.load_state_dict(torch.load("save/fcn/fcn_model_40.pt", map_location=args.device))
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):

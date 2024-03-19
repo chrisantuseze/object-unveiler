@@ -348,7 +348,7 @@ class ObstacleHead(nn.Module):
         return top_indices, attended_obj
     
     def forward(self, target_mask, object_masks):
-    # def forward(self, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None):
+    # def forward(self, target_mask, object_masks, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
         obj_features = self.preprocess_input(object_masks)
         
         target_feats = self.feat_extractor(target_mask)
@@ -584,7 +584,7 @@ class ResFCN(nn.Module):
     # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
         processed_objects, scores = self.obstacle_head(target_mask, object_masks)
-        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask)
+        # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
         
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
 

@@ -295,7 +295,7 @@ class Policy:
         processed_pred_mask = torch.FloatTensor(processed_pred_mask).unsqueeze(0).to(self.device)
         # print("processed_pred_mask.shape", processed_pred_mask.shape)
 
-        processed_target = general_utils.preprocess_target(target_mask, state)
+        processed_target = general_utils.preprocess_target(target_mask)#, state)
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
         # print("processed_target.shape", processed_target.shape)
 
@@ -305,7 +305,7 @@ class Policy:
             processed_mask = general_utils.resize_mask(transform, mask)
             raw_obj_masks.append(processed_mask)
 
-            processed_mask = general_utils.preprocess_target(mask, state)
+            processed_mask = general_utils.preprocess_target(mask)#, state)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 

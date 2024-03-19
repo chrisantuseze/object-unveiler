@@ -93,6 +93,24 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
+    def attention(self, target_feat, obj_feat, object_masks):
+        attn_scores = (target_feat.unsqueeze(1) * obj_feat).sum(dim=-1)/np.sqrt(obj_feat.shape[-1])
+        # print("attn_scores 1:", attn_scores)
+
+        # get zero padded objects
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+        # print("attn_scores 2:", attn_scores)
+
+        # Temperature 
+        temp = 50.0
+        attn_scores = attn_scores / temp
+        attn_scores = F.softmax(attn_scores, dim=1)
+        # print("softmax attn_scores 3:", attn_scores)
+
+        return attn_scores
+
     def causal_attention(self, target_feat, obj_feat, object_masks):
         # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
         attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
@@ -101,20 +119,25 @@ class ObstacleHead(nn.Module):
         energy = torch.tanh(attn_input)
         # print("energy.shape", energy.shape)
 
-        attention = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
-        # print("attention.shape", attention.shape)
+        attn_weights = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
+        # print("attn_weights.shape", attn_weights.shape)
         
-        attended_obj = torch.sum(obj_feat * attention.unsqueeze(1), dim=2) 
-        # print("attended_obj.shape", attended_obj.shape)
+        attn_weights = torch.sum(obj_feat * attn_weights.unsqueeze(1), dim=2) 
+        # print("attn_weights.shape", attn_weights.shape)
 
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
-        # print("attended_obj:", attended_obj)
+        padding_mask_expanded = padding_masks.expand_as(attn_weights)
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        # print("attn_weights:", attn_weights)
 
-        _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
+        if target_feat.shape[0] == 1:
+            attn_scores = self.attention(target_feat, obj_feat, object_masks)
+            attn_weights = torch.add(attn_weights, attn_scores)/2
+            print("attn_weights:", attn_weights)
 
-        return top_indices, attended_obj
+        _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
+
+        return top_indices, attn_weights
     
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
     def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
@@ -331,7 +354,7 @@ class ResFCN(nn.Module):
         return out
    
     def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask, raw_object_masks, raw_scene_mask, gt_object=None, specific_rotation=-1, is_volatile=[]):
         object_scores = self.obstacle_head(target_mask, object_masks)
         # object_scores = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
