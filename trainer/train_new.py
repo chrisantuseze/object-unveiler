@@ -3,6 +3,7 @@ import random
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
 from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -210,7 +211,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:7000]
+    transition_dirs = transition_dirs[:12000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
