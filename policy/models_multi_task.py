@@ -55,37 +55,6 @@ class ResidualBlock(nn.Module):
 
         return out
 
-class CausalAttention(nn.Module):
-    def __init__(self, args):
-        super(ObstacleHead, self).__init__()
-        self.args = args
-        self.final_conv_units = 128
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, 256),
-            nn.ReLU(),
-            nn.Linear(256, self.final_conv_units)
-        )
-
-    def forward(self, target_feat, obj_feat, object_masks):
-        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
-        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
-        # print("attn_input.shape", attn_input.shape)
-
-        attention = torch.softmax(self.projection(attn_input.reshape(attn_input.shape[0], -1)), dim=1)
-        # print("attention.shape", attention.shape)
-        
-        attended_obj = (obj_feat * attention.unsqueeze(1)).sum(dim=2) 
-        # print("attended_obj.shape", attended_obj.shape)
-        
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = attended_obj.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
-        print("attended_obj:", attended_obj)
-
-        return attended_obj
-
 class ObstacleHead(nn.Module):
     def __init__(self, args, feat_extractor):
         super(ObstacleHead, self).__init__()
@@ -125,69 +94,6 @@ class ObstacleHead(nn.Module):
             
         return object_features
 
-    def get_topk_attn_scores0(self, projected_target, projected_objs, object_masks):
-        N = projected_objs.shape[0]
-
-        # Spatial attention             
-        iou_scores = []
-        for i in range(N):
-            intersect = (projected_objs[i] * projected_target).sum() 
-            union = projected_objs[i].sum() + projected_target.sum() - intersect
-            iou = intersect / union
-            iou_scores.append(iou)
-        
-        center_dists = [(projected_objs[i] - projected_target).norm() for i in range(N)]
-
-        s_attn = [a*b for a,b in zip(iou_scores, 1/center_dists)]
-        print("attn_scores 1:", s_attn)
-        s_attn = torch.softmax(s_attn, dim=1)
-        print("softmax attn_scores 1:", s_attn)
-
-        # Depth attention
-        depth_values = torch.randn(N) # sample depth for each mask
-        d_attn = 1/depth_values
-        print("attn_scores 2:", d_attn)
-        d_attn = torch.softmax(d_attn, dim=1)
-        print("softmax attn_scores 2:", d_attn)
-
-        # Combine attention
-        combo_attn = s_attn * d_attn
-        print("combine attn_scores:", combo_attn)
-        top_scores, top_indices = torch.topk(combo_attn, k=self.args.sequence_length, dim=1)
-
-        return top_indices, combo_attn
-
-    def attention_head(self, projected_objs, projected_target, object_masks):
-        projected_target = self.target_proj(projected_target)
-        projected_objs = self.objects_proj(projected_objs.reshape(projected_objs.shape[0], -1))
-        projected_objs = projected_objs.reshape(projected_objs.shape[0], self.args.num_patches, -1)
-        # print(projected_objs.shape, projected_target.shape)
-
-        attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
-        # print("attn_scores 1:", attn_scores)
-
-        # get zero padded objects
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # print("attn_scores 2:", attn_scores)
-
-        # Temperature 
-        temp = 50.0
-        attn_scores = attn_scores / temp
-
-        attn_scores = F.softmax(attn_scores, dim=1)
-        attn_scores = self.dropout(attn_scores)
-        # print("softmax attn_scores 3:", attn_scores)
-
-        # Create a mask for NaN values
-        nan_mask = torch.isnan(attn_scores)
-
-        # Replace NaN values with a specific value (e.g., 0.0)
-        attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-        print_msg(attn_scores.shape[0], "attn_scores 4:", attn_scores)
-
-        return attn_scores
 
     def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
         n_heads = 3
