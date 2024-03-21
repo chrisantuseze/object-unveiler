@@ -55,7 +55,7 @@ class ResidualBlock(nn.Module):
 
         return out
 
-class ObstacleHead(nn.Module):
+class ObstacleHead0(nn.Module):
     def __init__(self, args, feat_extractor):
         super(ObstacleHead, self).__init__()
         self.args = args
@@ -290,6 +290,134 @@ class ObstacleHead(nn.Module):
         processed_objects = torch.stack(processed_objects)
         return Variable(processed_objects, requires_grad=True).to(self.device), attn_scores
     
+class ObstacleHead(nn.Module):
+    def __init__(self, args, feat_extractor):
+        super(ObstacleHead, self).__init__()
+        self.args = args
+        self.feat_extractor = feat_extractor
+        self.final_conv_units = 128
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        hidden_dim = 10 * 144
+        self.projection = nn.Sequential(
+            nn.Linear(41472, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 10)
+        )
+
+    # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
+        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
+
+        #save the top object
+        # Convert to uint8 and scale to [0, 255]
+        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
+        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+
+        for i in range(obj_masks.shape[0]):
+            if obj_masks.shape[0] == 1:
+                ax[i].imshow(scenes[i]) # this is because of the added gt images
+            else:
+                ax[i][0].imshow(scenes[i])
+
+            if obj_masks.shape[0] == 1:
+                ax[i+1].imshow(target_mask[i])
+            else:
+                ax[i][1].imshow(target_mask[i])
+
+            k = 2
+            for j in range(obj_masks.shape[1]):
+                obj_mask = obj_masks[i][j]
+                # print("obj_mask.shape", obj_mask.shape)
+
+                if obj_masks.shape[0] == 1:
+                    ax[k].imshow(obj_mask)
+                else:
+                    ax[i][k].imshow(obj_mask)
+                k += 1
+
+
+        if optimal_nodes:
+            n = 0
+            for i in range(2, raw_object_masks.shape[0] + 2):
+
+                gt_obj_masks = raw_object_masks[n]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape)
+
+                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
+                else:
+                    ax[i][0].imshow(scenes[n])
+
+                k = 1
+                for j in range(obj_masks.shape[1]):
+                    gt_obj_mask = gt_obj_masks[j]
+                    # print("obj_mask.shape", obj_mask.shape)
+
+                    if gt_obj_masks.shape[0] == 1:
+                        ax[i][k].imshow(gt_obj_mask)
+                    else:
+                        ax[i][k].imshow(gt_obj_mask)
+                    k += 1
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][k].imshow(target_mask[n])
+                else:
+                    ax[i][k].imshow(target_mask[n])
+
+                n += 1
+
+        plt.show()
+
+    def forward(self, scene_mask, target_mask, object_masks):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+        target_feats = self.feat_extractor(target_mask)
+        scene_feats = self.feat_extractor(scene_mask)
+
+        x = torch.cat([target_feats, scene_feats], dim=1)
+        attn_scores = self.projection(x.reshape(x.shape[0], -1))
+
+        object_masks = object_masks.squeeze(2)
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+        
+        attn_weights = torch.softmax(attn_scores, dim=1)
+        # print("attn_weights", attn_weights)
+        _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
+
+        B, C, H, W = target_feats.shape
+
+        ###### Keep overlapped objects #####
+        processed_objects = []
+
+        raw_objects = []
+        for i in range(B):
+            idx = top_indices[i] 
+            x = object_masks[i, idx] # x should be (4, 400, 400)
+            processed_objects.append(x)
+
+        # ################### THIS IS FOR VISUALIZATION ####################
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objects.append(raw_x)
+
+        # raw_objects = torch.stack(raw_objects)
+
+        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+            
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # ###############################################################
+            
+        processed_objects = torch.stack(processed_objects)
+        processed_objects = processed_objects.unsqueeze(1) if self.args.sequence_length == 1 else processed_objects
+        return processed_objects, attn_weights
 
 class GraspHead(nn.Module):
     def __init__(self, args, feat_extractor):
@@ -446,7 +574,7 @@ class ResFCN(nn.Module):
         self.rb4 = self.make_layer(512, 256)
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
-        # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
+        self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         self.obstacle_head = ObstacleHead(args, self.predict) 
         self.grasp_head = GraspHead(args, self.predict)
@@ -462,7 +590,32 @@ class ResFCN(nn.Module):
 
         return nn.Sequential(*layers)
     
-    def predict(self, depth, final_feats=False):
+    def predict0(self, depth, final_feats=False):
+        # x = F.relu(self.conv1(depth))
+        # x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
+        # x = self.rb1(x)
+        # x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
+        # x = self.rb2(x)
+        # x = self.rb3(x)
+        # x = self.rb4(x)
+        # x = self.rb5(x)
+        
+        # x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        # x = self.rb6(x)
+       
+        # x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        # if final_feats:
+        #     conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+        #     nn.init.xavier_uniform_(conv2.weight)
+        #     out = conv2(x)
+        # else:
+        #     conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+        #     nn.init.xavier_uniform_(conv3.weight)
+        #     out = conv3(x)
+        # return out
+        pass
+    
+    def predict(self, depth):
         x = F.relu(self.conv1(depth))
         x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
@@ -476,20 +629,13 @@ class ResFCN(nn.Module):
         x = self.rb6(x)
        
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        if final_feats:
-            conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv2.weight)
-            out = conv2(x)
-        else:
-            conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv3.weight)
-            out = conv3(x)
+        out = self.final_conv(x)
         return out
-   
-    def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
-        processed_objects, scores = self.obstacle_head(target_mask, object_masks)
+        processed_objects, scores = self.obstacle_head(scene_masks, target_mask, object_masks)
         # processed_objects, scores = self.obstacle_head(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
         
         out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)

@@ -1,8 +1,8 @@
 import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
-from policy.models_obstacle import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
@@ -46,7 +46,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net0(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -104,20 +104,21 @@ def train_fcn_net0(args):
                 x = batch[0].to(args.device)
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
                 object_masks = batch[2].to(args.device)
+                scene_masks = batch[3].to(args.device)
 
-                # raw_x = batch[3].to(args.device)
-                # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
-                # raw_object_masks = batch[5].to(args.device)
-                # rotations = batch[6]
-                # y = batch[7].to(args.device, dtype=torch.float32)
-                # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+                # raw_x = batch[4].to(args.device)
+                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+                # raw_object_masks = batch[6].to(args.device)
+                # rotations = batch[7]
+                # y = batch[8].to(args.device, dtype=torch.float32)
+                # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
 
-                rotations = batch[3]
-                y = batch[4].to(args.device, dtype=torch.float32)
-                obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
+                rotations = batch[4]
+                y = batch[5].to(args.device, dtype=torch.float32)
+                obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
 
                 obstacle_pred, pred = model(
-                    x, target_mask, object_masks,
+                    x, target_mask, object_masks, scene_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
                     rotations
                 )
@@ -148,20 +149,21 @@ def train_fcn_net0(args):
                     x = batch[0].to(args.device)
                     target_mask = batch[1].to(args.device, dtype=torch.float32)
                     object_masks = batch[2].to(args.device)
+                    scene_masks = batch[3].to(args.device)
 
-                    # raw_x = batch[3].to(args.device)
-                    # raw_target_mask = batch[4].to(args.device, dtype=torch.float32)
-                    # raw_object_masks = batch[5].to(args.device)
-                    # rotations = batch[6]
-                    # y = batch[7].to(args.device, dtype=torch.float32)
-                    # obstacle_ids = batch[8].to(args.device, dtype=torch.float32)
+                    # raw_x = batch[4].to(args.device)
+                    # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
+                    # raw_object_masks = batch[6].to(args.device)
+                    # rotations = batch[7]
+                    # y = batch[8].to(args.device, dtype=torch.float32)
+                    # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
 
-                    rotations = batch[3]
-                    y = batch[4].to(args.device, dtype=torch.float32)
-                    obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
+                    rotations = batch[4]
+                    y = batch[5].to(args.device, dtype=torch.float32)
+                    obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
 
                     obstacle_pred, pred = model(
-                        x, target_mask, object_masks,
+                        x, target_mask, object_masks, scene_masks, 
                         # raw_x, raw_target_mask, raw_object_masks,
                         rotations
                     )
@@ -193,7 +195,7 @@ def train_fcn_net0(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
