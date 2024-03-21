@@ -345,7 +345,7 @@ class Policy:
 
         object_logits, out_prob = self.fcn(x,
             # processed_target, processed_obj_masks, objects_to_remove,
-            processed_target, processed_obj_masks,
+            processed_target, processed_obj_masks, processed_pred_mask, 
             raw_pred_mask, raw_target_mask, raw_processed_mask, gt_object,
             is_volatile=True
         )
