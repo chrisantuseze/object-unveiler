@@ -64,7 +64,7 @@ class ObstacleHead(nn.Module):
 
         hidden_dim = 10 * 144
         self.projection = nn.Sequential(
-            nn.Linear(41472, hidden_dim),
+            nn.Linear(248832, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 10)
@@ -138,12 +138,38 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
+    def preprocess_input(self, object_masks):
+        B, N, C, H, W = object_masks.shape
+        # print("object_masks.shape", object_masks.shape)
+        object_features = torch.zeros(B, N, C, H, W).to(self.device)
+
+        for i in range(B):
+            object_masks_ = object_masks[i].to(self.device)
+
+            obj_features = []
+            for mask in object_masks_:
+                # print("mask.shape", mask.shape)
+
+                mask = mask.unsqueeze(0).to(self.device)
+                obj_feat = self.feat_extractor(mask)
+
+                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
+                obj_features.append(obj_feat)
+
+            obj_features = torch.cat(obj_features)
+            object_features[i] = obj_features
+            
+        return object_features
+
+
     def forward(self, scene_mask, target_mask, object_masks):
     # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-        target_feats = self.feat_extractor(target_mask)
-        scene_feats = self.feat_extractor(scene_mask)
+        object_feats = self.preprocess_input(object_masks)
+        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
+        scene_feats = self.feat_extractor(scene_mask).unsqueeze(1)
 
-        x = torch.cat([target_feats, scene_feats], dim=1)
+        x = torch.cat([target_feats, scene_feats, object_feats], dim=1)
+        # print(x.shape, x.reshape(x.shape[0], -1).shape)
         attn_scores = self.projection(x.reshape(x.shape[0], -1))
 
         object_masks = object_masks.squeeze(2)
@@ -155,13 +181,11 @@ class ObstacleHead(nn.Module):
         # print("attn_weights", attn_weights)
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
 
-        B, C, H, W = target_feats.shape
-
         ###### Keep overlapped objects #####
         processed_objects = []
 
         raw_objects = []
-        for i in range(B):
+        for i in range(target_mask.shape[0]):
             idx = top_indices[i] 
             x = object_masks[i, idx] # x should be (4, 400, 400)
             processed_objects.append(x)

@@ -1,8 +1,8 @@
 import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
+from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
@@ -46,7 +46,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net(args):
+def train_fcn_net0(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -195,7 +195,7 @@ def train_fcn_net(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
