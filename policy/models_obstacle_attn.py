@@ -351,8 +351,8 @@ class ResFCN(nn.Module):
             out = conv3(x)
         return out
 
-    # def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
         # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
         object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)

@@ -62,9 +62,9 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        hidden_dim = 10 * 144
+        hidden_dim = 10 * 72
         self.projection = nn.Sequential(
-            nn.Linear(248832, hidden_dim),
+            nn.Linear(62208, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 10)
@@ -141,7 +141,7 @@ class ObstacleHead(nn.Module):
     def preprocess_input(self, object_masks):
         B, N, C, H, W = object_masks.shape
         # print("object_masks.shape", object_masks.shape)
-        object_features = torch.zeros(B, N, C, H, W).to(self.device)
+        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
 
         for i in range(B):
             object_masks_ = object_masks[i].to(self.device)
@@ -156,10 +156,10 @@ class ObstacleHead(nn.Module):
                 # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
                 obj_features.append(obj_feat)
 
-            obj_features = torch.cat(obj_features)
-            object_features[i] = obj_features
-            
-        return object_features
+            obj_features = torch.cat(obj_features).unsqueeze(0)
+            object_features.append(obj_features)
+
+        return torch.cat(object_features).to(self.device)
 
 
     def forward(self, scene_mask, target_mask, object_masks):
@@ -250,9 +250,9 @@ class ResFCN(nn.Module):
         x = self.rb5(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb6(x)
+        x = self.rb6(x) # half the channel
        
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        # x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
         out = self.final_conv(x)
         return out
    
