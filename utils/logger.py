@@ -2,25 +2,23 @@ import logging
 import os
 import sys
 
-def init(log=1):
-    if log == 0:
-        return
-    
+
+def init():
     logger = logging.getLogger(__name__)
-    handler = logging.StreamHandler(stream=sys.stdout)
-    logger.addHandler(handler)
+    # handler = logging.StreamHandler(stream=sys.stdout)
+    # logger.addHandler(handler)
 
-    logging.basicConfig(filename="object_unveiler.log", format="%(asctime)s %(levelname)s %(message)s", datefmt="%m-%d-%Y %I:%M:%S %p", level=logging.INFO)#, force=True)
-    logging.info("object-unveiler started...")
+    # logging.basicConfig(filename="object_unveiler.log", format="%(asctime)s %(levelname)s %(message)s", datefmt="%m-%d-%Y %I:%M:%S %p", level=logging.INFO)
+    # logging.info("object-unveiler started...")
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
+    # def handle_exception(exc_type, exc_value, exc_traceback):
+    #     if issubclass(exc_type, KeyboardInterrupt):
+    #         sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    #         return
 
-        logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    #     logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
-    sys.excepthook = handle_exception
+    # sys.excepthook = handle_exception
     
 def debug(*args):
     result = ' '.join(map(str, args))

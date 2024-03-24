@@ -7,6 +7,8 @@ from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
 
+logging.init()
+
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -30,18 +32,14 @@ def parse_args():
 
     parser.add_argument('--sequence_length', default=1, type=int, help='')
     parser.add_argument('--patch_size', default=64, type=int, help='')
-    parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 8')
+    parser.add_argument('--num_patches', default=8, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 8')
     parser.add_argument('--step', default=200, type=int, help='')
-
-    parser.add_argument('--log', default=1, type=int, help='1 for logging, and 0 for no logging')
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    logging.init(args.log)
-
     general_utils.create_dirs()
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
