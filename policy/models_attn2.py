@@ -68,19 +68,16 @@ class ResFCN(nn.Module):
         self.rb4 = self.make_layer(512, 256)
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
-        # self.final_conv = nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=False)
+        self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.target_proj = nn.Linear(self.final_conv_units, self.final_conv_units)
-        self.objects_proj = nn.Linear(self.args.num_patches * self.final_conv_units, self.args.num_patches * self.final_conv_units)
-        self.dropout = nn.Dropout(p=0.4)
-
-        # Use Xavier normal initialization
-        nn.init.xavier_uniform_(self.target_proj.weight)
-        nn.init.xavier_uniform_(self.objects_proj.weight) 
-
-        # Normalize weight after init
-        # self.target_proj.weight.data = F.normalize(self.target_proj.weight.data, dim=0)
-        # self.objects_proj.weight.data = F.normalize(self.objects_proj.weight.data, dim=0)
+        self.dim = 144
+        self.hidden_dim = self.args.num_patches * self.dim
+        # self.projection = nn.Sequential(
+        #     nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim),
+        #     nn.BatchNorm1d(self.hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(self.hidden_dim, self.args.num_patches)
+        # )
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -93,7 +90,7 @@ class ResFCN(nn.Module):
 
         return nn.Sequential(*layers)
     
-    def predict(self, depth, final_feats=False):
+    def predict(self, depth):
         x = F.relu(self.conv1(depth))
         x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
@@ -104,23 +101,16 @@ class ResFCN(nn.Module):
         x = self.rb5(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb6(x)
+        x = self.rb6(x) # half the channel
        
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        if final_feats:
-            conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv2.weight)
-            out = conv2(x)
-        else:
-            conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv3.weight)
-            out = conv3(x)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
+        out = self.final_conv(x)
         return out
     
     def preprocess_input(self, object_masks):
-        B = object_masks.shape[0]
+        B, N, C, H, W = object_masks.shape
         # print("object_masks.shape", object_masks.shape)
-        object_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
+        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
 
         for i in range(B):
             object_masks_ = object_masks[i].to(self.device)
@@ -132,102 +122,80 @@ class ResFCN(nn.Module):
                 mask = mask.unsqueeze(0).to(self.device)
                 obj_feat = self.predict(mask)
 
-                obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
+                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
                 obj_features.append(obj_feat)
 
-            obj_features = torch.cat(obj_features)
-            object_features[i] = obj_features
-            
-        return object_features
+            obj_features = torch.cat(obj_features).unsqueeze(0)
+            object_features.append(obj_features)
+
+        return torch.cat(object_features).to(self.device)
     
-    def attention_head(self, projected_objs, projected_target, object_masks):
-        # projected_target = self.target_proj(projected_target)
-        # projected_objs = self.objects_proj(projected_objs.reshape(projected_objs.shape[0], -1))
-        # projected_objs = projected_objs.reshape(projected_objs.shape[0], self.args.num_patches, -1)
-        # print(projected_objs.shape, projected_target.shape)
+    def obstacle_scorer(self, scene_mask, target_mask, object_masks):
+        object_feats = self.preprocess_input(object_masks)
+        target_feats = self.predict(target_mask).unsqueeze(1)
+        scene_feats = self.predict(scene_mask).unsqueeze(1)
 
-        attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
-        # print("attn_scores 1:", attn_scores)
+        x = torch.cat([target_feats, scene_feats, object_feats], dim=1)
+        # print(x.shape, x.reshape(x.shape[0], -1).shape)
+        # attn_scores = self.projection(x.reshape(x.shape[0], -1))
 
-        # get zero padded objects
+        attn_scores = nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim)(x.reshape(x.shape[0], -1))
+        attn_scores = nn.BatchNorm1d(self.hidden_dim)(attn_scores)
+        attn_scores = F.relu(attn_scores)
+        attn_scores = nn.Linear(self.hidden_dim, self.args.num_patches)(attn_scores)
+
+        object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # print("attn_scores 2:", attn_scores)
+        # print("attn_scores", attn_scores)
 
-        # Temperature 
-        temp = 50.0
-        attn_scores = attn_scores / temp
+        # Sampling from the attention weights to get hard attention
+        sampled_attention_weights = torch.zeros_like(attn_scores)
+        for batch_idx in range(target_mask.shape[0]):
+            sampled_attention_weights[batch_idx, :] = F.gumbel_softmax(attn_scores[batch_idx, :], hard=True)
 
-        attn_scores = F.softmax(attn_scores, dim=1)
-        # attn_scores = self.dropout(attn_scores)
-        print("softmax attn_scores 3:", attn_scores)
+        # Multiplying the encoder outputs with the hard attention weights
+        sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
+        # print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
+        context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
+        context = context.unsqueeze(1)
 
-        # # Create a mask for NaN values
-        # nan_mask = torch.isnan(attn_scores)
+        # print(context.shape)
 
-        # # Replace NaN values with a specific value (e.g., 0.0)
-        # attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-
-        return attn_scores
+        return context
     
-    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
-        # Scaled dot-product attention
-        # Perform element-wise multiplication with broadcasting and Sum along the last dimension to get the final [2, 14] tensor
-        # attn_scores = (projected_target.unsqueeze(1) * projected_objs).sum(dim=-1)/np.sqrt(projected_objs.shape[-1])
-        # padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        # padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        # attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # attn_scores = F.softmax(attn_scores, dim=1)
-        # nan_mask = torch.isnan(attn_scores)
-        # attn_scores = torch.where(nan_mask, torch.tensor(0.0).to(self.device), attn_scores)
-
-        attn_scores = self.attention_head(projected_objs, projected_target, object_masks)
-
-        # Use torch.topk to get the top k values and their indices
-        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print(top_indices)
-
-        top_indices = torch.tensor([[3],
-        [1],
-        [2],
-        [4]])
-
-        return top_indices
-    
-    def forward(self, depth_heightmap, target_mask, object_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, specific_rotation=-1, is_volatile=[]):
-        obj_features = self.preprocess_input(object_masks)
-
-        target_feats = self.predict(target_mask)
-        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
-
-        B, N, C, = obj_features.shape
-        top_indices = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2)) #raw_object_masks)
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+        
+        processed_objects = self.obstacle_scorer(depth_heightmap, target_mask, object_masks)
 
         ###### Keep overlapped objects #####
-        processed_objects = []
-        raw_objects = []
-        for i in range(B):
-            idx = top_indices[i] 
-            x = object_masks[i, idx] # x should be (4, 400, 400)
-            processed_objects.append(x)
+        # processed_objects = []
 
-        #  ############## THIS IS FOR VISUALIZATION ####################
+        # raw_objects = []
+        # for i in range(target_mask.shape[0]):
+        #     idx = top_indices[i] 
+        #     x = object_masks[i, idx] # x should be (4, 400, 400)
+        #     processed_objects.append(x)
+
+        # ################### THIS IS FOR VISUALIZATION ####################
         #     raw_x = raw_object_masks[i, idx]
         #     # print("raw_x.shape", raw_x.shape)
         #     raw_objects.append(raw_x)
 
         # raw_objects = torch.stack(raw_objects)
+
+        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
             
-        # # self.show_images(raw_objects, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=is_volatile)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # ###############################################################
 
-        ################################################################
-
-        processed_objects = torch.stack(processed_objects)
+        # processed_objects = torch.stack(processed_objects)
 
         B, N, C, H, W = processed_objects.shape
+
         if is_volatile:
             out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
             for n, target_mask in enumerate(processed_objects[0]):
@@ -236,7 +204,7 @@ class ResFCN(nn.Module):
         
         else:
             out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
-            for batch in range(len(processed_objects)):
+            for batch in range(B):
                 for n, target_mask in enumerate(processed_objects[batch]):
                     out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
                     out_probs[batch][n] = out_prob

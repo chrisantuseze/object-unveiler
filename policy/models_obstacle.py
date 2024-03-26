@@ -62,9 +62,10 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        hidden_dim = self.args.num_patches * 72
+        self.dim = 144
+        hidden_dim = self.args.num_patches * self.dim
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 2) * 72 * 72, hidden_dim),
+            nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches)
@@ -252,7 +253,7 @@ class ResFCN(nn.Module):
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x) # half the channel
        
-        # x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
         out = self.final_conv(x)
         return out
    
