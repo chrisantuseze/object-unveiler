@@ -310,30 +310,45 @@ class Policy:
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
-        processed_obj_masks = torch.stack(processed_obj_masks).unsqueeze(0).to(self.device)
-        padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
-        processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
-        # print("processed_obj_masks.shape", processed_obj_masks.shape)
-
-        raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
-        raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
-        raw_obj_masks = torch.FloatTensor(raw_obj_masks).unsqueeze(0).to(self.device)
-        raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
-        # print("raw_obj_masks.shape", raw_obj_masks.shape)
+        processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
+        raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
         objects_to_remove = grasping2.get_target_objects_distance(target_mask, processed_masks)
         objects_to_remove = general_utils.apply_softmax(objects_to_remove)
-        objects_to_remove = torch.FloatTensor(objects_to_remove).unsqueeze(0).to(self.device)
+        objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
+        if processed_obj_masks.shape[0] < self.args.num_patches:
+            processed_obj_masks = processed_obj_masks.unsqueeze(0)
+            padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
+            
+            processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+            
+            raw_obj_masks = raw_obj_masks.unsqueeze(0)
+            raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
 
-        # print(padding_needed, objects_to_remove.shape)
-        padded_objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
-        print("ground truth:", padded_objects_to_remove)
+            objects_to_remove = objects_to_remove.unsqueeze(0)
+            objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
+        else:
+            processed_obj_masks = processed_obj_masks[:self.args.num_patches]
+            processed_obj_masks = processed_obj_masks.unsqueeze(0)
+
+            raw_obj_masks = raw_obj_masks[:self.args.num_patches]
+            raw_obj_masks = raw_obj_masks.unsqueeze(0)
+
+            objects_to_remove = objects_to_remove[:self.args.num_patches]
+            objects_to_remove = objects_to_remove.unsqueeze(0)
+
+        # print("processed_obj_masks.shape", processed_obj_masks.shape)
+        # print("raw_obj_masks.shape", raw_obj_masks.shape)
+        print("ground truth:", objects_to_remove)
+
+        raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
+        raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
 
         ids = torch.topk(objects_to_remove, k=1, dim=1)[1]
         gt_object = processed_obj_masks[0, ids[0]].unsqueeze(0)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks, padded_objects_to_remove, gt_object
+              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object
     
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation

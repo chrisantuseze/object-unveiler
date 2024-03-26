@@ -177,7 +177,8 @@ class ObstacleHead(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
         
-        attn_weights = torch.softmax(attn_scores, dim=1)
+        # attn_weights = torch.softmax(attn_scores, dim=1)
+        attn_weights = attn_scores
         # print("attn_weights", attn_weights)
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
 
@@ -203,7 +204,6 @@ class ObstacleHead(nn.Module):
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
             
-        processed_objects = torch.stack(processed_objects)
         return attn_weights
 
 class ResFCN(nn.Module):

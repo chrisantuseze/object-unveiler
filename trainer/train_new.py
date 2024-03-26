@@ -213,7 +213,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:14000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -240,7 +240,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    obstacle_criterion = nn.SmoothL1Loss(reduction='none')
+    obstacle_criterion = nn.CrossEntropyLoss() #nn.SmoothL1Loss(reduction='none')
 
     # model.load_state_dict(torch.load("save/fcn/fcn_model_40.pt", map_location=args.device))
 
@@ -271,7 +271,7 @@ def train_fcn_net(args):
                 rotations
             )
 
-            loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+            loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
             loss = torch.sum(loss)
 
             if step % (args.step * 2) == 0:

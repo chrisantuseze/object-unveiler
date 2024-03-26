@@ -657,7 +657,7 @@ class ResFCN(nn.Module):
         return out
     
     def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_target_mask=None, raw_object_masks=None, raw_scene_mask=None, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
         processed_objects, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
         # processed_objects, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
@@ -666,12 +666,6 @@ class ResFCN(nn.Module):
 
         return scores, out_probs
     
-
-def print_msg(B, *args):
-    if B != 1:
-        return
-    result = ' '.join(map(str, args))
-    print(result)
 
 class Regressor(nn.Module):
     def __init__(self):

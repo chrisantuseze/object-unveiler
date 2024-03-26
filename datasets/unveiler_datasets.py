@@ -177,13 +177,19 @@ class UnveilerDataset(data.Dataset):
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
 
-        optimal_nodes = general_utils.apply_softmax(optimal_nodes)
-        if len(optimal_nodes) < self.args.num_patches:
-            # Calculate the number of zeros needed for padding
-            num_zeros = self.args.num_patches - len(optimal_nodes)
-            padded_optimal_nodes = np.pad(optimal_nodes, (0, num_zeros), mode='constant', constant_values=0)
+        # optimal_nodes = general_utils.apply_softmax(optimal_nodes)
+        # if len(optimal_nodes) < self.args.num_patches:
+        #     # Calculate the number of zeros needed for padding
+        #     num_zeros = self.args.num_patches - len(optimal_nodes)
+        #     padded_optimal_nodes = np.pad(optimal_nodes, (0, num_zeros), mode='constant', constant_values=0)
 
-        else:
-            padded_optimal_nodes = optimal_nodes[:self.args.num_patches]
+        # else:
+        #     padded_optimal_nodes = optimal_nodes[:self.args.num_patches]
 
-        return processed_obj_masks, obj_masks, padded_optimal_nodes
+        optimal_nodes = np.argmax(optimal_nodes)
+
+        # TODO: Remove this
+        if optimal_nodes >= self.args.num_patches:
+            optimal_nodes = self.args.num_patches - 1
+
+        return processed_obj_masks, obj_masks, optimal_nodes
