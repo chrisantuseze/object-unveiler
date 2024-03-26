@@ -139,10 +139,10 @@ class ResFCN(nn.Module):
         # print(x.shape, x.reshape(x.shape[0], -1).shape)
         # attn_scores = self.projection(x.reshape(x.shape[0], -1))
 
-        attn_scores = nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim)(x.reshape(x.shape[0], -1))
-        attn_scores = nn.BatchNorm1d(self.hidden_dim)(attn_scores)
-        attn_scores = F.relu(attn_scores)
-        attn_scores = nn.Linear(self.hidden_dim, self.args.num_patches)(attn_scores)
+        attn_scores = nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim).to(self.args.device)(x.reshape(x.shape[0], -1))
+        attn_scores = nn.BatchNorm1d(self.hidden_dim)(attn_scores).to(self.args.device)
+        attn_scores = F.relu(attn_scores).to(self.args.device)
+        attn_scores = nn.Linear(self.hidden_dim, self.args.num_patches).to(self.args.device)(attn_scores)
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
