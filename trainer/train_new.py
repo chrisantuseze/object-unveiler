@@ -314,7 +314,7 @@ def train_fcn_net(args):
                     rotations
                 )
 
-                loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+                loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
