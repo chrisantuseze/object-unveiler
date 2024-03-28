@@ -111,9 +111,13 @@ class ObstacleHead(nn.Module):
 
         return attn_scores
 
-    def causal_attention(self, target_feat, obj_feat, object_masks):
-        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
-        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
+    def causal_attention(self, target_mask, object_masks):
+        obj_feats = self.preprocess_input(object_masks)
+        target_feats = self.feat_extractor(target_mask)
+        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
+        # print(target_feats.shape, target_feats.unsqueeze(1).shape, obj_feats.shape)
+
+        attn_input = torch.cat([target_feats.unsqueeze(1), obj_feats], dim=1)
         # print("attn_input.shape", attn_input.shape)
 
         energy = torch.tanh(attn_input)
@@ -122,18 +126,14 @@ class ObstacleHead(nn.Module):
         attn_weights = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
         # print("attn_weights.shape", attn_weights.shape)
         
-        attn_weights = torch.sum(obj_feat * attn_weights.unsqueeze(1), dim=2) 
+        attn_weights = torch.sum(obj_feats * attn_weights.unsqueeze(1), dim=2) 
         # print("attn_weights.shape", attn_weights.shape)
 
+        object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
         attn_weights = attn_weights.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
-        print("attn_weights:", attn_weights)
-
-        if target_feat.shape[0] == 1:
-            attn_scores = self.attention(target_feat, obj_feat, object_masks)
-            attn_weights = torch.add(attn_weights, attn_scores)/2
-            print("attn_weights:", attn_weights)
+        # print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
 
@@ -254,44 +254,33 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    # def forward(self, depth_heightmap, target_mask, object_masks):
-    def forward(self, depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-        obj_features = self.preprocess_input(object_masks)
-        
-        target_feats = self.feat_extractor(target_mask)
-        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
-
-        B, N, C, = obj_features.shape
-
-        top_indices, att_weights = self.causal_attention(target_feats, obj_features, object_masks.squeeze(2))
-
-        ########### VISUALIZE ATTENTION MAP ################
-        # self.visualize_attn(raw_scene_mask, raw_target_mask, raw_object_masks, all_scores)
+    def forward(self, scene_mask, target_mask, object_masks):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+        top_indices, attn_weights = self.causal_attention(target_mask, object_masks)
 
         ###### Keep overlapped objects #####
         processed_objects = []
 
         raw_objects = []
-        for i in range(B):
+        for i in range(target_mask.shape[0]):
             idx = top_indices[i] 
             x = object_masks[i, idx] # x should be (4, 400, 400)
             processed_objects.append(x)
 
         # ################### THIS IS FOR VISUALIZATION ####################
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objects.append(raw_x)
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objects.append(raw_x)
 
-        raw_objects = torch.stack(raw_objects)
+        # raw_objects = torch.stack(raw_objects)
 
-        # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
             
-        self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
             
-        processed_objects = torch.stack(processed_objects)
-        return att_weights
+        return attn_weights
    
 
 class ResFCN(nn.Module):
@@ -351,17 +340,18 @@ class ResFCN(nn.Module):
             out = conv3(x)
         return out
 
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
-        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
+        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
 
-        B, N, C, H, W = object_masks.shape
-        out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
-        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
-
-        return object_scores, out_probs
+        # B, N, C, H, W = object_masks.shape
+        # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
+        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        # return object_scores, out_probs
+    
+        return object_scores
     
 
 class Regressor(nn.Module):
