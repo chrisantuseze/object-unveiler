@@ -96,7 +96,7 @@ class ObstacleHead(nn.Module):
 
     def attention(self, target_feat, obj_feat, object_masks):
         attn_scores = (target_feat * obj_feat)/np.sqrt(obj_feat.shape[-1])
-        print("attn_scores 1:", attn_scores.shape)
+        # print("attn_scores 1:", attn_scores.shape)
 
         # # get zero padded objects
         # padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
