@@ -62,18 +62,19 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        hidden_dim = 128
+        self.dim = 72#144
+        hidden_dim = self.args.num_patches * self.dim
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, hidden_dim),
+            nn.Linear((self.args.num_patches * 2) * self.dim ** 2, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.final_conv_units)
+            nn.Linear(hidden_dim, self.args.num_patches)
         )
 
     def preprocess_input(self, object_masks):
-        B = object_masks.shape[0]
+        B, N, C, H, W = object_masks.shape
         # print("object_masks.shape", object_masks.shape)
-        object_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
+        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
 
         for i in range(B):
             object_masks_ = object_masks[i].to(self.device)
@@ -85,54 +86,58 @@ class ObstacleHead(nn.Module):
                 mask = mask.unsqueeze(0).to(self.device)
                 obj_feat = self.feat_extractor(mask)
 
-                obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
+                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
                 obj_features.append(obj_feat)
 
-            obj_features = torch.cat(obj_features)
-            object_features[i] = obj_features
-            
-        return object_features
+            obj_features = torch.cat(obj_features).unsqueeze(0)
+            object_features.append(obj_features)
+
+        return torch.cat(object_features).to(self.device)
 
     def attention(self, target_feat, obj_feat, object_masks):
-        attn_scores = (target_feat.unsqueeze(1) * obj_feat).sum(dim=-1)/np.sqrt(obj_feat.shape[-1])
-        # print("attn_scores 1:", attn_scores)
+        attn_scores = (target_feat * obj_feat)/np.sqrt(obj_feat.shape[-1])
+        print("attn_scores 1:", attn_scores.shape)
 
-        # get zero padded objects
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # print("attn_scores 2:", attn_scores)
+        # # get zero padded objects
+        # padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        # padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        # attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+        # # print("attn_scores 2:", attn_scores)
 
-        # Temperature 
-        temp = 50.0
-        attn_scores = attn_scores / temp
-        attn_scores = F.softmax(attn_scores, dim=1)
+        # # Temperature 
+        # temp = 50.0
+        # attn_scores = attn_scores / temp
+        # attn_scores = F.softmax(attn_scores, dim=1)
         # print("softmax attn_scores 3:", attn_scores)
 
         return attn_scores
 
-    def causal_attention(self, target_mask, object_masks):
+    def causal_attention(self, scene_mask, target_mask, object_masks):
         obj_feats = self.preprocess_input(object_masks)
         target_feats = self.feat_extractor(target_mask)
-        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
-        # print(target_feats.shape, target_feats.unsqueeze(1).shape, obj_feats.shape)
+        target_feats = target_feats.unsqueeze(1)
 
-        attn_input = torch.cat([target_feats.unsqueeze(1), obj_feats], dim=1)
-        # print("attn_input.shape", attn_input.shape)
+        scene_feats = self.feat_extractor(scene_mask)
+        scene_feats = scene_feats.unsqueeze(1)
+        # print(target_feats.shape, scene_feats.shape, obj_feats.shape)
 
-        energy = torch.tanh(attn_input)
-        # print("energy.shape", energy.shape)
+        attn_scores = self.attention(target_feats, obj_feats, object_masks)
+        # print(attn_scores.shape)
 
-        attn_weights = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
-        # print("attn_weights.shape", attn_weights.shape)
+        weights = torch.cat([obj_feats, attn_scores], dim=2)
+        # print("weights.shape", weights.shape)
+        # weights = torch.cat([scene_mask, target_feats, weights], dim=2)
+        # print("weights.shape", weights.shape)
+
+        attn_weights = self.projection(weights.view(weights.shape[0], -1))
         
-        attn_weights = torch.sum(obj_feats * attn_weights.unsqueeze(1), dim=2) 
+        # attn_weights = torch.sum(obj_feats * attn_weights.unsqueeze(1), dim=2) 
         # print("attn_weights.shape", attn_weights.shape)
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
-        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float('-inf'))
         # print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
@@ -256,7 +261,7 @@ class ObstacleHead(nn.Module):
 
     def forward(self, scene_mask, target_mask, object_masks):
     # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-        top_indices, attn_weights = self.causal_attention(target_mask, object_masks)
+        top_indices, attn_weights = self.causal_attention(scene_mask, target_mask, object_masks)
 
         ###### Keep overlapped objects #####
         processed_objects = []
@@ -301,7 +306,7 @@ class ResFCN(nn.Module):
         self.rb4 = self.make_layer(512, 256)
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
-        # self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
+        self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         self.obstacle_head = ObstacleHead(args, self.predict) 
 
@@ -316,7 +321,31 @@ class ResFCN(nn.Module):
 
         return nn.Sequential(*layers)
     
-    def predict(self, depth, final_feats=False):
+    # def predict(self, depth, final_feats=False):
+    #     x = F.relu(self.conv1(depth))
+    #     x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
+    #     x = self.rb1(x)
+    #     x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
+    #     x = self.rb2(x)
+    #     x = self.rb3(x)
+    #     x = self.rb4(x)
+    #     x = self.rb5(x)
+        
+    #     x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+    #     x = self.rb6(x)
+       
+    #     x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+    #     if final_feats:
+    #         conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+    #         nn.init.xavier_uniform_(conv2.weight)
+    #         out = conv2(x)
+    #     else:
+    #         conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
+    #         nn.init.xavier_uniform_(conv3.weight)
+    #         out = conv3(x)
+    #     return out
+
+    def predict(self, depth):
         x = F.relu(self.conv1(depth))
         x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
         x = self.rb1(x)
@@ -327,17 +356,10 @@ class ResFCN(nn.Module):
         x = self.rb5(x)
         
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb6(x)
+        x = self.rb6(x) # half the channel
        
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        if final_feats:
-            conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv2.weight)
-            out = conv2(x)
-        else:
-            conv3 = nn.Conv2d(64, self.final_conv_units, kernel_size=1, stride=1, padding=0, bias=False).to(self.device)
-            nn.init.xavier_uniform_(conv3.weight)
-            out = conv3(x)
+        # x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
+        out = self.final_conv(x)
         return out
 
     def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):

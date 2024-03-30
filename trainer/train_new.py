@@ -213,7 +213,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:14000]
+    transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -243,6 +243,7 @@ def train_fcn_net(args):
     obstacle_criterion = nn.CrossEntropyLoss() #nn.SmoothL1Loss(reduction='none')
 
     # model.load_state_dict(torch.load("save/fcn/fcn_model_40.pt", map_location=args.device))
+    torch.autograd.set_detect_anomaly(True)
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):

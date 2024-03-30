@@ -50,6 +50,20 @@ class ResidualBlock(nn.Module):
 
         return out
 
+class ObjectScorer(nn.Module):
+    def __init__(self, args):
+        super(ObjectScorer, self).__init__()
+        self.dim = 144
+        self.hidden_dim = self.args.num_patches * self.dim
+        self.projection = nn.Sequential(
+            nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim),
+            nn.BatchNorm1d(self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.args.num_patches)
+        )
+
+    def forward(self, )
+
 class ResFCN(nn.Module):
     def __init__(self, args):
         super(ResFCN, self).__init__()
@@ -69,15 +83,6 @@ class ResFCN(nn.Module):
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
-
-        self.dim = 144
-        self.hidden_dim = self.args.num_patches * self.dim
-        # self.projection = nn.Sequential(
-        #     nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim),
-        #     nn.BatchNorm1d(self.hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_dim, self.args.num_patches)
-        # )
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -139,16 +144,12 @@ class ResFCN(nn.Module):
         # print(x.shape, x.reshape(x.shape[0], -1).shape)
         # attn_scores = self.projection(x.reshape(x.shape[0], -1))
 
-        attn_scores = nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim).to(self.args.device)(x.reshape(x.shape[0], -1))
-        attn_scores = nn.BatchNorm1d(self.hidden_dim).to(self.args.device)(attn_scores)
-        attn_scores = nn.ReLU().to(self.args.device)(attn_scores)
-        attn_scores = nn.Linear(self.hidden_dim, self.args.num_patches).to(self.args.device)(attn_scores)
-
+        
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # print("attn_scores", attn_scores)
+        print("attn_scores", attn_scores)
 
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -165,8 +166,8 @@ class ResFCN(nn.Module):
 
         return context
     
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
         
         processed_objects = self.obstacle_scorer(depth_heightmap, target_mask, object_masks)
 
@@ -218,7 +219,7 @@ class ResFCN(nn.Module):
 
         # print("out_prob.shape", out_probs.shape)
 
-        return out_probs
+        return None, out_probs
     
     def get_predictions(self, depth_heightmap, target_mask, specific_rotation, is_volatile):
         if is_volatile:
