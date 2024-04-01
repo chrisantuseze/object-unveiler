@@ -337,9 +337,8 @@ class Policy:
             objects_to_remove = objects_to_remove[:self.args.num_patches]
             objects_to_remove = objects_to_remove.unsqueeze(0)
 
-        # print("processed_obj_masks.shape", processed_obj_masks.shape)
-        # print("raw_obj_masks.shape", raw_obj_masks.shape)
-        print("ground truth:", objects_to_remove)
+        _, top_indices = torch.topk(objects_to_remove, k=self.args.sequence_length, dim=1)
+        print("ground truth:", top_indices)
 
         raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
         raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
