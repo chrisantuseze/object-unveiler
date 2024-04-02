@@ -94,9 +94,9 @@ class ObstacleHead(nn.Module):
 
         return torch.cat(object_features).to(self.device)
 
-    def attention(self, target_feat, obj_feat, object_masks):
-        attn_scores = (target_feat * obj_feat)/np.sqrt(obj_feat.shape[-1])
-        # print("attn_scores 1:", attn_scores.shape)
+    def attention(self, target_feat, obj_feat, scene_feat, object_masks):
+        attn_scores = (target_feat * obj_feat * scene_feat)/np.sqrt(obj_feat.shape[-1])
+        print("attn_scores 1:", attn_scores.shape)
 
         # # get zero padded objects
         # padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
@@ -118,9 +118,12 @@ class ObstacleHead(nn.Module):
 
         target_feats = self.feat_extractor(target_mask)
         target_feats = target_feats.unsqueeze(1)
+
+        scene_feats = self.feat_extractor(scene_mask)
+        scene_feats = scene_feats.unsqueeze(1)
         # print(target_feats.shape, scene_feats.shape, obj_feats.shape)
 
-        attn_scores = self.attention(target_feats, obj_feats, object_masks)
+        attn_scores = self.attention(target_feats, obj_feats, scene_feats, object_masks)
         # print(attn_scores.shape)
 
         weights = torch.cat([obj_feats, attn_scores], dim=2)
