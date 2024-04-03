@@ -65,11 +65,17 @@ class ObstacleHead(nn.Module):
         self.dim = 72#144
         hidden_dim = self.args.num_patches * self.dim
         self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.dim ** 2, hidden_dim),
+            nn.Linear((self.args.num_patches * 2 + 1) * self.dim ** 2, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches)
         )
+        # self.projection = nn.Sequential(
+        #     nn.Linear((self.args.num_patches + 1) * self.dim ** 2, hidden_dim),
+        #     nn.BatchNorm1d(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.args.num_patches)
+        # )
 
     def preprocess_input(self, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -95,20 +101,9 @@ class ObstacleHead(nn.Module):
         return torch.cat(object_features).to(self.device)
 
     def attention(self, target_feat, obj_feat, scene_feat, object_masks):
-        attn_scores = (target_feat * obj_feat * scene_feat)/np.sqrt(obj_feat.shape[-1])
+        # attn_scores = (target_feat * obj_feat * scene_feat)/np.sqrt(obj_feat.shape[-1])
+        attn_scores = (target_feat * obj_feat)/np.sqrt(obj_feat.shape[-1])
         # print("attn_scores 1:", attn_scores.shape)
-
-        # # get zero padded objects
-        # padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        # padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        # attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # # print("attn_scores 2:", attn_scores)
-
-        # # Temperature 
-        # temp = 50.0
-        # attn_scores = attn_scores / temp
-        # attn_scores = F.softmax(attn_scores, dim=1)
-        # print("softmax attn_scores 3:", attn_scores)
 
         return attn_scores
 
@@ -126,11 +121,10 @@ class ObstacleHead(nn.Module):
         attn_scores = self.attention(target_feats, obj_feats, scene_feats, object_masks)
         # print(attn_scores.shape)
 
-        weights = torch.cat([obj_feats, attn_scores], dim=2)
+        # weights = torch.cat([obj_feats, attn_scores], dim=2)
         # print("weights.shape", weights.shape)
 
-        weights = torch.mean(weights, dim=2, keepdim=True)
-        weights = torch.cat([target_feats, weights], dim=1)
+        weights = torch.cat([target_feats, obj_feats, attn_scores], dim=1)
         # print("weights.shape", weights.shape)
 
         attn_weights = self.projection(weights.view(weights.shape[0], -1))
