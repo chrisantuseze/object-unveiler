@@ -100,14 +100,34 @@ class ObstacleHead(nn.Module):
 
         return torch.cat(object_features).to(self.device)
 
-    def attention(self, target_feat, obj_feat, scene_feat, object_masks):
-        # attn_scores = (target_feat * obj_feat * scene_feat)/np.sqrt(obj_feat.shape[-1])
-        attn_scores = (target_feat * obj_feat)/np.sqrt(obj_feat.shape[-1])
-        # print("attn_scores 1:", attn_scores.shape)
-
-        return attn_scores
-
     def causal_attention(self, scene_mask, target_mask, object_masks):
+        # print("target_mask.shape", target_mask.shape)
+        obj_feats = self.preprocess_input(object_masks)
+
+        target_feats = self.feat_extractor(target_mask)
+        target_feats = target_feats.unsqueeze(1)
+        # print(target_feats.shape, obj_feats.shape)
+
+        attn_scores = (target_feats * obj_feats)/np.sqrt(obj_feats.shape[-1])
+        # print(attn_scores.shape)
+
+        weights = torch.cat([target_feats, obj_feats, attn_scores], dim=1)
+        # print("weights.shape", weights.shape)
+
+        attn_weights = self.projection(weights.view(weights.shape[0], -1))
+        
+        object_masks = object_masks.squeeze(2)
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attn_weights)
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float('-inf'))
+        # print("attn_weights:", attn_weights)
+
+        _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
+
+        return top_indices, attn_weights
+    
+    def causal_attention1(self, scene_mask, target_mask, object_masks):
         # print("target_mask.shape", target_mask.shape)
         obj_feats = self.preprocess_input(object_masks)
 
@@ -118,20 +138,17 @@ class ObstacleHead(nn.Module):
         scene_feats = scene_feats.unsqueeze(1)
         # print(target_feats.shape, scene_feats.shape, obj_feats.shape)
 
-        attn_scores = self.attention(target_feats, obj_feats, scene_feats, object_masks)
+        attn_scores = (target_feats * obj_feats * scene_feats)/np.sqrt(obj_feats.shape[-1])
         # print(attn_scores.shape)
 
-        # weights = torch.cat([obj_feats, attn_scores], dim=2)
+        weights = torch.cat([obj_feats, attn_scores], dim=2)
         # print("weights.shape", weights.shape)
 
-        weights = torch.cat([target_feats, obj_feats, attn_scores], dim=1)
+        weights = torch.cat([target_feats, weights], dim=1)
         # print("weights.shape", weights.shape)
 
         attn_weights = self.projection(weights.view(weights.shape[0], -1))
         
-        # attn_weights = torch.sum(obj_feats * attn_weights.unsqueeze(1), dim=2) 
-        # print("attn_weights.shape", attn_weights.shape)
-
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
