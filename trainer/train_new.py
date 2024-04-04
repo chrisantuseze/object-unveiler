@@ -242,7 +242,7 @@ def train_fcn_net(args):
 
     obstacle_criterion = nn.CrossEntropyLoss() #nn.SmoothL1Loss(reduction='none')
 
-    # model.load_state_dict(torch.load("save/fcn/fcn_model_20.pt", map_location=args.device))
+    model.load_state_dict(torch.load("save/fcn/fcn_model_20.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
 
     try:
