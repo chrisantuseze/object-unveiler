@@ -119,7 +119,7 @@ class ObstacleHead(nn.Module):
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
-        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float(-1e-6))
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float(-1e-4))
         # print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
