@@ -245,10 +245,10 @@ def train_fcn_net(args):
     model.load_state_dict(torch.load("save/fcn/fcn_model_20.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
 
-    try:
-        global_step = 0 #{'train': 0, 'val': 0}
-        for epoch in range(args.epochs):
-            
+    global_step = 0 #{'train': 0, 'val': 0}
+    for epoch in range(args.epochs):
+        
+        try:
             model.train()
             for step, batch in enumerate(data_loader_train):
                 x = batch[0].to(args.device)
@@ -334,11 +334,11 @@ def train_fcn_net(args):
             if epoch % 10 == 0:
                 torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
-        torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
-        writer.close()
+        except Exception as e:
+            print(e)
 
-    except Exception as e:
-        print(e)
+    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    writer.close()
 
 # models_attn
 def train_fcn_net2(args):
