@@ -119,7 +119,7 @@ class ObstacleHead(nn.Module):
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
-        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float('-inf'))
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float(-1e-6))
         # print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
@@ -142,6 +142,7 @@ class ObstacleHead(nn.Module):
         # print(attn_scores.shape)
 
         weights = torch.cat([obj_feats, attn_scores], dim=2)
+        weights = torch.mean(weights, dim=2, keepdim=True)
         # print("weights.shape", weights.shape)
 
         weights = torch.cat([target_feats, weights], dim=1)
@@ -152,7 +153,7 @@ class ObstacleHead(nn.Module):
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
-        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float('-inf'))
+        attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float(-1e-6))
         # print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
