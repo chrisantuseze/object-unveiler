@@ -64,18 +64,24 @@ class ObstacleHead(nn.Module):
 
         self.dim = 72#144
         hidden_dim = self.args.num_patches * self.dim
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches * 2 + 1) * self.dim ** 2, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches)
-        )
+        # self.projection = nn.Sequential(
+        #     nn.Linear((self.args.num_patches * 2 + 1) * self.dim ** 2, hidden_dim),
+        #     nn.BatchNorm1d(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.args.num_patches)
+        # )
         # self.projection = nn.Sequential(
         #     nn.Linear((self.args.num_patches + 1) * self.dim ** 2, hidden_dim),
         #     nn.BatchNorm1d(hidden_dim),
         #     nn.ReLU(),
         #     nn.Linear(hidden_dim, self.args.num_patches)
         # )
+        self.projection = nn.Sequential(
+            nn.Linear((self.args.num_patches * 2) * self.dim ** 2, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches)
+        )
 
     def preprocess_input(self, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -100,7 +106,7 @@ class ObstacleHead(nn.Module):
 
         return torch.cat(object_features).to(self.device)
 
-    def causal_attention(self, scene_mask, target_mask, object_masks):
+    def causal_attention0(self, scene_mask, target_mask, object_masks):
         # print("target_mask.shape", target_mask.shape)
         obj_feats = self.preprocess_input(object_masks)
 
@@ -115,37 +121,38 @@ class ObstacleHead(nn.Module):
         # print("weights.shape", weights.shape)
 
         attn_weights = self.projection(weights.view(weights.shape[0], -1))
+        print("attn_weights", attn_weights)
         
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_weights)
         attn_weights = attn_weights.masked_fill_(padding_mask_expanded, float(-1e-4))
-        # print("attn_weights:", attn_weights)
+        print("attn_weights:", attn_weights)
 
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
         # print("top indices", top_indices)
 
         return top_indices, attn_weights
     
-    def causal_attention1(self, scene_mask, target_mask, object_masks):
+    def causal_attention(self, scene_mask, target_mask, object_masks):
         # print("target_mask.shape", target_mask.shape)
         obj_feats = self.preprocess_input(object_masks)
 
         target_feats = self.feat_extractor(target_mask)
         target_feats = target_feats.unsqueeze(1)
 
-        scene_feats = self.feat_extractor(scene_mask)
-        scene_feats = scene_feats.unsqueeze(1)
+        # scene_feats = self.feat_extractor(scene_mask)
+        # scene_feats = scene_feats.unsqueeze(1)
         # print(target_feats.shape, scene_feats.shape, obj_feats.shape)
 
-        attn_scores = (target_feats * obj_feats * scene_feats)/np.sqrt(obj_feats.shape[-1])
+        attn_scores = (target_feats * obj_feats)/np.sqrt(obj_feats.shape[-1])
         # print(attn_scores.shape)
 
         weights = torch.cat([obj_feats, attn_scores], dim=2)
-        weights = torch.mean(weights, dim=2, keepdim=True)
+        # weights = torch.mean(weights, dim=2, keepdim=True)
         # print("weights.shape", weights.shape)
 
-        weights = torch.cat([target_feats, weights], dim=1)
+        # weights = torch.cat([target_feats, weights], dim=1)
         # print("weights.shape", weights.shape)
 
         attn_weights = self.projection(weights.view(weights.shape[0], -1))
