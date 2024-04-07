@@ -1,31 +1,17 @@
 #!/usr/bin/env python3
-import zipfile
+# import zipfile
 
-with zipfile.ZipFile("pc-ou-dataset.zip", 'r') as zip_ref:
-    zip_ref.extractall("pc-ou-dataset")
+# with zipfile.ZipFile("pc-ou-dataset.zip", 'r') as zip_ref:
+#     zip_ref.extractall("pc-ou-dataset")
 
+import numpy as np
 
-# import torch
+# Assuming 'arr' is your N x 4 array
+arr = np.array([[1, 2, 3, 4],
+                [5, 6, 7, 8],
+                [9, 10, 11, 12]])
 
-# # A has shape (2, 12, 256) 
-# A = torch.rand(2, 12, 256)  
+# Pad the array to 8 x 4
+padded_arr = np.pad(arr, ((0, 8 - arr.shape[0]), (0, 0)), mode='constant')
 
-# # B has shape (2, 12, 100, 100)
-# B = torch.rand(2, 12, 100, 100)
-
-# # Set some entries of B to 0 to simulate padding
-# B[0, 5:8] = 0  
-# B[1, 2:3] = 0
-
-# # Assuming B is a mask indicating which entries are padded (containing zeros)
-# padding_masks = (B.sum(dim=(2, 3)) == 0)
-# print(padding_masks)
-# print()
-
-# # Expand the mask to match the shape of A
-# padding_mask_expanded = padding_masks.unsqueeze(-1).expand_as(A)
-
-# # Zero out the corresponding entries in A using the mask
-# A = A.masked_fill_(padding_mask_expanded, 0)
-
-# print(A)
+print(padded_arr)

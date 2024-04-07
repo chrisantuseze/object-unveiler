@@ -177,7 +177,7 @@ class UnveilerDataset(data.Dataset):
             obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
             obj_masks[:object_masks.shape[0], :, :] = object_masks
 
-            num_zeros = self.args.num_patches - N
+            num_zeros = self.args.num_patches - bboxes.shape[0]
             bbox = np.pad(bboxes, pad_width=((0, num_zeros), (0, 0)), mode='constant')
         else:
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
