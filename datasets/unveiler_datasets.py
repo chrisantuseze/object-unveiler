@@ -179,10 +179,12 @@ class UnveilerDataset(data.Dataset):
 
             num_zeros = self.args.num_patches - bboxes.shape[0]
             bbox = np.pad(bboxes, pad_width=((0, num_zeros), (0, 0)), mode='constant')
+            print("1 bbox.shape", bbox.shape)
         else:
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
             bbox = bboxes[:self.args.num_patches]
+            print("2 bbox.shape", bbox.shape)
 
         # optimal_nodes = general_utils.apply_softmax(optimal_nodes)
         # if len(optimal_nodes) < self.args.num_patches:
