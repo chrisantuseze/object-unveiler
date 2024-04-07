@@ -57,7 +57,7 @@ def modify_episode(memory: ReplayBuffer, episode_dir, index):
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
-def modify_episode2(episode_dir, index):
+def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -68,9 +68,15 @@ def modify_episode2(episode_dir, index):
         heightmap = data['state']
         object_masks = data['object_masks']
 
+        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], plot=True, bbox=True)
+
         new_masks = []
-        for mask in object_masks:
+        new_bboxes = []
+        for id, mask in enumerate(object_masks):
+            mask = general_utils.resize_mask(transform, mask)
             new_masks.append(general_utils.extract_target_crop(mask, heightmap))
+
+            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
         # get optimal nodes
         objects_to_remove = grasping2.get_target_objects_distance(data['target_mask'], data['object_masks'])
@@ -90,6 +96,7 @@ def modify_episode2(episode_dir, index):
             'action': data['action'],
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
+            'bboxes': new_bboxes,
         }
         episode_data_list.append(transition)
 
@@ -149,11 +156,13 @@ if __name__ == "__main__":
         # if not file_.startswith("transition"):
         #     episode_dirs.remove(file_)
 
+
+    segmenter = ObjectSegmenter()
     for i, episode_dir in enumerate(episode_dirs):
         #  modify_episode(memory, episode_dir, i)
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode2(episode_dir, i)
+        modify_episode2(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

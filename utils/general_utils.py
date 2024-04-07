@@ -276,6 +276,21 @@ def resize_mask(transform, mask, new_size = (100, 100)):
     resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
     return resized
 
+def resize_bbox(bbox):
+    old_width, old_height = (400, 400)
+    new_width, new_height = (100, 100)
+
+    width_scale_factor = new_width / old_width
+    height_scale_factor = new_height / old_height
+
+    resized_bbox = [
+        bbox[0] * width_scale_factor,  # New x-coordinate
+        bbox[1] * height_scale_factor,  # New y-coordinate
+        bbox[2] * width_scale_factor,  # New width
+        bbox[3] * height_scale_factor  # New height
+    ]
+    return resized_bbox
+
 def pad_label(labels):
     labels = torch.stack(labels, dim=0)
 
