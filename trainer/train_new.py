@@ -2,8 +2,8 @@ import os
 import random
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
-from policy.models_obstacle_attn import Regressor, ResFCN
+from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -213,7 +213,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:18000]
+    transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -261,14 +261,17 @@ def train_fcn_net(args):
             # rotations = batch[7]
             # y = batch[8].to(args.device, dtype=torch.float32)
             # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+            # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
             rotations = batch[4]
             y = batch[5].to(args.device, dtype=torch.float32)
             obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+            bboxes = batch[7].to(args.device, dtype=torch.float32)
 
             obstacle_pred = model(
                 x, target_mask, object_masks, scene_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
+                bboxes,
                 rotations
             )
 
@@ -307,14 +310,17 @@ def train_fcn_net(args):
                 # rotations = batch[7]
                 # y = batch[8].to(args.device, dtype=torch.float32)
                 # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+                # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
                 rotations = batch[4]
                 y = batch[5].to(args.device, dtype=torch.float32)
                 obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+                bboxes = batch[7].to(args.device, dtype=torch.float32)
 
                 obstacle_pred = model(
                     x, target_mask, object_masks, scene_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
+                    bboxes,
                     rotations
                 )
 

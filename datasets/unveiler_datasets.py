@@ -23,14 +23,14 @@ class UnveilerDataset(data.Dataset):
     # single - input, multi - output for models_attn
     def __getitem__1(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, scene_color, target_mask, _, _ = episode_data[0]
+        heightmap, scene_color, target_mask, _, bboxes, _ = episode_data[0]
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
         padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
 
         labels, rot_ids = [], []
         for data in episode_data:
-            _, _, _, _, action = data
+            _, _, _, _, bboxes, action = data
 
             # convert theta to range 0-360 and then compute the rot_id
             angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -70,7 +70,7 @@ class UnveilerDataset(data.Dataset):
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, _ = episode_data[0]
+        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, bboxes, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
@@ -87,7 +87,7 @@ class UnveilerDataset(data.Dataset):
         # get labels and rot_ids
         labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, _, _, _, optimal_nodes, action = data
+            _, _, _, _, _, _, optimal_nodes, bboxes, action = data
 
             # we need one obstacle per episode
             obstacle_ids.append(optimal_nodes[0])
@@ -117,11 +117,13 @@ class UnveilerDataset(data.Dataset):
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
 
         # pad object masks
-        processed_obj_masks, obj_masks, optimal_nodes = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, optimal_nodes)
+        processed_obj_masks, obj_masks, optimal_nodes, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, optimal_nodes, bboxes)
 
-        return processed_heightmap, processed_target_mask, processed_obj_masks, processed_scene_mask, rot_ids, labels, optimal_nodes
+        return processed_heightmap, processed_target_mask, processed_obj_masks\
+             , processed_scene_mask, rot_ids, labels, optimal_nodes, bbox
 
-        # return processed_heightmap, processed_target_mask, processed_obj_masks, processed_scene_mask, scene_mask, c_target_mask, obj_masks, rot_ids, labels, optimal_nodes
+        # return processed_heightmap, processed_target_mask, processed_obj_masks\
+        #         , processed_scene_mask, scene_mask, c_target_mask, obj_masks, rot_ids, labels, optimal_nodes, bbox
 
     def __len__(self):
         return len(self.dir_ids)
@@ -162,9 +164,11 @@ class UnveilerDataset(data.Dataset):
         return padded_heightmaps, padded_target_masks
 
 
-    def pad_object_masks_and_nodes(self, _processed_obj_masks, object_masks, optimal_nodes):
+    def pad_object_masks_and_nodes(self, _processed_obj_masks, object_masks, optimal_nodes, bboxes):
         N, C, H, W = _processed_obj_masks.shape
         object_masks = np.array(object_masks)
+        bboxes = np.array(bboxes)
+        # print(bboxes)
         if N < self.args.num_patches:
             processed_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=_processed_obj_masks.dtype)
             processed_obj_masks[:_processed_obj_masks.shape[0], :, :, :] = _processed_obj_masks
@@ -173,9 +177,12 @@ class UnveilerDataset(data.Dataset):
             obj_masks = np.zeros((self.args.num_patches, H, W), dtype=object_masks.dtype)
             obj_masks[:object_masks.shape[0], :, :] = object_masks
 
+            num_zeros = self.args.num_patches - N
+            bbox = np.pad(bboxes, pad_width=((0, num_zeros), (0, 0)), mode='constant')
         else:
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
+            bbox = bboxes[:self.args.num_patches]
 
         # optimal_nodes = general_utils.apply_softmax(optimal_nodes)
         # if len(optimal_nodes) < self.args.num_patches:
@@ -192,4 +199,4 @@ class UnveilerDataset(data.Dataset):
         if optimal_nodes >= self.args.num_patches:
             optimal_nodes = self.args.num_patches - 1
 
-        return processed_obj_masks, obj_masks, optimal_nodes
+        return processed_obj_masks, obj_masks, optimal_nodes, bbox

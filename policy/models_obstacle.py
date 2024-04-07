@@ -63,13 +63,21 @@ class ObstacleHead(nn.Module):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         self.dim = 72#144
+        self.dim2 = self.dim ** 2
         hidden_dim = self.args.num_patches * self.dim
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, hidden_dim),
+        self.image_proj = nn.Sequential(
+            nn.Linear(2 * self.dim2, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches)
+            nn.Linear(hidden_dim, hidden_dim)
         )
+
+        self.fc = nn.Sequential(
+            nn.Linear(42080, self.dim),
+            nn.ReLU(),
+            nn.Linear(self.dim, self.args.num_patches)
+        )
+
 
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
     def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
@@ -163,15 +171,26 @@ class ObstacleHead(nn.Module):
         return torch.cat(object_features).to(self.device)
 
 
-    # def forward(self, scene_mask, target_mask, object_masks):
-    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+    def forward(self, scene_mask, target_mask, object_masks, bboxes):
+    # def forward(self, scene_mask, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks):
         object_feats = self.preprocess_input(object_masks)
         target_feats = self.feat_extractor(target_mask).unsqueeze(1)
-        scene_feats = self.feat_extractor(scene_mask).unsqueeze(1)
+        scene_feats = self.feat_extractor(scene_mask).unsqueeze(1) # 4x1x1x144x144
 
-        x = torch.cat([target_feats, scene_feats, object_feats], dim=1)
-        # print(x.shape, x.reshape(x.shape[0], -1).shape)
-        attn_scores = self.projection(x.reshape(x.shape[0], -1))
+        B, N, C, H, W = object_feats.shape
+        out1 = torch.cat([scene_feats, target_feats], dim=1)
+        # print("out1.shape", out1.shape)
+        
+        out1 = self.image_proj(out1.view(B, -1))
+        # print("out1.shape", out1.shape)
+
+        out2 = torch.cat([object_feats.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
+        # print("out2.shape", out2.shape)        
+
+        x = torch.cat([out1, out2], dim=1)
+        # print(x.shape)
+
+        attn_scores = self.fc(x.reshape(x.shape[0], -1))
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
@@ -180,7 +199,7 @@ class ObstacleHead(nn.Module):
         
         # attn_weights = torch.softmax(attn_scores, dim=1)
         attn_weights = attn_scores
-        print("attn_weights", attn_weights)
+        # print("attn_weights", attn_weights)
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
 
         ###### Keep overlapped objects #####
@@ -257,11 +276,11 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
    
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, bboxes, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
         
-        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
+        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks)
 
         B, N, C, H, W = object_masks.shape
         # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)

@@ -110,8 +110,7 @@ class ObstacleHead(nn.Module):
         # print("target_mask.shape", target_mask.shape)
         obj_feats = self.preprocess_input(object_masks)
 
-        target_feats = self.feat_extractor(target_mask)
-        target_feats = target_feats.unsqueeze(1)
+        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
         # print(target_feats.shape, obj_feats.shape)
 
         attn_scores = (target_feats * obj_feats)/np.sqrt(obj_feats.shape[-1])
@@ -138,11 +137,8 @@ class ObstacleHead(nn.Module):
         # print("target_mask.shape", target_mask.shape)
         obj_feats = self.preprocess_input(object_masks)
 
-        target_feats = self.feat_extractor(target_mask)
-        target_feats = target_feats.unsqueeze(1)
-
-        # scene_feats = self.feat_extractor(scene_mask)
-        # scene_feats = scene_feats.unsqueeze(1)
+        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
+        # scene_feats = self.feat_extractor(scene_mask).unsqueeze(1)
         # print(target_feats.shape, scene_feats.shape, obj_feats.shape)
 
         attn_scores = (target_feats * obj_feats)/np.sqrt(obj_feats.shape[-1])
