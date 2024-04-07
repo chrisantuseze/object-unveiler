@@ -87,7 +87,7 @@ class UnveilerDataset(data.Dataset):
         # get labels and rot_ids
         labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, _, _, _, optimal_nodes, bboxes, action = data
+            _, _, _, _, _, _, optimal_nodes, _, action = data
 
             # we need one obstacle per episode
             obstacle_ids.append(optimal_nodes[0])
@@ -168,7 +168,7 @@ class UnveilerDataset(data.Dataset):
         N, C, H, W = _processed_obj_masks.shape
         object_masks = np.array(object_masks)
         bboxes = np.array(bboxes)
-        # print(bboxes)
+        print("bbox.shape", bboxes.shape)
         if N < self.args.num_patches:
             processed_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=_processed_obj_masks.dtype)
             processed_obj_masks[:_processed_obj_masks.shape[0], :, :, :] = _processed_obj_masks
