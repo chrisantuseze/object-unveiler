@@ -267,7 +267,6 @@ def train_fcn_net(args):
             y = batch[5].to(args.device, dtype=torch.float32)
             obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
             bboxes = batch[7].to(args.device, dtype=torch.float32)
-            print(bboxes)
 
             obstacle_pred = model(
                 x, target_mask, object_masks, scene_masks, 
