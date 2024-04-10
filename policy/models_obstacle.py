@@ -65,17 +65,17 @@ class ObstacleHead(nn.Module):
         self.dim = 72#144
         self.dim2 = self.dim ** 2
         hidden_dim = self.args.num_patches * self.dim
-        self.image_proj = nn.Sequential(
-            nn.Linear(2 * self.dim2, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim)
-        )
+        # self.image_proj = nn.Sequential(
+        #     nn.Linear(2 * self.dim2, hidden_dim),
+        #     nn.BatchNorm1d(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, hidden_dim)
+        # )
 
         self.fc = nn.Sequential(
-            nn.Linear(42080, self.dim),
+            nn.Linear(41504, self.dim2),
             nn.ReLU(),
-            nn.Linear(self.dim, self.args.num_patches)
+            nn.Linear(self.dim2, self.args.num_patches)
         )
 
 
@@ -175,32 +175,36 @@ class ObstacleHead(nn.Module):
     # def forward(self, scene_mask, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks):
         object_feats = self.preprocess_input(object_masks)
         target_feats = self.feat_extractor(target_mask).unsqueeze(1)
-        scene_feats = self.feat_extractor(scene_mask).unsqueeze(1) # 4x1x1x144x144
+        # scene_feats = self.feat_extractor(scene_mask).unsqueeze(1) # 4x1x1x144x144
 
         B, N, C, H, W = object_feats.shape
-        out1 = torch.cat([scene_feats, target_feats], dim=1)
+        # out1 = torch.cat([scene_feats, target_feats], dim=1)
         # print("out1.shape", out1.shape)
         
-        out1 = self.image_proj(out1.view(B, -1))
+        # out1 = self.image_proj(out1.view(B, -1))
         # print("out1.shape", out1.shape)
 
-        out2 = torch.cat([object_feats.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
-        # print("out2.shape", out2.shape)        
+        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[-1])
+        # print(attn_scores.shape)
 
-        x = torch.cat([out1, out2], dim=1)
+        x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
+        # print("x.shape", x.shape)        
+
+        # x = torch.cat([out1, out2], dim=1)
         # print(x.shape)
 
-        attn_scores = self.fc(x.reshape(x.shape[0], -1))
+        attn_scores = self.fc(x)
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         # attn_weights = torch.softmax(attn_scores, dim=1)
         attn_weights = attn_scores
         # print("attn_weights", attn_weights)
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
 
         ###### Keep overlapped objects #####
         processed_objects = []
@@ -277,12 +281,12 @@ class ResFCN(nn.Module):
         return out
    
     def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, bboxes, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
         
         object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
         # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks)
 
-        B, N, C, H, W = object_masks.shape
+        # B, N, C, H, W = object_masks.shape
         # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
         # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
         # return object_scores, out_probs

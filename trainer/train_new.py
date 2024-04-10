@@ -213,7 +213,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:8000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -242,7 +242,7 @@ def train_fcn_net(args):
 
     obstacle_criterion = nn.CrossEntropyLoss() #nn.SmoothL1Loss(reduction='none')
 
-    model.load_state_dict(torch.load("save/fcn/fcn_model_10.pt", map_location=args.device))
+    # model.load_state_dict(torch.load("save/fcn/fcn_model_10.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
 
     global_step = 0 #{'train': 0, 'val': 0}
@@ -282,6 +282,8 @@ def train_fcn_net(args):
             loss = torch.sum(loss)
 
             if step % (args.step * 2) == 0:
+                _, top_indices = torch.topk(obstacle_pred, k=args.sequence_length, dim=1)
+                logging.info(f"pred: {top_indices.squeeze(1)}; gt: {obstacle_gt}")
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()

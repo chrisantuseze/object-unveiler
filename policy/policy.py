@@ -2,8 +2,8 @@ import os
 import pickle
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
-from policy.models_obstacle_attn import Regressor, ResFCN
+from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
 from policy.object_segmenter import ObjectSegmenter
 import torch
@@ -288,7 +288,7 @@ class Policy:
         return actions
     
     def get_inputs(self, state, color_image, target_mask):
-        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_image, plot=True)
+        processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, plot=True, bbox=True)
         # print("processed_masks.shape", processed_masks[0].shape)
         # print("pred_mask.shape", pred_mask.shape)
 
@@ -302,7 +302,8 @@ class Policy:
 
         processed_obj_masks = []
         raw_obj_masks = []
-        for mask in processed_masks:
+        bboxes = []
+        for id, mask in enumerate(processed_masks):
             processed_mask = general_utils.resize_mask(transform, mask)
             raw_obj_masks.append(processed_mask)
 
@@ -310,12 +311,16 @@ class Policy:
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
+            bboxes.append(general_utils.resize_bbox(bbox[id]))
+
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
         raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
         objects_to_remove = grasping2.get_target_objects_distance(target_mask, processed_masks)
-        objects_to_remove = general_utils.apply_softmax(objects_to_remove)
+        objects_to_remove = np.argmax(objects_to_remove)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
+
+        bboxes = torch.FloatTensor(bboxes).to(self.device)
         if processed_obj_masks.shape[0] < self.args.num_patches:
             processed_obj_masks = processed_obj_masks.unsqueeze(0)
             padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
@@ -327,6 +332,9 @@ class Policy:
 
             objects_to_remove = objects_to_remove.unsqueeze(0)
             objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
+
+            bboxes = bboxes.unsqueeze(0)
+            bboxes = torch.nn.functional.pad(bboxes, (0,0, 0,padding_needed), mode='constant')
         else:
             processed_obj_masks = processed_obj_masks[:self.args.num_patches]
             processed_obj_masks = processed_obj_masks.unsqueeze(0)
@@ -336,6 +344,9 @@ class Policy:
 
             objects_to_remove = objects_to_remove[:self.args.num_patches]
             objects_to_remove = objects_to_remove.unsqueeze(0)
+
+            bboxes = bboxes[:self.args.num_patches]
+            bboxes = bboxes.unsqueeze(0)
 
         _, top_indices = torch.topk(objects_to_remove, k=self.args.sequence_length + 1, dim=1)
         print("ground truth:", top_indices)
@@ -347,7 +358,7 @@ class Policy:
         gt_object = processed_obj_masks[0, ids[0]].unsqueeze(0)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object
+              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation
@@ -355,12 +366,13 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_processed_mask, objects_to_remove, gt_object = self.get_inputs(state, color_image, target_mask)
+        raw_pred_mask, raw_target_mask, raw_processed_mask,\
+              objects_to_remove, gt_object, bboxes = self.get_inputs(state, color_image, target_mask)
 
         object_logits, out_prob = self.fcn(x,
             # processed_target, processed_obj_masks, objects_to_remove,
             processed_target, processed_obj_masks, processed_pred_mask, 
-            raw_pred_mask, raw_target_mask, raw_processed_mask, gt_object,
+            raw_pred_mask, raw_target_mask, raw_processed_mask, gt_object, bboxes, 
             is_volatile=True
         )
 
