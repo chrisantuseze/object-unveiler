@@ -1,5 +1,6 @@
 import os
 import random
+import copy
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
 from policy.models_obstacle import Regressor, ResFCN
@@ -245,6 +246,9 @@ def train_fcn_net(args):
     # model.load_state_dict(torch.load("save/fcn/fcn_model_10.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
 
+    best_model = None
+    lowest_loss = float('inf')
+
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
         
@@ -342,8 +346,12 @@ def train_fcn_net(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if epoch % 10 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_best.pt'))
+
+        # if epoch % 10 == 0:
+        #     torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
     writer.close()
