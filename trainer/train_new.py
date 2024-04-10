@@ -283,7 +283,7 @@ def train_fcn_net(args):
 
             if step % (args.step * 2) == 0:
                 _, top_indices = torch.topk(obstacle_pred, k=args.sequence_length, dim=1)
-                logging.info(f"pred: {top_indices.squeeze(1)}; gt: {obstacle_gt}")
+                logging.info(f"pred: {top_indices.squeeze(1)}\ngt: {obstacle_gt}")
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
