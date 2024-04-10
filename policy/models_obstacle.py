@@ -73,9 +73,9 @@ class ObstacleHead(nn.Module):
         # )
 
         self.fc = nn.Sequential(
-            nn.Linear(41504, self.dim2),
+            nn.Linear(41504, self.dim * self.args.num_patches),
             nn.ReLU(),
-            nn.Linear(self.dim2, self.args.num_patches)
+            nn.Linear(self.dim * self.args.num_patches, self.args.num_patches)
         )
 
 

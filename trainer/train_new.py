@@ -282,15 +282,13 @@ def train_fcn_net(args):
             loss = torch.sum(loss)
 
             if step % (args.step * 2) == 0:
-                _, top_indices = torch.topk(obstacle_pred, k=args.sequence_length, dim=1)
-                logging.info(f"pred: {top_indices.squeeze(1)}\ng_t: {obstacle_gt.long()}")
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward(retain_graph=True)
             optimizer.step()
 
-            debug_params(model)
+            # debug_params(model)
 
             # grad_norm = calculate_gradient_norm(model) 
 
@@ -332,11 +330,14 @@ def train_fcn_net(args):
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
+                    _, top_indices = torch.topk(obstacle_pred, k=args.sequence_length, dim=1)
+                    logging.info(f"pred: {top_indices.squeeze(1)}\ng_t: {obstacle_gt.long()}")
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.8f} '
             ', validation loss = {:.8f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                 epoch_loss['val'] / len(data_loaders['val'])))
+        logging.info("")
         
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
