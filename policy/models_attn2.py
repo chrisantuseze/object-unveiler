@@ -50,19 +50,77 @@ class ResidualBlock(nn.Module):
 
         return out
 
-class ObjectScorer(nn.Module):
-    def __init__(self, args):
-        super(ObjectScorer, self).__init__()
+class ObstacleSelector(nn.Module):
+    def __init__(self, args, feat_extractor):
+        super(ObstacleSelector, self).__init__()
+        self.args = args
+        self.feat_extractor = feat_extractor
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
         self.dim = 144
-        self.hidden_dim = self.args.num_patches * self.dim
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, self.hidden_dim),
-            nn.BatchNorm1d(self.hidden_dim),
+        self.dim2 = self.dim ** 2
+        self.fc = nn.Sequential(#41504
+            nn.Linear(165920, self.dim * self.args.num_patches),
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.args.num_patches)
+            nn.Linear(self.dim * self.args.num_patches, self.args.num_patches)
         )
 
-    def forward(self, )
+    def preprocess_input(self, object_masks):
+        B, N, C, H, W = object_masks.shape
+        # print("object_masks.shape", object_masks.shape)
+        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
+
+        for i in range(B):
+            object_masks_ = object_masks[i].to(self.device)
+
+            obj_features = []
+            for mask in object_masks_:
+                # print("mask.shape", mask.shape)
+
+                mask = mask.unsqueeze(0).to(self.device)
+                obj_feat = self.feat_extractor(mask)
+
+                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
+                obj_features.append(obj_feat)
+
+            obj_features = torch.cat(obj_features).unsqueeze(0)
+            object_features.append(obj_features)
+
+        return torch.cat(object_features).to(self.device)
+
+    def forward(self, target_mask, object_masks, bboxes):
+        object_feats = self.preprocess_input(object_masks)
+        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
+
+        B, N, C, H, W = object_feats.shape
+        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[-1])
+        # print(attn_scores.shape)
+
+        x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
+        # print("x.shape", x.shape)        
+        attn_scores = self.fc(x)
+
+        object_masks = object_masks.squeeze(2)
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
+        
+        # print("attn_scores", attn_scores)
+        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
+
+        # Sampling from the attention weights to get hard attention
+        sampled_attention_weights = torch.zeros_like(attn_scores)
+        for batch_idx in range(target_mask.shape[0]):
+            sampled_attention_weights[batch_idx, :] = F.gumbel_softmax(attn_scores[batch_idx, :], hard=True)
+
+        # Multiplying the encoder outputs with the hard attention weights
+        sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
+        # print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
+        context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
+        context = context.unsqueeze(1)
+
+        return context
 
 class ResFCN(nn.Module):
     def __init__(self, args):
@@ -83,6 +141,8 @@ class ResFCN(nn.Module):
         self.rb5 = self.make_layer(256, 128)
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.obstacle_selector = ObstacleSelector(self.args, self.predict)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -166,10 +226,14 @@ class ResFCN(nn.Module):
 
         return context
     
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
-        
-        processed_objects = self.obstacle_scorer(depth_heightmap, target_mask, object_masks)
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
+         
+        selected_objects = self.obstacle_selector(target_mask, object_masks, bboxes)
+
+        # selected_objects = object_masks[:, 0, :, :, :]
+        selected_objects = selected_objects.squeeze(1)
+        specific_rotation = specific_rotation[0]
 
         ###### Keep overlapped objects #####
         # processed_objects = []
@@ -193,34 +257,22 @@ class ResFCN(nn.Module):
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
 
-        # processed_objects = torch.stack(processed_objects)
-
-        B, N, C, H, W = processed_objects.shape
-
         if is_volatile:
-            out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
-            for n, target_mask in enumerate(processed_objects[0]):
-                out_prob = self.get_predictions(depth_heightmap, target_mask.unsqueeze(0), specific_rotation, is_volatile)
-                out_probs[n] = out_prob
+            out_prob = self.get_predictions(depth_heightmap, selected_objects, specific_rotation, is_volatile)
         
         else:
-            out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
-            for batch in range(B):
-                for n, target_mask in enumerate(processed_objects[batch]):
-                    out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
-                    out_probs[batch][n] = out_prob
+            out_prob = self.get_predictions(depth_heightmap, selected_objects, specific_rotation, is_volatile)
 
             # Image-wide softmax
-            out_probs = out_probs.view(B * N, H * W)
-            output_shape = out_probs.shape
-            out_probs = out_probs.view(output_shape[0], -1)
-            out_probs = torch.softmax(out_probs, dim=1)
-            out_probs = out_probs.view(B, N, C, H, W).to(dtype=torch.float)
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
 
-        # print("out_prob.shape", out_probs.shape)
-
-        return None, out_probs
+        # print("out_prob.shape", out_prob.shape)
     
+        return out_prob.unsqueeze(1)
+        
     def get_predictions(self, depth_heightmap, target_mask, specific_rotation, is_volatile):
         if is_volatile:
             # rotations x channel x h x w
@@ -247,8 +299,7 @@ class ResFCN(nn.Module):
                 rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
                 
-                rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
-                    flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+                rotate_target_mask = F.grid_sample(target_mask, flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
                 
                 batch_rot_depth[rot_id] = rotate_depth[0]
                 batch_rot_target[rot_id] = rotate_target_mask[0]
@@ -277,8 +328,8 @@ class ResFCN(nn.Module):
             return out_prob
         
         else:
-            thetas = np.radians(specific_rotation * (360 / self.nr_rotations)).unsqueeze(0)
-            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3))
+            thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
+            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 # Compute sample grid for rotation before neural network
                 theta = thetas[i]
@@ -288,23 +339,19 @@ class ResFCN(nn.Module):
                 affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).float()
                 affine_before[i] = affine_mat_before
 
-            flow_grid_before = F.affine_grid(Variable(affine_before, requires_grad=False).to(self.device),
-                                             depth_heightmap.size(), align_corners=True)
+            flow_grid_before = F.affine_grid(affine_before, depth_heightmap.size(), align_corners=True)
 
             # Rotate image clockwise_
-            rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
-                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-            
-            rotate_target_mask = F.grid_sample(Variable(target_mask, requires_grad=False).to(self.device),
-                                         flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            rotate_target_mask = F.grid_sample(target_mask, flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
-            interm_grasp_depth_feat = self.predict(rotate_depth)
-            interm_grasp_target_feat = self.predict(rotate_target_mask)
-            interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
+            depth_feat = self.predict(rotate_depth)
+            target_feat = self.predict(rotate_target_mask)
+            masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
 
             # Compute sample grid for rotation after branches
-            affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
+            affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 theta = thetas[i]
                 affine_mat_after = np.array([[np.cos(-theta), np.sin(-theta), 0.0],
@@ -313,11 +360,11 @@ class ResFCN(nn.Module):
                 affine_mat_after = torch.from_numpy(affine_mat_after).permute(2, 0, 1).float()
                 affine_after[i] = affine_mat_after
 
-            flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
-                                            interm_grasp_feat.data.size(), align_corners=True)
+            flow_grid_after = F.affine_grid(affine_after, masked_depth_feat.data.size(), align_corners=True)
 
             # Forward pass through branches, undo rotation on output predictions, upsample results
-            out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
+            out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
+
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
             
             return out_prob

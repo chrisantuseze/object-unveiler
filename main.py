@@ -17,7 +17,7 @@ def parse_args():
     # args for eval_agent
     parser.add_argument('--fcn_model', default='', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
-    parser.add_argument('--seed', default=6, type=int, help='')
+    parser.add_argument('--seed', default=16, type=int, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')
     parser.add_argument('--object_set', default='seen', type=str, help='')
 

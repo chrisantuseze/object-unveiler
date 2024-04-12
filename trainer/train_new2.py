@@ -57,7 +57,7 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ResFCN().to(args.device)
+    model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
     criterion = nn.BCELoss(reduction='none')
@@ -76,11 +76,13 @@ def train_fcn_net(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            debug_params(model)
 
         model.eval()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -145,3 +147,16 @@ def train_regressor(args):
     criterion = nn.SmoothL1Loss()
 
     logging.info(model)
+
+
+
+def debug_params(model):
+    for name, param in model.named_parameters():
+        if param.grad is None:  
+            logging.info(name, " gradient is None!")
+            module = name.split('.')[0]   
+            logging.info("Checking module:", module)
+
+            # For example, get parent module with getattr 
+            parent = getattr(model, module) 
+            logging.info("Parent:",parent)

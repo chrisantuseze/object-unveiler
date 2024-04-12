@@ -39,7 +39,7 @@ def get_target_objects_distance(target_mask, all_masks):
     # Step 4: Add a small positive value to ensure the values are above 0
     normalized_weights += epsilon
 
-    return normalized_weights
+    return np.array(normalized_weights)
 
 # Implement the helper functions as needed
 

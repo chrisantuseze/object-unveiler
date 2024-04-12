@@ -1,9 +1,9 @@
 import os
 import random
 import copy
-# from policy.models_attn2 import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
-from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
@@ -196,7 +196,7 @@ def train_fcn_net0(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -292,7 +292,7 @@ def train_fcn_net(args):
             loss.backward(retain_graph=True)
             optimizer.step()
 
-            # debug_params(model)
+            debug_params(model)
 
             # grad_norm = calculate_gradient_norm(model) 
 
@@ -357,7 +357,7 @@ def train_fcn_net(args):
     writer.close()
 
 # models_attn
-def train_fcn_net2(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -420,14 +420,17 @@ def train_fcn_net2(args):
             # rotations = batch[7]
             # y = batch[8].to(args.device, dtype=torch.float32)
             # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+            # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
             rotations = batch[4]
             y = batch[5].to(args.device, dtype=torch.float32)
             obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+            bboxes = batch[7].to(args.device, dtype=torch.float32)
 
             obstacle_pred = model(
                 x, target_mask, object_masks, scene_masks, 
                 # raw_x, raw_target_mask, raw_object_masks,
+                bboxes,
                 rotations
             )
 
@@ -463,14 +466,17 @@ def train_fcn_net2(args):
                 # rotations = batch[7]
                 # y = batch[8].to(args.device, dtype=torch.float32)
                 # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+                # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
                 rotations = batch[4]
                 y = batch[5].to(args.device, dtype=torch.float32)
                 obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+                bboxes = batch[7].to(args.device, dtype=torch.float32)
 
                 obstacle_pred = model(
                     x, target_mask, object_masks, scene_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
+                    bboxes,
                     rotations
                 )
 
