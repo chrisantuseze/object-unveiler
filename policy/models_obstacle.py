@@ -53,7 +53,6 @@ class ResidualBlock(nn.Module):
 
         return out
 
-
 class ObstacleHead(nn.Module):
     def __init__(self, args, feat_extractor):
         super(ObstacleHead, self).__init__()
@@ -64,20 +63,11 @@ class ObstacleHead(nn.Module):
 
         self.dim = 72#144
         self.dim2 = self.dim ** 2
-        hidden_dim = self.args.num_patches * self.dim
-        # self.image_proj = nn.Sequential(
-        #     nn.Linear(2 * self.dim2, hidden_dim),
-        #     nn.BatchNorm1d(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, hidden_dim)
-        # )
-
         self.fc = nn.Sequential(
             nn.Linear(41504, self.dim * self.args.num_patches),
             nn.ReLU(),
             nn.Linear(self.dim * self.args.num_patches, self.args.num_patches)
         )
-
 
     # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
     def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
@@ -171,8 +161,8 @@ class ObstacleHead(nn.Module):
         return torch.cat(object_features).to(self.device)
 
 
-    # def forward(self, scene_mask, target_mask, object_masks, bboxes):
-    def forward(self, scene_mask, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks):
+    def forward(self, scene_mask, target_mask, object_masks, bboxes):
+    # def forward(self, scene_mask, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks):
         object_feats = self.preprocess_input(object_masks)
         target_feats = self.feat_extractor(target_mask).unsqueeze(1)
         # scene_feats = self.feat_extractor(scene_mask).unsqueeze(1) # 4x1x1x144x144
@@ -204,7 +194,7 @@ class ObstacleHead(nn.Module):
         attn_weights = attn_scores
         # print("attn_weights", attn_weights)
         _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # print("top indices", top_indices)
 
         ###### Keep overlapped objects #####
         processed_objects = []
@@ -216,16 +206,16 @@ class ObstacleHead(nn.Module):
             processed_objects.append(x)
 
         # ################### THIS IS FOR VISUALIZATION ####################
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objects.append(raw_x)
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objects.append(raw_x)
 
-        raw_objects = torch.stack(raw_objects)
+        # raw_objects = torch.stack(raw_objects)
 
-        # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-            
-        self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
+        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+        
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
             
         return attn_weights
@@ -280,18 +270,18 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
    
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
         
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
-        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks)
+        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks)
 
-        B, N, C, H, W = object_masks.shape
-        out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
-        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
-        return object_scores, out_probs
+        # B, N, C, H, W = object_masks.shape
+        # out_probs = torch.rand(B, self.args.sequence_length, C, H, W)
+        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        # return object_scores, out_probs
     
-        # return object_scores
+        return object_scores
     
 
 class Regressor(nn.Module):
