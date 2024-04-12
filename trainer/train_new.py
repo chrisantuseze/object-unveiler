@@ -1,9 +1,9 @@
 import os
 import random
 import copy
-# from policy.models_attn2 import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
-from policy.models_obstacle import Regressor, ResFCN
+# from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
@@ -196,7 +196,7 @@ def train_fcn_net0(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -357,7 +357,7 @@ def train_fcn_net(args):
     writer.close()
 
 # models_attn
-def train_fcn_net2(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
