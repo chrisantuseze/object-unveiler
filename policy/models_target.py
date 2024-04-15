@@ -135,7 +135,7 @@ class ResFCN(nn.Module):
             out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
             out_prob = torch.mean(out_prob, dim=1, keepdim=True)
 
-            return out_prob
+            return out_prob # 16x1x144x144
         
         else:
             thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
@@ -183,7 +183,7 @@ class ResFCN(nn.Module):
             out_prob = torch.softmax(out_prob, dim=1)
             out_prob = out_prob.view(output_shape).to(dtype=torch.float)
 
-            return out_prob
+            return out_prob # Bx1x144x144
         
 
 class Regressor(nn.Module):

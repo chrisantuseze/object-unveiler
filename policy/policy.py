@@ -374,43 +374,29 @@ class Policy:
             raw_pred_mask, raw_target_mask, raw_processed_mask, gt_object, bboxes, 
             is_volatile=True
         )
+        out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
 
-        out_prob = general_utils.postprocess_multi(out_prob, self.padding_width)
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
 
-        best_actions = []
-        actions = []
-        for i in range(out_prob.shape[0]):
-            prob = out_prob[i]
-            best_action = np.unravel_index(np.argmax(prob), prob.shape)
-            best_actions.append(best_action)
+        # find optimal aperture
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
 
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
 
-            p1 = np.array([best_actions[i][3], best_actions[i][2]])
-            theta = best_actions[i][0] * 2 * np.pi/self.rotations
-
-            # find optimal aperture
-            aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.crop_size)
-            x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
-            aperture = self.reg(x).detach().cpu().numpy()[0, 0]
-        
-            # undo normalization
-            aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
-                                        target_range=[self.aperture_limits[0], 
-                                                        self.aperture_limits[1]])
-
-            action = np.zeros((4,))
-            action[0] = p1[0]
-            action[1] = p1[1]
-            action[2] = theta
-            action[3] = aperture
-
-            print("action:", action)
-
-            actions.append(action)
-
-        print("\n")
-
-        return actions
+        return action
     
     def exploit_old(self, state, target_mask):
         # find optimal position and orientation

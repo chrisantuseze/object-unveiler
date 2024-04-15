@@ -214,7 +214,7 @@ def train_fcn_net1(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:8000]
+    transition_dirs = transition_dirs[:15000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -239,9 +239,9 @@ def train_fcn_net1(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    obstacle_criterion = nn.CrossEntropyLoss() #nn.SmoothL1Loss(reduction='none')
+    obstacle_criterion = nn.CrossEntropyLoss()
 
     # model.load_state_dict(torch.load("save/fcn/fcn_model_10.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
@@ -348,7 +348,7 @@ def train_fcn_net1(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_best.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_best_{epoch}.pt'))
 
         # if epoch % 10 == 0:
         #     torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
@@ -399,9 +399,8 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    # criterion = nn.SmoothL1Loss(reduction='none')
     criterion = nn.BCELoss(reduction='none')
 
     global_step = 0 #{'train': 0, 'val': 0}
