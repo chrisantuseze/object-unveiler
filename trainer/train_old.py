@@ -32,12 +32,8 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             if is_fcn:
                 x = batch[0]
                 rotations = batch[1]
-                y = batch[2]
+                y = batch[2].to(args.device, dtype=torch.float32)
                 pred = model(x, rotations)
-
-                y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
-
-                # print("y.shape:", y.shape)  #torch.Size([4, 1, 1, 224, 224])
             else:
                 x = batch[0].to(args.device, dtype=torch.float32)
                 y = batch[1].to(args.device, dtype=torch.float32)
@@ -62,12 +58,10 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
         logging.info("\nEval mode...")
         for step, batch in enumerate(dataloaders['val']):
             if is_fcn:
-                x = batch[0]
+                x = batch[0].to(args.device, dtype=torch.float32)
                 rotations = batch[1]
-                y = batch[2]
+                y = batch[2].to(args.device, dtype=torch.float32)
                 pred = model(x, rotations)
-
-                y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
             else:
                 x = batch[0].to(args.device, dtype=torch.float32)
                 y = batch[1].to(args.device, dtype=torch.float32)
