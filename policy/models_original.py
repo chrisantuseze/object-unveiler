@@ -87,12 +87,13 @@ class ResFCN(nn.Module):
         x = self.rb2(x)
         x = self.rb3(x)
         x = self.rb4(x)
-
         x = self.rb5(x)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
-        out = self.final_conv(x) # activation function?
+       
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        out = self.final_conv(x)
         return out
 
     def forward(self, depth_heightmap, specific_rotation=-1, is_volatile=[]):
