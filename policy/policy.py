@@ -173,9 +173,6 @@ class Policy:
 
         full_crop = general_utils.extract_target_crop(resized_target, state)
         if np.all(full_crop == 0):
-            r = np.random.randint(0, 100)
-            cv2.imwrite(os.path.join(TRAIN_DIR, f"state_{r}.png"), state)
-            cv2.imwrite(os.path.join(TRAIN_DIR, f"resized_target_{r}.png"), resized_target)
             state = resized_target
         else:
             state = full_crop

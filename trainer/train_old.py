@@ -8,9 +8,8 @@ import torch.nn as nn
 from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer.aperture_dataset import ApertureDataset
-from trainer.heightmap_dataset import HeightMapDataset
-from policy.old.action_net_linear_undo import ActionNet
+from datasets.aperture_dataset import ApertureDataset
+from datasets.heightmap_dataset import HeightMapDataset
 
 import utils.general_utils as general_utils
 import utils.logger as logging
@@ -100,7 +99,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
 
 
-def train_fcn(args):
+def train_fcn_net(args):
     save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
@@ -142,14 +141,9 @@ def train_fcn(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # model = ResFCN().to(args.device)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # criterion = nn.BCELoss(reduction='none')
-
-    model = ActionNet(args).to(args.device)
+    model = ResFCN().to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # criterion = nn.MSELoss()
-    criterion = nn.BCELoss(reduction='none') #nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss(reduction='none')
 
     train(args, model, optimizer, criterion, data_loaders, save_path, is_fcn=True)
 
