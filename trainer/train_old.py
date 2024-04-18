@@ -35,7 +35,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 y = batch[2]
                 pred = model(x, rotations)
 
-                y = general_utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
 
                 # print("y.shape:", y.shape)  #torch.Size([4, 1, 1, 224, 224])
             else:
@@ -67,7 +67,7 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
                 y = batch[2]
                 pred = model(x, rotations)
 
-                y = general_utils.pad_label(args.sequence_length, y).to(args.device, dtype=torch.float32)
+                y = general_utils.pad_label(y).to(args.device, dtype=torch.float32)
             else:
                 x = batch[0].to(args.device, dtype=torch.float32)
                 y = batch[1].to(args.device, dtype=torch.float32)
