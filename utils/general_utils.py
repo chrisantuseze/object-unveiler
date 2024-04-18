@@ -291,12 +291,6 @@ def resize_bbox(bbox):
     ]
     return resized_bbox
 
-def pad_label(labels):
-    labels = torch.stack(labels, dim=0)
-
-    return labels
-
-
 def postprocess_single(q_maps, padding_width):
     """
     Remove extra padding

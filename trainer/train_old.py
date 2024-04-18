@@ -19,16 +19,9 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
 
     writer = SummaryWriter()
 
-    
     for epoch in range(args.epochs):
-        logging.info('\nEpoch {}/{}'.format(epoch, args.epochs))
-        logging.info('-' * 10)
-        
-        total_loss = 0
         model.train()
-        logging.info("\nTrain mode...")
         for step, batch in enumerate(dataloaders['train']):
-            optimizer.zero_grad()
             if is_fcn:
                 x = batch[0]
                 rotations = batch[1]
@@ -43,50 +36,46 @@ def train(args, model, optimizer, criterion, dataloaders, save_path, is_fcn=True
             # compute loss in the whole scene
             loss = criterion(pred, y)
             loss = torch.sum(loss)
+
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            loss_item = loss.item() * len(x)
-            total_loss += loss_item
             if step % args.step == 0:
-                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss_item}\t Lr: {optimizer.param_groups[0]['lr']}")
+                logging.info(f"Train Step [{step}/{len(dataloaders['train'])}]\t Loss: {loss.item()}\t")
 
-        train_loss = total_loss / len(dataloaders['train'])
-
-        total_loss = 0
         model.eval()
-        logging.info("\nEval mode...")
-        for step, batch in enumerate(dataloaders['val']):
-            if is_fcn:
-                x = batch[0].to(args.device, dtype=torch.float32)
-                rotations = batch[1]
-                y = batch[2].to(args.device, dtype=torch.float32)
-                pred = model(x, rotations)
-            else:
-                x = batch[0].to(args.device, dtype=torch.float32)
-                y = batch[1].to(args.device, dtype=torch.float32)
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
+            for step, batch in enumerate(dataloaders[phase]):
+                if is_fcn:
+                    x = batch[0].to(args.device, dtype=torch.float32)
+                    rotations = batch[1]
+                    y = batch[2].to(args.device, dtype=torch.float32)
+                    pred = model(x, rotations)
+                else:
+                    x = batch[0].to(args.device, dtype=torch.float32)
+                    y = batch[1].to(args.device, dtype=torch.float32)
 
-                pred = model(x)
+                    pred = model(x)
 
-            # compute loss
-            loss = criterion(pred, y)
-            loss = torch.sum(loss)
-            loss_item = loss.item() * len(x)
-            total_loss += loss_item
+                loss = criterion(pred, y)
 
-            if step % args.step == 0:
-                logging.info(f"Val Step [{step}/{len(dataloaders['val'])}]\t Loss: {loss_item}")
+                loss = torch.sum(loss)
+                epoch_loss[phase] += loss.item()
 
-        val_loss = total_loss / len(dataloaders['val'])
-
+                if step % args.step == 0:
+                    logging.info(f"{phase} step [{step}/{len(dataloaders[phase])}]\t Loss: {loss.item()}")
 
         # save model
         # if epoch % 50 == 0:
         #     torch.save(model.state_dict(), os.path.join(save_path, f'{prefix}_model_' + str(epoch) + '.pt'))
 
-        logging.info('Epoch {}: training loss = {}, validation loss = {}'.format(epoch, train_loss, val_loss))
-        writer.add_scalar("training loss x epoch", train_loss, epoch)
-        writer.add_scalar("validation loss x epoch", val_loss, epoch)
+        logging.info('Epoch {}: training loss = {:.6f} '
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(dataloaders['train']),
+                                                  epoch_loss['val'] / len(dataloaders['val'])))
+        writer.add_scalar("log/train", epoch_loss['train'] / len(dataloaders['train']), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(dataloaders['val']), epoch)
         
     writer.close()
     torch.save(model.state_dict(), os.path.join(save_path,  f'{prefix}_model.pt'))
