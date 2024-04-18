@@ -20,14 +20,10 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__old1(self, id):
-        heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
-
-        resized_target = general_utils.resize_mask(transform, target_mask)
-        full_crop = general_utils.extract_target_crop(resized_target, heightmap)
+    def __getitem__(self, id):
+        heightmap, action = self.memory.load(self.dir_ids, id)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(full_crop, skip_transform=True)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -50,10 +46,10 @@ class HeightMapDataset(data.Dataset):
                  padding_width_depth:padded_heightmap.shape[2] - padding_width_depth] = action_area
         
         label = np.array(label)
-        return padded_heightmap, padded_target_mask, rot_id, label
+        return padded_heightmap, rot_id, label
 
     # single - input, single - output for ou-dataset with target action
-    def __getitem__old2(self, id):
+    def __getitem__1(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 
@@ -83,7 +79,7 @@ class HeightMapDataset(data.Dataset):
         return padded_heightmap, padded_target_mask, rot_id, label
 
     # single - input, single - output for real-ou-dataset with target action
-    def __getitem__(self, id):
+    def __getitem__2(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         heightmap, _, _, target_mask, _, _, _, _, action = episode_data[-1]
 

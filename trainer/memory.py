@@ -106,13 +106,13 @@ class ReplayBuffer:
     def load(self, dir_ids, idx):
         try:
             heightmap = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'heightmap.exr'), -1)
-            target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
+            # target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
             action = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'action'), 'rb'))
         except Exception as e:
             logging.info(e)
             idx += 1
 
-        return heightmap, target_mask, action
+        return heightmap, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
         batch_size = self.count if self.count < given_batch_size else given_batch_size
