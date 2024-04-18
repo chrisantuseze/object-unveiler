@@ -1,6 +1,6 @@
 import os
 import random
-from policy.models import Regressor, ResFCN
+from policy.models_original import Regressor, ResFCN
 
 import torch
 import torch.optim as optim

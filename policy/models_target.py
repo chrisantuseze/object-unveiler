@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import numpy as np
-from collections import OrderedDict
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
