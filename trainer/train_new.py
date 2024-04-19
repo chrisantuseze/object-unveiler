@@ -3,8 +3,8 @@ import random
 import copy
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
-from policy.models_obstacle import Regressor, ResFCN
-# from policy.models_obstacle_attn import Regressor, ResFCN
+# from policy.models_obstacle import Regressor, ResFCN
+from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -283,7 +283,7 @@ def train_fcn_net(args):
                 print("obstacle_pred", obstacle_pred, "obstacle_gt", obstacle_gt)
 
             loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-            loss *= 0.01
+            # loss *= 0.01
             loss = torch.sum(loss)
 
             if step % (args.step * 2) == 0:
@@ -330,7 +330,7 @@ def train_fcn_net(args):
                 )
 
                 loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-                loss *= 0.01
+                # loss *= 0.01
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()
