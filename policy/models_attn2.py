@@ -51,63 +51,57 @@ class ResidualBlock(nn.Module):
         return out
 
 class ObstacleSelector(nn.Module):
-    def __init__(self, args, feat_extractor):
+    def __init__(self, args):
         super(ObstacleSelector, self).__init__()
         self.args = args
-        self.feat_extractor = feat_extractor
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        self.dim = 144
-        self.dim2 = self.dim ** 2
-        self.fc = nn.Sequential(#41504
-            nn.Linear(165920, self.dim * self.args.num_patches),
+        hidden_dim = 1024
+        self.model = torchvision.models.resnet50(pretrained=True)
+        self.model.fc = nn.Linear(2048, hidden_dim)
+
+        self.fc = nn.Sequential(
+            nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.dim * self.args.num_patches, self.args.num_patches)
+            nn.Linear(hidden_dim, self.args.num_patches)
         )
 
-    def preprocess_input(self, object_masks):
+    def preprocess_inputs(self, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
-        # print("object_masks.shape", object_masks.shape)
-        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
 
-        for i in range(B):
-            object_masks_ = object_masks[i].to(self.device)
+        target_mask = target_mask.repeat(1, 3, 1, 1)
+        target_feats = self.model(target_mask)
+        target_feats = target_feats.view(B, 1, -1)
 
-            obj_features = []
-            for mask in object_masks_:
-                # print("mask.shape", mask.shape)
+        object_masks = object_masks.repeat(1, 1, 3, 1, 1)
+        object_masks = object_masks.view(-1, 3, H, W)
+        object_feats = self.model(object_masks)
+        object_feats = object_feats.view(B, N, -1)
+        # print(object_feats.shape)
 
-                mask = mask.unsqueeze(0).to(self.device)
-                obj_feat = self.feat_extractor(mask)
-
-                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
-                obj_features.append(obj_feat)
-
-            obj_features = torch.cat(obj_features).unsqueeze(0)
-            object_features.append(obj_features)
-
-        return torch.cat(object_features).to(self.device)
+        return target_feats, object_feats
 
     def forward(self, target_mask, object_masks, bboxes):
-        object_feats = self.preprocess_input(object_masks)
-        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
+        target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
 
-        B, N, C, H, W = object_feats.shape
-        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[-1])
+        B, N, C, H, W = object_masks.shape
+
+        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[1])
         # print(attn_scores.shape)
 
         x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
-        # print("x.shape", x.shape)        
+        # print("x.shape", x.shape)    
+
         attn_scores = self.fc(x)
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
-        # print("attn_scores", attn_scores)
 
-        _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
 
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -142,7 +136,7 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.obstacle_selector = ObstacleSelector(self.args, self.predict)
+        self.obstacle_selector = ObstacleSelector(self.args)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
         downsample = None
@@ -226,8 +220,8 @@ class ResFCN(nn.Module):
 
         return context
     
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
          
         selected_objects = self.obstacle_selector(target_mask, object_masks, bboxes)
 
