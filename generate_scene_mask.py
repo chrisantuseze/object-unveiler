@@ -71,15 +71,18 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
         object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], plot=True, bbox=True)
 
         new_masks = []
+        masks = []
         new_bboxes = []
         for id, mask in enumerate(object_masks):
             mask = general_utils.resize_mask(transform, mask)
+            masks.append(mask)
             new_masks.append(general_utils.extract_target_crop(mask, heightmap))
 
             new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
         # get optimal nodes
-        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], object_masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], masks)
+        target_id = grasping.get_target_id(data['target_mask'], masks)
 
         transition = {
             # 'color_obs': data['color_obs'],
@@ -96,6 +99,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
             'bboxes': new_bboxes,
+            'target_id': target_id,
         }
         episode_data_list.append(transition)
 
@@ -138,7 +142,7 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = dataset_dir + '3'
+    new_dir = dataset_dir + '2'
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
