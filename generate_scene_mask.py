@@ -79,8 +79,8 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
         # get optimal nodes
-        objects_to_remove = grasping2.get_target_objects_distance(data['target_mask'], data['object_masks'])
-        # print("\nobjects_to_remove:", objects_to_remove)
+        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], data['object_masks'])
+        target_id = grasping.get_target_id(data['target_mask'], data['object_masks'])
 
         transition = {
             # 'color_obs': data['color_obs'],
@@ -89,7 +89,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             # 'depth_heightmap': data['depth_heightmap'],
             'target_mask': data['target_mask'], 
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
-            'c_obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
+            # 'c_obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
             'scene_mask': data['scene_mask'],
             'c_object_masks': new_masks,
             'object_masks': object_masks,
@@ -97,6 +97,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
             'bboxes': new_bboxes,
+            'target_id': target_id,
         }
         episode_data_list.append(transition)
 

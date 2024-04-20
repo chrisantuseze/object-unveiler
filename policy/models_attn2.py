@@ -230,7 +230,6 @@ class ResFCN(nn.Module):
 
         ###### Keep overlapped objects #####
         # processed_objects = []
-
         # raw_objects = []
         # for i in range(target_mask.shape[0]):
         #     idx = top_indices[i] 
@@ -243,10 +242,6 @@ class ResFCN(nn.Module):
         #     raw_objects.append(raw_x)
 
         # raw_objects = torch.stack(raw_objects)
-
-        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-            
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
 

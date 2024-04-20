@@ -197,13 +197,9 @@ class ObstacleHead(nn.Module):
         # print("top indices", top_indices)
 
         ###### Keep overlapped objects #####
-        processed_objects = []
-
-        raw_objects = []
-        for i in range(target_mask.shape[0]):
-            idx = top_indices[i] 
-            x = object_masks[i, idx] # x should be (4, 400, 400)
-            processed_objects.append(x)
+        # raw_objects = []
+        # for i in range(target_mask.shape[0]):
+        #     idx = top_indices[i] 
 
         # ################### THIS IS FOR VISUALIZATION ####################
         #     raw_x = raw_object_masks[i, idx]
@@ -211,10 +207,6 @@ class ObstacleHead(nn.Module):
         #     raw_objects.append(raw_x)
 
         # raw_objects = torch.stack(raw_objects)
-
-        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-        
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
         # ###############################################################
             

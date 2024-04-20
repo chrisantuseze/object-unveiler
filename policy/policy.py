@@ -313,7 +313,7 @@ class Policy:
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
         raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
-        objects_to_remove = grasping2.get_target_objects_distance(target_mask, processed_masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
@@ -345,13 +345,15 @@ class Policy:
             bboxes = bboxes.unsqueeze(0)
 
         # _, top_indices = torch.topk(objects_to_remove, k=self.args.sequence_length + 1, dim=1)
-        objects_to_remove = np.argmax(objects_to_remove)
+        # objects_to_remove = np.argmax(objects_to_remove)
+
+        objects_to_remove_id = 0
         print("ground truth:", objects_to_remove)
 
         raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
         raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
 
-        gt_object = processed_obj_masks[0, objects_to_remove].unsqueeze(0)
+        gt_object = processed_obj_masks[0, objects_to_remove_id].unsqueeze(0)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
