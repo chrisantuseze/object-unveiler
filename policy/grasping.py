@@ -8,7 +8,7 @@ import utils.object_comparison as compare
 import utils.general_utils as general_utils
 import utils.logger as logging
 
-def get_object_centroid(segmentation_mask):
+def get_object_centroid_old(segmentation_mask):
     # Find the contours in the segmentation mask
     contours, _ = cv2.findContours(segmentation_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -30,6 +30,18 @@ def get_object_centroid(segmentation_mask):
 
     center_of_mass = list(center_of_mass)
     return center_of_mass
+
+def get_object_centroid(mask):
+    # Calculate the centroid (center of mass)
+    M = cv2.moments(mask)
+    if M['m00'] != 0:
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+    else:
+        # Handle the case when the contour is empty
+        cx, cy = 0, 0
+
+    return [cx, cy]
 
 def calculate_iou(mask1, mask2):
     """Calculates the intersection over union (IoU) between two object masks."""
@@ -236,7 +248,7 @@ def get_target_id(target, processed_masks):
         if dist < 20:
             return index
     return -1
-    
+
 def evaluate_actions(actions, target_mask):
     new_actions = []
     for action in actions:
