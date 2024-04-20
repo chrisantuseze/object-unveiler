@@ -1,10 +1,10 @@
 import os
 import random
 import copy
-from policy.models_attn2 import Regressor, ResFCN
+# from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
-# from policy.models_obstacle_attn import Regressor, ResFCN
+from policy.models_obstacle_attn import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -196,7 +196,7 @@ def train_fcn_net0(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -359,7 +359,7 @@ def train_fcn_net1(args):
     writer.close()
 
 # models_attn
-def train_fcn_net(args):
+def train_fcn_ne2t(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
