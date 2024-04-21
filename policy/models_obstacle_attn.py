@@ -63,7 +63,13 @@ class ObstacleHead(nn.Module):
 
         hidden_dim = 1024
         self.model = torchvision.models.resnet50(pretrained=True)
-        self.model.fc = nn.Linear(2048, hidden_dim)
+        self.model.fc = nn.Linear(2048, 2048)
+
+        self.attn = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2048, self.args.num_patches * hidden_dim),
+            nn.BatchNorm1d(self.args.num_patches * hidden_dim),
+            nn.ReLU(),
+        )
 
         self.fc = nn.Sequential(
             nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
@@ -241,11 +247,18 @@ class ObstacleHead(nn.Module):
 
         B, N, C, H, W = object_masks.shape
 
-        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[1])
+        attn_weights = (target_feats * object_feats)/np.sqrt(object_feats.shape[1])
+        soft_attn = torch.softmax(attn_weights, dim=1) * object_feats
+        # print(soft_attn.shape)
+
+        attn_scores = self.attn((object_feats - soft_attn).view(B, -1))
+        # print(attn_scores.shape)
+
+        # attn_scores += object_feats
         # print(attn_scores.shape)
 
         x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
-        # print("x.shape", x.shape)    
+        # print("x.shape", x.shape)
 
         attn_scores = self.fc(x)
 

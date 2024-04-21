@@ -300,9 +300,11 @@ class Policy:
         processed_obj_masks = []
         raw_obj_masks = []
         bboxes = []
+        masks = []
         for id, mask in enumerate(processed_masks):
             processed_mask = general_utils.resize_mask(transform, mask)
             raw_obj_masks.append(processed_mask)
+            masks.append(processed_mask)
 
             processed_mask = general_utils.preprocess_target(mask)#, state)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
@@ -313,7 +315,7 @@ class Policy:
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
         raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(general_utils.resize_mask(transform, target_mask), masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
