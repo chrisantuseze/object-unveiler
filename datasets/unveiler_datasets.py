@@ -75,11 +75,11 @@ class UnveilerDataset(data.Dataset):
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
-        processed_target_mask = general_utils.preprocess_target(c_target_mask)#, heightmap)
+        processed_target_mask = general_utils.preprocess_target(target_mask)#, heightmap)
         processed_scene_mask = general_utils.preprocess_target(scene_mask)#, heightmap)
 
         _processed_obj_masks = []
-        for obj_mask in c_object_masks:
+        for obj_mask in object_masks:
             processed_obj_mask = general_utils.preprocess_target(obj_mask)#, heightmap)
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
@@ -117,7 +117,7 @@ class UnveilerDataset(data.Dataset):
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
 
         # pad object masks
-        processed_obj_masks, obj_masks, optimal_nodes, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, optimal_nodes, bboxes)
+        processed_obj_masks, obj_masks, optimal_nodes, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, optimal_nodes, bboxes)
 
         return processed_heightmap, processed_target_mask, processed_obj_masks\
              , processed_scene_mask, rot_ids, labels, optimal_nodes, bbox
@@ -162,7 +162,6 @@ class UnveilerDataset(data.Dataset):
             padded_target_masks = target_masks[:seq_len]
 
         return padded_heightmaps, padded_target_masks
-
 
     def pad_object_masks_and_nodes(self, _processed_obj_masks, object_masks, optimal_nodes, bboxes):
         N, C, H, W = _processed_obj_masks.shape

@@ -279,11 +279,7 @@ def train_fcn_net(args):
                 rotations
             )
 
-            if obstacle_pred.isnan().any():
-                print("obstacle_pred", obstacle_pred, "obstacle_gt", obstacle_gt)
-
             loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-            # loss *= 0.01
             loss = torch.sum(loss)
 
             if step % (args.step * 2) == 0:
@@ -330,7 +326,6 @@ def train_fcn_net(args):
                 )
 
                 loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-                # loss *= 0.01
                 loss = torch.sum(loss)
 
                 epoch_loss[phase] += loss.detach().cpu().numpy()

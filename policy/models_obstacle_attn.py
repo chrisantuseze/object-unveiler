@@ -227,8 +227,12 @@ class ObstacleHead(nn.Module):
 
         plt.show()
 
-    def preprocess_inputs(self, target_mask, object_masks):
+    def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
+
+        scene_mask = scene_mask.repeat(1, 3, 1, 1)
+        scene_feats = self.model(scene_mask)
+        scene_feats = scene_feats.view(B, 1, -1)
 
         target_mask = target_mask.repeat(1, 3, 1, 1)
         target_feats = self.model(target_mask)
@@ -240,15 +244,15 @@ class ObstacleHead(nn.Module):
         object_feats = object_feats.view(B, N, -1)
         # print(object_feats.shape)
 
-        return target_feats, object_feats
+        return scene_feats, target_feats, object_feats
 
-    def spatial_rel(self, target_mask, object_masks, bboxes):
-        target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
+    def spatial_rel(self, scene_mask, target_mask, object_masks, bboxes):
+        scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
 
         B, N, C, H, W = object_masks.shape
 
         attn_weights = (target_feats * object_feats)/np.sqrt(object_feats.shape[1])
-        soft_attn = torch.softmax(attn_weights, dim=1) * object_feats
+        soft_attn = torch.softmax(attn_weights, dim=1) * scene_feats
         # print(soft_attn.shape)
 
         attn_scores = self.attn((object_feats - soft_attn).view(B, -1))
@@ -274,7 +278,7 @@ class ObstacleHead(nn.Module):
 
     def forward(self, scene_mask, target_mask, object_masks, bboxes):
     # def forward(self, scene_mask, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks):
-        attn_weights, top_indices = self.spatial_rel(target_mask, object_masks, bboxes)
+        attn_weights, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
 
         # ###### Keep overlapped objects #####
         # raw_objects = []
