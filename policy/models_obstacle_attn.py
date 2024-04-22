@@ -71,8 +71,15 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
         )
 
+        # self.fc = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
+        #     nn.BatchNorm1d(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.args.num_patches)
+        # )
+
         self.fc = nn.Sequential(
-            nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches)
@@ -257,11 +264,12 @@ class ObstacleHead(nn.Module):
 
         attn_scores = self.attn((object_feats - soft_attn).view(B, -1))
         # print(attn_scores.shape)
+        x = attn_scores
 
         # attn_scores += object_feats
         # print(attn_scores.shape)
 
-        x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
+        # x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
         # print("x.shape", x.shape)
 
         attn_scores = self.fc(x)
