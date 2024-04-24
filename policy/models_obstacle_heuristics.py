@@ -137,7 +137,7 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim, self.args.num_patches)
         )
 
-        self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
+        # self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
 
         # self.fc = nn.Sequential(
         #     nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
@@ -203,13 +203,13 @@ class ObstacleHead(nn.Module):
         object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape, object_rel_feats)
 
-        # weighted_features, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
+        weighted_features, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
         # # print("weighted_features", weighted_features)
 
-        updated_edges, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
+        # updated_edges, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
         # print("updated_edges.shape", updated_edges.shape)
 
-        attn_scores = self.attn(updated_edges.reshape(B, -1))
+        attn_scores = self.attn(weighted_features.reshape(B, -1))
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
