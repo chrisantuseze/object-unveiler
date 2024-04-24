@@ -33,7 +33,7 @@ def compute_edge_features(boxes, masks, target_mask):
 
         target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
         target_iou = calculate_iou(boxes[i], target_mask)  # IoU between object and target
-        relative_position = calculate_relative_position(boxes[i], target_mask)  # Relative position to target
+        # relative_position = calculate_relative_position(boxes[i], target_mask)  # Relative position to target
 
         # Compute edge features
         edge_feats_list = [target_overlap, target_iou]
