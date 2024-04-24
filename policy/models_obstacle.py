@@ -155,7 +155,6 @@ class ResFCN(nn.Module):
     # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
         
         object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes, raw_scene_mask, raw_target_mask, raw_object_masks)
 
         # B, N, C, H, W = object_masks.shape
         # out_probs = torch.rand(16, C, H, W)
