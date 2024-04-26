@@ -50,6 +50,79 @@ class ResidualBlock(nn.Module):
 
         return out
 
+def compute_edge_features(boxes, masks, target_mask):
+    """
+    Compute pairwise spatial relationships between objects and the target object.
+
+    Args:
+        boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
+        masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
+        target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
+
+    Returns:
+        edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
+        edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
+    """
+    device = boxes.device
+    num_objects = boxes.size(0)
+
+    # Compute pairwise object-target relationships
+    edges = []
+    edge_features = []
+
+    for i in range(num_objects):
+        # Compute spatial features between object i and the target object
+        obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
+        # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
+
+        target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+        target_iou = calculate_iou(boxes[i], target_mask)  # IoU between object and target
+        # relative_position = calculate_relative_position(boxes[i], target_mask)  # Relative position to target
+
+        # Compute edge features
+        edge_feats_list = [target_overlap, target_iou]
+        # edge_feats_list.extend(relative_position)
+        # print("relative_position", relative_position)
+
+        edge_feat = torch.tensor(edge_feats_list, device=device)
+        edge_features.append(edge_feat)
+
+        # Add edge index
+        edges.append([i, num_objects])  # Connect object node to a dummy target node
+
+    edge_features = torch.stack(edge_features, dim=0)
+    edges = torch.tensor(edges, dtype=torch.long, device=device)
+
+    return edge_features, edges
+
+def calculate_iou(box, target_mask):
+    """
+    Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
+
+    Args:
+        box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
+        target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
+
+    Returns:
+        iou (float): The Intersection over Union between the box and the target mask.
+    """
+    # Convert box to (x1, y1, x2, y2) format
+    # print("box.shape", box.shape)
+    x1, y1, x2, y2 = box
+
+    # Create a mask for the bounding box
+    box_mask = torch.zeros_like(target_mask)
+    box_mask[int(y1):int(y2), int(x1):int(x2)] = 1
+
+    # Calculate the intersection and union
+    intersection = torch.sum(box_mask * target_mask)
+    union = torch.sum(box_mask) + torch.sum(target_mask) - intersection
+
+    # Avoid division by zero
+    iou = intersection / (union + 1e-8)
+
+    return iou.item()
+
 class ObstacleSelector(nn.Module):
     def __init__(self, args):
         super(ObstacleSelector, self).__init__()
@@ -60,15 +133,30 @@ class ObstacleSelector(nn.Module):
         self.model = torchvision.models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(2048, hidden_dim)
 
-        self.fc = nn.Sequential(
-            nn.Linear(self.args.num_patches * (hidden_dim + 4), hidden_dim),
+        self.object_rel = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
+        )
+
+        self.attn = nn.Sequential(
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches)
         )
 
-    def preprocess_inputs(self, target_mask, object_masks):
+        self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
+
+    def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
+
+        # scene_mask = scene_mask.repeat(1, 3, 1, 1)
+        # scene_feats = self.model(scene_mask)
+        # scene_feats = scene_feats.view(B, 1, -1)
+
+        scene_feats = None
 
         target_mask = target_mask.repeat(1, 3, 1, 1)
         target_feats = self.model(target_mask)
@@ -80,20 +168,35 @@ class ObstacleSelector(nn.Module):
         object_feats = object_feats.view(B, N, -1)
         # print(object_feats.shape)
 
-        return target_feats, object_feats
+        return scene_feats, target_feats, object_feats
 
-    def forward(self, target_mask, object_masks, bboxes):
-        target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
-
+    def compute_edge_features(self, bboxes, object_masks, target_mask):
         B, N, C, H, W = object_masks.shape
 
-        attn_scores = (target_feats * object_feats)/np.sqrt(object_feats.shape[1])
-        # print(attn_scores.shape)
+        edge_features = []
+        for i in range(B):
+            edge_feats, _ = compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
+            edge_features.append(edge_feats)
 
-        x = torch.cat([attn_scores.view(B, N, -1), bboxes.view(B, N, -1)], dim=2).view(B, -1)
-        # print("x.shape", x.shape)    
+        edge_features = torch.stack(edge_features).to(self.device)
+        # print("edge_features.shape", edge_features.shape)
 
-        attn_scores = self.fc(x)
+        return edge_features
+    
+    def forward(self, target_mask, object_masks, bboxes):
+        scene_feats, target_feats, object_feats = self.preprocess_inputs(None, target_mask, object_masks)
+        B, N, C, H, W = object_masks.shape
+
+        objects_rel = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # print("objects_rel", objects_rel)
+
+        object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
+        # print("object_rel_feats.shape", object_rel_feats.shape, object_rel_feats)
+
+        out, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
+        # print("out.shape", out.shape)
+
+        attn_scores = self.attn(out.reshape(B, -1))
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
@@ -166,29 +269,6 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def preprocess_input(self, object_masks):
-        B, N, C, H, W = object_masks.shape
-        # print("object_masks.shape", object_masks.shape)
-        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
-
-        for i in range(B):
-            object_masks_ = object_masks[i].to(self.device)
-
-            obj_features = []
-            for mask in object_masks_:
-                # print("mask.shape", mask.shape)
-
-                mask = mask.unsqueeze(0).to(self.device)
-                obj_feat = self.predict(mask)
-
-                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
-                obj_features.append(obj_feat)
-
-            obj_features = torch.cat(obj_features).unsqueeze(0)
-            object_features.append(obj_features)
-
-        return torch.cat(object_features).to(self.device)
-    
     def obstacle_scorer(self, scene_mask, target_mask, object_masks):
         object_feats = self.preprocess_input(object_masks)
         target_feats = self.predict(target_mask).unsqueeze(1)
@@ -225,25 +305,7 @@ class ResFCN(nn.Module):
          
         selected_objects = self.obstacle_selector(target_mask, object_masks, bboxes)
 
-        # selected_objects = object_masks[:, 0, :, :, :]
         selected_objects = selected_objects.squeeze(1)
-
-        ###### Keep overlapped objects #####
-        # processed_objects = []
-        # raw_objects = []
-        # for i in range(target_mask.shape[0]):
-        #     idx = top_indices[i] 
-        #     x = object_masks[i, idx] # x should be (4, 400, 400)
-        #     processed_objects.append(x)
-
-        # ################### THIS IS FOR VISUALIZATION ####################
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objects.append(raw_x)
-
-        # raw_objects = torch.stack(raw_objects)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
-        # ###############################################################
 
         if is_volatile:
             out_prob = self.get_predictions(depth_heightmap, selected_objects, specific_rotation, is_volatile)

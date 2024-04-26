@@ -123,35 +123,35 @@ class ObstacleHead(nn.Module):
         self.model = torchvision.models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(2048, hidden_dim)
 
-        # self.object_rel = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
-        #     nn.BatchNorm1d(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
-        # )
+        self.object_rel = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
+        )
 
         ###################################
-        dimen = hidden_dim//2
-        self.object_rel = nn.Sequential(
-            nn.Linear(self.args.num_patches * 2, dimen),
-            nn.BatchNorm1d(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
-        )
+        # dimen = hidden_dim//2
+        # self.object_rel = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * 2, dimen),
+        #     nn.BatchNorm1d(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, self.args.num_patches * dimen)
+        # )
 
-        self.W_t = nn.Sequential(
-            nn.Linear(hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
-        )
+        # self.W_t = nn.Sequential(
+        #     nn.Linear(hidden_dim, dimen),
+        #     nn.BatchNorm1d(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, self.args.num_patches * dimen)
+        # )
 
-        self.W_o = nn.Sequential(
-            nn.Linear(self.args.num_patches * hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
-        )
+        # self.W_o = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * hidden_dim, dimen),
+        #     nn.BatchNorm1d(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, self.args.num_patches * dimen)
+        # )
 
         ###################################
 
@@ -162,9 +162,7 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim, self.args.num_patches)
         )
 
-        # self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
-
-        ######################################
+        self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
 
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -232,7 +230,6 @@ class ObstacleHead(nn.Module):
         
         return output
 
-
     def spatial_rel(self, scene_mask, target_mask, object_masks, bboxes):
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         B, N, C, H, W = object_masks.shape
@@ -243,15 +240,15 @@ class ObstacleHead(nn.Module):
         object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape, object_rel_feats)
 
-        # weighted_features, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
-        # # print("weighted_features", weighted_features)
+        # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
+        # # print("out", out)
 
-        # updated_edges, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
-        # print("updated_edges.shape", updated_edges.shape)
-
-        attn_output = self.cross_attention(target_feats, object_feats)
-        out = torch.cat([attn_output, object_rel_feats], dim=-1)
+        out, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
         # print("out.shape", out.shape)
+
+        # attn_output = self.cross_attention(target_feats, object_feats)
+        # out = torch.cat([attn_output, object_rel_feats], dim=-1)
+        # # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
 
