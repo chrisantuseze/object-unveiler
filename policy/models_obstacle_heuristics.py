@@ -5,6 +5,10 @@ import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
 import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+import os
+from utils.constants import TEST_DIR
 
 def compute_edge_features(boxes, masks, target_mask):
     """
@@ -33,14 +37,9 @@ def compute_edge_features(boxes, masks, target_mask):
 
         target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
         target_iou = calculate_iou(boxes[i], target_mask)  # IoU between object and target
-        # relative_position = calculate_relative_position(boxes[i], target_mask)  # Relative position to target
 
         # Compute edge features
-        edge_feats_list = [target_overlap, target_iou]
-        # edge_feats_list.extend(relative_position)
-        # print("relative_position", relative_position)
-
-        edge_feat = torch.tensor(edge_feats_list, device=device)
+        edge_feat = torch.tensor([target_overlap, target_iou], device=device)
         edge_features.append(edge_feat)
 
         # Add edge index
@@ -78,38 +77,6 @@ def calculate_iou(box, target_mask):
     iou = intersection / (union + 1e-8)
 
     return iou.item()
-
-def calculate_relative_position(box, target_mask):
-    """
-    Calculate the relative position of a bounding box with respect to the target mask.
-
-    Args:
-        box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
-        target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
-
-    Returns:
-        relative_position (Tensor): A tensor of shape (4,) representing the relative position features.
-    """
-    # Convert box to (x1, y1, x2, y2) format
-    x1, y1, x2, y2 = box
-
-    # Calculate the centroid of the bounding box
-    box_center_x = (x1 + x2) / 2
-    box_center_y = (y1 + y2) / 2
-
-    # Calculate the centroid of the target mask
-    target_center_x = torch.argmax(torch.sum(target_mask, dim=0)) / (target_mask.shape[1] - 1)
-    target_center_y = torch.argmax(torch.sum(target_mask, dim=1)) / (target_mask.shape[0] - 1)
-
-    # Calculate the relative position features
-    dx = (box_center_x - target_center_x) / target_mask.shape[1]
-    dy = (box_center_y - target_center_y) / target_mask.shape[0]
-    dw = (x2 - x1) / target_mask.shape[1]
-    dh = (y2 - y1) / target_mask.shape[0]
-
-    relative_position = torch.tensor([dx, dy, dw, dh])
-
-    return relative_position.numpy()
 
 class ObstacleHead(nn.Module):
     def __init__(self, args):
@@ -260,11 +227,94 @@ class ObstacleHead(nn.Module):
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         # print("top indices", top_indices)
 
-        return attn_scores
+        return attn_scores, top_indices
     
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
     def forward(self, scene_mask, target_mask, object_masks, bboxes):
-        return self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
+        attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
+
+        # raw_objects = []
+        # for i in range(target_mask.shape[0]):
+        #     idx = top_indices[i] 
+        #     x = object_masks[i, idx] # x should be (4, 400, 400)
+
+        # # ################### THIS IS FOR VISUALIZATION ####################
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objects.append(raw_x)
+
+        # raw_objects = torch.stack(raw_objects)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # # ###############################################################
+
+        return attn_scores
    
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
+        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
+
+        #save the top object
+        # Convert to uint8 and scale to [0, 255]
+        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
+        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+
+        for i in range(obj_masks.shape[0]):
+            if obj_masks.shape[0] == 1:
+                ax[i].imshow(scenes[i]) # this is because of the added gt images
+            else:
+                ax[i][0].imshow(scenes[i])
+
+            if obj_masks.shape[0] == 1:
+                ax[i+1].imshow(target_mask[i])
+            else:
+                ax[i][1].imshow(target_mask[i])
+
+            k = 2
+            for j in range(obj_masks.shape[1]):
+                obj_mask = obj_masks[i][j]
+                # print("obj_mask.shape", obj_mask.shape)
+
+                if obj_masks.shape[0] == 1:
+                    ax[k].imshow(obj_mask)
+                else:
+                    ax[i][k].imshow(obj_mask)
+                k += 1
+
+
+        if optimal_nodes:
+            n = 0
+            for i in range(2, raw_object_masks.shape[0] + 2):
+
+                gt_obj_masks = raw_object_masks[n]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape)
+
+                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
+                else:
+                    ax[i][0].imshow(scenes[n])
+
+                k = 1
+                for j in range(obj_masks.shape[1]):
+                    gt_obj_mask = gt_obj_masks[j]
+                    # print("obj_mask.shape", obj_mask.shape)
+
+                    if gt_obj_masks.shape[0] == 1:
+                        ax[i][k].imshow(gt_obj_mask)
+                    else:
+                        ax[i][k].imshow(gt_obj_mask)
+                    k += 1
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][k].imshow(target_mask[n])
+                else:
+                    ax[i][k].imshow(target_mask[n])
+
+                n += 1
+
+        plt.show()
 
 class ResFCN(nn.Module):
     def __init__(self, args):
@@ -280,6 +330,7 @@ class ResFCN(nn.Module):
     def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
     # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
 
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
         object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
 
         # B, N, C, H, W = object_masks.shape
