@@ -98,27 +98,27 @@ class ObstacleHead(nn.Module):
         )
 
         ###################################
-        # dimen = hidden_dim//2
-        # self.object_rel = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, dimen),
-        #     nn.BatchNorm1d(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, self.args.num_patches * dimen)
-        # )
+        dimen = hidden_dim//2
+        self.object_rel = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, dimen),
+            nn.BatchNorm1d(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen)
+        )
 
-        # self.W_t = nn.Sequential(
-        #     nn.Linear(hidden_dim, dimen),
-        #     nn.BatchNorm1d(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, self.args.num_patches * dimen)
-        # )
+        self.W_t = nn.Sequential(
+            nn.Linear(hidden_dim, dimen),
+            nn.BatchNorm1d(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen)
+        )
 
-        # self.W_o = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * hidden_dim, dimen),
-        #     nn.BatchNorm1d(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, self.args.num_patches * dimen)
-        # )
+        self.W_o = nn.Sequential(
+            nn.Linear(self.args.num_patches * hidden_dim, dimen),
+            nn.BatchNorm1d(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen)
+        )
 
         ###################################
 
@@ -128,8 +128,6 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches)
         )
-
-        self.edge_attn = nn.MultiheadAttention(hidden_dim, 4, batch_first=True)
 
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -205,17 +203,16 @@ class ObstacleHead(nn.Module):
         # print("objects_rel", objects_rel)
 
         object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
-        # print("object_rel_feats.shape", object_rel_feats.shape, object_rel_feats)
+        # print("object_rel_feats.shape", object_rel_feats.shape)
 
         # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
-        # # print("out", out)
 
-        out, _ = self.edge_attn(object_feats, object_rel_feats, object_rel_feats)
+        attn_output = self.cross_attention(target_feats, object_feats)
+        # print("attn_output.shape", attn_output.shape)
+
+        out = torch.cat([attn_output, object_rel_feats], dim=-1)
+
         # print("out.shape", out.shape)
-
-        # attn_output = self.cross_attention(target_feats, object_feats)
-        # out = torch.cat([attn_output, object_rel_feats], dim=-1)
-        # # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
 
@@ -233,12 +230,12 @@ class ObstacleHead(nn.Module):
     def forward(self, scene_mask, target_mask, object_masks, bboxes):
         attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
 
+        # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = []
         # for i in range(target_mask.shape[0]):
         #     idx = top_indices[i] 
         #     x = object_masks[i, idx] # x should be (4, 400, 400)
 
-        # # ################### THIS IS FOR VISUALIZATION ####################
         #     raw_x = raw_object_masks[i, idx]
         #     # print("raw_x.shape", raw_x.shape)
         #     raw_objects.append(raw_x)

@@ -351,7 +351,7 @@ class Policy:
         # objects_to_remove = np.argmax(objects_to_remove)
 
         objects_to_remove_id = 0
-        print("ground truth:", objects_to_remove)
+        print("ground truth:", objects_to_remove[0])
 
         raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
         raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)

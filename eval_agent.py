@@ -18,7 +18,7 @@ import utils.logger as logging
 from skimage import transform
 
 # multi output using attn
-def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -46,6 +46,9 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
 
     max_steps = 3
     while episode_data['attempts'] < max_steps:
+        grp_count += 1
+        logging.info("Grasping count -", grp_count)
+
         general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
@@ -104,7 +107,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
-    return episode_data, success_count
+    return episode_data, success_count, grp_count
 
 # original
 def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
@@ -176,12 +179,13 @@ def eval_agent(args):
     sr_n, sr_1, attempts, objects_removed = 0, 0, 0, 0
 
     success_count = 0
+    grasping_action_count = 0
 
     for i in range(args.n_scenes):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode_multi(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False)
+        episode_data, success_count, grasping_action_count = run_episode_multi(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False, grp_count=grasping_action_count)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
