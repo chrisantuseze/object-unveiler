@@ -81,7 +81,7 @@ class HeightMapDataset(data.Dataset):
     # single - input, single - output for real-ou-dataset with target action
     def __getitem__2(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, _, _, target_mask, _, _, _, _, action = episode_data[-1]
+        heightmap, _, _, target_mask, _, _, _, _, _, action = episode_data[-1]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
         # processed_target_mask = general_utils.preprocess_target(target_mask)

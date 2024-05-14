@@ -15,6 +15,7 @@ from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
+import policy.grasping3 as grasping3
 from utils.constants import *
 
 def collect_episodic_dataset(args, params):
@@ -65,7 +66,7 @@ def collect_episodic_dataset(args, params):
         while node_id != target_id:
             general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
 
-            objects_to_remove = grasping2.find_obstacles_to_remove(target_mask, processed_masks)
+            objects_to_remove = grasping3.find_obstacles_to_remove(target_id, processed_masks)
             print("\nobjects_to_remove:", objects_to_remove)
 
             # node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)

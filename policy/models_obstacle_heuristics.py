@@ -242,7 +242,7 @@ class ObstacleHead(nn.Module):
 
         # raw_objects = torch.stack(raw_objects)
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
-        # # ###############################################################
+        # ##################################################################
 
         return attn_scores
    
@@ -325,7 +325,7 @@ class ResFCN(nn.Module):
         self.obstacle_head = ObstacleHead(args) 
 
     def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
 
         # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
         object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)

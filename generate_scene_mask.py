@@ -15,6 +15,7 @@ import utils.general_utils as general_utils
 import env.cameras as cameras
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
+import policy.grasping3 as grasping3
 
 dataset_dir = 'save/pc-ou-dataset'
 
@@ -81,8 +82,8 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
         # get optimal nodes
-        objects_to_remove = grasping2.find_obstacles_to_remove(data['target_mask'], masks)
         target_id = grasping.get_target_id(data['target_mask'], masks)
+        objects_to_remove = grasping3.find_obstacles_to_remove(target_id, masks)
 
         transition = {
             # 'color_obs': data['color_obs'],

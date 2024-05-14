@@ -70,7 +70,7 @@ class UnveilerDataset(data.Dataset):
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, bboxes, _ = episode_data[0]
+        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, bboxes, target_id, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
@@ -87,7 +87,7 @@ class UnveilerDataset(data.Dataset):
         # get labels and rot_ids
         labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, _, _, _, optimal_nodes, _, action = data
+            _, _, _, _, _, _, optimal_nodes, _, _, action = data
 
             # we need one obstacle per episode
             obstacle_ids.append(optimal_nodes[0])
@@ -120,10 +120,10 @@ class UnveilerDataset(data.Dataset):
         processed_obj_masks, obj_masks, optimal_nodes, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, optimal_nodes, bboxes)
 
         return processed_heightmap, processed_target_mask, processed_obj_masks\
-             , processed_scene_mask, rot_ids, labels, optimal_nodes, bbox
+             , processed_scene_mask, rot_ids, labels, optimal_nodes, bbox, target_id
 
         # return processed_heightmap, processed_target_mask, processed_obj_masks\
-        #         , processed_scene_mask, scene_mask, c_target_mask, obj_masks, rot_ids, labels, optimal_nodes, bbox
+        #         , processed_scene_mask, scene_mask, target_mask, obj_masks, rot_ids, labels, optimal_nodes, bbox
 
     def __len__(self):
         return len(self.dir_ids)
@@ -147,7 +147,7 @@ class UnveilerDataset(data.Dataset):
 
         return np.array(labels), rot_ids, np.array(obstacle_ids)
     
-    def pad_heightmap_and_target(self, heightmaps, target_masks):
+    def pad_heightmap_and_target(self, heightmaps, target_masks, targets_id):
         N, C, H, W = heightmaps.shape
         seq_len = self.args.sequence_length
         if N < seq_len:
@@ -157,11 +157,15 @@ class UnveilerDataset(data.Dataset):
             padded_target_masks = np.zeros((seq_len, C, H, W), dtype=target_masks.dtype)
             padded_target_masks[:target_masks.shape[0], :, :, :] = target_masks
 
+            padded_targets_id = np.zeros((seq_len, 1), dtype=targets_id.dtype)
+            padded_targets_id[:len(targets_id)] = targets_id
+
         else:
             padded_heightmaps = heightmaps[:seq_len]
             padded_target_masks = target_masks[:seq_len]
+            padded_targets_id = targets_id[:seq_len]
 
-        return padded_heightmaps, padded_target_masks
+        return padded_heightmaps, padded_target_masks, padded_targets_id
 
     def pad_object_masks_and_nodes(self, _processed_obj_masks, object_masks, optimal_nodes, bboxes):
         N, C, H, W = _processed_obj_masks.shape
@@ -181,15 +185,6 @@ class UnveilerDataset(data.Dataset):
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
             bbox = bboxes[:self.args.num_patches]
-
-        # optimal_nodes = general_utils.apply_softmax(optimal_nodes)
-        # if len(optimal_nodes) < self.args.num_patches:
-        #     # Calculate the number of zeros needed for padding
-        #     num_zeros = self.args.num_patches - len(optimal_nodes)
-        #     padded_optimal_nodes = np.pad(optimal_nodes, (0, num_zeros), mode='constant', constant_values=0)
-
-        # else:
-        #     padded_optimal_nodes = optimal_nodes[:self.args.num_patches]
 
         optimal_nodes = np.argmax(optimal_nodes)
 
