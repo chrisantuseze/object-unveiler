@@ -29,14 +29,12 @@ def find_obstacles_to_remove(target_index, segmentation_masks):
     
     # Identify the target mask
     target_mask = segmentation_masks[target_index]
-    print("target", target_index)
 
     # Find obstacles overlapping the target mask
     closest_overlapping_obstacles = []
     for i, dist, obstacle_mask in objects_periphery_dist:
         if i != target_index:
             dist = get_distance(get_object_centroid(target_mask), get_object_centroid(obstacle_mask))
-            print("dist", dist)
             if dist < 100:
                 closest_overlapping_obstacles.append((i, dist))
 
