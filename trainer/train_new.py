@@ -280,10 +280,12 @@ def train_fcn_net(args):
                 rotations
             )
 
-            print(type(obstacle_gt))
-
-            loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-            loss = torch.sum(loss)
+            try:
+                loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
+                loss = torch.sum(loss)
+            except Exception as e:
+                print(obstacle_gt, e)
+                exit(0)
 
             if step % (args.step * 2) == 0:
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
