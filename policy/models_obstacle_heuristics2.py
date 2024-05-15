@@ -83,7 +83,7 @@ def compute_objects_periphery_dist(masks):
     binary_masks = [mask > 0 for mask in masks]
 
     # Calculate distance transform for the periphery
-    periphery_mask = np.zeros_like(binary_masks[0].squeeze(0))
+    periphery_mask = np.zeros_like(binary_masks[0].squeeze(0).detach().cpu().numpy())
     periphery_mask[:, 0] = 1  # Left edge
     periphery_mask[:, -1] = 1  # Right edge
     periphery_mask[0, :] = 1  # Top edge
@@ -93,8 +93,7 @@ def compute_objects_periphery_dist(masks):
     # Find closest overlapping obstacles to the periphery
     objects_periphery_dist = []
     for obstacle_index, mask in enumerate(masks):
-        obstacle_mask = binary_masks[obstacle_index].squeeze(0)
-        obstacle_mask = obstacle_mask.numpy()
+        obstacle_mask = binary_masks[obstacle_index].squeeze(0).detach().cpu().numpy()
         min_distance = np.min(obstacle_mask.astype(np.float32) * periphery_distance_map)
         objects_periphery_dist.append(min_distance)
 
