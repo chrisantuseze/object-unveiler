@@ -115,15 +115,15 @@ class UnveilerDataset(data.Dataset):
 
         # pad labels and rot_ids. The object_ids are not required anymore
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
-        obstacle_ids = obstacle_ids[0] # Refer to notebook for why I did this.
+        obstacle_ids = np.array(obstacle_ids[0]) # Refer to notebook for why I did this.
 
-        objects_to_remove = np.argmax(objects_to_remove)
+        # objects_to_remove = np.argmax(objects_to_remove)
 
         # pad object masks
         processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, bboxes)
 
         return processed_heightmap, processed_target_mask, processed_obj_masks\
-             , processed_scene_mask, rot_ids, labels, objects_to_remove, bbox
+             , processed_scene_mask, rot_ids, labels, obstacle_ids, bbox
 
         # return processed_heightmap, processed_target_mask, processed_obj_masks\
         #         , processed_scene_mask, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids, bbox
