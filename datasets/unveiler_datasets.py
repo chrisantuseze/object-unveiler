@@ -123,7 +123,7 @@ class UnveilerDataset(data.Dataset):
         processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, bboxes)
 
         return processed_heightmap, processed_target_mask, processed_obj_masks\
-             , processed_scene_mask, rot_ids, labels, obstacle_ids, bbox
+             , processed_scene_mask, rot_ids, labels, objects_to_remove, bbox
 
         # return processed_heightmap, processed_target_mask, processed_obj_masks\
         #         , processed_scene_mask, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids, bbox
