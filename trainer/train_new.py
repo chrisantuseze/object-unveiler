@@ -280,6 +280,8 @@ def train_fcn_net(args):
                 rotations
             )
 
+            print(type(obstacle_gt))
+
             loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
             loss = torch.sum(loss)
 
