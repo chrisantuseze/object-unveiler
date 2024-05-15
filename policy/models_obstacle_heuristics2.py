@@ -78,6 +78,28 @@ def calculate_iou(box, target_mask):
 
     return iou.item()
 
+def compute_objects_periphery_dist(masks):
+    # Convert masks to binary images
+    binary_masks = [mask > 0 for mask in masks]
+
+    # Calculate distance transform for the periphery
+    periphery_mask = np.zeros_like(binary_masks[0].squeeze(0))
+    periphery_mask[:, 0] = 1  # Left edge
+    periphery_mask[:, -1] = 1  # Right edge
+    periphery_mask[0, :] = 1  # Top edge
+    periphery_mask[-1, :] = 1  # Bottom edge
+    periphery_distance_map = cv2.distanceTransform(np.uint8(periphery_mask), cv2.DIST_L2, 5)
+
+    # Find closest overlapping obstacles to the periphery
+    objects_periphery_dist = []
+    for obstacle_index, mask in enumerate(masks):
+        obstacle_mask = binary_masks[obstacle_index].squeeze(0)
+        obstacle_mask = obstacle_mask.numpy()
+        min_distance = np.min(obstacle_mask.astype(np.float32) * periphery_distance_map)
+        objects_periphery_dist.append(min_distance)
+
+    return torch.tensor(objects_periphery_dist)
+
 class ObstacleHead(nn.Module):
     def __init__(self, args):
         super(ObstacleHead, self).__init__()
@@ -85,16 +107,21 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        ############# cc ######################
         hidden_dim = 1024
         self.model = torchvision.models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(2048, hidden_dim)
 
         self.attn = nn.Sequential(
             nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches)
+            nn.Linear(hidden_dim, hidden_dim//2),
+            nn.LayerNorm(hidden_dim//2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim//2, hidden_dim//4),
+            nn.LayerNorm(hidden_dim//4),
+            nn.ReLU(),
+            nn.Linear(hidden_dim//4, self.args.num_patches)
         )
 
         ############# scaled dot product attn ######################
@@ -108,11 +135,18 @@ class ObstacleHead(nn.Module):
         
         ############# cross attn ###################################
         dimen = hidden_dim//2
-        self.object_rel = nn.Sequential(
+        self.object_rel_fc = nn.Sequential(
             nn.Linear(self.args.num_patches * 2, dimen),
             nn.BatchNorm1d(dimen),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
+            nn.Linear(dimen, self.args.num_patches * dimen//2)
+        )
+
+        self.periphery_fc = nn.Sequential(
+            nn.Linear(self.args.num_patches, dimen),
+            nn.BatchNorm1d(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen//2)
         )
 
         self.W_t = nn.Sequential(
@@ -129,7 +163,6 @@ class ObstacleHead(nn.Module):
             nn.Linear(dimen, self.args.num_patches * dimen)
         )
         ############################################################
-
 
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -156,14 +189,19 @@ class ObstacleHead(nn.Module):
         B, N, C, H, W = object_masks.shape
 
         edge_features = []
+        periphery_dists = []
         for i in range(B):
             edge_feats, _ = compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
             edge_features.append(edge_feats)
 
+            periphery_dist = compute_objects_periphery_dist(object_masks[i])
+            periphery_dists.append(periphery_dist)
+
         edge_features = torch.stack(edge_features).to(self.device)
+        periphery_dists = torch.stack(periphery_dists).to(self.device)
         # print("edge_features.shape", edge_features.shape)
 
-        return edge_features
+        return edge_features, periphery_dists
     
     def scaled_dot_product_attention(self, query, key, value):
         # Compute attention scores
@@ -201,19 +239,21 @@ class ObstacleHead(nn.Module):
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         B, N, C, H, W = object_masks.shape
 
-        objects_rel = self.compute_edge_features(bboxes, object_masks, target_mask)
-        # print("objects_rel", objects_rel.shape)
+        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
 
-        object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
+        object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)
+
+        object_periphery_feats = self.periphery_fc(periphery_dists.view(B, -1)).view(B, N, -1)
+        # print("object_periphery_feats.shape", object_periphery_feats.shape)
 
         # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
 
         attn_output = self.cross_attention(target_feats, object_feats)
         # print("attn_output.shape", attn_output.shape)
 
-        out = torch.cat([attn_output, object_rel_feats], dim=-1)
-
+        out = torch.cat([attn_output, object_rel_feats, object_periphery_feats], dim=-1)
         # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
@@ -224,7 +264,7 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # print("top indices", top_indices)
 
         return attn_scores, top_indices
     

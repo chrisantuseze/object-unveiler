@@ -5,7 +5,7 @@ import copy
 # from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
-from policy.models_obstacle_heuristics import Regressor, ResFCN
+from policy.models_obstacle_heuristics2 import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -346,7 +346,7 @@ def train_fcn_net(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_best_{epoch}.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
         # if epoch % 10 == 0:
         #     torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))

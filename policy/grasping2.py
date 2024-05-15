@@ -1,9 +1,8 @@
 import numpy as np
 from scipy import ndimage
 
-def find_obstacles_to_remove(target_mask, all_masks):
-    # Calculate distances of each object to the periphery
-    # distances = calculate_distances_to_periphery(all_masks, workspace_boundary)
+def find_obstacles_to_remove(target_index, all_masks):
+    target_mask = all_masks[target_index]
 
     distances = get_distances_to_edge(all_masks)
 

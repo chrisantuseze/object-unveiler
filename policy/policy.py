@@ -25,7 +25,9 @@ import utils.orientation as ori
 from utils.constants import *
 import env.cameras as cameras
 import utils.logger as logging
+import policy.grasping as grasping
 import policy.grasping2 as grasping2
+import policy.grasping3 as grasping3
 
 class Policy:
     def __init__(self, args, params) -> None:
@@ -316,7 +318,8 @@ class Policy:
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
         raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
-        objects_to_remove = grasping2.find_obstacles_to_remove(general_utils.resize_mask(transform, target_mask), masks)
+        target_id = grasping.get_target_id(general_utils.resize_mask(transform, target_mask), masks)
+        objects_to_remove = grasping3.find_obstacles_to_remove(target_id, masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
@@ -373,7 +376,7 @@ class Policy:
         object_logits, out_prob = self.fcn(x,
             # processed_target, processed_obj_masks, objects_to_remove,
             processed_target, processed_obj_masks, processed_pred_mask, 
-            raw_pred_mask, raw_target_mask, raw_processed_mask, gt_object, bboxes, 
+            raw_pred_mask, raw_target_mask, raw_processed_mask, bboxes, 
             is_volatile=True
         )
         out_prob = general_utils.postprocess_single(out_prob, self.padding_width)

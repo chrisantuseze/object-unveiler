@@ -32,7 +32,7 @@ def parse_args():
 
     parser.add_argument('--sequence_length', default=1, type=int, help='')
     parser.add_argument('--patch_size', default=64, type=int, help='')
-    parser.add_argument('--num_patches', default=8, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 8')
+    parser.add_argument('--num_patches', default=9, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
     parser.add_argument('--step', default=200, type=int, help='')
 
     return parser.parse_args()
