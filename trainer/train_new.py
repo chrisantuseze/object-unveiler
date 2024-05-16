@@ -263,6 +263,7 @@ def train_fcn_net(args):
 
     loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
     loss = torch.sum(loss)
+    print(loss)
 
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
