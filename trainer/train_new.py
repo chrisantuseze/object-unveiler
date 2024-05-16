@@ -297,6 +297,7 @@ def train_fcn_net(args):
             # writer.add_scalar("norm/train", grad_norm, global_step)
             # global_step += 1
 
+        print("Here -1")
         model.eval()
         print("Here 0")
         epoch_loss = {'train': 0.0, 'val': 0.0}
