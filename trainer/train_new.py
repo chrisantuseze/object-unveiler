@@ -294,7 +294,7 @@ def train_fcn_net(args):
             optimizer.step()
             print("here 4")
 
-            debug_params(model)
+            # debug_params(model)
 
             # grad_norm = calculate_gradient_norm(model) 
 
