@@ -286,9 +286,13 @@ def train_fcn_net(args):
             if step % (args.step * 2) == 0:
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
+            print("here 1")
             optimizer.zero_grad()
+            print("here 2")
             loss.backward(retain_graph=True)
+            print("here 3")
             optimizer.step()
+            print("here 4")
 
             debug_params(model)
 
