@@ -250,21 +250,6 @@ def train_fcn_net(args):
     best_model = None
     lowest_loss = float('inf')
 
-    obstacle_pred = torch.tensor([[-1.1408e-01, -1.3953e-01,  2.4487e-01,  3.8921e-01, -2.7214e-01,
-         -4.0947e-01,  1.8761e-02, -1.8201e-02, -1.0000e-06],
-        [-1.8901e-01, -1.0150e-01,  5.2261e-02,  9.5935e-02, -3.4108e-01,
-         -1.2484e+00,  2.5115e-01, -1.0000e-06, -1.0000e-06],
-        [-1.7526e-01, -1.9880e-01,  5.5991e-02,  3.6399e-01,  4.2726e-02,
-         -7.3071e-01, -1.0000e-06, -1.0000e-06, -1.0000e-06],
-        [-8.4714e-01, -4.8134e-02,  6.7388e-01,  5.3826e-02, -3.3054e-01,
-         -1.0000e-06, -1.0000e-06, -1.0000e-06, -1.0000e-06]], device=args.device)
-    obstacle_gt = torch.tensor([1, 6, 5, 0], device=args.device)
-    # print(obstacle_gt.long(), obstacle_pred)
-
-    loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
-    loss = torch.sum(loss)
-    print(loss)
-
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
         
