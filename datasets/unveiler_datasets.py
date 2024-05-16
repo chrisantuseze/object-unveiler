@@ -117,8 +117,6 @@ class UnveilerDataset(data.Dataset):
         labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
         obstacle_ids = obstacle_ids[0] if obstacle_ids[0] < self.args.num_patches else self.args.num_patches-1 # Refer to notebook for why I did this.
 
-        # objects_to_remove = np.argmax(objects_to_remove)
-
         # pad object masks
         processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, object_masks, bboxes)
 

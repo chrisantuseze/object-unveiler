@@ -215,7 +215,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:15000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -280,7 +280,6 @@ def train_fcn_net(args):
                 rotations
             )
 
-            print(obstacle_gt)
             loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
             loss = torch.sum(loss)
 
