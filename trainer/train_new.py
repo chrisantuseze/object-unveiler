@@ -301,6 +301,7 @@ def train_fcn_net(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
+                print("Here 1")
                 x = batch[0].to(args.device)
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
                 object_masks = batch[2].to(args.device)
@@ -319,6 +320,7 @@ def train_fcn_net(args):
                 obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
                 bboxes = batch[7].to(args.device, dtype=torch.float32)
 
+                print("Here 2")
                 obstacle_pred = model(
                     x, target_mask, object_masks, scene_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
