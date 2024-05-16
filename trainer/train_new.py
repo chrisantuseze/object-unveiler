@@ -298,6 +298,7 @@ def train_fcn_net(args):
             # global_step += 1
 
         model.eval()
+        print("Here 0")
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
