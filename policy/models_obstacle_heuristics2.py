@@ -10,6 +10,7 @@ import cv2
 import os
 from utils.constants import TEST_DIR
 from policy.grasping2 import get_distances_to_edge
+from scipy import ndimage
 
 def compute_edge_features(boxes, masks, target_mask):
     """
@@ -79,8 +80,56 @@ def calculate_iou(box, target_mask):
 
     return iou.item()
 
+# def get_distances_to_edge(segmentation_masks):
+#     distances_list = []
+
+#     # Iterate over each segmentation mask
+#     for i, mask in enumerate(segmentation_masks):
+#         min_distance = find_centroid_distance(mask.squeeze(0).detach().cpu().numpy())[0]
+#         # print(i, "-", min_distance)
+#         distances_list.append(min_distance)
+
+#     return distances_list
+
+# def find_centroid_distance(segmentation_mask):
+#     # Find unique labels in the segmentation mask
+#     unique_labels = np.unique(segmentation_mask)
+
+#     # Remove background label if present
+#     unique_labels = unique_labels[unique_labels != 0]
+
+#     # Initialize an array to store the minimum distances
+#     min_distances = []
+
+#     # Iterate through each object
+#     for obj_label in unique_labels:
+#         # Create a binary mask for the current object
+#         obj_mask = segmentation_mask == obj_label
+
+#         # Find the centroid of the object
+#         centroid = np.array(ndimage.measurements.center_of_mass(obj_mask))
+
+#         # Compute distances to the four edges
+#         distances_to_edges = [
+#             centroid[0],                      # Distance to top edge
+#             segmentation_mask.shape[0] - centroid[0],  # Distance to bottom edge
+#             centroid[1],                      # Distance to left edge
+#             segmentation_mask.shape[1] - centroid[1]   # Distance to right edge
+#         ]
+
+#         # Append the minimum distance to the array
+#         min_distances.append(min(distances_to_edges))
+
+#     return min_distances
+
 def compute_objects_periphery_dist(masks):
-    objects_periphery_dist = get_distances_to_edge(masks)
+
+    # Find closest overlapping obstacles to the periphery
+    seg_masks = []
+    for mask in masks:
+        seg_masks.append(mask.squeeze(0).detach().cpu().numpy())
+
+    objects_periphery_dist = get_distances_to_edge(seg_masks)
 
     return torch.tensor(objects_periphery_dist)
 
