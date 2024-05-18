@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import cv2
 import os
 from utils.constants import TEST_DIR
-from policy.grasping2 import get_distances_to_edge
-from scipy import ndimage
 
 def compute_edge_features(boxes, masks, target_mask):
     """
@@ -80,59 +78,6 @@ def calculate_iou(box, target_mask):
 
     return iou.item()
 
-# def get_distances_to_edge(segmentation_masks):
-#     distances_list = []
-
-#     # Iterate over each segmentation mask
-#     for i, mask in enumerate(segmentation_masks):
-#         min_distance = find_centroid_distance(mask.squeeze(0).detach().cpu().numpy())[0]
-#         # print(i, "-", min_distance)
-#         distances_list.append(min_distance)
-
-#     return distances_list
-
-# def find_centroid_distance(segmentation_mask):
-#     # Find unique labels in the segmentation mask
-#     unique_labels = np.unique(segmentation_mask)
-
-#     # Remove background label if present
-#     unique_labels = unique_labels[unique_labels != 0]
-
-#     # Initialize an array to store the minimum distances
-#     min_distances = []
-
-#     # Iterate through each object
-#     for obj_label in unique_labels:
-#         # Create a binary mask for the current object
-#         obj_mask = segmentation_mask == obj_label
-
-#         # Find the centroid of the object
-#         centroid = np.array(ndimage.measurements.center_of_mass(obj_mask))
-
-#         # Compute distances to the four edges
-#         distances_to_edges = [
-#             centroid[0],                      # Distance to top edge
-#             segmentation_mask.shape[0] - centroid[0],  # Distance to bottom edge
-#             centroid[1],                      # Distance to left edge
-#             segmentation_mask.shape[1] - centroid[1]   # Distance to right edge
-#         ]
-
-#         # Append the minimum distance to the array
-#         min_distances.append(min(distances_to_edges))
-
-#     return min_distances
-
-def compute_objects_periphery_dist(masks):
-
-    # Find closest overlapping obstacles to the periphery
-    seg_masks = []
-    for mask in masks:
-        seg_masks.append(mask.squeeze(0).detach().cpu().numpy())
-
-    objects_periphery_dist = get_distances_to_edge(seg_masks)
-
-    return torch.tensor(objects_periphery_dist)
-
 class ObstacleHead(nn.Module):
     def __init__(self, args):
         super(ObstacleHead, self).__init__()
@@ -172,15 +117,15 @@ class ObstacleHead(nn.Module):
             nn.Linear(self.args.num_patches * 2, dimen),
             nn.BatchNorm1d(dimen),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen//2)
+            nn.Linear(dimen, self.args.num_patches * dimen)
         )
 
-        self.periphery_fc = nn.Sequential(
-            nn.Linear(self.args.num_patches, dimen),
-            nn.BatchNorm1d(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen//2)
-        )
+        # self.periphery_fc = nn.Sequential(
+        #     nn.Linear(self.args.num_patches, dimen),
+        #     nn.BatchNorm1d(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, self.args.num_patches * dimen//2)
+        # )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, dimen),
@@ -227,11 +172,11 @@ class ObstacleHead(nn.Module):
             edge_feats, _ = compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
             edge_features.append(edge_feats)
 
-            periphery_dist = compute_objects_periphery_dist(object_masks[i])
-            periphery_dists.append(periphery_dist)
+            # periphery_dist = compute_objects_periphery_dist(object_masks[i])
+            # periphery_dists.append(periphery_dist)
 
         edge_features = torch.stack(edge_features).to(self.device)
-        periphery_dists = torch.stack(periphery_dists).to(self.device)
+        # periphery_dists = torch.stack(periphery_dists).to(self.device)
         # print("edge_features.shape", edge_features.shape)
 
         return edge_features, periphery_dists
@@ -278,7 +223,7 @@ class ObstacleHead(nn.Module):
         object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)
 
-        object_periphery_feats = self.periphery_fc(periphery_dists.view(B, -1)).view(B, N, -1)
+        # object_periphery_feats = self.periphery_fc(periphery_dists.view(B, -1)).view(B, N, -1)
         # print("object_periphery_feats.shape", object_periphery_feats.shape)
 
         # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
@@ -286,7 +231,8 @@ class ObstacleHead(nn.Module):
         attn_output = self.cross_attention(target_feats, object_feats)
         # print("attn_output.shape", attn_output.shape)
 
-        out = torch.cat([attn_output, object_rel_feats, object_periphery_feats], dim=-1)
+        # out = torch.cat([attn_output, object_rel_feats, object_periphery_feats], dim=-1)
+        out = torch.cat([attn_output, object_rel_feats], dim=-1)
         # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
