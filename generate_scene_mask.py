@@ -84,6 +84,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
         # get optimal nodes
         target_id = grasping.get_target_id(data['target_mask'], masks)
         objects_to_remove = grasping3.find_obstacles_to_remove(target_id, masks)
+        # print(target_id, objects_to_remove)
 
         transition = {
             # 'color_obs': data['color_obs'],

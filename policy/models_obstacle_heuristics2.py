@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 import os
 from utils.constants import TEST_DIR
+from policy.grasping2 import get_distances_to_edge
 
 def compute_edge_features(boxes, masks, target_mask):
     """
@@ -79,23 +80,7 @@ def calculate_iou(box, target_mask):
     return iou.item()
 
 def compute_objects_periphery_dist(masks):
-    # Convert masks to binary images
-    binary_masks = [mask > 0 for mask in masks]
-
-    # Calculate distance transform for the periphery
-    periphery_mask = np.zeros_like(binary_masks[0].squeeze(0).detach().cpu().numpy())
-    periphery_mask[:, 0] = 1  # Left edge
-    periphery_mask[:, -1] = 1  # Right edge
-    periphery_mask[0, :] = 1  # Top edge
-    periphery_mask[-1, :] = 1  # Bottom edge
-    periphery_distance_map = cv2.distanceTransform(np.uint8(periphery_mask), cv2.DIST_L2, 5)
-
-    # Find closest overlapping obstacles to the periphery
-    objects_periphery_dist = []
-    for obstacle_index, mask in enumerate(masks):
-        obstacle_mask = binary_masks[obstacle_index].squeeze(0).detach().cpu().numpy()
-        min_distance = np.min(obstacle_mask.astype(np.float32) * periphery_distance_map)
-        objects_periphery_dist.append(min_distance)
+    objects_periphery_dist = get_distances_to_edge(masks)
 
     return torch.tensor(objects_periphery_dist)
 

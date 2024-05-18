@@ -2,8 +2,42 @@ import cv2
 import numpy as np
 
 from policy.grasping import get_distance, get_object_centroid
+from policy.grasping2 import get_distances_to_edge, sort_objects_by_distance
 
 def find_obstacles_to_remove(target_index, segmentation_masks):
+    periphery_distances = get_distances_to_edge(segmentation_masks)
+
+    min_dist = min(periphery_distances)
+    min_index = periphery_distances.index(min_dist)
+    if min_index == target_index:
+        return [target_index]
+    
+    # Identify the target mask
+    target_mask = segmentation_masks[target_index]
+
+    # Find obstacles overlapping with the target object
+    target_obj_distances = []
+    for object_idx, mask in enumerate(segmentation_masks):
+        dist = get_distance(get_object_centroid(target_mask), get_object_centroid(segmentation_masks[object_idx]))
+        target_obj_distances.append(dist)
+    
+    normalized_periphery_dists = normalize(periphery_distances)
+    normalized_target_obj_dists = normalize(target_obj_distances)
+    combined_distances = [d1 + d2 for d1, d2 in zip(normalized_periphery_dists, normalized_target_obj_dists)]
+    
+    sorted_indices = sorted(range(len(combined_distances)), key=lambda k: combined_distances[k])
+
+    if sorted_indices[0] == target_index:
+        return sorted_indices[1:]
+    
+    return sorted_indices
+
+def normalize(distances):
+    max_distance = max(distances)
+    normalized_distances = [distance / max_distance for distance in distances]
+    return normalized_distances
+
+def find_obstacles_to_remove1(target_index, segmentation_masks):
     # Convert masks to binary images
     binary_masks = [mask > 0 for mask in segmentation_masks]
 
@@ -15,38 +49,18 @@ def find_obstacles_to_remove(target_index, segmentation_masks):
     periphery_mask[-1, :] = 1  # Bottom edge
     periphery_distance_map = cv2.distanceTransform(np.uint8(periphery_mask), cv2.DIST_L2, 5)
 
-    # Find closest overlapping obstacles to the periphery
+    # Check if the target is the closest object to the periphery
     objects_periphery_dist = []
     for obstacle_index, mask in enumerate(segmentation_masks):
         obstacle_mask = binary_masks[obstacle_index]
         min_distance = np.min(obstacle_mask.astype(np.float32) * periphery_distance_map)
         objects_periphery_dist.append((obstacle_index, min_distance, mask))
 
-    # Sort overlapping obstacles based on distance to periphery
+    # Sort obstacles based on distance to periphery
     objects_periphery_dist.sort(key=lambda x: x[1])
+    
     if objects_periphery_dist[0][0] == target_index:
         return [target_index]
-    
-    # Identify the target mask
-    target_mask = segmentation_masks[target_index]
-
-    # Find obstacles overlapping the target mask
-    closest_overlapping_obstacles = []
-    for i, dist, obstacle_mask in objects_periphery_dist:
-        if i != target_index:
-            dist = get_distance(get_object_centroid(target_mask), get_object_centroid(obstacle_mask))
-            closest_overlapping_obstacles.append((i, dist))
-
-    if len(closest_overlapping_obstacles) == 0:
-        return [target_index]
-    
-    closest_overlapping_obstacles.sort(key=lambda x: x[1])
-    
-    return [id for id, dist in closest_overlapping_obstacles]
-
-def find_obstacles_to_remove1(target_index, segmentation_masks):
-    # Convert masks to binary images
-    binary_masks = [mask > 0 for mask in segmentation_masks]
 
     # Identify the target mask
     target_mask = segmentation_masks[target_index]
@@ -54,22 +68,10 @@ def find_obstacles_to_remove1(target_index, segmentation_masks):
     # Find obstacles overlapping the target mask
     overlapping_obstacles = []
     for i, obstacle_mask in enumerate(segmentation_masks):
-        if i != target_index:
-            # overlap = cv2.bitwise_and(target_mask, obstacle_mask)
-            # if cv2.countNonZero(overlap) > 0:
-            #     overlapping_obstacles.append(i)
-
-            dist = get_distance(get_object_centroid(target_mask), get_object_centroid(obstacle_mask))
-            if dist < 100:
-                overlapping_obstacles.append(i)
-
-    # Calculate distance transform for the periphery
-    periphery_mask = np.zeros_like(binary_masks[0])
-    periphery_mask[:, 0] = 1  # Left edge
-    periphery_mask[:, -1] = 1  # Right edge
-    periphery_mask[0, :] = 1  # Top edge
-    periphery_mask[-1, :] = 1  # Bottom edge
-    periphery_distance_map = cv2.distanceTransform(np.uint8(periphery_mask), cv2.DIST_L2, 5)
+        dist = get_distance(get_object_centroid(target_mask), get_object_centroid(obstacle_mask))
+        print(dist)
+        if dist < 100:
+            overlapping_obstacles.append(i)
 
     # Find closest overlapping obstacles to the periphery
     closest_overlapping_obstacles = []
@@ -78,11 +80,14 @@ def find_obstacles_to_remove1(target_index, segmentation_masks):
         min_distance = np.min(obstacle_mask.astype(np.float32) * periphery_distance_map)
         closest_overlapping_obstacles.append((obstacle_index, min_distance))
 
-    # Sort overlapping obstacles based on distance to periphery
-    closest_overlapping_obstacles.sort(key=lambda x: x[1])
-
     if len(closest_overlapping_obstacles) == 0:
         return [target_index]
+    
+    print(closest_overlapping_obstacles)
+    
+    # Sort overlapping obstacles based on distance to periphery
+    closest_overlapping_obstacles.sort(key=lambda x: x[1])
+    print(closest_overlapping_obstacles)
     
     return [id for id, dist in closest_overlapping_obstacles]
     

@@ -114,7 +114,7 @@ class UnveilerDataset(data.Dataset):
             labels.append(label)
 
         # pad labels and rot_ids. The object_ids are not required anymore
-        labels, rot_ids, obstacle_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids, obstacle_ids)
+        labels, rot_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids)
         obstacle_ids = obstacle_ids[0] if obstacle_ids[0] < self.args.num_patches else self.args.num_patches-1 # Refer to notebook for why I did this.
 
         # pad object masks
@@ -129,7 +129,7 @@ class UnveilerDataset(data.Dataset):
     def __len__(self):
         return len(self.dir_ids)
     
-    def pad_labels_and_rot(self, episode_len, processed_heightmap, labels, rot_ids, obstacle_ids):
+    def pad_labels_and_rot(self, episode_len, processed_heightmap, labels, rot_ids):
         seq_len = self.args.sequence_length
         if episode_len < seq_len:
             required_len = seq_len - len(labels)
@@ -139,14 +139,11 @@ class UnveilerDataset(data.Dataset):
             labels = labels + [empty_array] * required_len
 
             rot_ids = rot_ids + [0] * required_len
-
-            obstacle_ids = obstacle_ids + [0] * required_len
         else:
             labels = labels[:seq_len]
             rot_ids = rot_ids[:seq_len]
-            obstacle_ids = obstacle_ids[:seq_len]
 
-        return np.array(labels), rot_ids, np.array(obstacle_ids)
+        return np.array(labels), rot_ids
     
     def pad_heightmap_and_target(self, heightmaps, target_masks, targets_id):
         N, C, H, W = heightmaps.shape
