@@ -117,6 +117,12 @@ class ObstacleHead(nn.Module):
             nn.Linear(self.args.num_patches * 2, dimen),
             nn.BatchNorm1d(dimen),
             nn.ReLU(),
+            nn.Linear(dimen, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, dimen),
+            nn.BatchNorm1d(dimen),
+            nn.ReLU(),
             nn.Linear(dimen, self.args.num_patches * dimen)
         )
 
