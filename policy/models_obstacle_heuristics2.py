@@ -147,7 +147,7 @@ class ObstacleHead(nn.Module):
         )
 
         self.W_o = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim*2),
             nn.LayerNorm(hidden_dim*2),
             nn.ReLU(),
             nn.Linear(hidden_dim*2, hidden_dim),
