@@ -93,13 +93,16 @@ class ObstacleHead(nn.Module):
             nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim//2),
             nn.LayerNorm(hidden_dim//2),
             nn.ReLU(),
-            nn.Linear(hidden_dim//2, hidden_dim//4),
-            nn.LayerNorm(hidden_dim//4),
-            nn.ReLU(),
-            nn.Linear(hidden_dim//4, self.args.num_patches)
+            nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
         ############# scaled dot product attn ######################
@@ -115,13 +118,13 @@ class ObstacleHead(nn.Module):
         dimen = hidden_dim//2
         self.object_rel_fc = nn.Sequential(
             nn.Linear(self.args.num_patches * 2, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.LayerNorm(dimen),
             nn.ReLU(),
             nn.Linear(dimen, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.LayerNorm(dimen),
             nn.ReLU(),
             nn.Linear(dimen, self.args.num_patches * dimen)
         )
@@ -134,17 +137,23 @@ class ObstacleHead(nn.Module):
         # )
 
         self.W_t = nn.Sequential(
-            nn.Linear(hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
 
         self.W_o = nn.Sequential(
-            nn.Linear(self.args.num_patches * hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
         ############################################################
 
@@ -249,7 +258,7 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top indices", top_indices)
+        print("top indices", top_indices)
 
         return attn_scores, top_indices
     
