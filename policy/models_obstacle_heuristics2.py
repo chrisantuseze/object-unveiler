@@ -105,16 +105,6 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-        ############# scaled dot product attn ######################
-        # self.object_rel = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
-        #     nn.BatchNorm1d(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
-        # )
-        ############################################################
-        
-        ############# cross attn ###################################
         dimen = hidden_dim//2
         self.object_rel_fc = nn.Sequential(
             nn.Linear(self.args.num_patches * 2, dimen),
@@ -155,16 +145,15 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
-        ############################################################
 
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
 
-        # scene_mask = scene_mask.repeat(1, 3, 1, 1)
-        # scene_feats = self.model(scene_mask)
-        # scene_feats = scene_feats.view(B, 1, -1)
+        scene_mask = scene_mask.repeat(1, 3, 1, 1)
+        scene_feats = self.model(scene_mask)
+        scene_feats = scene_feats.view(B, 1, -1)
 
-        scene_feats = None
+        # scene_feats = None
 
         target_mask = target_mask.repeat(1, 3, 1, 1)
         target_feats = self.model(target_mask)
@@ -196,7 +185,17 @@ class ObstacleHead(nn.Module):
 
         return edge_features, periphery_dists
     
-    def scaled_dot_product_attention(self, query, key, value):
+    def scaled_dot_product_attention(self, object_feats, scene_feats, objects_rel):
+        B, N, D = object_feats.shape
+
+        scene_feats = scene_feats.reshape(B, -1)
+        query = self.W_t(scene_feats).view(B, N, -1)
+
+        object_feats = object_feats.reshape(B, -1)
+        key = self.W_o(object_feats).view(B, N, -1)
+
+        value = objects_rel
+
         # Compute attention scores
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(key.size(-1))
         weights = F.softmax(scores, dim=-1)
@@ -204,7 +203,7 @@ class ObstacleHead(nn.Module):
         # Apply attention weights to the value
         weighted_values = torch.matmul(weights, value)
 
-        return weighted_values, weights
+        return weighted_values
     
     def cross_attention(self, target_feats, object_feats):
         B, N, D = object_feats.shape
@@ -241,9 +240,9 @@ class ObstacleHead(nn.Module):
         # object_periphery_feats = self.periphery_fc(periphery_dists.view(B, -1)).view(B, N, -1)
         # print("object_periphery_feats.shape", object_periphery_feats.shape)
 
-        # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
+        attn_output = self.scaled_dot_product_attention(object_feats, scene_feats, object_rel_feats)
+        # attn_output = self.cross_attention(target_feats, object_feats)
 
-        attn_output = self.cross_attention(target_feats, object_feats)
         # print("attn_output.shape", attn_output.shape)
 
         # out = torch.cat([attn_output, object_rel_feats, object_periphery_feats], dim=-1)
