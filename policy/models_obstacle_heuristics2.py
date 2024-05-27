@@ -86,11 +86,12 @@ class ObstacleHead(nn.Module):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         hidden_dim = 1024
+        dimen = hidden_dim//2
         self.model = torchvision.models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(2048, hidden_dim)
 
         self.attn = nn.Sequential(
-            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -105,7 +106,6 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-        dimen = hidden_dim//2
         self.object_rel_fc = nn.Sequential(
             nn.Linear(self.args.num_patches * 2, dimen),
             nn.LayerNorm(dimen),
@@ -118,13 +118,6 @@ class ObstacleHead(nn.Module):
             nn.ReLU(),
             nn.Linear(dimen, self.args.num_patches * dimen)
         )
-
-        # self.periphery_fc = nn.Sequential(
-        #     nn.Linear(self.args.num_patches, dimen),
-        #     nn.BatchNorm1d(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, self.args.num_patches * dimen//2)
-        # )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -237,16 +230,11 @@ class ObstacleHead(nn.Module):
         object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)
 
-        # object_periphery_feats = self.periphery_fc(periphery_dists.view(B, -1)).view(B, N, -1)
-        # print("object_periphery_feats.shape", object_periphery_feats.shape)
-
         attn_output = self.scaled_dot_product_attention(object_feats, scene_feats, object_rel_feats)
         # attn_output = self.cross_attention(target_feats, object_feats)
-
         # print("attn_output.shape", attn_output.shape)
 
-        # out = torch.cat([attn_output, object_rel_feats, object_periphery_feats], dim=-1)
-        out = torch.cat([attn_output, object_rel_feats], dim=-1)
+        out = torch.cat([attn_output, object_feats], dim=-1)
         # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
