@@ -91,7 +91,8 @@ class ObstacleHead(nn.Module):
         self.model.fc = nn.Linear(2048, hidden_dim)
 
         self.attn = nn.Sequential(
-            nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
+            # nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -142,11 +143,11 @@ class ObstacleHead(nn.Module):
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
 
-        scene_mask = scene_mask.repeat(1, 3, 1, 1)
-        scene_feats = self.model(scene_mask)
-        scene_feats = scene_feats.view(B, 1, -1)
+        # scene_mask = scene_mask.repeat(1, 3, 1, 1)
+        # scene_feats = self.model(scene_mask)
+        # scene_feats = scene_feats.view(B, 1, -1)
 
-        # scene_feats = None
+        scene_feats = None
 
         target_mask = target_mask.repeat(1, 3, 1, 1)
         target_feats = self.model(target_mask)
@@ -178,11 +179,11 @@ class ObstacleHead(nn.Module):
 
         return edge_features, periphery_dists
     
-    def scaled_dot_product_attention(self, object_feats, scene_feats, objects_rel):
+    def scaled_dot_product_attention(self, object_feats, target_feats, objects_rel):
         B, N, D = object_feats.shape
 
-        scene_feats = scene_feats.reshape(B, -1)
-        query = self.W_t(scene_feats).view(B, N, -1)
+        target_feats = target_feats.reshape(B, -1)
+        query = self.W_t(target_feats).view(B, N, -1)
 
         object_feats = object_feats.reshape(B, -1)
         key = self.W_o(object_feats).view(B, N, -1)
@@ -230,11 +231,11 @@ class ObstacleHead(nn.Module):
         object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)
 
-        attn_output = self.scaled_dot_product_attention(object_feats, scene_feats, object_rel_feats)
+        attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
         # attn_output = self.cross_attention(target_feats, object_feats)
         # print("attn_output.shape", attn_output.shape)
 
-        out = torch.cat([attn_output, object_feats], dim=-1)
+        out = torch.cat([attn_output, object_rel_feats], dim=-1)
         # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))

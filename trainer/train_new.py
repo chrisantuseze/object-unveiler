@@ -247,7 +247,6 @@ def train_fcn_net(args):
     # model.load_state_dict(torch.load("save/fcn/fcn_model_10.pt", map_location=args.device))
     torch.autograd.set_detect_anomaly(True)
 
-    best_model = None
     lowest_loss = float('inf')
 
     global_step = 0 #{'train': 0, 'val': 0}
