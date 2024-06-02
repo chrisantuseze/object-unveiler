@@ -3,7 +3,7 @@ Unveiling the Unseen: Smart Grasping through Occlusion-Aware Semantic Segmentati
 - Aperture is the distance between the two opposing fingers of the hand. So basically, how open is the hand?
 
 <!-- python3 main.py --mode 'eval' --fcn_model 'downloads/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
-python3 main.py --mode 'eval' --reg_model 'downloads/reg_model.pt' --fcn_model 'save/fcn/fcn_model.pt' --n_scenes 30
+python3 main.py --mode 'eval' --reg_model 'downloads/reg_model.pt' --fcn_model 'save/fcn/fcn_model_17.pt' --n_scenes 50
 
 python3 main.py --dataset_dir 'save/ou-dataset' --mode 'fcn' --epochs 100 --batch_size 2 --lr 0.001
 
@@ -13,6 +13,9 @@ pete - 2, 6
 uc - 3, 4, 7, 10, 18, 24
 regan - 25, 26, 27, 28 - 29, 30, 31, 32, 33, 34, 35
 tacc - 23
+
+########### new collect_data seeds ################
+100
 
 
 For the Pose-FCN Pose (Paper):

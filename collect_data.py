@@ -15,7 +15,6 @@ from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
-import policy.grasping3 as grasping3
 from utils.constants import *
 
 def collect_episodic_dataset(args, params):
@@ -56,7 +55,6 @@ def collect_episodic_dataset(args, params):
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_target_mask.png"), target_mask)
 
         node_id = -1
-        prev_node_id = -1
         grasp_status = []
         is_target_grasped = False
         episode_data_list = []
@@ -73,6 +71,9 @@ def collect_episodic_dataset(args, params):
 
             node_id = objects_to_remove[0]
             cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
+            cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
+            cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
+            
             print("target id:", target_id)
 
             state, depth_heightmap = policy.get_state_representation(obs)
@@ -85,7 +86,6 @@ def collect_episodic_dataset(args, params):
                 print("Resetting environment:", e)
                 continue
 
-            # action = grasping.compute_grasping_point_for_object1(processed_masks, node_id, policy.aperture_limits, policy.rotations, rng)
             print(action)
 
             env_action3d = policy.action3d(action)
@@ -137,8 +137,6 @@ def collect_episodic_dataset(args, params):
                 print("Target is no longer available in the scene.")
                 break
 
-            cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
-            cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
 
         if grasping.episode_status(grasp_status, is_target_grasped):
             memory.store_episode(episode_data_list)

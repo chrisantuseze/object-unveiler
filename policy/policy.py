@@ -4,7 +4,7 @@ import pickle
 # from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
-from policy.models_obstacle_heuristics2 import Regressor, ResFCN
+from policy.models_obstacle_heuristics import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
 from policy.object_segmenter import ObjectSegmenter
 import torch
@@ -27,7 +27,6 @@ import env.cameras as cameras
 import utils.logger as logging
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
-import policy.grasping3 as grasping3
 
 class Policy:
     def __init__(self, args, params) -> None:
@@ -319,7 +318,7 @@ class Policy:
         raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
 
         target_id = grasping.get_target_id(general_utils.resize_mask(transform, target_mask), masks)
-        objects_to_remove = grasping3.find_obstacles_to_remove(target_id, masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
         print(objects_to_remove)
 

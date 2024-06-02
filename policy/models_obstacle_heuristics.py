@@ -85,51 +85,60 @@ class ObstacleHead(nn.Module):
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        ############# cc ######################
         hidden_dim = 1024
+        dimen = hidden_dim//2
         self.model = torchvision.models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(2048, hidden_dim)
 
         self.attn = nn.Sequential(
+            # nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
             nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches)
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim//2),
+            nn.LayerNorm(hidden_dim//2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-        ############# scaled dot product attn ######################
-        # self.object_rel = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
-        #     nn.BatchNorm1d(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
-        # )
-        ############################################################
-        
-        ############# cross attn ###################################
-        dimen = hidden_dim//2
-        self.object_rel = nn.Sequential(
+        self.object_rel_fc = nn.Sequential(
             nn.Linear(self.args.num_patches * 2, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.LayerNorm(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, dimen),
+            nn.LayerNorm(dimen),
             nn.ReLU(),
             nn.Linear(dimen, self.args.num_patches * dimen)
         )
 
         self.W_t = nn.Sequential(
-            nn.Linear(hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
 
         self.W_o = nn.Sequential(
-            nn.Linear(self.args.num_patches * hidden_dim, dimen),
-            nn.BatchNorm1d(dimen),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
-        ############################################################
-
 
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
@@ -156,16 +165,31 @@ class ObstacleHead(nn.Module):
         B, N, C, H, W = object_masks.shape
 
         edge_features = []
+        periphery_dists = []
         for i in range(B):
             edge_feats, _ = compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
             edge_features.append(edge_feats)
 
+            # periphery_dist = compute_objects_periphery_dist(object_masks[i])
+            # periphery_dists.append(periphery_dist)
+
         edge_features = torch.stack(edge_features).to(self.device)
+        # periphery_dists = torch.stack(periphery_dists).to(self.device)
         # print("edge_features.shape", edge_features.shape)
 
-        return edge_features
+        return edge_features, periphery_dists
     
-    def scaled_dot_product_attention(self, query, key, value):
+    def scaled_dot_product_attention(self, object_feats, target_feats, objects_rel):
+        B, N, D = object_feats.shape
+
+        target_feats = target_feats.reshape(B, -1)
+        query = self.W_t(target_feats).view(B, N, -1)
+
+        object_feats = object_feats.reshape(B, -1)
+        key = self.W_o(object_feats).view(B, N, -1)
+
+        value = objects_rel
+
         # Compute attention scores
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(key.size(-1))
         weights = F.softmax(scores, dim=-1)
@@ -173,7 +197,7 @@ class ObstacleHead(nn.Module):
         # Apply attention weights to the value
         weighted_values = torch.matmul(weights, value)
 
-        return weighted_values, weights
+        return weighted_values
     
     def cross_attention(self, target_feats, object_feats):
         B, N, D = object_feats.shape
@@ -201,19 +225,17 @@ class ObstacleHead(nn.Module):
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         B, N, C, H, W = object_masks.shape
 
-        objects_rel = self.compute_edge_features(bboxes, object_masks, target_mask)
-        # print("objects_rel", objects_rel.shape)
+        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
 
-        object_rel_feats = self.object_rel(objects_rel.view(B, -1)).view(B, N, -1)
+        object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)
 
-        # out, attention_weights = self.scaled_dot_product_attention(object_feats, object_rel_feats, object_rel_feats)
-
-        attn_output = self.cross_attention(target_feats, object_feats)
+        attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
+        # attn_output = self.cross_attention(target_feats, object_feats)
         # print("attn_output.shape", attn_output.shape)
 
         out = torch.cat([attn_output, object_rel_feats], dim=-1)
-
         # print("out.shape", out.shape)
 
         attn_scores = self.attn(out.reshape(B, -1))
@@ -224,27 +246,27 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # print("top indices", top_indices)
 
         return attn_scores, top_indices
     
-    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
-    # def forward(self, scene_mask, target_mask, object_masks, bboxes):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
+    def forward(self, scene_mask, target_mask, object_masks, bboxes):
         attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
 
-        ################### THIS IS FOR VISUALIZATION ####################
-        raw_objects = []
-        for i in range(target_mask.shape[0]):
-            idx = top_indices[i] 
-            x = object_masks[i, idx] # x should be (4, 400, 400)
+        # ################### THIS IS FOR VISUALIZATION ####################
+        # raw_objects = []
+        # for i in range(target_mask.shape[0]):
+        #     idx = top_indices[i] 
+        #     x = object_masks[i, idx] # x should be (4, 400, 400)
 
-            raw_x = raw_object_masks[i, idx]
-            # print("raw_x.shape", raw_x.shape)
-            raw_objects.append(raw_x)
+        #     raw_x = raw_object_masks[i, idx]
+        #     # print("raw_x.shape", raw_x.shape)
+        #     raw_objects.append(raw_x)
 
-        raw_objects = torch.stack(raw_objects)
-        self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
-        ##################################################################
+        # raw_objects = torch.stack(raw_objects)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # ##################################################################
 
         return attn_scores
    
@@ -326,18 +348,18 @@ class ResFCN(nn.Module):
 
         self.obstacle_head = ObstacleHead(args) 
 
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
 
-        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
+        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
 
-        B, N, C, H, W = object_masks.shape
-        out_probs = torch.rand(16, C, H, W)
-        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
-        return object_scores, out_probs
+        # B, N, C, H, W = object_masks.shape
+        # out_probs = torch.rand(16, C, H, W)
+        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        # return object_scores, out_probs
     
-        # return object_scores
+        return object_scores
     
 
 class Regressor(nn.Module):

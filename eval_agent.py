@@ -89,7 +89,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         if len(processed_masks) == n_prev_masks:
             count += 1
 
-        if count >= 2:
+        if count >= 1:
             logging.info("Robot is in an infinite loop")
             break
 

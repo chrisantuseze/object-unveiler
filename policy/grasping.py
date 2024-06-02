@@ -3,6 +3,8 @@ import math
 import torch
 import cv2
 import numpy as np
+from scipy.ndimage import center_of_mass
+
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
 import utils.general_utils as general_utils
@@ -243,10 +245,16 @@ def is_target_neighbor(target, action, threshold):
     return dist < threshold
 
 def get_target_id(target, processed_masks):
+    indices = []
     for index, mask in enumerate(processed_masks):
         dist = get_distance(get_object_centroid(target), get_object_centroid(mask))
         if dist < 20:
-            return index
+            indices.append((index, dist))
+
+    indices.sort(key=lambda x: x[1])
+    if len(indices) > 0:
+        return indices[0][0]
+    
     return -1
 
 def evaluate_actions(actions, target_mask):
@@ -302,6 +310,7 @@ def get_grasped_object(processed_masks, action):
         dist = get_distance(get_object_centroid(mask), (action[0], action[1]))
         print(dist)
         if dist < 250:
+            print("grasped object:", id, dist)
             return id, mask
 
     return -1, None
@@ -310,3 +319,39 @@ def is_target(target_mask, object_mask):
     dist = get_distance(get_object_centroid(target_mask), get_object_centroid(object_mask))
     print(dist)
     return dist < 150
+
+def find_central_object(segmentation_masks):
+    """
+    Find the object with the centroid closest to the average centroid of all objects.
+
+    Args:
+        segmentation_masks (list): A list of binary segmentation masks, where 1 represents the object pixels, and 0 represents the background.
+
+    Returns:
+        int: The index of the object with the centroid closest to the average centroid of all objects.
+    """
+    num_objects = len(segmentation_masks)
+    object_centroids = []
+
+    # Calculate the centroid for each object's segmentation mask
+    for mask in segmentation_masks:
+        centroid = center_of_mass(mask)
+        object_centroids.append(centroid)
+
+    # Calculate the average centroid of all objects' centroids
+    avg_centroid_x = sum(centroid[0] for centroid in object_centroids) / num_objects
+    avg_centroid_y = sum(centroid[1] for centroid in object_centroids) / num_objects
+    avg_centroid = (avg_centroid_x, avg_centroid_y)
+
+    # Find the object with the centroid closest to the average centroid
+    min_distance = float('inf')
+    central_object_index = None
+
+    for i, centroid in enumerate(object_centroids):
+        distance = np.sqrt((centroid[0] - avg_centroid[0])**2 + (centroid[1] - avg_centroid[1])**2)
+        if distance < min_distance:
+            min_distance = distance
+            central_object_index = i
+
+    print("Central object id is:", central_object_index)
+    return central_object_index

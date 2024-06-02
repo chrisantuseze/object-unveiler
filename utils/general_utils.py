@@ -12,6 +12,7 @@ from skimage import transform
 import utils.pybullet_utils as p_utils
 from utils.constants import *
 import utils.logger as logging
+import policy.grasping as grasping
 
 try:
     import open3d as o3d
@@ -207,7 +208,8 @@ def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
 def get_target_mask(processed_masks, obs, rng):
     id = 0
     if len(processed_masks) > 1:
-        id = rng.randint(0, len(processed_masks) - 1)
+        # id = rng.randint(0, len(processed_masks) - 1)
+        id = grasping.find_central_object(processed_masks)
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:
         target_mask = processed_masks[id]
