@@ -11,4 +11,4 @@ export APPTAINER_BIND=$PWD
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'fcn' --epochs 100 --batch_size 8 --lr 0.0001
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/ppg-ou-dataset' --mode 'fcn' --epochs 100 --batch_size 4 --lr 0.001
 # apptainer run --nv apptainerfile.sif python3 modify_dataset.py
-apptainer run --nv apptainerfile.sif python3 collect_data.py --singulation_condition --n_samples 30000 --seed 100
+apptainer run --nv apptainerfile.sif python3 playground.py

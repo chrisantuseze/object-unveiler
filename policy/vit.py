@@ -60,15 +60,16 @@ class Transformer(nn.Module):
 
 
 class VisualTransformer(nn.Module):
-    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
+    def __init__(self, args, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
         super().__init__()
+        self.args = args
         self.input_resolution = input_resolution
         self.output_dim = output_dim
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=width, kernel_size=patch_size, stride=patch_size, bias=False)
 
         scale = width ** -0.5
         self.class_embedding = nn.Parameter(scale * torch.randn(width))
-        self.positional_embedding = nn.Parameter(scale * torch.randn((input_resolution // patch_size) ** 2 + 1, width))
+        # self.positional_embedding = nn.Parameter(scale * torch.randn((input_resolution // patch_size) ** 2 + 1, width))
+        self.positional_embedding = nn.Parameter(scale * torch.randn(patch_size ** 2 + 1, width))
         self.ln_pre = LayerNorm(width)
 
         self.transformer = Transformer(width, layers, heads)
@@ -76,30 +77,71 @@ class VisualTransformer(nn.Module):
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
 
+        self.fc = nn.Sequential(
+            nn.Linear(11, 56),
+            LayerNorm(56),
+            nn.ReLU(),
+            nn.Linear(56, 224)
+        )
+
     def forward(self, x: torch.Tensor):
-        x = self.conv1(x)  # shape = [*, width, grid, grid]
-        x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
-        x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-        x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
-        x = x + self.positional_embedding.to(x.dtype)
+        x = x.reshape(-1, x.shape[1])
+        # print("x.shape", x.shape)
+        x = self.fc(x)
+        # print("x.shape", x.shape)
+
+        x = x.reshape(self.args.batch_size, -1, x.shape[-1])  # shape = [*, width, grid ** 2]
+        # print("x.shape", x.shape)
+
+        x = x.permute(2, 1, 0)  # shape = [*, grid ** 2, width]
+        # print("x.shape", x.shape)
+
+        in1 = self.class_embedding.to(x.dtype)
+        in1 = in1.reshape(in1.shape[0], 1, 1)
+        # print("in1.shape", in1.shape)
+
+        in2 = torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device)
+        # print("in2.shape", in2.shape)
+
+        x = torch.cat([in1 + in2, x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        # print("x.shape", x.shape)
+
+        x = x.permute(2, 1, 0)
+
+        pos = self.positional_embedding.to(x.dtype)
+        # print("pos.shape", pos.shape)
+
+        x = x + pos
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
+        # print("x.shape", x.shape)
         x = self.transformer(x)
+        # print("x.shape", x.shape)
         x = x.permute(1, 0, 2)  # LND -> NLD
+        # print("x.shape", x.shape)
 
         x = self.ln_post(x[:, 0, :])
+        # print("x.shape", x.shape)
 
         if self.proj is not None:
             x = x @ self.proj
 
+        # print("x.shape", x.shape)
         return x
 
     def forward_spatial(self, x: torch.Tensor):
-        x = self.conv1(x)  # shape = [*, width, grid, grid]
-        x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
-        x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-        x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = self.fc(x.reshape(-1, x.shape[1]))
+        x = x.reshape(self.args.batch_size, -1, x.shape[-1])
+        x = x.permute(2, 1, 0)  # shape = [*, grid ** 2, width]
+
+        in1 = self.class_embedding.to(x.dtype)
+        in1 = in1.reshape(in1.shape[0], 1, 1)
+        in2 = torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device)
+
+        x = torch.cat([in1 + in2, x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = x.permute(2, 1, 0)  # shape = [*, grid ** 2, width]
+
         x = x + self.positional_embedding.to(x.dtype)
         x = self.ln_pre(x)
 
@@ -107,6 +149,7 @@ class VisualTransformer(nn.Module):
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
 
+        # print("x.shape", x.shape)
         x = self.ln_post(x)[:, 1:]
-        return x
+        return x.reshape(x.shape[0], -1)
 
