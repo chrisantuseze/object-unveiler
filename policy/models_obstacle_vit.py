@@ -133,7 +133,7 @@ class ObstacleHead(nn.Module):
         out = out.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(out, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # print("top indices", top_indices)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = []
