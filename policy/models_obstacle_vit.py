@@ -50,25 +50,26 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim, self.args.num_patches * hidden_dim)
         )
 
-        self.mlp = nn.Sequential(
-            nn.Linear(hidden_dim//2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim//2),
-            nn.LayerNorm(hidden_dim//2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim//2, self.args.num_patches)
-        )
-
         # self.mlp = nn.Sequential(
-        #     nn.Linear(hidden_dim * vision_width, hidden_dim * 2),
-        #     nn.LayerNorm(hidden_dim * 2),
+        #     nn.Linear(hidden_dim//2, hidden_dim),
+        #     nn.LayerNorm(hidden_dim),
         #     nn.ReLU(),
-        #     nn.Linear(hidden_dim * 2, hidden_dim//2),
+        #     nn.Linear(hidden_dim, hidden_dim//2),
         #     nn.LayerNorm(hidden_dim//2),
         #     nn.ReLU(),
         #     nn.Linear(hidden_dim//2, self.args.num_patches)
         # )
+
+        ############## FOR SPATIAL #########################
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim * vision_width, hidden_dim * 2),
+            nn.LayerNorm(hidden_dim * 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim * 2, hidden_dim//2),
+            nn.LayerNorm(hidden_dim//2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim//2, self.args.num_patches)
+        )
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -122,7 +123,8 @@ class ObstacleHead(nn.Module):
         input = torch.cat([scene_feats, joint_feats], dim=1)
         # print("input.shape", input.shape)
 
-        feats = self.visual(input)
+        # feats = self.visual(input)
+        feats = self.visual.forward_spatial(input)
         # print("feats.shape", feats.shape)
 
         out = self.mlp(feats)
@@ -132,7 +134,7 @@ class ObstacleHead(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(out)
         out = out.masked_fill_(padding_mask_expanded, float(-1e-6))
         
-        _, top_indices = torch.topk(out, k=self.args.sequence_length, dim=1)
+        # _, top_indices = torch.topk(out, k=self.args.sequence_length, dim=1)
         # print("top indices", top_indices)
 
         # ################### THIS IS FOR VISUALIZATION ####################

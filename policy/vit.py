@@ -75,7 +75,9 @@ class VisualTransformer(nn.Module):
         self.transformer = Transformer(width, layers, heads)
 
         self.ln_post = LayerNorm(width)
-        self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
+
+        # ########## FOR SPATIAL ######################
+        # self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
 
         self.fc = nn.Sequential(
             nn.Linear(11, 56),
