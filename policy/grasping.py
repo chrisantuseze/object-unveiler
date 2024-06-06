@@ -7,7 +7,7 @@ from scipy.ndimage import center_of_mass
 
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
-import utils.general_utils as general_utils
+# import utils.general_utils as general_utils
 import utils.logger as logging
 
 def get_object_centroid_old(segmentation_mask):
