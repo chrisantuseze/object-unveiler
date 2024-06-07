@@ -10,74 +10,6 @@ import cv2
 import os
 from utils.constants import TEST_DIR
 
-def compute_edge_features(boxes, masks, target_mask):
-    """
-    Compute pairwise spatial relationships between objects and the target object.
-
-    Args:
-        boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
-        masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
-        target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
-
-    Returns:
-        edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
-        edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
-    """
-    device = boxes.device
-    num_objects = boxes.size(0)
-
-    # Compute pairwise object-target relationships
-    edges = []
-    edge_features = []
-
-    for i in range(num_objects):
-        # Compute spatial features between object i and the target object
-        obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
-        # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
-
-        target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
-        target_iou = calculate_iou(boxes[i], target_mask)  # IoU between object and target
-
-        # Compute edge features
-        edge_feat = torch.tensor([target_overlap, target_iou], device=device)
-        edge_features.append(edge_feat)
-
-        # Add edge index
-        edges.append([i, num_objects])  # Connect object node to a dummy target node
-
-    edge_features = torch.stack(edge_features, dim=0)
-    edges = torch.tensor(edges, dtype=torch.long, device=device)
-
-    return edge_features, edges
-
-def calculate_iou(box, target_mask):
-    """
-    Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
-
-    Args:
-        box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
-        target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
-
-    Returns:
-        iou (float): The Intersection over Union between the box and the target mask.
-    """
-    # Convert box to (x1, y1, x2, y2) format
-    # print("box.shape", box.shape)
-    x1, y1, x2, y2 = box
-
-    # Create a mask for the bounding box
-    box_mask = torch.zeros_like(target_mask)
-    box_mask[int(y1):int(y2), int(x1):int(x2)] = 1
-
-    # Calculate the intersection and union
-    intersection = torch.sum(box_mask * target_mask)
-    union = torch.sum(box_mask) + torch.sum(target_mask) - intersection
-
-    # Avoid division by zero
-    iou = intersection / (union + 1e-8)
-
-    return iou.item()
-
 class ObstacleHead(nn.Module):
     def __init__(self, args):
         super(ObstacleHead, self).__init__()
@@ -140,6 +72,74 @@ class ObstacleHead(nn.Module):
             nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
 
+    def compute_edge_features(self, boxes, masks, target_mask):
+        """
+        Compute pairwise spatial relationships between objects and the target object.
+
+        Args:
+            boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
+            masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
+            target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
+
+        Returns:
+            edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
+            edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
+        """
+        device = boxes.device
+        num_objects = boxes.size(0)
+
+        # Compute pairwise object-target relationships
+        edges = []
+        edge_features = []
+
+        for i in range(num_objects):
+            # Compute spatial features between object i and the target object
+            obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
+            # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
+
+            target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+            target_iou = self.calculate_iou(boxes[i], target_mask)  # IoU between object and target
+
+            # Compute edge features
+            edge_feat = torch.tensor([target_overlap, target_iou], device=device)
+            edge_features.append(edge_feat)
+
+            # Add edge index
+            edges.append([i, num_objects])  # Connect object node to a dummy target node
+
+        edge_features = torch.stack(edge_features, dim=0)
+        edges = torch.tensor(edges, dtype=torch.long, device=device)
+
+        return edge_features, edges
+
+    def calculate_iou(self, box, target_mask):
+        """
+        Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
+
+        Args:
+            box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
+            target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
+
+        Returns:
+            iou (float): The Intersection over Union between the box and the target mask.
+        """
+        # Convert box to (x1, y1, x2, y2) format
+        # print("box.shape", box.shape)
+        x1, y1, x2, y2 = box
+
+        # Create a mask for the bounding box
+        box_mask = torch.zeros_like(target_mask)
+        box_mask[int(y1):int(y2), int(x1):int(x2)] = 1
+
+        # Calculate the intersection and union
+        intersection = torch.sum(box_mask * target_mask)
+        union = torch.sum(box_mask) + torch.sum(target_mask) - intersection
+
+        # Avoid division by zero
+        iou = intersection / (union + 1e-8)
+
+        return iou.item()
+
     def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
 
@@ -167,7 +167,7 @@ class ObstacleHead(nn.Module):
         edge_features = []
         periphery_dists = []
         for i in range(B):
-            edge_feats, _ = compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
+            edge_feats, _ = self.compute_edge_features(bboxes[i], object_masks[i], target_mask[i])
             edge_features.append(edge_feats)
 
             # periphery_dist = compute_objects_periphery_dist(object_masks[i])
@@ -246,27 +246,27 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top indices", top_indices)
+        print("top indices", top_indices)
 
         return attn_scores, top_indices
     
-    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
-    def forward(self, scene_mask, target_mask, object_masks, bboxes):
+    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
+    # def forward(self, scene_mask, target_mask, object_masks, bboxes):
         attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
 
-        # ################### THIS IS FOR VISUALIZATION ####################
-        # raw_objects = []
-        # for i in range(target_mask.shape[0]):
-        #     idx = top_indices[i] 
-        #     x = object_masks[i, idx] # x should be (4, 400, 400)
+        ################### THIS IS FOR VISUALIZATION ####################
+        raw_objects = []
+        for i in range(target_mask.shape[0]):
+            idx = top_indices[i] 
+            x = object_masks[i, idx] # x should be (4, 400, 400)
 
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objects.append(raw_x)
+            raw_x = raw_object_masks[i, idx]
+            # print("raw_x.shape", raw_x.shape)
+            raw_objects.append(raw_x)
 
-        # raw_objects = torch.stack(raw_objects)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
-        # ##################################################################
+        raw_objects = torch.stack(raw_objects)
+        self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        ##################################################################
 
         return attn_scores
    
@@ -348,18 +348,18 @@ class ResFCN(nn.Module):
 
         self.obstacle_head = ObstacleHead(args) 
 
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
 
-        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
-        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
+        object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
+        # object_scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
 
-        # B, N, C, H, W = object_masks.shape
-        # out_probs = torch.rand(16, C, H, W)
-        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
-        # return object_scores, out_probs
+        B, N, C, H, W = object_masks.shape
+        out_probs = torch.rand(16, C, H, W)
+        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        return object_scores, out_probs
     
-        return object_scores
+        # return object_scores
     
 
 class Regressor(nn.Module):

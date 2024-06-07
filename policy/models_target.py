@@ -138,7 +138,9 @@ class ResFCN(nn.Module):
         
         else:
             thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
+            print("thetas", thetas)
             affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
+            print("affine_before.shape", affine_before.shape)
             for i in range(len(thetas)):
                 # Compute sample grid for rotation before neural network
                 theta = thetas[i]
@@ -148,7 +150,9 @@ class ResFCN(nn.Module):
                 affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).float()
                 affine_before[i] = affine_mat_before
 
+            print("before flow_grid_before")
             flow_grid_before = F.affine_grid(affine_before, depth_heightmap.size(), align_corners=True)
+            print("after flow_grid_before")
 
             # Rotate image clockwise_
             rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")

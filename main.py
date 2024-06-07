@@ -7,7 +7,7 @@ from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
 
-logging.init()
+# logging.init()
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

@@ -2,11 +2,11 @@ import os
 import random
 import copy
 # from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
-from policy.models_obstacle_vit import Regressor, ResFCN
+# from policy.models_obstacle_vit import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -34,13 +34,17 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     # noise[zero_indices] = 0
     # obstacle_pred = p * obstacle_pred + (1 - p) * noise
 
-    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt)
+    # print("policy: obstacle:", obstacle_pred.shape, " grasp:", grasp_pred.shape)
+    # print("gt: obstacle:", obstacle_gt, " grasp:", grasp_gt.shape)
+
+    obstacle_loss = obstacle_criterion(obstacle_pred, obstacle_gt.long())
     grasp_loss = grasp_criterion(grasp_pred, grasp_gt)
 
-    obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+    # print("obstacle_loss:", obstacle_loss.shape, torch.sum(obstacle_loss), " grasp_loss:", grasp_loss.shape, torch.sum(grasp_loss))
+    # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
     try:
-        w = 25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+        w = 0.25 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     except:
         w = 0.0025
 
@@ -49,7 +53,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net0(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -67,7 +71,7 @@ def train_fcn_net0(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:12000]
+    transition_dirs = transition_dirs[:25000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -94,11 +98,10 @@ def train_fcn_net0(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
-    obstacle_criterion = nn.SmoothL1Loss(reduction='none')
+    obstacle_criterion = nn.CrossEntropyLoss()
     grasp_criterion = nn.BCELoss(reduction='none')
 
     try:
-
         global_step = 0 #{'train': 0, 'val': 0}
         for epoch in range(args.epochs):
             
@@ -115,14 +118,17 @@ def train_fcn_net0(args):
                 # rotations = batch[7]
                 # y = batch[8].to(args.device, dtype=torch.float32)
                 # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+                # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
                 rotations = batch[4]
                 y = batch[5].to(args.device, dtype=torch.float32)
                 obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+                bboxes = batch[7].to(args.device, dtype=torch.float32)
 
                 obstacle_pred, pred = model(
                     x, target_mask, object_masks, scene_masks, 
                     # raw_x, raw_target_mask, raw_object_masks,
+                    bboxes,
                     rotations
                 )
 
@@ -160,14 +166,17 @@ def train_fcn_net0(args):
                     # rotations = batch[7]
                     # y = batch[8].to(args.device, dtype=torch.float32)
                     # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
+                    # bboxes = batch[10].to(args.device, dtype=torch.float32)
 
                     rotations = batch[4]
                     y = batch[5].to(args.device, dtype=torch.float32)
                     obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
+                    bboxes = batch[7].to(args.device, dtype=torch.float32)
 
                     obstacle_pred, pred = model(
                         x, target_mask, object_masks, scene_masks, 
                         # raw_x, raw_target_mask, raw_object_masks,
+                        bboxes,
                         rotations
                     )
 
@@ -179,6 +188,8 @@ def train_fcn_net0(args):
                     epoch_loss[phase] += loss.detach().cpu().numpy()
 
                     if step % args.step == 0:
+                        _, top_indices = torch.topk(obstacle_pred, k=args.sequence_length, dim=1)
+                        logging.info(f"pred: {top_indices.squeeze(1)}\ng_t: {obstacle_gt.long()}")
                         logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
             logging.info('Epoch {}: training loss = {:.8f} '
@@ -198,7 +209,7 @@ def train_fcn_net0(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net(args):
+def train_fcn_net1(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -521,7 +532,6 @@ def debug_params(model):
             # For example, get parent module with getattr 
             parent = getattr(model, module) 
             logging.info("Parent:",parent)
-
 
 def train_regressor(args):
     save_path = 'save/reg'

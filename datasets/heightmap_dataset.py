@@ -20,7 +20,7 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__(self, id):
+    def __getitem__0(self, id):
         heightmap, action = self.memory.load(self.dir_ids, id)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
@@ -49,7 +49,7 @@ class HeightMapDataset(data.Dataset):
         return padded_heightmap, rot_id, label
 
     # single - input, single - output for ou-dataset with target action
-    def __getitem__1(self, id):
+    def __getitem__(self, id):
         episode_data = self.memory.load_episode(self.dir_ids[id])
         heightmap, _, target_mask, _, action = episode_data[-1]
 

@@ -6,6 +6,7 @@ from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import math
 import os
 from utils.constants import TEST_DIR
 
@@ -55,393 +56,343 @@ class ResidualBlock(nn.Module):
 
         return out
 
-class ObstacleHead0(nn.Module):
-    def __init__(self, args, feat_extractor):
-        super(ObstacleHead, self).__init__()
-        self.args = args
-        self.feat_extractor = feat_extractor
-        self.final_conv_units = 128
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-        hidden_dim = 128
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 1) * self.final_conv_units, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, self.final_conv_units)
-        )
-
-        self.rnn = nn.LSTM(input_size=self.args.num_patches, hidden_size=hidden_dim, batch_first=True)
-        self.fc_occluding_objects = nn.Linear(hidden_dim, self.args.num_patches)
-        
-    def preprocess_input(self, object_masks):
-        B = object_masks.shape[0]
-        object_features = torch.zeros(B, self.args.num_patches, self.final_conv_units).to(self.device)
-
-        for i in range(B):
-            object_masks_ = object_masks[i].to(self.device)
-
-            obj_features = []
-            for mask in object_masks_:
-                mask = mask.unsqueeze(0).to(self.device)
-                obj_feat = self.feat_extractor(mask)
-
-                obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
-                obj_features.append(obj_feat)
-
-            obj_features = torch.cat(obj_features)
-            object_features[i] = obj_features
-            
-        return object_features
-
-
-    def get_topk_attn_scores(self, projected_objs, projected_target, object_masks):
-        n_heads = 3
-        multi_heads = [self.attention_head(projected_objs, projected_target, object_masks) for _ in range(n_heads)]
-        attn_scores = sum(multi_heads)/n_heads
-        # print("average attn_scores:", attn_scores)
-
-        # Sample noise  
-        # noise = torch.randn_like(attn_scores) * 0.01
-        # zero_indices = torch.where(attn_scores == 0)
-        # noise[zero_indices] = 0
-        # attn_scores = attn_scores + noise
-
-        _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        return top_indices, attn_scores
-    
-    # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
-    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
-        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
-        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
-
-        #save the top object
-        # Convert to uint8 and scale to [0, 255]
-        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
-        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-
-        for i in range(obj_masks.shape[0]):
-            if obj_masks.shape[0] == 1:
-                ax[i].imshow(scenes[i]) # this is because of the added gt images
-            else:
-                ax[i][0].imshow(scenes[i])
-
-            if obj_masks.shape[0] == 1:
-                ax[i+1].imshow(target_mask[i])
-            else:
-                ax[i][1].imshow(target_mask[i])
-
-            k = 2
-            for j in range(obj_masks.shape[1]):
-                obj_mask = obj_masks[i][j]
-                # print("obj_mask.shape", obj_mask.shape)
-
-                if obj_masks.shape[0] == 1:
-                    ax[k].imshow(obj_mask)
-                else:
-                    ax[i][k].imshow(obj_mask)
-                k += 1
-
-
-        if optimal_nodes:
-            n = 0
-            for i in range(2, raw_object_masks.shape[0] + 2):
-
-                gt_obj_masks = raw_object_masks[n]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape)
-
-                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
-
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
-                else:
-                    ax[i][0].imshow(scenes[n])
-
-                k = 1
-                for j in range(obj_masks.shape[1]):
-                    gt_obj_mask = gt_obj_masks[j]
-                    # print("obj_mask.shape", obj_mask.shape)
-
-                    if gt_obj_masks.shape[0] == 1:
-                        ax[i][k].imshow(gt_obj_mask)
-                    else:
-                        ax[i][k].imshow(gt_obj_mask)
-                    k += 1
-
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][k].imshow(target_mask[n])
-                else:
-                    ax[i][k].imshow(target_mask[n])
-
-                n += 1
-
-        plt.show()
-
-    def visualize_attn(self, target_mask, object_masks, attn_scores):
-        B, N, H, W = object_masks.shape
-
-        # Reshape attention to match object masks 
-        attn_weights = attn_scores.view(B, N, 1, 1)
-
-        # Tile attention weights spatially 
-        attn_weights = attn_weights.repeat(1, 1, H, W) 
-
-        # Multiply masks by attention weights
-        weighted_obj_masks = attn_weights * object_masks 
-
-        # Sum weighted masks along N dimension
-        attended_obj_masks = weighted_obj_masks.sum(dim=1)
-
-        # Normalize for visualization
-        attended_obj_masks = attended_obj_masks / attended_obj_masks.max() 
-        # print("attended_obj_masks.shape", attended_obj_masks.shape)
-
-        # Use torch.topk to get the top k values and their indices
-        top_scores, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-
-        if B == 1:
-            fig, axs = plt.subplots(B, N+2, figsize=(13, 9))
-            axs[0].imshow(target_mask[0])
-            axs[1].imshow(attended_obj_masks[0].detach().numpy()) 
-            k = 2
-            for j in range(N):
-                axs[k].imshow(object_masks[0,j])
-                axs[k].imshow(attn_weights[0,j].detach().numpy(), alpha=0.5, cmap='viridis') 
-                k += 1
-
-        else:
-            fig, axs = plt.subplots(B, N+2, figsize=(13, 9))
-            for i in range(B):
-                axs[i, 0].imshow(target_mask[i])
-                axs[i, 1].imshow(attended_obj_masks[i].detach().numpy()) 
-                k = 2
-                for j in range(N):
-                    axs[i,k].imshow(object_masks[i,j])
-                    axs[i,k].imshow(attn_weights[i,j].detach().numpy(), alpha=0.5, cmap='viridis') 
-                    k += 1
-
-        plt.show()
-
-    def causal_attention(self, target_feat, obj_feat, object_masks):
-        # print(target_feat.shape, target_feat.unsqueeze(1).shape, obj_feat.shape)
-        attn_input = torch.cat([target_feat.unsqueeze(1), obj_feat], dim=1)
-        # print("attn_input.shape", attn_input.shape)
-
-        energy = torch.tanh(attn_input)
-        # print("energy.shape", energy.shape)
-
-        attention = torch.softmax(self.projection(energy.reshape(attn_input.shape[0], -1)), dim=1)
-        # print("attention.shape", attention.shape)
-        
-        attended_obj = torch.sum(obj_feat * attention.unsqueeze(1), dim=2) 
-        # print("attended_obj.shape", attended_obj.shape)
-
-        rnn_output, _ = self.rnn(attended_obj.unsqueeze(0))
-        # print("rnn_output.shape", rnn_output.shape)
-
-        rnn_output = rnn_output.squeeze(0)
-        occluding_objects_output = self.fc_occluding_objects(rnn_output)
-        # print("occluding_objects_output.shape", occluding_objects_output.shape)
-        
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attended_obj)
-        attended_obj = occluding_objects_output.masked_fill_(padding_mask_expanded, torch.tensor(0.0).to(self.device))
-        # print("attended_obj:", attended_obj)
-
-        _, top_indices = torch.topk(attended_obj, k=self.args.sequence_length, dim=1)
-
-        return top_indices, attended_obj
-    
-    def forward(self, target_mask, object_masks):
-    # def forward(self, target_mask, object_masks, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
-        obj_features = self.preprocess_input(object_masks)
-        
-        target_feats = self.feat_extractor(target_mask)
-        target_feats = target_feats.reshape(target_feats.shape[0], target_feats.shape[1], -1)[:, :, 0]
-
-        B, N, C, = obj_features.shape
-
-        # top_indices, attn_scores = self.get_topk_attn_scores(obj_features, target_feats, object_masks.squeeze(2))
-        top_indices, attn_scores = self.causal_attention(target_feats, obj_features, object_masks.squeeze(2))
-
-        # self.visualize_attn(raw_target_mask, raw_object_masks, attn_scores)
-
-        ###### Keep overlapped objects #####
-        processed_objects = []
-        raw_objects = []
-        for i in range(B):
-            idx = top_indices[i] 
-            x = object_masks[i, idx] # x should be (4, 400, 400)
-            processed_objects.append(x)
-
-        # ################### THIS IS FOR VISUALIZATION ####################
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objects.append(raw_x)
-
-        # raw_objects = torch.stack(raw_objects)
-            
-        # # self.show_images(raw_objs, raw_object_masks, raw_target_mask, raw_scene_mask, optimal_nodes)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=B==1)
-
-        # ###############################################################
-            
-        processed_objects = torch.stack(processed_objects)
-        return Variable(processed_objects, requires_grad=True).to(self.device), attn_scores
-    
 class ObstacleHead(nn.Module):
-    def __init__(self, args, feat_extractor):
+    def __init__(self, args):
         super(ObstacleHead, self).__init__()
         self.args = args
-        self.feat_extractor = feat_extractor
         self.final_conv_units = 128
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        self.dim = 144
-        hidden_dim = self.args.num_patches * self.dim
-        self.projection = nn.Sequential(
-            nn.Linear((self.args.num_patches + 2) * self.dim * self.dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+        hidden_dim = 1024
+        dimen = hidden_dim//2
+        self.model = torchvision.models.resnet50(pretrained=True)
+        self.model.fc = nn.Linear(2048, hidden_dim)
+
+        self.attn = nn.Sequential(
+            # nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches)
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim//2),
+            nn.LayerNorm(hidden_dim//2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-    # def show_images(self, obj_masks, raw_object_masks, target_mask, scenes, optimal_nodes):
-    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
-        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
-        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
+        self.object_rel_fc = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, dimen),
+            nn.LayerNorm(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, dimen),
+            nn.LayerNorm(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen)
+        )
 
-        #save the top object
-        # Convert to uint8 and scale to [0, 255]
-        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
-        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+        self.W_t = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
+        )
 
-        for i in range(obj_masks.shape[0]):
-            if obj_masks.shape[0] == 1:
-                ax[i].imshow(scenes[i]) # this is because of the added gt images
-            else:
-                ax[i][0].imshow(scenes[i])
+        self.W_o = nn.Sequential(
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * dimen)
+        )
 
-            if obj_masks.shape[0] == 1:
-                ax[i+1].imshow(target_mask[i])
-            else:
-                ax[i][1].imshow(target_mask[i])
+    def compute_edge_features_single(self, boxes, masks, target_mask):
+        """
+        Compute pairwise spatial relationships between objects and the target object.
 
-            k = 2
-            for j in range(obj_masks.shape[1]):
-                obj_mask = obj_masks[i][j]
-                # print("obj_mask.shape", obj_mask.shape)
+        Args:
+            boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
+            masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
+            target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
 
-                if obj_masks.shape[0] == 1:
-                    ax[k].imshow(obj_mask)
-                else:
-                    ax[i][k].imshow(obj_mask)
-                k += 1
+        Returns:
+            edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
+            edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
+        """
+        device = boxes.device
+        num_objects = boxes.size(0)
 
+        # Compute pairwise object-target relationships
+        edges = []
+        edge_features = []
 
-        if optimal_nodes:
-            n = 0
-            for i in range(2, raw_object_masks.shape[0] + 2):
+        for i in range(num_objects):
+            # Compute spatial features between object i and the target object
+            obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
+            # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
 
-                gt_obj_masks = raw_object_masks[n]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape)
+            target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+            target_iou = self.calculate_iou(boxes[i], target_mask)  # IoU between object and target
 
-                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
+            # Compute edge features
+            edge_feat = torch.tensor([target_overlap, target_iou], device=device)
+            edge_features.append(edge_feat)
 
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
-                else:
-                    ax[i][0].imshow(scenes[n])
+            # Add edge index
+            edges.append([i, num_objects])  # Connect object node to a dummy target node
 
-                k = 1
-                for j in range(obj_masks.shape[1]):
-                    gt_obj_mask = gt_obj_masks[j]
-                    # print("obj_mask.shape", obj_mask.shape)
+        edge_features = torch.stack(edge_features, dim=0)
+        edges = torch.tensor(edges, dtype=torch.long, device=device)
 
-                    if gt_obj_masks.shape[0] == 1:
-                        ax[i][k].imshow(gt_obj_mask)
-                    else:
-                        ax[i][k].imshow(gt_obj_mask)
-                    k += 1
+        return edge_features, edges
 
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][k].imshow(target_mask[n])
-                else:
-                    ax[i][k].imshow(target_mask[n])
+    def calculate_iou(self, box, target_mask):
+        """
+        Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
 
-                n += 1
+        Args:
+            box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
+            target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
 
-        plt.show()
+        Returns:
+            iou (float): The Intersection over Union between the box and the target mask.
+        """
+        # Convert box to (x1, y1, x2, y2) format
+        # print("box.shape", box.shape)
+        x1, y1, x2, y2 = box
 
-    def preprocess_input(self, object_masks):
+        # Create a mask for the bounding box
+        box_mask = torch.zeros_like(target_mask)
+        box_mask[int(y1):int(y2), int(x1):int(x2)] = 1
+
+        # Calculate the intersection and union
+        intersection = torch.sum(box_mask * target_mask)
+        union = torch.sum(box_mask) + torch.sum(target_mask) - intersection
+
+        # Avoid division by zero
+        iou = intersection / (union + 1e-8)
+
+        return iou.item()
+
+    def preprocess_inputs(self, scene_mask, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
-        # print("object_masks.shape", object_masks.shape)
-        object_features = [] #torch.zeros(B, N, C, H, W).to(self.device)
 
+        # scene_mask = scene_mask.repeat(1, 3, 1, 1)
+        # scene_feats = self.model(scene_mask)
+        # scene_feats = scene_feats.view(B, 1, -1)
+
+        scene_feats = None
+
+        target_mask = target_mask.repeat(1, 3, 1, 1)
+        target_feats = self.model(target_mask)
+        target_feats = target_feats.view(B, 1, -1)
+
+        object_masks = object_masks.repeat(1, 1, 3, 1, 1)
+        object_masks = object_masks.view(-1, 3, H, W)
+        object_feats = self.model(object_masks)
+        object_feats = object_feats.view(B, N, -1)
+        # print(object_feats.shape)
+
+        return scene_feats, target_feats, object_feats
+
+    def compute_edge_features(self, bboxes, object_masks, target_mask):
+        B, N, C, H, W = object_masks.shape
+
+        edge_features = []
+        periphery_dists = []
         for i in range(B):
-            object_masks_ = object_masks[i].to(self.device)
+            edge_feats, _ = self.compute_edge_features_single(bboxes[i], object_masks[i], target_mask[i])
+            edge_features.append(edge_feats)
 
-            obj_features = []
-            for mask in object_masks_:
-                # print("mask.shape", mask.shape)
+            # periphery_dist = compute_objects_periphery_dist(object_masks[i])
+            # periphery_dists.append(periphery_dist)
 
-                mask = mask.unsqueeze(0).to(self.device)
-                obj_feat = self.feat_extractor(mask)
+        edge_features = torch.stack(edge_features).to(self.device)
+        # periphery_dists = torch.stack(periphery_dists).to(self.device)
+        # print("edge_features.shape", edge_features.shape)
 
-                # obj_feat = obj_feat.reshape(1, obj_feat.shape[1], -1)[:, :, 0]
-                obj_features.append(obj_feat)
+        return edge_features, periphery_dists
+    
+    def scaled_dot_product_attention(self, object_feats, target_feats, objects_rel):
+        B, N, D = object_feats.shape
 
-            obj_features = torch.cat(obj_features).unsqueeze(0)
-            object_features.append(obj_features)
+        target_feats = target_feats.reshape(B, -1)
+        query = self.W_t(target_feats).view(B, N, -1)
 
-        return torch.cat(object_features).to(self.device)
+        object_feats = object_feats.reshape(B, -1)
+        key = self.W_o(object_feats).view(B, N, -1)
 
-    def forward(self, scene_mask, target_mask, object_masks):
-    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-        object_feats = self.preprocess_input(object_masks)
-        target_feats = self.feat_extractor(target_mask).unsqueeze(1)
-        scene_feats = self.feat_extractor(scene_mask).unsqueeze(1)
+        value = objects_rel
 
-        x = torch.cat([target_feats, scene_feats, object_feats], dim=1)
-        # print(x.shape, x.reshape(x.shape[0], -1).shape)
-        attn_scores = self.projection(x.reshape(x.shape[0], -1))
+        # Compute attention scores
+        scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(key.size(-1))
+        weights = F.softmax(scores, dim=-1)
+
+        # Apply attention weights to the value
+        weighted_values = torch.matmul(weights, value)
+
+        return weighted_values
+    
+    def cross_attention(self, target_feats, object_feats):
+        B, N, D = object_feats.shape
+
+        target_feats = target_feats.reshape(B, -1)
+        query1 = key1 = value1 = self.W_t(target_feats).view(B, N, -1)
+
+        object_feats = object_feats.reshape(B, -1)
+        query2 = key2 = value2 = self.W_o(object_feats).view(B, N, -1)
+
+        attn_scores1 = torch.matmul(query1, key2.transpose(-2, -1)) / math.sqrt(key1.size(-1))
+        attn_scores2 = torch.matmul(query2, key1.transpose(-2, -1)) / math.sqrt(key2.size(-1))
+
+        attn_probs1 = F.softmax(attn_scores1, dim=-1)
+        attn_probs2 = F.softmax(attn_scores2, dim=-1)
+
+        attn_output1 = torch.matmul(attn_probs1, value2)
+        attn_output2 = torch.matmul(attn_probs2, value1)
+
+        output = attn_output1 + attn_output2
+        
+        return output
+
+    def spatial_rel(self, scene_mask, target_mask, object_masks, bboxes):
+        scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
+        B, N, C, H, W = object_masks.shape
+
+        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
+
+        object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
+        # print("object_rel_feats.shape", object_rel_feats.shape)
+
+        attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
+        # attn_output = self.cross_attention(target_feats, object_feats)
+        # print("attn_output.shape", attn_output.shape)
+
+        out = torch.cat([attn_output, object_rel_feats], dim=-1)
+        # print("out.shape", out.shape)
+
+        attn_scores = self.attn(out.reshape(B, -1))
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
-        attn_weights = torch.softmax(attn_scores, dim=1)
-        # print("attn_weights", attn_weights)
-        _, top_indices = torch.topk(attn_weights, k=self.args.sequence_length, dim=1)
+        _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
 
-        ###### Keep overlapped objects #####
-        processed_objects = []
+        # Sampling from the attention weights to get hard attention
+        sampled_attention_weights = torch.zeros_like(attn_scores)
+        for batch_idx in range(target_mask.shape[0]):
+            sampled_attention_weights[batch_idx, :] = F.gumbel_softmax(attn_scores[batch_idx, :], hard=True)
 
-        raw_objects = []
-        for i in range(target_mask.shape[0]):
-            idx = top_indices[i] 
-            x = object_masks[i, idx] # x should be (4, 400, 400)
-            processed_objects.append(x)
+        # Multiplying the encoder outputs with the hard attention weights
+        sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
+        # print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
+        context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
+        context = context.unsqueeze(1)
+
+        return context, attn_scores, top_indices
+    
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
+    def forward(self, scene_mask, target_mask, object_masks, bboxes):
+        selected_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
+        # raw_objects = []
+        # for i in range(target_mask.shape[0]):
+        #     idx = top_indices[i] 
+        #     x = object_masks[i, idx] # x should be (4, 400, 400)
+
         #     raw_x = raw_object_masks[i, idx]
         #     # print("raw_x.shape", raw_x.shape)
         #     raw_objects.append(raw_x)
 
         # raw_objects = torch.stack(raw_objects)
-
-        # # numpy_image = (raw_objects[0].numpy() * 255).astype(np.uint8)
-        # # cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
-            
         # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
-        # ###############################################################
-            
-        processed_objects = torch.stack(processed_objects)
-        processed_objects = processed_objects.unsqueeze(1) if self.args.sequence_length == 1 else processed_objects
-        return processed_objects, attn_weights
+        # ##################################################################
+
+        return selected_object, attn_scores
+   
+    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
+        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+        fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
+
+        #save the top object
+        # Convert to uint8 and scale to [0, 255]
+        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
+        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
+
+        for i in range(obj_masks.shape[0]):
+            if obj_masks.shape[0] == 1:
+                ax[i].imshow(scenes[i]) # this is because of the added gt images
+            else:
+                ax[i][0].imshow(scenes[i])
+
+            if obj_masks.shape[0] == 1:
+                ax[i+1].imshow(target_mask[i])
+            else:
+                ax[i][1].imshow(target_mask[i])
+
+            k = 2
+            for j in range(obj_masks.shape[1]):
+                obj_mask = obj_masks[i][j]
+                # print("obj_mask.shape", obj_mask.shape)
+
+                if obj_masks.shape[0] == 1:
+                    ax[k].imshow(obj_mask)
+                else:
+                    ax[i][k].imshow(obj_mask)
+                k += 1
+
+
+        if optimal_nodes:
+            n = 0
+            for i in range(2, raw_object_masks.shape[0] + 2):
+
+                gt_obj_masks = raw_object_masks[n]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape)
+
+                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
+                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
+                else:
+                    ax[i][0].imshow(scenes[n])
+
+                k = 1
+                for j in range(obj_masks.shape[1]):
+                    gt_obj_mask = gt_obj_masks[j]
+                    # print("obj_mask.shape", obj_mask.shape)
+
+                    if gt_obj_masks.shape[0] == 1:
+                        ax[i][k].imshow(gt_obj_mask)
+                    else:
+                        ax[i][k].imshow(gt_obj_mask)
+                    k += 1
+
+                if gt_obj_masks.shape[0] == 1:
+                    ax[i][k].imshow(target_mask[n])
+                else:
+                    ax[i][k].imshow(target_mask[n])
+
+                n += 1
+
+        plt.show()
 
 class GraspHead(nn.Module):
     def __init__(self, args, feat_extractor):
@@ -507,8 +458,8 @@ class GraspHead(nn.Module):
             return out_prob
         
         else:
-            thetas = np.radians(specific_rotation * (360 / self.nr_rotations)).unsqueeze(0)
-            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3))
+            thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
+            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 # Compute sample grid for rotation before neural network
                 theta = thetas[i]
@@ -520,7 +471,7 @@ class GraspHead(nn.Module):
 
             flow_grid_before = F.affine_grid(Variable(affine_before, requires_grad=False).to(self.device),
                                              depth_heightmap.size(), align_corners=True)
-
+            
             # Rotate image clockwise_
             rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
                                          flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
@@ -552,32 +503,27 @@ class GraspHead(nn.Module):
             
             return out_prob
 
-    def forward(self, depth_heightmap, processed_objects, specific_rotation=-1, is_volatile=[]):
-        B, N, C, H, W = processed_objects.shape
+    def forward(self, depth_heightmap, selected_object, specific_rotation=-1, is_volatile=[]):
+        selected_object = selected_object.squeeze(1)
+        # print("selected_object.shape", selected_object.shape)
 
         if is_volatile:
-            out_probs = torch.zeros((N, self.nr_rotations, C, H, W)).to(self.device)
-            for n, target_mask in enumerate(processed_objects[0]):
-                out_prob = self.get_predictions(depth_heightmap, target_mask.unsqueeze(0), specific_rotation, is_volatile)
-                out_probs[n] = out_prob
+            out_prob = self.get_predictions(depth_heightmap, selected_object, specific_rotation, is_volatile)
         
+            return out_prob
         else:
-            out_probs = torch.zeros((B, N, C, H, W)).to(self.device)
-            for batch in range(B):
-                for n, target_mask in enumerate(processed_objects[batch]):
-                    out_prob = self.get_predictions(depth_heightmap[batch].unsqueeze(0), target_mask.unsqueeze(0), specific_rotation[n][batch], is_volatile)
-                    out_probs[batch][n] = out_prob
+            specific_rotation = specific_rotation[0]
+            out_prob = self.get_predictions(depth_heightmap, selected_object, specific_rotation, is_volatile)
 
             # Image-wide softmax
-            out_probs = out_probs.view(B * N, H * W)
-            output_shape = out_probs.shape
-            out_probs = out_probs.view(output_shape[0], -1)
-            out_probs = torch.softmax(out_probs, dim=1)
-            out_probs = out_probs.view(B, N, C, H, W).to(dtype=torch.float)
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
 
-        # print("out_prob.shape", out_probs.shape)
-
-        return out_probs
+            # print("out_prob.shape", out_prob.shape)
+    
+            return out_prob.unsqueeze(1)
 
 
 class ResFCN(nn.Module):
@@ -600,7 +546,7 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.obstacle_head = ObstacleHead(args, self.predict) 
+        self.obstacle_head = ObstacleHead(args) 
         self.grasp_head = GraspHead(args, self.predict)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
@@ -656,13 +602,13 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, gt_object=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
         
-        processed_objects, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks)
-        # processed_objects, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
-        
-        out_probs = self.grasp_head(depth_heightmap, processed_objects, specific_rotation, is_volatile)
+        # selected_object, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
+        selected_object, scores = self.obstacle_head(depth_heightmap, target_mask, object_masks, bboxes)
+
+        out_probs = self.grasp_head(depth_heightmap, selected_object, specific_rotation, is_volatile)
 
         return scores, out_probs
     
