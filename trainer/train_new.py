@@ -2,11 +2,11 @@ import os
 import random
 import copy
 # from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
-# from policy.models_obstacle_vit import Regressor, ResFCN
+from policy.models_obstacle_vit import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
@@ -53,7 +53,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net(args):
+def train_fcn_net0(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -209,7 +209,7 @@ def train_fcn_net(args):
     writer.close()
 
 # models_obstacle
-def train_fcn_net1(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -227,7 +227,7 @@ def train_fcn_net1(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:35000]
+    transition_dirs = transition_dirs[:20000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
