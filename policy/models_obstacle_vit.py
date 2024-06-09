@@ -115,9 +115,9 @@ class ObstacleHead(nn.Module):
 
         return weighted_values
     
-    # def forward(self, scene_masks, target_masks, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-    def forward(self, scene_masks, target_masks, object_masks):
-        scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_masks, target_masks, object_masks)
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+    def forward(self, scene_mask, target_mask, object_masks):
+        scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         joint_feats = self.scaled_dot_product_attention(object_feats, target_feats)
 
         input = torch.cat([scene_feats, joint_feats], dim=1)
