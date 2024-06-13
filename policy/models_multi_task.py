@@ -305,13 +305,16 @@ class ObstacleHead(nn.Module):
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
-        raw_context = (sampled_attention_weights * raw_object_masks.unsqueeze(2)).sum(dim=1)
-        raw_context = raw_context.squeeze(1)
+        if raw_object_masks:
+            raw_context = (sampled_attention_weights * raw_object_masks.unsqueeze(2)).sum(dim=1)
+            raw_context = raw_context.squeeze(1)
+        else:
+            raw_context = None
 
         return context, raw_context, attn_scores, top_indices
     
     # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
-    def forward(self, scene_mask, target_mask, object_masks, bboxes):
+    def forward(self, scene_mask, target_mask, object_masks, raw_object_masks=None, bboxes=None):
         selected_object, raw_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
