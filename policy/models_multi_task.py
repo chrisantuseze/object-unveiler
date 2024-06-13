@@ -267,7 +267,7 @@ class ObstacleHead(nn.Module):
         
         return output
 
-    def spatial_rel(self, scene_mask, target_mask, object_masks, bboxes):
+    def spatial_rel(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         B, N, C, H, W = object_masks.shape
 
@@ -292,7 +292,7 @@ class ObstacleHead(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top indices", top_indices)
+        print("top indices", top_indices)
 
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -305,36 +305,26 @@ class ObstacleHead(nn.Module):
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
-        return context, attn_scores, top_indices
+        raw_context = (sampled_attention_weights * raw_object_masks.unsqueeze(2)).sum(dim=1)
+        raw_context = raw_context.squeeze(1)
+
+        return context, raw_context, attn_scores, top_indices
     
     # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
     def forward(self, scene_mask, target_mask, object_masks, bboxes):
-        selected_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, bboxes)
+        selected_object, raw_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
-        # raw_objects = []
-        # for i in range(target_mask.shape[0]):
-        #     idx = top_indices[i] 
-        #     x = object_masks[i, idx] # x should be (4, 400, 400)
-
-        #     raw_x = raw_object_masks[i, idx]
-        #     # print("raw_x.shape", raw_x.shape)
-        #     raw_objects.append(raw_x)
+        # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
 
         # raw_objects = torch.stack(raw_objects)
-        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask, optimal_nodes=None, eval=True)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask)
         # ##################################################################
 
         return selected_object, attn_scores
    
-    def show_images(self, obj_masks, target_mask, scenes, optimal_nodes=None, eval=False):
-        # fig, ax = plt.subplots(obj_masks.shape[0] * 2, obj_masks.shape[1] + 2)
+    def show_images(self, obj_masks, target_mask, scenes):
         fig, ax = plt.subplots(obj_masks.shape[0], obj_masks.shape[1] + 2)
-
-        #save the top object
-        # Convert to uint8 and scale to [0, 255]
-        numpy_image = (obj_masks[0][0].numpy() * 255).astype(np.uint8)
-        cv2.imwrite(os.path.join(TEST_DIR, "best_obstacle.png"), numpy_image)
 
         for i in range(obj_masks.shape[0]):
             if obj_masks.shape[0] == 1:
@@ -357,40 +347,6 @@ class ObstacleHead(nn.Module):
                 else:
                     ax[i][k].imshow(obj_mask)
                 k += 1
-
-
-        if optimal_nodes:
-            n = 0
-            for i in range(2, raw_object_masks.shape[0] + 2):
-
-                gt_obj_masks = raw_object_masks[n]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape)
-
-                gt_obj_masks = gt_obj_masks[optimal_nodes[n], :, :]
-                # print("gt_obj_masks.shape", gt_obj_masks.shape, "\n")
-
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][0].imshow(scenes[n]) # this is because of the added gt images
-                else:
-                    ax[i][0].imshow(scenes[n])
-
-                k = 1
-                for j in range(obj_masks.shape[1]):
-                    gt_obj_mask = gt_obj_masks[j]
-                    # print("obj_mask.shape", obj_mask.shape)
-
-                    if gt_obj_masks.shape[0] == 1:
-                        ax[i][k].imshow(gt_obj_mask)
-                    else:
-                        ax[i][k].imshow(gt_obj_mask)
-                    k += 1
-
-                if gt_obj_masks.shape[0] == 1:
-                    ax[i][k].imshow(target_mask[n])
-                else:
-                    ax[i][k].imshow(target_mask[n])
-
-                n += 1
 
         plt.show()
 
