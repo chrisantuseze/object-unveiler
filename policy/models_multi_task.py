@@ -305,7 +305,7 @@ class ObstacleHead(nn.Module):
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
-        if raw_object_masks:
+        if raw_object_masks is not None:
             raw_context = (sampled_attention_weights * raw_object_masks.unsqueeze(2)).sum(dim=1)
             raw_context = raw_context.squeeze(1)
         else:

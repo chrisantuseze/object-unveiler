@@ -43,8 +43,8 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     # print("obstacle_loss:", obstacle_loss.shape, torch.sum(obstacle_loss), " grasp_loss:", grasp_loss.shape, torch.sum(grasp_loss))
     # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
-    try:#0.25
-        w = 1 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    try:#0.25, 1 - was favoring grasping more than obstacle pred
+        w = 0.5 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     except:
         w = 0.0025
 
@@ -98,16 +98,19 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.99))
 
+    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("number of parameters: %.2fM" % (n_parameters/1e6,))
+
     obstacle_criterion = nn.CrossEntropyLoss()
     grasp_criterion = nn.BCELoss(reduction='none')
-
+ 
     lowest_loss = float('inf')
     global_step = 0 #{'train': 0, 'val': 0}
     for epoch in range(args.epochs):
         
         model.train()
         for step, batch in enumerate(data_loader_train):
-            x = batch[0].to(args.device)
+            x = batch[0].to(args.device) 
             target_mask = batch[1].to(args.device, dtype=torch.float32)
             object_masks = batch[2].to(args.device)
             scene_masks = batch[3].to(args.device)

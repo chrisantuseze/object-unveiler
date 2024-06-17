@@ -1,5 +1,8 @@
 Unveiling the Unseen: Smart Grasping through Occlusion-Aware Semantic Segmentation
 
+conda create -n unveiler python=3.9.12
+conda activate unveiler
+
 - Aperture is the distance between the two opposing fingers of the hand. So basically, how open is the hand?
 
 <!-- python3 main.py --mode 'eval' --fcn_model 'downloads/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
