@@ -1,53 +1,15 @@
-# Python:
-__pycache__
-*.egg-info
-
-# IDEs
-*.idea*
-
-# venv
-venv/
-
-# pkl files
-*.pkl
-
-#*.urdf
-
-*.pt
-
-*.log
-*.txt
-
-scripts/
-models/
-#assets/
-logs/
-save/
-baselines/
-lib/
-bin/
-share/
-downloads/
-pyvenv.cfg
-.DS_Store
-runs/
-
-
-
-################# FOR ACT ############################
-
-act/bin
-act/logs
-act/wandb
-act/outputs
-act/data
-act/data_local
+bin
+logs
+wandb
+outputs
+data
+data_local
 .vscode
 _wandb
 
 **/.DS_Store
 
-act/fuse.cfg
+fuse.cfg
 
 *.ai
 
@@ -176,7 +138,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-
-*.png
-*ckpt
