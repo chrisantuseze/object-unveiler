@@ -1,21 +1,21 @@
 # opencv-python==4.5.1.48
-torch
-torchvision
-# pybullet==3.0.8
-pybullet
-open3d
-numpy
-matplotlib
-tabulate
-#imutils==0.5.3
-imutils
-# pycocotools==2.0.2
-pycocotools
-# termcolor==1.1.0
-termcolor
-Pillow
-scikit-image
-tensorboard
+# torch
+# torchvision
+# # pybullet==3.0.8
+# pybullet
+# open3d
+# numpy
+# matplotlib
+# tabulate
+# #imutils==0.5.3
+# imutils
+# # pycocotools==2.0.2
+# pycocotools
+# # termcolor==1.1.0
+# termcolor
+# Pillow
+# scikit-image
+# tensorboard
 
 #   - python=3.9
 #   - pip=23.0.1
