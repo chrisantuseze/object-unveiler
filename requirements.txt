@@ -1,21 +1,21 @@
-# opencv-python==4.5.1.48
-# torch
-# torchvision
-# # pybullet==3.0.8
-# pybullet
-# open3d
-# numpy
-# matplotlib
-# tabulate
-# #imutils==0.5.3
-# imutils
-# # pycocotools==2.0.2
-# pycocotools
-# # termcolor==1.1.0
-# termcolor
-# Pillow
-# scikit-image
-# tensorboard
+opencv-python==4.5.1.48
+torch
+torchvision
+# pybullet==3.0.8
+pybullet
+open3d
+numpy
+matplotlib
+tabulate
+#imutils==0.5.3
+imutils
+# pycocotools==2.0.2
+pycocotools
+# termcolor==1.1.0
+termcolor
+Pillow
+scikit-image
+tensorboard
 
 #   - python=3.9
 #   - pip=23.0.1
@@ -26,9 +26,9 @@ pyquaternion==0.9.9
 pyyaml==6.0
 #   - rospkg=1.5.0
 pexpect==4.8.0
-mujoco==2.3.3
+mujoco==2.3.7
 dm_control==1.0.9
-# py-opencv==4.7.0
+#   - py-opencv==4.7.0
 #   - matplotlib=3.7.1
 einops==0.6.0
 packaging==23.0
