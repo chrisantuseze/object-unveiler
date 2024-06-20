@@ -79,7 +79,7 @@ class Policy:
         dim_feedforward = 3200
         camera_names = ['top']
 
-        ckpt_dir = "ckpt"
+        ckpt_dir = "act/ckpt"
         ckpt_name = f'policy_epoch_100_seed_0.ckpt'
         state_dim = 1
 
