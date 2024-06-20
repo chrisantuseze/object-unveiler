@@ -1,11 +1,11 @@
 import os
 import pickle
 # from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
+from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
-from policy.models_obstacle_vit import Regressor, ResFCN
+# from policy.models_obstacle_vit import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
 from act.policy import ACTPolicy
 from policy.object_segmenter import ObjectSegmenter
@@ -80,7 +80,7 @@ class Policy:
         camera_names = ['top']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_100_seed_0.ckpt'
+        ckpt_name = f'policy_epoch_1000_seed_0.ckpt'
         state_dim = 1
 
         policy_config = {

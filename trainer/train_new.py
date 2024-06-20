@@ -43,8 +43,8 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     # print("obstacle_loss:", obstacle_loss.shape, torch.sum(obstacle_loss), " grasp_loss:", grasp_loss.shape, torch.sum(grasp_loss))
     # obstacle_loss = obstacle_loss.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
 
-    try:#0.25, 1 - was favoring grasping more than obstacle pred
-        w = 0.5 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
+    try:#0.25, 1 - was favoring grasping more than obstacle pred. 0.5 favored obstacle pred more
+        w = 0.8 * (torch.sum(obstacle_loss).detach().cpu().numpy()/torch.sum(grasp_loss).detach().cpu().numpy())
     except:
         w = 0.0025
 
