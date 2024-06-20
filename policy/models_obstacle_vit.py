@@ -115,8 +115,8 @@ class ObstacleHead(nn.Module):
 
         return weighted_values
     
-    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
-    def forward(self, scene_mask, target_mask, object_masks):
+    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks):
+    # def forward(self, scene_mask, target_mask, object_masks):
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
         joint_feats = self.scaled_dot_product_attention(object_feats, target_feats)
 
@@ -190,17 +190,17 @@ class ResFCN(nn.Module):
 
         self.obstacle_head = ObstacleHead(args) 
 
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
 
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-        out = self.obstacle_head(scene_masks, target_mask, object_masks)
-        return out
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+        # out = self.obstacle_head(scene_masks, target_mask, object_masks)
+        # return out
 
-        # out = self.obstacle_head(scene_masks, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
-        # B, N, C, H, W = object_masks.shape
-        # out_probs = torch.rand(16, C, H, W)
-        # out_probs = Variable(out_probs, requires_grad=True).to(self.device)
-        # return out, out_probs
+        out = self.obstacle_head(scene_masks, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks)
+        B, N, C, H, W = object_masks.shape
+        out_probs = torch.rand(16, C, H, W)
+        out_probs = Variable(out_probs, requires_grad=True).to(self.device)
+        return out, out_probs
     
 
 

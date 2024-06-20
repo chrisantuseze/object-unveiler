@@ -1,12 +1,13 @@
 import os
 import pickle
 # from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
-# from policy.models_obstacle_vit import Regressor, ResFCN
+from policy.models_obstacle_vit import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
+from act.policy import ACTPolicy
 from policy.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -55,6 +56,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
+        self.policy, self.stats = self.make_act_policy()
+
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
         demo_save_dir = 'save/ppg-dataset'
@@ -62,6 +65,72 @@ class Policy:
 
     def seed(self, seed):
         self.rng.seed(seed)
+
+    def make_act_policy(self):
+        lr_backbone = 1e-5
+        backbone = 'resnet18'
+        enc_layers = 4
+        dec_layers = 7
+        nheads = 8
+        lr = 1e-5
+        chunk_size = 1
+        kl_weight = 10
+        hidden_dim = 512
+        dim_feedforward = 3200
+        camera_names = ['top']
+
+        ckpt_dir = "ckpt"
+        ckpt_name = f'policy_epoch_100_seed_0.ckpt'
+        state_dim = 1
+
+        policy_config = {
+            'lr': lr,
+            'num_queries': chunk_size, #@Chris: ensure the chunk size is 3 and not 100
+            'kl_weight': kl_weight,
+            'hidden_dim': hidden_dim,
+            'dim_feedforward': dim_feedforward,
+            'lr_backbone': lr_backbone,
+            'backbone': backbone,
+            'enc_layers': enc_layers,
+            'dec_layers': dec_layers,
+            'nheads': nheads,
+            'camera_names': camera_names,
+        }
+
+        config = {
+            'num_epochs': 2000,
+            'ckpt_dir': ckpt_dir,
+            'episode_len': 50,
+            'state_dim': state_dim,
+            'lr': lr,
+            'policy_class': "ACT",
+            'onscreen_render': True,
+            'policy_config': policy_config,
+            'task_name': 'sim_transfer_cube_scripted',
+            'seed': 0,
+            'temporal_agg': True,
+            'camera_names': camera_names,
+            'real_robot': False
+
+            # for unveiler
+            ,'split_ratio': 0.8
+        }
+
+        
+        policy = ACTPolicy(policy_config)
+
+        # load policy and stats
+        ckpt_path = os.path.join(ckpt_dir, ckpt_name)
+        loading_status = policy.load_state_dict(torch.load(ckpt_path))
+
+        policy.to(self.device)
+        policy.eval()
+        print(f'Loaded: {ckpt_path}')
+        stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
+        with open(stats_path, 'rb') as f:
+            stats = pickle.load(f)
+
+        return policy, stats
 
     def is_state_init_valid(self, obs):
         """
@@ -364,6 +433,45 @@ class Policy:
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
+    
+    def exploit_act(self, state, color_image, target_mask):
+        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        processed_target = general_utils.preprocess_target(target_mask)#, state)
+        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
+
+        print("x.shape", x.shape, "processed_target.shape", processed_target.shape)
+
+        image_data = torch.cat([x, processed_target], dim=0)
+        print("image_data.shape", image_data.shape)
+        
+        action = self.policy(image_data).detach().cpu().numpy()[0][0]
+        print(action)
+
+        post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
+        action = post_process(action)
+
+        p1 = np.array([action[3], action[2]])
+        theta = action[0] * 2 * np.pi/self.rotations
+
+        # find optimal aperture
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
     
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation
