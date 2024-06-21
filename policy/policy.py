@@ -7,7 +7,7 @@ from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
 # from policy.models_obstacle_vit import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
-# from act.policy import ACTPolicy
+from act.policy import ACTPolicy
 from policy.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -56,7 +56,7 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = None, None #self.make_act_policy()
+        self.policy, self.stats = self.make_act_policy()
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -80,7 +80,7 @@ class Policy:
         camera_names = ['top']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_1000_seed_0.ckpt'
+        ckpt_name = f'policy_epoch_1100_seed_0.ckpt'
         state_dim = 1
 
         policy_config = {
