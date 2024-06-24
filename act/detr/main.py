@@ -4,7 +4,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from act.detr.models import build_ACT_model, build_CNNMLP_model
+
+from .models import build_ACT_model, build_CNNMLP_model
 
 import IPython
 e = IPython.embed
@@ -69,8 +70,15 @@ def get_args_parser():
     # args for eval_agent
     parser.add_argument('--fcn_model', default='', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
-    # parser.add_argument('--seed', default=16, type=int, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')
+
+    # args for data collection
+    parser.add_argument('--n_samples', default=10000, type=int, help='')
+    parser.add_argument('--singulation_condition', action='store_true', default=False, help='')
+
+    # not needed for this operation, but if its not here, it causes problem in policy.py
+    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--num_patches', default=10, type=int, help='')
 
     return parser
 

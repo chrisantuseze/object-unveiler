@@ -12,7 +12,6 @@ import env.env_components as env_components
 import env.cameras as cameras
 import utils.logger as logging
 
-MOUNT_URDF_PATH = 'mount.urdf'
 UR5_URDF_PATH = 'ur5e_bhand.urdf'
 UR5_WORKSPACE_URDF_PATH = 'table/table.urdf'
 PLANE_URDF_PATH = "plane/plane.urdf"
@@ -80,6 +79,7 @@ class Environment:
         p.setTimeStep(1.0 / hz)
         p.setGravity(0, 0, -9.8)
         p.setPhysicsEngineParameter(numSolverIterations=10)
+        p.setRealTimeSimulation(0)  # we want to be faster than real time : #@Chris
 
 
         self.simulation = Simulation(self.objects)

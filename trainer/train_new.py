@@ -1,8 +1,8 @@
 import os
 import random
 import copy
-# from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
@@ -53,7 +53,7 @@ def multi_task_loss(epoch, grasp_criterion, obstacle_criterion, obstacle_pred, g
     return torch.sum(total_loss)
 
 # models_multi_task
-def train_fcn_net(args):
+def train_fcn_net0(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -364,7 +364,7 @@ def train_fcn_net1(args):
     writer.close()
 
 # models_attn
-def train_fcn_net2(args):
+def train_fcn_net(args):
     writer = SummaryWriter()
     
     save_path = 'save/fcn'
@@ -415,7 +415,7 @@ def train_fcn_net2(args):
         
         model.train()
         for step, batch in enumerate(data_loader_train):
-            x = batch[0].to(args.device)
+            x = batch[0].to(args.device) 
             target_mask = batch[1].to(args.device, dtype=torch.float32)
             object_masks = batch[2].to(args.device)
             scene_masks = batch[3].to(args.device)
@@ -461,7 +461,7 @@ def train_fcn_net2(args):
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                x = batch[0].to(args.device)
+                x = batch[0].to(args.device) 
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
                 object_masks = batch[2].to(args.device)
                 scene_masks = batch[3].to(args.device)
