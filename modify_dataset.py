@@ -9,7 +9,7 @@ import torch
 from skimage import transform
 import matplotlib.pyplot as plt
 
-from policy.object_segmenter import ObjectSegmenter
+from mask_rg.object_segmenter import ObjectSegmenter
 from trainer.memory import ReplayBuffer
 import utils.logger as logging
 import utils.general_utils as general_utils
@@ -19,46 +19,7 @@ import policy.grasping2 as grasping2
 
 dataset_dir = 'save/pc-ou-dataset'
 
-def modify_episode1(memory: ReplayBuffer, episode_dir, index):
-    try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
-    except Exception as e:
-        logging.info(e, "- Failed episode:", episode_dir)
-
-    episode_data_list = []
-    for data in episode_data:
-        obs = data['obs']
-        segmenter = ObjectSegmenter()
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], plot=True)
-
-        new_masks = []
-        for mask in processed_masks:
-            new_masks.append(general_utils.resize_mask(transform, mask))
-
-        _, edges = grasping.build_graph(raw_masks)
-        optimal_nodes = []
-        if len(edges) > 0:
-            target_id = grasping.get_target_id(data['target_mask'], processed_masks)
-            optimal_nodes = grasping.get_optimal_target_path(edges, target_id)
-    
-        transition = {
-            'color_obs': obs['color'][1],
-            'depth_obs': obs['depth'][1],
-            'state': data['state'], 
-            'target_mask': general_utils.resize_mask(transform, data['target_mask']), 
-            'obstacle_mask': general_utils.resize_mask(transform, data['obstacle_mask']),
-            'scene_mask': general_utils.resize_mask(transform, pred_mask),
-            'object_masks': new_masks,
-            'action': data['action'], 
-            'label': data['label'],
-            'optimal_nodes': optimal_nodes
-        }
-        episode_data_list.append(transition)
-
-    memory.store_episode(episode_data_list)
-    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
-
-def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
+def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -69,7 +30,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
         heightmap = data['state']
         object_masks = data['object_masks']
 
-        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], plot=True, bbox=True)
+        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
 
         new_masks = []
         masks = []
@@ -100,13 +61,14 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
+            'joints_pos': data['joints_pos']
         }
         episode_data_list.append(transition)
 
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
-def modify_episode3(segmenter: ObjectSegmenter, episode_dir, index):
+def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -117,7 +79,7 @@ def modify_episode3(segmenter: ObjectSegmenter, episode_dir, index):
         heightmap = data['state']
         object_masks = data['object_masks']
 
-        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], plot=True, bbox=True)
+        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
 
         new_masks = []
         masks = []
@@ -230,7 +192,7 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode2(segmenter, episode_dir, i)
+        modify_episode1(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

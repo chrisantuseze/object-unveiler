@@ -8,13 +8,14 @@ import cv2
 import torch
 from skimage import transform
 
-from policy.object_segmenter import ObjectSegmenter
+from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
+import policy.grasping3 as grasping3
 from utils.constants import *
 
 def collect_episodic_dataset(args, params):
@@ -45,7 +46,7 @@ def collect_episodic_dataset(args, params):
             obs = env.reset()
 
         id = 1
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
         cv2.imwrite(os.path.join(TRAIN_DIR, "initial_scene.png"), pred_mask)
 
         # get a randomly picked target mask from the segmented image
@@ -119,7 +120,8 @@ def collect_episodic_dataset(args, params):
                     'scene_mask': general_utils.resize_mask(transform, pred_mask),
                     'object_masks': new_masks,
                     'action': action, 
-                    'label': grasp_info['stable']
+                    'label': grasp_info['stable'],
+                    'joints_pos': obs['joints_pos']
                 }
                 episode_data_list.append(transition)
 
@@ -131,7 +133,7 @@ def collect_episodic_dataset(args, params):
 
             obs = copy.deepcopy(next_obs)
 
-            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR, plot=True)
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
             target_id, target_mask = grasping.find_target(processed_masks, target_mask)
             if target_id == -1:
                 print("Target is no longer available in the scene.")

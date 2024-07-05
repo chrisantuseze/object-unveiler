@@ -1,6 +1,6 @@
 import torch
 import torchvision
-from vision.segmentation_dataset import SegmentationDataset
+from mask_rg.segmentation_dataset import SegmentationDataset
 import utils.log_utils as log_utils
 import utils.torch_utils as torch_utils
 import datetime
@@ -9,9 +9,9 @@ import time
 import os
 import numpy as np
 
-from vision.coco_utils import get_coco_api_from_dataset
-from vision.coco_eval import CocoEvaluator
-import vision.transforms as T
+from mask_rg.coco_utils import get_coco_api_from_dataset
+from mask_rg.coco_eval import CocoEvaluator
+import mask_rg.transforms as T
 import math
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor

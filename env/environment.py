@@ -40,7 +40,8 @@ class Environment:
         self.pxl_size = params['env']['pixel_size']
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
-        self.nr_objects = [6, 9] #[5, 8]
+        # self.nr_objects = [11, 15] #[5, 8]
+        self.nr_objects = [6, 9]
 
 
         # Setup cameras.
@@ -135,7 +136,7 @@ class Environment:
         return self.get_observation()
 
     def get_observation(self):
-        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': []}
+        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'joints_pos': []}
 
         for cam in self.agent_cams:
             color, depth, seg = cam.get_data() 
@@ -166,7 +167,7 @@ class Environment:
 
         # set finger configuration
         theta = action['aperture']
-        self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
+        joints_pos = self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
 
         # move to the pre-grasp position
         is_in_contact = self.bhand.move(action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
@@ -235,7 +236,10 @@ class Environment:
 
         self.remove_flat_objs()
 
-        return self.get_observation(), {'collision': is_in_contact,
+        obs = self.get_observation()
+        obs['joints_pos'] = joints_pos
+
+        return obs, {'collision': is_in_contact,
                                 'stable': grasp_label,
                                 'num_contacts': num_contacts}
 

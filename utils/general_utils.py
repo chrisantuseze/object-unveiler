@@ -209,6 +209,7 @@ def get_target_mask(processed_masks, obs, rng):
     id = 0
     if len(processed_masks) > 1:
         # id = rng.randint(0, len(processed_masks) - 1)
+        # id = grasping.find_topmost_right_object(processed_masks)
         id = grasping.find_central_object(processed_masks)
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:

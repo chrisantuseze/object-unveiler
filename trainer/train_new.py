@@ -381,7 +381,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:10000]
+    # transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -411,6 +411,7 @@ def train_fcn_net(args):
     criterion = nn.BCELoss(reduction='none')
 
     global_step = 0 #{'train': 0, 'val': 0}
+    lowest_loss = float('inf')
     for epoch in range(args.epochs):
         
         model.train()
@@ -501,7 +502,8 @@ def train_fcn_net(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if epoch % 10 == 0:
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
             torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))

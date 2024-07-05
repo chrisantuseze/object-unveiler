@@ -8,7 +8,7 @@ import cv2
 from scipy import ndimage
 
 from env.environment import Environment
-from policy.object_segmenter import ObjectSegmenter
+from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -31,9 +31,12 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
                     'attempts': 0,
                     'collisions': 0,
                     'objects_removed': 0,
-                    'objects_in_scene': len(obs['full_state'])}
+                    'objects_in_scene': len(obs['full_state']),
+                    'clutter_score': 0.0,
+                    'singulation_score': 0.0,
+                }
     
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, plot=True)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -85,7 +88,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
         if len(processed_masks) == n_prev_masks:
             count += 1
 
@@ -103,6 +106,15 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
 
             print('------------------------------------------')
             break
+
+        ############# Calculating scores ##########
+        clutter_score = grasping.measure_clutter_segmentation(processed_masks)
+        print("clutter_score:", clutter_score)
+        episode_data['clutter_score'] += clutter_score
+
+        singulation_score = grasping.measure_singulation(target_id, processed_masks)
+        print("singulation_score:", singulation_score)
+        episode_data['singulation_score'] += singulation_score
 
         n_prev_masks = len(processed_masks)
 
@@ -177,6 +189,7 @@ def eval_agent(args):
 
     eval_data = []
     sr_n, sr_1, attempts, objects_removed = 0, 0, 0, 0
+    clutter_score, singulation_score = 0.0, 0.0
 
     success_count = 0
     grasping_action_count = 0
@@ -191,16 +204,21 @@ def eval_agent(args):
         sr_1 += episode_data['sr-1']
         sr_n += episode_data['sr-n']
         attempts += episode_data['attempts']
+        clutter_score += episode_data['clutter_score']
+        singulation_score += episode_data['singulation_score']
+
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])
 
         logging.info(f">>>>>>>>> {success_count}/{i+1} >>>>>>>>>>>>>")
 
         if i % 5 == 0:
-            logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
-                                                                               sr_n / attempts,
-                                                                               objects_removed / len(eval_data)))
+            # logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
+            #                                                                    sr_n / attempts,
+            #                                                                    objects_removed / len(eval_data)))
+            logging.info('Episode: {}, Clutter Score:{}, Singulation Score: {}'.format(i, clutter_score, singulation_score))
 
-    logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
-                                                          sr_n / attempts,
-                                                          objects_removed / len(eval_data)))
+    # logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
+    #                                                       sr_n / attempts,
+    #                                                       objects_removed / len(eval_data)))
+    logging.info('Avg Clutter Score:{}, Avg Singulation Score: {}'.format(clutter_score / attempts, singulation_score / attempts))
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

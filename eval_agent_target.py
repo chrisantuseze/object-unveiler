@@ -8,7 +8,7 @@ import cv2
 from scipy import ndimage
 
 from env.environment import Environment
-from policy.object_segmenter import ObjectSegmenter
+from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -34,7 +34,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
                     'objects_in_scene': len(obs['full_state'])}
     
     id = 1
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -97,7 +97,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR)
         if len(processed_masks) == n_prev_masks:
             count += 1
 
@@ -139,7 +139,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
                     'objects_in_scene': len(obs['full_state'])}
     
     id = 1
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -188,7 +188,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR, plot=True)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TEST_EPISODES_DIR)
         if len(processed_masks) == n_prev_masks:
             count += 1
 

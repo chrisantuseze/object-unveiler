@@ -227,9 +227,13 @@ class FloatingBHand:
         for i in self.indices:
             current_pos.append(p.getJointState(0, i)[0])
 
+        # print("Current joint pos:", current_pos) #@Chris
+
         hand_pos = []
         for i in self.joint_ids:
             hand_pos.append(p.getJointState(0, i)[0])
+
+        # print("Hand mount joint pos:", hand_pos) #@Chris
 
         final = [final_joint_values[0], final_joint_values[0], final_joint_values[1],
                  final_joint_values[2], final_joint_values[3], final_joint_values[1]/3,
@@ -262,6 +266,8 @@ class FloatingBHand:
             t += dt
             self.simulation.step()
             time.sleep(dt)
+
+        return [current_pos, hand_pos] #@Chris
 
     def step_constraints(self):
         current_pos = []

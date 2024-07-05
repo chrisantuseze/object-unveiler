@@ -1,14 +1,14 @@
 import os
 import pickle
-# from policy.models_attn2 import Regressor, ResFCN
-from policy.models_multi_task import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+# from policy.models_multi_task import Regressor, ResFCN
 # from policy.models_obstacle import Regressor, ResFCN
 # from policy.models_obstacle_attn import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
 # from policy.models_obstacle_vit import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
 # from act.policy import ACTPolicy
-from policy.object_segmenter import ObjectSegmenter
+from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -357,7 +357,7 @@ class Policy:
         return actions
     
     def get_inputs(self, state, color_image, target_mask):
-        processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, plot=True, bbox=True)
+        processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
         # print("processed_masks.shape", processed_masks[0].shape)
         # print("pred_mask.shape", pred_mask.shape)
 

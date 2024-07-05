@@ -3,8 +3,9 @@ import numpy as np
 import cv2
 import os
 from torchvision.transforms import functional as TF
+import numpy as np
 
-from vision.train_maskrcnn import get_model_instance_segmentation
+from mask_rg.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
 
 class ObjectSegmenter:
@@ -25,29 +26,30 @@ class ObjectSegmenter:
         self.mask_model = self.mask_model.to(self.device)
         self.mask_model.eval()
 
+        # TODO, 0.9 can be tuned
+        if IS_REAL:
+            self.threshold = 0.97
+        else:
+            self.threshold = 0.98
+
     @torch.no_grad()
-    def from_maskrcnn(self, color_image, dir=TRAIN_EPISODES_DIR, plot=False, bbox=False):
+    def from_maskrcnn(self, color_image, dir=TRAIN_EPISODES_DIR, bbox=False):
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
         image = TF.to_tensor(image)
-        prediction = self.mask_model([image.to(self.device)])[0]
+        self.prediction = self.mask_model([image.to(self.device)])
+
         processed_masks = []
         raw_masks = []
-
-        if plot:
-            pred_mask = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8)
-        
         bboxes = []
+
+        pred_mask = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8)
+        prediction = self.prediction[0]
+
         for idx, mask in enumerate(prediction["masks"]):
-            # TODO, 0.9 can be tuned
-            if IS_REAL:
-                threshold = 0.97
-            else:
-                threshold = 0.98
-            
-            if prediction["scores"][idx] > threshold:
+            if prediction["scores"][idx] > self.threshold:
                 # get mask
                 img = mask[0].mul(255).byte().cpu().numpy()
                 img = cv2.GaussianBlur(img, (3, 3), 0)
@@ -57,10 +59,9 @@ class ObjectSegmenter:
                 
                 processed_masks.append(img)
                 raw_masks.append(mask)
-                if plot:
-                    pred_mask[img > 0] = 255 - idx * 20
-                    name = str(idx) + "mask.png"
-                    cv2.imwrite(os.path.join(dir, name), img)
+                pred_mask[img > 0] = 255 - idx * 20
+                name = str(idx) + "mask.png"
+                cv2.imwrite(os.path.join(dir, name), img)
 
                 bboxes.append(prediction["boxes"][idx].tolist())
         # if plot:

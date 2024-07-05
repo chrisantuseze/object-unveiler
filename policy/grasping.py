@@ -1,13 +1,17 @@
 import os
 import math
+from typing import List
 import torch
 import cv2
 import numpy as np
 from scipy.ndimage import center_of_mass
+from scipy.spatial.distance import pdist, squareform
+
+import numpy as np
+from skimage.morphology import dilation, disk
 
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
-# import utils.general_utils as general_utils
 import utils.logger as logging
 
 def get_object_centroid_old(segmentation_mask):
@@ -95,86 +99,6 @@ def calculate_area(bbox):
     # Calculate the area of a bounding box
     _, _, width, height = bbox
     return width * height
-
-def build_graph(object_masks):
-    nodes = []
-    edges = []
-
-    # Add nodes (objects) to the graph
-    for idx, mask in enumerate(object_masks):
-        nodes.append(idx)
-
-    relationships = extract_relationships(object_masks)
-    # print("relationships:", relationships)
-
-    # Add edges (relationships) to the graph
-    for rel in relationships:
-        edges.append((rel[0], rel[1]))
-
-    return nodes, edges
-
-def get_optimal_target_path(representations, target_id):
-    '''
-    representations -> [(0,2), (0,3), (0,5), (3,1), (5,1), (2,3), (5,4)]
-    target_id -> 1
-    '''
-    adj_nodes = []
-    for rep in representations:
-        if rep[0] == target_id:
-            adj_nodes.append(rep[1])
-        elif rep[1] == target_id:
-            adj_nodes.append(rep[0])
-
-    '''
-    add possible paths to dictionary. Nodes are 3 and 5 -> 
-    (3,1) -> (0,3), (2,3)
-    (5,1) -> (0,5), (5,4)
-    '''
-    path_dic = {}
-    for rep in representations:
-        for node in adj_nodes:
-            if node in rep:
-                if node not in path_dic.keys():
-                    path_dic[node] = []
-                path_dic[node].append(rep)
-
-    # print("path_dic:", path_dic)
-    if len(path_dic) < 1:
-        return []
-    
-    '''
-    get node with smallest path (items in list)
-    Picks the first one (3, 1) since both have same number of unique items
-    '''
-    optimal_node_id = key_with_least_unique_items(path_dic)
-    optimal_nodes = set([node for tuple_ in path_dic[optimal_node_id] for node in tuple_])
-    optimal_nodes = list(optimal_nodes) # returns -> [0,2,3]
-
-    # order based on the node with the least number of edges
-    return sort_by_num_edges(representations, optimal_nodes)
-
-def key_with_least_unique_items(dictionary):
-    min_unique_count = float('inf')
-    key_with_min_unique = None
-    
-    for key, value in dictionary.items():
-        unique_count = len(set(value))
-        if unique_count < min_unique_count:
-            min_unique_count = unique_count
-            key_with_min_unique = key
-    
-    return key_with_min_unique
-
-def sort_by_num_edges(representations, optimal_nodes):
-    edges_as_list = [node for tuple_ in representations for node in tuple_]
-    # print("edges_as_list:", edges_as_list)
-
-    # Create a sorting key function that uses the count of each item in edges_as_list
-    def sorting_key(item):
-        return edges_as_list.count(item)
-
-    # Sort list optimal_nodes using the custom sorting key
-    return sorted(optimal_nodes, key=sorting_key)
 
 def find_target(processed_masks, old_target_mask): 
     valid_objs = {}
@@ -273,37 +197,6 @@ def get_closest_neighbor(actions, target_mask):
 
     return min(new_actions, key=lambda x: x[0])[1]
 
-def get_obstacle_id(raw_masks, target_id, prev_node_id):
-    _, edges = build_graph(raw_masks)
-    if len(edges) > 0:
-        optimal_nodes = get_optimal_target_path(edges, target_id)
-        print("optimal_nodes:", optimal_nodes)
-
-        if len(optimal_nodes) > 0:
-            node_id = optimal_nodes[0]
-            if prev_node_id == node_id and len(optimal_nodes) > 1:
-                node_id = optimal_nodes[1]
-                
-        else: # if target is not occluded
-            node_id = target_id
-
-    else: # if target is not occluded
-        print("Object is not occluded")
-        node_id = target_id
-
-    # print("node_id:", node_id)
-    prev_node_id = node_id
-
-    return node_id, prev_node_id
-
-def get_obstacles(raw_masks, target_id):
-    _, edges = build_graph(raw_masks)
-    optimal_nodes = []
-    if len(edges) > 0:
-        optimal_nodes = get_optimal_target_path(edges, target_id)
-    
-    return optimal_nodes
-
 def get_grasped_object(processed_masks, action):
 
     for id, mask in enumerate(processed_masks):
@@ -355,3 +248,90 @@ def find_central_object(segmentation_masks):
 
     print("Central object id is:", central_object_index)
     return central_object_index
+
+def find_topmost_right_object(segmentation_masks, top_weight=2, right_weight=1):
+    best_score = float('-inf')
+    best_object = None
+    
+    height, width = segmentation_masks[0].shape
+    
+    for i, mask in enumerate(segmentation_masks):
+        non_zero = np.nonzero(mask)
+        if len(non_zero[0]) > 0:
+            # Find the topmost and rightmost points
+            top = np.min(non_zero[0])
+            right = np.max(non_zero[1])
+            
+            # Calculate a score favoring top position more than right position
+            # We invert top because lower y values are higher in the image
+            score = (top_weight * (height - top) / height) + (right_weight * right / width)
+            
+            if score > best_score:
+                best_score = score
+                best_object = i
+
+    print("Top-right object id is:", best_object)
+    return best_object
+
+def measure_singulation(target_id, masks: List, dilation_radius=5):
+    target_mask = masks[target_id]
+    # Dilate the target mask
+    dilated_target = dilation(target_mask, disk(dilation_radius))
+
+    masks.pop(target_id)
+    
+    # Create a combined mask of all other objects
+    other_objects = np.any(masks, axis=0)
+    
+    # Calculate the overlap between dilated target and other objects
+    overlap = np.logical_and(dilated_target, other_objects)
+    
+    # Calculate singulation score (1 - overlap ratio)
+    overlap_ratio = np.sum(overlap) / np.sum(dilated_target)
+    singulation_score = 1 - overlap_ratio
+    
+    return singulation_score
+
+def measure_clutter_segmentation(object_masks):
+    """
+    Measure clutter based on segmented object masks.
+    
+    :param object_masks: List of binary masks, each representing a segmented object
+    :return: Dictionary containing clutter metrics
+    """
+    # Count number of objects
+    num_objects = len(object_masks)
+    
+    # Calculate centroids
+    centroids = []
+    for mask in object_masks:
+        y_indices, x_indices = np.where(mask)
+        centroid_y = np.mean(y_indices)
+        centroid_x = np.mean(x_indices)
+        centroids.append([centroid_y, centroid_x])
+    
+    centroids = np.array(centroids)
+    
+    # Calculate average distance between centroids
+    if num_objects > 1:
+        distances = pdist(centroids)
+        avg_distance = np.mean(distances)
+    else:
+        avg_distance = 0  # or np.inf, depending on how you want to handle single object case
+    
+    # Calculate total occupied area
+    total_area = sum(np.sum(mask) for mask in object_masks)
+    
+    # Assuming all masks have the same shape, get the total image area
+    image_area = object_masks[0].shape[0] * object_masks[0].shape[1]
+    
+    # Calculate occupancy ratio
+    occupancy_ratio = total_area / image_area
+
+    # return {
+    #     "num_objects": num_objects,
+    #     "avg_distance_between_centroids": avg_distance,
+    #     "occupancy_ratio": occupancy_ratio
+    # }
+
+    return avg_distance
