@@ -287,7 +287,7 @@ class ObstacleSelector(nn.Module):
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # print("top indices", top_indices)
 
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -308,16 +308,16 @@ class ObstacleSelector(nn.Module):
 
         return context, raw_context, attn_scores, top_indices
     
-    def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
-    # def forward(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
+    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
+    def forward(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
         selected_object, raw_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, raw_object_masks, bboxes)
 
-        ################### THIS IS FOR VISUALIZATION ####################
-        raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
+        # ################### THIS IS FOR VISUALIZATION ####################
+        # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
 
-        raw_objects = torch.stack(raw_objects)
-        self.show_images(raw_objects, raw_target_mask, raw_scene_mask)
-        ##################################################################
+        # raw_objects = torch.stack(raw_objects)
+        # self.show_images(raw_objects, raw_target_mask, raw_scene_mask)
+        # ##################################################################
 
         return selected_object
    
@@ -429,11 +429,11 @@ class ResFCN(nn.Module):
 
         return context
     
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
          
-        selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
-        # selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_object_masks=None, bboxes=bboxes)
+        # selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
+        selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_object_masks=None, bboxes=bboxes)
 
         selected_objects = selected_objects.squeeze(1)
 
