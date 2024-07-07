@@ -198,19 +198,16 @@ def sample_distribution(prob, rng, n_samples=1):
     rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
     return np.int32(rand_ind_coords.squeeze())
 
-def save_image(color_img, name, dir=TRAIN_EPISODES_DIR):
-    # Get color image.
-    logging.info(">>>>>>>>>>> saving the updated scene >>>>>>>>>>>", color_img.shape)
-
-    # img = Image.fromarray(color_img, 'RGB')
-    # img.save(os.path.join(dir, name + '.png'))
-
 def get_target_mask(processed_masks, obs, rng):
     id = 0
     if len(processed_masks) > 1:
-        # id = rng.randint(0, len(processed_masks) - 1)
+        rand_id = rng.randint(0, len(processed_masks) - 1)
         # id = grasping.find_topmost_right_object(processed_masks)
-        id = grasping.find_central_object(processed_masks)
+        mid_id = grasping.find_central_object(processed_masks)
+
+        # Randomly decide between mid_id and the generated number
+        id = rng.choice([mid_id, rand_id])
+
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:
         target_mask = processed_masks[id]

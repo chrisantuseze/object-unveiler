@@ -52,8 +52,6 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
-        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
-
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
@@ -140,8 +138,6 @@ def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmente
     
     i = 0
     while episode_data['attempts'] < max_steps:
-        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
-
         state = policy.state_representation(obs)
         action = policy.exploit_old(state)
         env_action3d = policy.action3d(action)

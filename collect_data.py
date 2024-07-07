@@ -63,8 +63,6 @@ def collect_episodic_dataset(args, params):
         # NOTE: During the next iteration you need to search through the masks and identify the target, 
         # then use its id. Don't maintain the old target id because the scene has been resegmented
         while node_id != target_id:
-            general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
-
             objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
             print("\nobjects_to_remove:", objects_to_remove)
 
@@ -121,7 +119,8 @@ def collect_episodic_dataset(args, params):
                     'object_masks': new_masks,
                     'action': action, 
                     'label': grasp_info['stable'],
-                    'joints_pos': obs['joints_pos']
+                    'joints_traj': obs['joints_traj'],
+                    'images_traj': obs['images_traj'],
                 }
                 episode_data_list.append(transition)
 
@@ -182,9 +181,6 @@ def collect_random_target_dataset(args, params):
             obs = env.reset()
 
         for i in range(15):
-
-            general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TRAIN_EPISODES_DIR)
-
             # get a randomly picked target mask from the segmented image
             target_mask = obs['color'][0] #utils.get_target_mask(segmenter, obs, rng)
 

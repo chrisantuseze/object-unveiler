@@ -174,12 +174,16 @@ class FloatingBHand:
         t = 0
         dt = 0.001
         is_in_contact = False
+        commands = []
         while t < duration:
             command = []
+            vels = []
 
             for i in range(len(self.joint_ids)):
                 command.append(trajectories[i].pos(t))
+                vels.append(trajectories[i].vel(t)) #@Chris
 
+            # print("command", len(command), command)
             p.setJointMotorControlArray(
                 self.robot_hand_id,
                 self.joint_ids,
@@ -203,6 +207,10 @@ class FloatingBHand:
             t += dt
             self.simulation.step()
             time.sleep(dt)
+
+            commands.append((command, vels))
+
+        return commands, is_in_contact
 
     def set_hand_joint_position(self, joint_position, force):
         for i in range(len(self.joint_names)):
@@ -245,11 +253,14 @@ class FloatingBHand:
 
         t = 0
         dt = 0.001
+        commands = []
         while t < duration:
             command = []
+            vels = []
 
             for i in range(len(self.joint_names)):
                 command.append(trajectories[i].pos(t))
+                vels.append(trajectories[i].vel(t))
 
             self.set_hand_joint_position(command, force)
 
@@ -267,7 +278,9 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-        return [current_pos, hand_pos] #@Chris
+            commands.append((command, vels))
+
+        return commands#, [current_pos, hand_pos] #@Chris
 
     def step_constraints(self):
         current_pos = []
@@ -284,10 +297,10 @@ class FloatingBHand:
         )
 
     def close(self, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
-        self.move_fingers(joint_vals)
+        return self.move_fingers(joint_vals)
 
     def open(self, joint_vals=[0.0, 0.6, 0.6, 0.6]):
-        self.move_fingers(joint_vals, duration=1)
+        return self.move_fingers(joint_vals, duration=1)
 
     def configure(self, n_links_before):
         # set friction coefficients for gripper fingers

@@ -136,7 +136,7 @@ class Environment:
         return self.get_observation()
 
     def get_observation(self):
-        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'joints_pos': []}
+        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'joints_traj': [], 'images_traj': []}
 
         for cam in self.agent_cams:
             color, depth, seg = cam.get_data() 
@@ -160,17 +160,32 @@ class Environment:
         return obs
     
     def step(self, action):
+        trajectories = []
+
+        #@Chris we save the images at the beginning of the trajectory
+        images = {'color': [], 'depth': []}
+        for cam in self.agent_cams:
+            color, depth, seg = cam.get_data() 
+            images['color'].append(color)
+            images['depth'].append(depth)
+            cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            cv2.imwrite(os.path.join("save/misc", "depth.png"), depth)
+            
         # move hand above the pre-grasp position
         pre_grasp_pos = action['pos'].copy()
         pre_grasp_pos[2] += 0.3
-        self.bhand.move(pre_grasp_pos, action['quat'], duration=0.1)
+
+        commands, _ = self.bhand.move(pre_grasp_pos, action['quat'], duration=0.1)
+        trajectories.extend(commands)
 
         # set finger configuration
         theta = action['aperture']
-        joints_pos = self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
+        commands = self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
+        trajectories.extend(commands)
 
         # move to the pre-grasp position
-        is_in_contact = self.bhand.move(action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
+        commands, is_in_contact = self.bhand.move(action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
+        trajectories.extend(commands)
         
         # check if during reaching the pre-grasp position, the hand collides with some objects
         if not is_in_contact:
@@ -184,7 +199,8 @@ class Environment:
             grasp_pos = action['pos'] + rot[0:3, 2] * action['push_distance']
 
             # if grasping only (without power push), comment out
-            self.bhand.move(grasp_pos, action['quat'], duration=2)
+            commands, _ = self.bhand.move(grasp_pos, action['quat'], duration=2)
+            trajectories.extend(commands)
 
             # compute the distances of each object from other objects after pushing
             next_obs = self.get_observation()
@@ -198,17 +214,20 @@ class Environment:
 
             
             # close the fingers
-            self.bhand.close()
+            commands = self.bhand.close()
+            trajectories.extend(commands)
         else:
             grasp_pos = action['pos']
 
         # move up when the object is picked
         final_pos = grasp_pos.copy()
         final_pos[2] += 0.4
-        self.bhand.move(final_pos, action['quat'], duration=0.1)
+        commands, _ = self.bhand.move(final_pos, action['quat'], duration=0.1)
+        trajectories.extend(commands)
 
         # check grasp stability
-        self.bhand.move(final_pos, action['quat'], duration=0.5)
+        _, _ = self.bhand.move(final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for saving grasp stability
+
         stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
         # check the validity of the grasp
@@ -229,15 +248,18 @@ class Environment:
                     grasp_label = False
 
         # move home
-        self.bhand.move(self.bhand.home_position, action['quat'], duration=0.1)
+        commands, _ = self.bhand.move(self.bhand.home_position, action['quat'], duration=0.1)
+        trajectories.extend(commands)
 
         # open fingers to drop grasped object
-        self.bhand.open()
+        commands = self.bhand.open()
+        trajectories.extend(commands)
 
         self.remove_flat_objs()
 
         obs = self.get_observation()
-        obs['joints_pos'] = joints_pos
+        obs['joints_traj'] = trajectories
+        obs['images_traj'] = images
 
         return obs, {'collision': is_in_contact,
                                 'stable': grasp_label,

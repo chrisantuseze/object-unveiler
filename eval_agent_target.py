@@ -51,8 +51,6 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
-        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
-
         node_id, prev_node = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
 
         obstacle_mask = processed_masks[node_id]
@@ -151,8 +149,6 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
     count = 0
     max_steps = 5
     while episode_data['attempts'] < max_steps:
-        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
-
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
@@ -232,8 +228,6 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     
     i = 0
     while episode_data['attempts'] < max_steps:
-        general_utils.save_image(color_img=obs['color'][1], name="color" + str(i), dir=TEST_EPISODES_DIR)
-
         state = policy.state_representation(obs)
         action = policy.exploit_old(state)
         env_action3d = policy.action3d(action)
