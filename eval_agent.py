@@ -47,7 +47,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
     n_prev_masks = 0
     count = 0
 
-    max_steps = 2#3
+    max_steps = 3
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -90,7 +90,7 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
         if len(processed_masks) == n_prev_masks:
             count += 1
 
-        if count >= 1:
+        if count > 1:
             logging.info("Robot is in an infinite loop")
             break
 

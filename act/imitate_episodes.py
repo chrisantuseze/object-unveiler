@@ -326,14 +326,16 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
 
 def forward_pass(data, policy):
-    image_data, action_data, is_pad = data
+    image_data, qpos_data, action_data, is_pad = data
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # print("image_data.shape", image_data.shape, "action_data.shape", action_data.shape, "is_pad.shape", is_pad.shape)
 
-    image_data, action_data, is_pad = image_data.to(device), action_data.to(device), is_pad.to(device)
-    return policy(image_data, action_data, is_pad) # TODO remove None
+    image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), \
+        action_data.to(device), is_pad.to(device)
+    
+    return policy(image_data, qpos_data, action_data, is_pad)
 
 
 def train_bc(train_dataloader, val_dataloader, config):

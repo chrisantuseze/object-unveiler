@@ -121,6 +121,7 @@ def find_centroid_distance(segmentation_mask):
 
     return min_distances
 
+@DeprecationWarning("Not used anywhere")
 def find_obstacles_to_remove(target_index, segmentation_masks):
     objects = [Object(mask, i) for i, mask in enumerate(segmentation_masks)]
     target = objects[target_index]

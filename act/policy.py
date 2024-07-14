@@ -23,13 +23,14 @@ class ACTPolicy(nn.Module):
         self.kl_weight = args_override["kl_weight"]
         print(f"KL Weight {self.kl_weight}")
 
-    def __call__(self, image, actions=None, is_pad=None):
+    def __call__(self, image, qpos, actions=None, is_pad=None):
         env_state = None
         normalize = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] #@Chris
         )
 
         image = image.repeat(1, 1, 3, 1, 1) #@Chris
+
         # print("image.shape", image.shape)
         qpos = torch.rand([image.shape[0], 4], dtype=torch.float32).to(image.device) #@Chris
         image = normalize(image)

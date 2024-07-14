@@ -9,6 +9,7 @@ from scipy.spatial.distance import pdist, squareform
 
 import numpy as np
 from skimage.morphology import dilation, disk
+from sklearn.neighbors import NearestNeighbors
 
 import matplotlib.pyplot as plt
 import utils.object_comparison as compare
@@ -292,46 +293,32 @@ def measure_singulation(target_id, masks: List, dilation_radius=5):
     
     return singulation_score
 
-def measure_clutter_segmentation(object_masks):
-    """
-    Measure clutter based on segmented object masks.
-    
-    :param object_masks: List of binary masks, each representing a segmented object
-    :return: Dictionary containing clutter metrics
-    """
-    # Count number of objects
-    num_objects = len(object_masks)
-    
-    # Calculate centroids
-    centroids = []
-    for mask in object_masks:
-        y_indices, x_indices = np.where(mask)
-        centroid_y = np.mean(y_indices)
-        centroid_x = np.mean(x_indices)
-        centroids.append([centroid_y, centroid_x])
-    
-    centroids = np.array(centroids)
-    
-    # Calculate average distance between centroids
-    if num_objects > 1:
-        distances = pdist(centroids)
-        avg_distance = np.mean(distances)
-    else:
-        avg_distance = 0  # or np.inf, depending on how you want to handle single object case
-    
-    # Calculate total occupied area
-    total_area = sum(np.sum(mask) for mask in object_masks)
-    
-    # Assuming all masks have the same shape, get the total image area
-    image_area = object_masks[0].shape[0] * object_masks[0].shape[1]
-    
-    # Calculate occupancy ratio
-    occupancy_ratio = total_area / image_area
+def measure_clutter_segmentation(segmentation_masks, k=3):
+    # Calculate the centroid for each object's segmentation mask
+    positions = []
+    for mask in segmentation_masks:
+        centroid = center_of_mass(mask)
+        positions.append(centroid)
 
-    # return {
-    #     "num_objects": num_objects,
-    #     "avg_distance_between_centroids": avg_distance,
-    #     "occupancy_ratio": occupancy_ratio
-    # }
-
-    return avg_distance
+    n = len(positions)
+    positions = np.array(positions)
+    
+    # k-NN regression to estimate x_hat_i and y_hat_i
+    nbrs = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(positions)
+    distances, indices = nbrs.kneighbors(positions)
+    
+    # Remove the self-distance (distance to itself which is 0)
+    distances = distances[:, 1:]
+    indices = indices[:, 1:]
+    
+    x_hat = np.array([np.mean(positions[indices[i], 0]) for i in range(n)])
+    y_hat = np.array([np.mean(positions[indices[i], 1]) for i in range(n)])
+    
+    # Calculate the average Euclidean distance
+    euclidean_distances = np.sqrt((positions[:, 0] - x_hat)**2 + (positions[:, 1] - y_hat)**2)
+    avg_distance = np.mean(euclidean_distances)
+    
+    # Calculate the clutter coefficient
+    clutter_coefficient = -np.log(avg_distance)
+    
+    return clutter_coefficient

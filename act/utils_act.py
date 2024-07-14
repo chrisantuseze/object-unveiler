@@ -83,12 +83,13 @@ class EpisodicDataset(torch.utils.data.Dataset):
     
 
 class ACTUnveilerDataset(torch.utils.data.Dataset):
-    def __init__(self, args, dir_ids, dataset_dir, stats):
+    def __init__(self, args, dir_ids, dataset_dir, camera_names, norm_stats):
         super(ACTUnveilerDataset, self).__init__()
         self.args = args
         self.dataset_dir = dataset_dir
         self.dir_ids = dir_ids
-        self.stats = stats
+        self.camera_names = camera_names
+        self.norm_stats = norm_stats
 
         self.memory = ReplayBuffer(self.dataset_dir)
 
@@ -103,79 +104,71 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         data_list = []        
         for data in episode_data:
-            heightmap = data['state']
-            c_target_mask = data['c_target_mask']
+            # heightmap = data['state']
+            # c_target_mask = data['c_target_mask']
+            # action = data['action']
+
+            images = data['images_traj']['color'] # picks only the color top and side camera images
+            qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
             action = data['action']
+            c_target_mask = data['c_target_mask']
 
-            # c_object_masks = data['c_object_masks']
-            # optimal_nodes = data['optimal_nodes']
-            # c_obstacle_mask = c_object_masks[optimal_nodes[0]]
-
-            bboxes = data['bboxes']
-            target_id = data['target_id']
-
-            target_bbox = bboxes[target_id]
-            # obstacle_bbox = bboxes[optimal_nodes[0]]
-
-            data_list.append((heightmap, c_target_mask, target_bbox, action))
+            data_list.append((images, qpos, action, c_target_mask))
 
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        target_bboxes, obstacle_bboxes = [], []
-        processed_image_datas, actions = [], []
-        for data in episode_data:
-            heightmap, c_target_mask, target_bbox, action = data
+        images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
-            processed_heightmap, _ = general_utils.preprocess_heightmap(heightmap)
+        sequence_len = self.args['policy_config']['num_queries']
+        action = np.array(action, dtype=np.float32)
+        print("action.shape", action.shape)
 
-            processed_target_mask = general_utils.preprocess_target(c_target_mask)#, heightmap)
-            target_bboxes.append(target_bbox)
+        action_len = action.shape[0]
+        padded_action = np.zeros((sequence_len, action.shape[1]), dtype=np.float32)
+        padded_action[:action_len] = action
+        is_pad = np.zeros(sequence_len)
+        is_pad[action_len:] = 1
 
-            processed_image_data = np.concatenate((processed_heightmap, processed_target_mask), axis=0)
-            processed_image_datas.append(processed_image_data)
+        image_dict = dict()
+        for cam_name in self.camera_names:
+            if cam_name == 'front':
+                image_dict[cam_name] = images[0]
+            elif cam_name == 'top':
+                image_dict[cam_name] = images[0]
+            elif cam_name == 'target':
+                image_dict[cam_name] = c_target_mask
 
-            actions.append(action)
+        # new axis for different cameras
+        all_cam_images = []
+        for cam_name in self.camera_names:
+            all_cam_images.append(image_dict[cam_name])
+        all_cam_images = np.stack(all_cam_images, axis=0)
 
-        processed_image_datas = np.array(processed_image_datas)
-
-        actions = np.array(actions, dtype=np.float32)
-        # normalize action data
-        action_data = (actions - self.stats['action_mean']) / self.stats['action_std']
-
-        padded_image_data, padded_actions, is_pad = self.pad_data(processed_image_datas, action_data)
-
-        # print("padded_image_data.shape", padded_image_data.shape, "padded_actions.shape", padded_actions.shape, "is_pad.shape", is_pad.shape)
-
+        # construct observations
+        image_data = torch.from_numpy(all_cam_images)
+        qpos_data = torch.from_numpy(qpos).float()
+        action_data = torch.from_numpy(padded_action).float()
         is_pad = torch.from_numpy(is_pad).bool()
+
+        print("image_data.shape", image_data.shape)
+
+        # channel last
+        image_data = torch.einsum('k h w c -> k c h w', image_data)
+        print("image_data.shape", image_data.shape)
+
+        # normalize image and change dtype to float
+        image_data = image_data / 255.0
+        action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
+        qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
         
-        return padded_image_data, padded_actions, is_pad
+        return image_data, qpos_data, action_data, is_pad
     
     def __len__(self):
         return len(self.dir_ids)
     
-    def pad_data(self, image_data, actions):
-        N, C, H, W = image_data.shape
-        seq_len = self.args['policy_config']['num_queries']
-
-        is_pad = np.zeros(seq_len)
-        is_pad[N:] = 1
-
-        if N < seq_len:
-            padded_image_data = np.zeros((seq_len, C, H, W), dtype=image_data.dtype)
-            padded_image_data[:image_data.shape[0], :, :, :] = image_data
-
-            #N x 3
-            padded_actions = np.pad(actions, ((0, (seq_len - len(actions))), (0, 0)), mode='constant', constant_values=0)
-
-        else:
-            padded_image_data = image_data[:seq_len]
-            padded_actions = actions[:seq_len]
-
-        padded_image_data = padded_image_data.reshape(seq_len * C, 1, H, W)
-        return padded_image_data, padded_actions, is_pad
     
 def get_norm_stats(dataset_dir, num_episodes):
     all_qpos_data = []
@@ -210,17 +203,30 @@ def get_norm_stats(dataset_dir, num_episodes):
 
 def get_stats(dataset_dir, transition_dirs):
     episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
-    actions = []
+    all_action_data, all_qpos_data = [], []
     for data in episode_data:
         action = data['action']
-        actions.append(torch.from_numpy(action))
-    actions = torch.stack(actions)
+        all_action_data.append(torch.from_numpy(action))
+
+        qpos = data['joints_traj'][0][0]
+        all_qpos_data.append(torch.from_numpy(qpos))
+
+
+    all_action_data = torch.stack(all_action_data)
+    all_qpos_data = torch.stack(all_qpos_data)
 
     # normalize action data
-    action_mean = actions.mean(dim=[0, 1], keepdim=True)
-    action_std = actions.std(dim=[0, 1], keepdim=True)
+    action_mean = all_action_data.mean(dim=[0, 1], keepdim=True)
+    action_std = all_action_data.std(dim=[0, 1], keepdim=True)
     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
-    stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze()}
+
+    # normalize qpos data
+    qpos_mean = all_qpos_data.mean(dim=[0, 1], keepdim=True)
+    qpos_std = all_qpos_data.std(dim=[0, 1], keepdim=True)
+    qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
+
+    stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze(),
+             "qpos_mean": qpos_mean.numpy().squeeze(), "qpos_std": qpos_std.numpy().squeeze()}
 
     return stats
 
@@ -250,17 +256,17 @@ def load_data(args, dataset_dir, num_episodes, camera_names, batch_size_train, b
     data_length = (len(val_ids)//args['batch_size']) * args['batch_size']
     val_ids = val_ids[:data_length]
 
-    stats = get_stats(dataset_dir, transition_dirs)
+    norm_stats = get_stats(dataset_dir, transition_dirs)
 
     # construct dataset and dataloader
-    train_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, stats)
+    train_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, norm_stats)
 
-    val_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, stats)
+    val_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, norm_stats)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
 
-    return train_dataloader, val_dataloader, stats, train_dataset.is_sim
+    return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
 
 
 ### env utils
