@@ -259,9 +259,9 @@ def load_data(args, dataset_dir, num_episodes, camera_names, batch_size_train, b
     norm_stats = get_stats(dataset_dir, transition_dirs)
 
     # construct dataset and dataloader
-    train_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, norm_stats)
+    train_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
 
-    val_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, norm_stats)
+    val_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
