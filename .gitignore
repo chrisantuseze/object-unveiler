@@ -19,7 +19,7 @@ venv/
 *.txt
 
 scripts/
-models/
+# models/
 #assets/
 logs/
 save/

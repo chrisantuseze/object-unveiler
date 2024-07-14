@@ -31,8 +31,8 @@ SIM_TASK_CONFIGS = {
         'camera_names': ['top']
     },
 
-    'object_unveiler': {
-        'dataset_dir': DATA_DIR + '/pc-ou-dataset2',#'/sim_insertion_human',
+    'sim_object_unveiler': {
+        'dataset_dir': DATA_DIR + '/pc-ou-dataset',#'/sim_insertion_human',
         'num_episodes': 50,
         'episode_len': 3,
         'camera_names': ['top', 'front', 'target']
