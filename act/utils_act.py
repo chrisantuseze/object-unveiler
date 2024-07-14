@@ -124,6 +124,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         sequence_len = self.args['policy_config']['num_queries']
         action = np.array(action, dtype=np.float32)
+        action = action.reshape(1, action.shape[0])
         print("action.shape", action.shape)
 
         action_len = action.shape[0]
