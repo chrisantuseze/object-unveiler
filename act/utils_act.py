@@ -205,10 +205,10 @@ def get_stats(dataset_dir, transition_dirs):
     episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
     all_action_data, all_qpos_data = [], []
     for data in episode_data:
-        action = data['action']
+        action = np.array(data['action'])
         all_action_data.append(torch.from_numpy(action))
 
-        qpos = data['joints_traj'][0][0]
+        qpos = np.array(data['joints_traj'][0][0])
         all_qpos_data.append(torch.from_numpy(qpos))
 
 
