@@ -111,7 +111,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             images = data['images_traj']['color'] # picks only the color top and side camera images
             qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
             action = data['action']
-            c_target_mask = data['c_target_mask']
+            c_target_mask = data['target_mask']
 
             data_list.append((images, qpos, action, c_target_mask))
 
