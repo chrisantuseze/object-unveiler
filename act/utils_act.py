@@ -333,6 +333,7 @@ def set_seed(seed):
     np.random.seed(seed)
 
 def process_image(image):
+    print(image.shape)
     if image.shape[0] == 480 and image.shape[1] == 640:
         return image
     
