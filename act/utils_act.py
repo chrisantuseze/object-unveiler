@@ -111,7 +111,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # action = data['action']
 
             # print(data.keys())
-            print(data['images_traj'].keys())
+            print(data['images_traj'])
 
             images = data['images_traj']['color'] # picks only the color top and side camera images
             qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
