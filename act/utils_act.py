@@ -11,6 +11,8 @@ import IPython
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 
+from skimage.transform import resize
+
 e = IPython.embed
 
 class EpisodicDataset(torch.utils.data.Dataset):
@@ -140,10 +142,10 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'top':
                 image_dict[cam_name] = images[1]
             elif cam_name == 'target':
-                image_dict[cam_name] = c_target_mask
+                image_dict[cam_name] = process_target_image(c_target_mask)
 
         print("images[0].shape", images[0].shape)
-        print("c_target_mask.shape", c_target_mask.shape)
+        print("c_target_mask.shape", c_target_mask.shape, image_dict['target'].shape)
 
         # new axis for different cameras
         all_cam_images = []
@@ -332,3 +334,10 @@ def detach_dict(d):
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
+
+def process_target_image(target_image):
+    # Resize the image
+    resized_image = resize(target_image, (480, 640), anti_aliasing=True)
+
+    # Add color channels
+    return np.stack((resized_image,) * 3, axis=-1)
