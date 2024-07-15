@@ -151,6 +151,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         all_cam_images = []
         for cam_name in self.camera_names:
             all_cam_images.append(image_dict[cam_name])
+            print("image_dict[cam_name].shape", image_dict[cam_name].shape)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
         # construct observations
