@@ -110,7 +110,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # c_target_mask = data['c_target_mask']
             # action = data['action']
 
-            try:
+            try: # data['images_traj'] and/or data['joints_traj'] could be empty
                 images = data['images_traj']['color'] # picks only the color top and side camera images
                 qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
                 action = data['action']
@@ -124,6 +124,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
+
+        print("Episode length", len(episode_data))
 
         images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
