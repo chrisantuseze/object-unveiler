@@ -112,14 +112,14 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
             try:
                 images = data['images_traj']['color'] # picks only the color top and side camera images
+                qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
+                action = data['action']
+                c_target_mask = data['target_mask']
+
+                data_list.append((images, qpos, action, c_target_mask))
             except Exception as e:
-                print("data['images_traj']", data['images_traj'])
-            qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
-            action = data['action']
-            c_target_mask = data['target_mask']
-
-            data_list.append((images, qpos, action, c_target_mask))
-
+                print("Error occurred", e)
+            
         return data_list
 
     def __getitem__(self, id):
