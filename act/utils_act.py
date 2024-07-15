@@ -125,6 +125,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         sequence_len = self.args['policy_config']['num_queries']
+
+        qpos = np.array(qpos)
+
         action = np.array(action, dtype=np.float32)
         action = action.reshape(1, action.shape[0])
         print("action.shape", action.shape)
@@ -148,7 +151,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         all_cam_images = []
         for cam_name in self.camera_names:
             image = resize_image(image_dict[cam_name])
-            print(image.shape)
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
@@ -334,7 +336,7 @@ def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-def resize_image(image, target_size=(640, 480)):
+def resize_image(image, target_size=(480, 640)):
     # Get the shape of the input image
     input_shape = image.shape
 
