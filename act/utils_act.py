@@ -147,7 +147,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            image = process_image(image_dict[cam_name])
+            image = resize_image(image_dict[cam_name])
             print(image.shape)
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
@@ -334,12 +334,18 @@ def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-def process_image(image):
-    if len(image.shape) == 3 and image.shape[0] == 480 and image.shape[1] == 640:
-        return image
-    
-    # Resize the image
-    resized_image = resize(image, (480, 640), anti_aliasing=True)
+def resize_image(image, target_size=(640, 480)):
+    # Get the shape of the input image
+    input_shape = image.shape
 
-    # Add color channels
-    return np.stack((resized_image,) * 3, axis=-1)
+    # Resize the image
+    if len(input_shape) == 2:  # Grayscale image
+        resized = resize(image, target_size, anti_aliasing=True)
+        # Add color channels
+        resized = np.stack((resized,) * 3, axis=-1)
+    elif len(input_shape) == 3:  # Color image
+        resized = resize(image, target_size, anti_aliasing=True)
+    else:
+        raise ValueError("Unexpected image shape. Expected 2D or 3D array.")
+    
+    return resized
