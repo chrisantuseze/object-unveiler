@@ -110,6 +110,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # c_target_mask = data['c_target_mask']
             # action = data['action']
 
+            print(data.keys())
+
             images = data['images_traj']['color'] # picks only the color top and side camera images
             qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
             action = data['action']
@@ -130,7 +132,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         action = np.array(action, dtype=np.float32)
         action = action.reshape(1, action.shape[0])
-        print("action.shape", action.shape)
 
         action_len = action.shape[0]
         padded_action = np.zeros((sequence_len, action.shape[1]), dtype=np.float32)
