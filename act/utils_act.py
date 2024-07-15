@@ -142,6 +142,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'target':
                 image_dict[cam_name] = c_target_mask
 
+        print("images[0].shape", images[0].shape)
         print("c_target_mask.shape", c_target_mask.shape)
 
         # new axis for different cameras
