@@ -147,7 +147,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            all_cam_images.append(process_image(image_dict[cam_name]))
+            image = process_image(image_dict[cam_name])
+            print(image.shape)
+            all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
         # construct observations
@@ -333,7 +335,6 @@ def set_seed(seed):
     np.random.seed(seed)
 
 def process_image(image):
-    print(image.shape)
     if image.shape[0] == 480 and image.shape[1] == 640:
         return image
     
