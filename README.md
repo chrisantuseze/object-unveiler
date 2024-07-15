@@ -12,10 +12,12 @@ python3 main.py --dataset_dir 'save/ou-dataset' --mode 'fcn' --epochs 100 --batc
 
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
-pete - 2, 6
-uc - 3, 4, 7, 10, 18, 24
-regan - 25, 26, 27, 28 - 29, 30, 31, 32, 33, 34, 35
-tacc - 23
+python3 main_act.py \
+--task_name sim_object_unveiler \
+--ckpt_dir act/ckpt \
+--policy_class ACT --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 \
+--num_epochs 2000  --lr 1e-5 \
+--seed 0
 
 ########### new collect_data seeds ################
 100
