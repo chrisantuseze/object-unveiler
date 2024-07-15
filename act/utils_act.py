@@ -142,16 +142,12 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'top':
                 image_dict[cam_name] = images[1]
             elif cam_name == 'target':
-                image_dict[cam_name] = process_target_image(c_target_mask)
-
-        print("images[0].shape", images[0].shape)
-        print("c_target_mask.shape", c_target_mask.shape, image_dict['target'].shape)
+                image_dict[cam_name] = c_target_mask
 
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            all_cam_images.append(image_dict[cam_name])
-            print("image_dict[cam_name].shape", image_dict[cam_name].shape)
+            all_cam_images.append(process_image(image_dict[cam_name]))
         all_cam_images = np.stack(all_cam_images, axis=0)
 
         # construct observations
@@ -336,9 +332,13 @@ def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-def process_target_image(target_image):
+def process_image(image):
+    H, W, C = image.shape
+    if H == 480 and W == 640 and C == 3:
+        return image
+    
     # Resize the image
-    resized_image = resize(target_image, (480, 640), anti_aliasing=True)
+    resized_image = resize(image, (480, 640), anti_aliasing=True)
 
     # Add color channels
     return np.stack((resized_image,) * 3, axis=-1)
