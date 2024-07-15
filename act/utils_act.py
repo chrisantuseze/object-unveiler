@@ -125,7 +125,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        print("Episode length", len(episode_data))
+        print("Episode length", len(episode_data), id)
 
         images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
