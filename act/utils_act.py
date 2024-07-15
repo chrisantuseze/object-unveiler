@@ -333,8 +333,7 @@ def set_seed(seed):
     np.random.seed(seed)
 
 def process_image(image):
-    H, W, C = image.shape
-    if H == 480 and W == 640 and C == 3:
+    if image.shape[0] == 480 and image.shape[1] == 640:
         return image
     
     # Resize the image
