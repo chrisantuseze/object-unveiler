@@ -240,6 +240,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                     B = nagent_pos.shape[0]
                     
                     # concatenate vision feature and low-dim obs
+                    print("image_features, nagent_pos", image_features.shape, nagent_pos.shape)
                     obs_features = torch.cat([image_features, nagent_pos], dim=-1)
 
                     obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
