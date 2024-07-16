@@ -226,21 +226,9 @@ def get_stats(dataset_dir, transition_dirs):
     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
 
     #actual gripper minmax
-    action_min = all_action_data.min(axis=0) 
-    action_max = all_action_data.max(axis=0)
-
-    # Extract the tensors
-    values = action_min.values
-    indices = action_min.indices
-    values[3] = 0.0  # new value
-    action_min = torch.return_types.min(
-        values=values,
-        indices=indices
-    )
-
-    print("action_min", action_min)
-
-    # action_min[3] = 0.0 
+    action_min = all_action_data.min(axis=0).values
+    action_max = all_action_data.max(axis=0).values
+    action_min[3] = 0.0 
     action_max[3] = 0.08
 
     # normalize qpos data
@@ -249,8 +237,8 @@ def get_stats(dataset_dir, transition_dirs):
     qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
 
     #actual gripper minmax
-    qpos_min = all_qpos_data.min(axis=0)
-    qpos_max = all_qpos_data.max(axis=0)
+    qpos_min = all_qpos_data.min(axis=0).values
+    qpos_max = all_qpos_data.max(axis=0).values
     qpos_min[3] = 0.0
     qpos_max[3] = 0.08
 
