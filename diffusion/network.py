@@ -300,7 +300,7 @@ class DiffusionModel(nn.Module):
         
         # concatenate vision feature and low-dim obs
         print("image_features, nagent_pos", image_features.shape, nagent_pos.shape)
-        proprio_input = self.input_proj_robot_state(nagent_pos)
+        proprio_input = self.input_proj_robot_state(nagent_pos).unsqueeze(1)
         print("proprio_input.shape", proprio_input.shape)
 
         obs_features = torch.cat([image_features, proprio_input], dim=-1)
