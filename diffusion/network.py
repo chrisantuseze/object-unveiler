@@ -269,6 +269,62 @@ class ConditionalUnet1D(nn.Module):
         x = x.moveaxis(-1,-2)
         # (B,T,C)
         return x
+    
+
+class DiffusionModel(nn.Module):
+    def __init__(self, nets, camera_names, device):
+        super().__init__()
+
+        self.nets = nets
+        self.camera_names = camera_names
+        self.device = device
+        self.obs_horizon = 1
+
+        hidden_dim = 512
+        self.input_proj_robot_state = nn.Linear(3, hidden_dim) #@Chris
+
+    def forward(self, nbatch):
+        image_features = torch.Tensor().to(self.device)
+        for cam_name in self.camera_names:
+            ncur = nbatch[cam_name][:,:self.obs_horizon].to(self.device)
+
+            ncur_features = self.nets[f'{cam_name}_encoder'](ncur.flatten(end_dim=1))
+            ncur_features = ncur_features.reshape(*ncur.shape[:2],-1)
+
+            image_features = torch.cat([image_features, ncur_features], dim=-1)
+        
+        nagent_pos = nbatch['agent_pos'][:,:self.obs_horizon].to(self.device)
+        naction = nbatch['action'].to(self.device)
+        B = nagent_pos.shape[0]
+        
+        # concatenate vision feature and low-dim obs
+        print("image_features, nagent_pos", image_features.shape, nagent_pos.shape)
+        proprio_input = self.input_proj_robot_state(nagent_pos)
+        print("proprio_input.shape", proprio_input.shape)
+
+        obs_features = torch.cat([image_features, proprio_input], dim=-1)
+
+        obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
+
+        # sample noise to add to actions
+        noise = torch.randn(naction.shape, device=self.device)
+
+        # sample a diffusion iteration for each data point
+        timesteps = torch.randint(
+            0, self.noise_scheduler.config.num_train_timesteps,
+            (B,), device=self.device
+        ).long()
+
+
+        # add noise to the clean images according to the noise magnitude at each diffusion iteration
+        # (this is the forward diffusion process)
+        noisy_actions = self.noise_scheduler.add_noise(naction, noise, timesteps)
+        
+        # import pdb; pdb.set_trace()
+        # predict the noise residual
+        noise_pred = self.nets['noise_pred_net'](noisy_actions, timesteps, global_cond=obs_cond)
+
+        return noise_pred, noise
 
 
 #@markdown ### **Vision Encoder**
