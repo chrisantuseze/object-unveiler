@@ -128,10 +128,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         sequence_len = self.args['policy_config']['num_queries']
 
-        images = images.astype(np.float32)
         qpos = np.array(qpos)
-        c_target_mask = c_target_mask.astype(np.float32)
-
         action = np.array(action, dtype=np.float32)
         action = action.reshape(1, action.shape[0])
 
@@ -144,11 +141,11 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
-                image_dict[cam_name] = images[0]
+                image_dict[cam_name] = images[0].astype(np.float32)
             elif cam_name == 'top':
-                image_dict[cam_name] = images[1]
+                image_dict[cam_name] = images[1].astype(np.float32)
             elif cam_name == 'target':
-                image_dict[cam_name] = c_target_mask
+                image_dict[cam_name] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
