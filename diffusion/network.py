@@ -115,6 +115,8 @@ class ConditionalResidualBlock1D(nn.Module):
             returns:
             out : [ batch_size x out_channels x horizon ]
         '''
+
+        print(x.shape, cond.shape)
         out = self.blocks[0](x)
         embed = self.cond_encoder(cond)
 
@@ -304,18 +306,16 @@ class DiffusionModel(nn.Module):
         print("proprio_input.shape", proprio_input.shape)
 
         obs_features = torch.cat([image_features, proprio_input], dim=-1)
+        print("obs_features.shape", obs_features.shape)
 
         obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
+        print("obs_cond.shape", obs_cond.shape)
 
         # sample noise to add to actions
         noise = torch.randn(naction.shape, device=self.device)
 
         # sample a diffusion iteration for each data point
-        timesteps = torch.randint(
-            0, self.noise_scheduler.config.num_train_timesteps,
-            (B,), device=self.device
-        ).long()
-
+        timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (B,), device=self.device).long()
 
         # add noise to the clean images according to the noise magnitude at each diffusion iteration
         # (this is the forward diffusion process)
