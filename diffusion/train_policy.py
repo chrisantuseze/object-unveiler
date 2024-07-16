@@ -19,9 +19,7 @@ from datetime import datetime
 from diffusion.visualization import debug, visualize
 from diffusion.visualize_waypts import predict_diff_actions
 
-from diffusion.train_args import CKPT_DIR, SIM_TASK_CONFIGS, GELSIGHT_WEIGHTS_PATH, \
-IMAGE_WEIGHTS_PATH, DEVICE_STR, ABLATE_GEL,\
-START_TIME
+from diffusion.train_args import CKPT_DIR, SIM_TASK_CONFIGS, DEVICE_STR, START_TIME
 
 def main(args):
     batch_size_train = args['batch_size']
@@ -59,12 +57,12 @@ def main(args):
 
     if enc_type == 'clip':
         # load modified CLIP pretrained resnet 
-        image_weights = torch.load(IMAGE_WEIGHTS_PATH)
+        # image_weights = torch.load(IMAGE_WEIGHTS_PATH)
 
         image_encoders = []
         for i in range(len(camera_names)): #subtract one to account for gelsight
             image_encoders += [modified_resnet18()]
-            image_encoders[i].load_state_dict(image_weights)
+            # image_encoders[i].load_state_dict(image_weights)
             image_encoders[i] = nn.Sequential(image_encoders[i],nn.AdaptiveAvgPool2d(output_size=1), nn.Flatten())
 
         # modified_resnet18 uses groupnorm instead of batch already

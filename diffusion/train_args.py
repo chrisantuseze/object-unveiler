@@ -6,10 +6,8 @@ START_TIME = datetime.now()
 
 # # NOT FIXED DATASET
 DATA_TYPE = "NOT_FIXED"
-CKPT_DIR = '/home/selam/checkpoints/'
-#for pretrained clip head
-GELSIGHT_WEIGHTS_PATH = '/home/selam/data/camera_cage_new_notfixed/clip_models/trained/epoch_1499_gelsight_encoder.pth'
-IMAGE_WEIGHTS_PATH = '/home/selam/data/camera_cage_new_notfixed/clip_models/trained/epoch_1499_vision_encoder.pth'
+CKPT_DIR = '/diffusion/ckpt'
+
 ENC_TYPE = 'clip'  # weights above not actually used here
 DEVICE_STR = 'cuda:0'
 PRED_HORIZON = 20
