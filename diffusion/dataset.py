@@ -2,6 +2,11 @@ from act.utils_act import ACTUnveilerDataset
 import torch
 import numpy as np
 import warnings
+import random
+import os
+import torch
+
+from act.utils_act import get_stats
 
 class NormalizeDiffusionActionQpos:
     def __init__(self, norm_stats):
@@ -48,9 +53,10 @@ class NormalizeDiffusionActionQpos:
 
 class DiffusionEpisodicDataset(ACTUnveilerDataset):
 
-    def __init__(self, episode_ids, dataset_dir, pred_horizon, camera_names,norm_stats,image_size=None):
+    def __init__(self, args, dir_ids, dataset_dir, camera_names, norm_stats):
         self.gel_idx = None
-        super().__init__(episode_ids,dataset_dir,camera_names,norm_stats, pred_horizon,image_size)
+        super().__init__(args, dir_ids, dataset_dir, camera_names, norm_stats)
+
         self.action_qpos_normalize = NormalizeDiffusionActionQpos(norm_stats)
         self.camera_names = camera_names
 
@@ -79,3 +85,65 @@ class DiffusionEpisodicDataset(ACTUnveilerDataset):
         nsample['action'] = action_data
 
         return nsample
+    
+
+def load_data(args, dataset_dir, camera_names, batch_size_train, batch_size_val):
+    print(f'\nData from: {dataset_dir}\n')
+
+    args['batch_size'] = batch_size_train
+    transition_dirs = os.listdir(dataset_dir)
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    # split data to training/validation
+    random.seed(0)
+    random.shuffle(transition_dirs)
+
+    transition_dirs = transition_dirs[:10000]
+
+    split_index = int(args['split_ratio'] * len(transition_dirs))
+    train_ids = transition_dirs[:split_index]
+    val_ids = transition_dirs[split_index:]
+
+    # this ensures that the split is done properly without causing input mismatch error
+    data_length = (len(train_ids)//args['batch_size']) * args['batch_size']
+    train_ids = train_ids[:data_length]
+
+    data_length = (len(val_ids)//args['batch_size']) * args['batch_size']
+    val_ids = val_ids[:data_length]
+
+    norm_stats = get_stats(dataset_dir, transition_dirs)
+
+    # construct dataset and dataloader
+    train_dataset = DiffusionEpisodicDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
+
+    val_dataset = DiffusionEpisodicDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
+
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=batch_size_train,
+        num_workers=4,
+        shuffle=True,
+        # accelerate cpu-gpu transfer
+        pin_memory=True,
+        # don't kill worker process afte each epoch
+        persistent_workers=True,
+        prefetch_factor=4
+        # this leads to an error message about shutting down workers at the end but 
+        # does not affect training/model output
+    )
+
+    val_dataloader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=batch_size_val,
+        num_workers=1,
+        shuffle=True,
+        # accelerate cpu-gpu transfer
+        pin_memory=True,
+        # don't kill worker process afte each epoch
+        persistent_workers=True
+    )
+
+    return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
+

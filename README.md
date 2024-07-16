@@ -19,9 +19,11 @@ python3 main_act.py \
 --num_epochs 2000  --lr 1e-5 \
 --seed 0
 
-########### new collect_data seeds ################
-100
-
+python3 main_diffusion.py \
+--task_name sim_object_unveiler \
+--ckpt_dir diffusion/ckpt --enc_type resnet18 \
+--batch_size 8 --num_epochs 2000  --lr 1e-5 \
+--seed 0
 
 For the Pose-FCN Pose (Paper):
 - To simplify learning of the angle θ, we account for

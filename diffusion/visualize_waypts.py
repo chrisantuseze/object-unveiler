@@ -2,12 +2,11 @@ import h5py
 import torch
 from torch import nn
 import os
-from visualization import visualize
+from diffusion.visualization import visualize
 
-from network import get_resnet, replace_bn_with_gn, ConditionalUnet1D
+from diffusion.network import get_resnet, replace_bn_with_gn, ConditionalUnet1D
     
-from dataset import DiffusionEpisodicDataset, NormalizeDiffusionActionQpos
-from utils import get_norm_stats
+from diffusion.dataset import DiffusionEpisodicDataset, NormalizeDiffusionActionQpos
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 

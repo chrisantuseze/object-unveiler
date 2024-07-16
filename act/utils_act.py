@@ -225,17 +225,31 @@ def get_stats(dataset_dir, transition_dirs):
     action_std = all_action_data.std(dim=[0, 1], keepdim=True)
     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
 
+    #actual gripper minmax
+    action_min = all_action_data.min(axis=0) 
+    action_max = all_action_data.max(axis=0)
+    action_min[3] = 0.0 
+    action_max[3] = 0.08
+
     # normalize qpos data
     qpos_mean = all_qpos_data.mean(dim=[0, 1], keepdim=True)
     qpos_std = all_qpos_data.std(dim=[0, 1], keepdim=True)
     qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
 
+    #actual gripper minmax
+    qpos_min = all_qpos_data.min(axis=0)
+    qpos_max = all_qpos_data.max(axis=0)
+    qpos_min[3] = 0.0
+    qpos_max[3] = 0.08
+
     stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze(),
-             "qpos_mean": qpos_mean.numpy().squeeze(), "qpos_std": qpos_std.numpy().squeeze()}
+             "action_min": action_min, "action_max": action_max,
+             "qpos_mean": qpos_mean.numpy().squeeze(), "qpos_std": qpos_std.numpy().squeeze(),
+             "qpos_min": qpos_min, "qpos_max": qpos_max}
 
     return stats
 
-def load_data(args, dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val):
+def load_data(args, dataset_dir, camera_names, batch_size_train, batch_size_val):
     print(f'\nData from: {dataset_dir}\n')
 
     args['batch_size'] = batch_size_train

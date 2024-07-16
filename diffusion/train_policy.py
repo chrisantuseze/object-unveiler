@@ -1,4 +1,5 @@
 import os
+import pickle
 # diffusion policy import
 import numpy as np
 import torch
@@ -7,26 +8,53 @@ from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
 from diffusers.optimization import get_scheduler
 from tqdm.auto import tqdm
-from network import get_resnet, replace_bn_with_gn, ConditionalUnet1D
 
-from clip_pretraining import modified_resnet18
-
-from dataset import DiffusionEpisodicDataset 
+from diffusion.network import get_resnet, replace_bn_with_gn, ConditionalUnet1D
+from diffusion.clip_pretraining import modified_resnet18
+from diffusion.dataset import load_data 
 #from utils import get_norm_stats
 
 from datetime import datetime
 
-from visualization import debug, visualize
-from visualize_waypts import predict_diff_actions
+from diffusion.visualization import debug, visualize
+from diffusion.visualize_waypts import predict_diff_actions
 
-from train_args import CKPT_DIR, GELSIGHT_WEIGHTS_PATH, \
+from diffusion.train_args import CKPT_DIR, SIM_TASK_CONFIGS, GELSIGHT_WEIGHTS_PATH, \
 IMAGE_WEIGHTS_PATH, DEVICE_STR, ABLATE_GEL,\
 START_TIME
 
-def create_nets(enc_type, data_dir, norm_stats, camera_names, pred_horizon, num_episodes=100):
+def main(args):
+    batch_size_train = args['batch_size']
+    batch_size_val = args['batch_size']
+    num_epochs = args['num_epochs']
+    ckpt_dir = args['ckpt_dir']
+    enc_type = args['enc_type']
+    task_name = args['task_name']
+
     if enc_type not in ['clip','resnet18']:
         raise ValueError("only 'clip' or 'resnet18' accepted as encoder types")
-    obs_horizon=1
+
+    task_config = SIM_TASK_CONFIGS[task_name]
+    dataset_dir = task_config['dataset_dir']
+    num_episodes = task_config['num_episodes']
+    episode_len = task_config['episode_len']
+    camera_names = task_config['camera_names']
+
+    split_ratio = 0.8
+    obs_horizon = 1
+
+    config = {
+        'num_epochs': num_epochs,
+        'ckpt_dir': ckpt_dir,
+        'episode_len': episode_len,
+        'lr': args['lr'],
+        'seed': args['seed'],
+        # 'temporal_agg': args['temporal_agg'],
+        'camera_names': camera_names,
+
+        # for unveiler
+        'split_ratio': split_ratio
+    }
 
     if enc_type == 'clip':
         # load modified CLIP pretrained resnet 
@@ -69,39 +97,16 @@ def create_nets(enc_type, data_dir, norm_stats, camera_names, pred_horizon, num_
         global_cond_dim=obs_dim*obs_horizon
     )
 
-    train_ratio = 0.8
-    shuffled_indices = np.random.permutation(num_episodes)
-    train_indices = shuffled_indices[:int(train_ratio * num_episodes)]
-    val_indices = shuffled_indices[int(train_ratio * num_episodes):]
-    
-    train_dataset = DiffusionEpisodicDataset(train_indices,data_dir,pred_horizon,camera_names,norm_stats)
 
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=8,
-        num_workers=4,
-        shuffle=True,
-        # accelerate cpu-gpu transfer
-        pin_memory=True,
-        # don't kill worker process afte each epoch
-        persistent_workers=True,
-        prefetch_factor=4
-        # this leads to an error message about shutting down workers at the end but 
-        # does not affect training/model output
-    )
+    train_dataloader, val_dataloader, stats, _ = load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_val)
 
-    val_dataset = DiffusionEpisodicDataset(val_indices,data_dir,pred_horizon,camera_names,norm_stats)
+    # save dataset stats
+    if not os.path.isdir(ckpt_dir):
+        os.makedirs(ckpt_dir)
 
-    val_dataloader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=2,
-        num_workers=1,
-        shuffle=True,
-        # accelerate cpu-gpu transfer
-        pin_memory=True,
-        # don't kill worker process afte each epoch
-        persistent_workers=True
-    )
+    stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
+    with open(stats_path, 'wb') as f:
+        pickle.dump(stats, f)
 
     nets = nn.ModuleDict({
         'noise_pred_net': noise_pred_net
@@ -109,9 +114,9 @@ def create_nets(enc_type, data_dir, norm_stats, camera_names, pred_horizon, num_
 
     for i, cam_name in enumerate(camera_names):
         nets[f"{cam_name}_encoder"] = image_encoders[i]
-    
-    return nets, train_dataloader, val_dataloader, enc_type
 
+    train(num_epochs, nets, train_dataloader, val_dataloader, enc_type, camera_names)
+    
 def _save_ckpt(start_time:datetime,epoch,enc_type,
                nets,train_losses,val_losses,test=False):
     
@@ -164,29 +169,7 @@ def _save_ckpt(start_time:datetime,epoch,enc_type,
         print("noise model is same as random model:", bool)
         input("press any key to continue")
 
-
-noise_scheduler = DDPMScheduler(
-        num_train_timesteps=100,
-        # the choise of beta schedule has big impact on performance
-        # we found squared cosine works the best
-        beta_schedule='squaredcos_cap_v2',
-        # clip output to [-1,1] to improve stability
-        clip_sample=True,
-        # our network predicts noise (instead of denoised action)
-        prediction_type='epsilon'
-    )
-
-#START_TIME = datetime.now()
-
-
-
-def train(num_epochs,
-          camera_names,
-          nets:nn.ModuleDict,
-          train_dataloader,
-          val_dataloader,
-          enc_type,
-          device=torch.device(DEVICE_STR)):
+def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type, camera_names, device=torch.device(DEVICE_STR)):
     
     debug.print=True
     debug.plot=True 
@@ -195,10 +178,9 @@ def train(num_epochs,
     debugdir = CKPT_DIR+today+'_plots'+'_'+enc_type
     debug.visualizations_dir=debugdir
 
-
     # TODO: 
     # variable obs_horizon   
-    obs_horizon =1
+    obs_horizon = 1
 
     #TODO:
     # Exponential Moving Average
@@ -210,6 +192,17 @@ def train(num_epochs,
     #     power=0.75)
 
     nets.to(device)
+
+    noise_scheduler = DDPMScheduler(
+        num_train_timesteps=100,
+        # the choise of beta schedule has big impact on performance
+        # we found squared cosine works the best
+        beta_schedule='squaredcos_cap_v2',
+        # clip output to [-1,1] to improve stability
+        clip_sample=True,
+        # our network predicts noise (instead of denoised action)
+        prediction_type='epsilon'
+    )
 
     # Standard ADAM optimizer
     # Note that EMA parametesr are not optimized
