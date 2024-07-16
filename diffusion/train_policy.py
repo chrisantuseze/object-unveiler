@@ -228,7 +228,6 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                 for nbatch in tepoch:
                     image_features = torch.Tensor().to(device)
                     for cam_name in camera_names:
-                        print(nbatch)
                         ncur = nbatch[cam_name][:,:obs_horizon].to(device)
 
                         ncur_features = nets[f'{cam_name}_encoder'](ncur.flatten(end_dim=1))

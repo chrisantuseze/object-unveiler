@@ -61,27 +61,13 @@ class DiffusionEpisodicDataset(ACTUnveilerDataset):
         self.camera_names = camera_names
 
     def __getitem__(self, index):        
-
-        if self.gel_idx == None:
-            return super().__getitem__(index)
-        
         all_cam_images, qpos_data, action_data, is_pad = super().__getitem__(index)
-        # because we used the super init, everything is already normalized
 
         nsample = dict()
-
-        # change the padding behavior so the robot stays in the same position at the end
-        if any(is_pad): 
-            last_idx = torch.where(is_pad==0)[0][-1]
-            last_action = action_data[last_idx]
-
-            action_data[last_idx+1:] = last_action
-        
-        # add all cameras
         for i, cam in enumerate(self.camera_names):
             nsample[cam] = torch.stack([all_cam_images[i],]) 
 
-        nsample['agent_pos'] = torch.stack([qpos_data,])
+        nsample['agent_pos'] = qpos_data
         nsample['action'] = action_data
 
         return nsample
