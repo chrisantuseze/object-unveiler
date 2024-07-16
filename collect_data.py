@@ -60,6 +60,8 @@ def collect_episodic_dataset(args, params):
         is_target_grasped = False
         episode_data_list = []
 
+        steps = 0
+
         # NOTE: During the next iteration you need to search through the masks and identify the target, 
         # then use its id. Don't maintain the old target id because the scene has been resegmented
         while node_id != target_id:
@@ -89,6 +91,11 @@ def collect_episodic_dataset(args, params):
 
             env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step(env_action3d)
+
+            # if this is the first loop, set the initial reset obs with the joint and images from the next_obs
+            if steps == 0:
+                obs['joints_traj'] = next_obs['joints_traj']
+                obs['images_traj'] = next_obs['images_traj']
 
             grasp_status.append(grasp_info['stable'])
 
@@ -138,6 +145,7 @@ def collect_episodic_dataset(args, params):
                 print("Target is no longer available in the scene.")
                 break
 
+            steps += 1
 
         if grasping.episode_status(grasp_status, is_target_grasped):
             memory.store_episode(episode_data_list)
