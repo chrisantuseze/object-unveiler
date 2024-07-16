@@ -229,9 +229,18 @@ def get_stats(dataset_dir, transition_dirs):
     action_min = all_action_data.min(axis=0) 
     action_max = all_action_data.max(axis=0)
 
+    # Extract the tensors
+    values = action_min.values
+    indices = action_min.indices
+    values[3] = 0.0  # new value
+    action_min = torch.return_types.min(
+        values=values,
+        indices=indices
+    )
+
     print("action_min", action_min)
 
-    action_min[3] = 0.0 
+    # action_min[3] = 0.0 
     action_max[3] = 0.08
 
     # normalize qpos data
