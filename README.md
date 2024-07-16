@@ -15,14 +15,14 @@ python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 python3 main_act.py \
 --task_name sim_object_unveiler \
 --ckpt_dir act/ckpt \
---policy_class ACT --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 \
+--policy_class ACT --kl_weight 10 --chunk_size 3 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 \
 --num_epochs 2000  --lr 1e-5 \
 --seed 0
 
 python3 main_diffusion.py \
 --task_name sim_object_unveiler \
 --ckpt_dir diffusion/ckpt --enc_type resnet18 \
---batch_size 8 --num_epochs 2000  --lr 1e-5 \
+--chunk_size 3 --batch_size 8 --num_epochs 2000  --lr 1e-5 \
 --seed 0
 
 For the Pose-FCN Pose (Paper):

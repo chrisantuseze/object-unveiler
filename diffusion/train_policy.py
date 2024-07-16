@@ -49,6 +49,7 @@ def main(args):
         'episode_len': episode_len,
         'lr': args['lr'],
         'seed': args['seed'],
+        'policy_config': {'num_queries': args['chunk_size'], }, #@Chris: ensure the chunk size is 3 and not 100
         # 'temporal_agg': args['temporal_agg'],
         'camera_names': camera_names,
 
