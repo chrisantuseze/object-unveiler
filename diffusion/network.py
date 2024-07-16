@@ -208,6 +208,8 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
+        self.fc_cond = nn.Linear(3328, 1796) #@Chris
+
         self.diffusion_step_encoder = diffusion_step_encoder
         self.up_modules = up_modules
         self.down_modules = down_modules
@@ -247,6 +249,9 @@ class ConditionalUnet1D(nn.Module):
             global_feature = torch.cat([
                 global_feature, global_cond
             ], axis=-1)
+
+            global_feature = self.fc_cond(global_feature)
+            print("global_feature.shape", global_feature.shape)
 
         x = sample
         h = []
@@ -301,15 +306,15 @@ class DiffusionModel(nn.Module):
         B = nagent_pos.shape[0]
         
         # concatenate vision feature and low-dim obs
-        print("image_features, nagent_pos", image_features.shape, nagent_pos.shape)
+        print("image_features, nagent_pos", image_features.shape, nagent_pos.shape) # 8 x 1 x 1536, 8 x 1
         proprio_input = self.input_proj_robot_state(nagent_pos).unsqueeze(1)
-        print("proprio_input.shape", proprio_input.shape)
+        print("proprio_input.shape", proprio_input.shape) # 8 x 1 x 1536
 
-        obs_features = torch.cat([image_features, proprio_input], dim=-1)
+        obs_features = torch.cat([image_features, proprio_input], dim=-1) # 8 x 1 x 3072
         print("obs_features.shape", obs_features.shape)
 
         obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
-        print("obs_cond.shape", obs_cond.shape)
+        print("obs_cond.shape", obs_cond.shape) # 8 x 3072
 
         # sample noise to add to actions
         noise = torch.randn(naction.shape, device=self.device)
