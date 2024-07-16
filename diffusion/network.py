@@ -272,16 +272,17 @@ class ConditionalUnet1D(nn.Module):
     
 
 class DiffusionModel(nn.Module):
-    def __init__(self, nets, camera_names, device):
+    def __init__(self, nets, camera_names, device, noise_scheduler):
         super().__init__()
 
         self.nets = nets
         self.camera_names = camera_names
         self.device = device
+        self.noise_scheduler = noise_scheduler
         self.obs_horizon = 1
 
         hidden_dim = 512
-        self.input_proj_robot_state = nn.Linear(3, hidden_dim) #@Chris
+        self.input_proj_robot_state = nn.Linear(1, hidden_dim * 3) #@Chris
 
     def forward(self, nbatch):
         image_features = torch.Tensor().to(self.device)

@@ -199,7 +199,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
         prediction_type='epsilon'
     )
 
-    model = DiffusionModel(nets, camera_names, device).to(device)
+    model = DiffusionModel(nets, camera_names, device, noise_scheduler).to(device)
 
     # Standard ADAM optimizer
     # Note that EMA parametesr are not optimized
