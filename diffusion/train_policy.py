@@ -16,7 +16,7 @@ from diffusion.dataset import load_data
 
 from datetime import datetime
 
-from diffusion.visualization import debug, visualize
+# from diffusion.visualization import debug, visualize
 from diffusion.visualize_waypts import predict_diff_actions
 
 from diffusion.train_args import CKPT_DIR, SIM_TASK_CONFIGS, DEVICE_STR, START_TIME
@@ -170,12 +170,12 @@ def _save_ckpt(start_time:datetime,epoch,enc_type,
 
 def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type, camera_names, device=torch.device(DEVICE_STR)):
     
-    debug.print=True
-    debug.plot=True 
-    debug.dataset=('validation')
-    today = START_TIME.strftime("%Y-%m-%d_%H-%M-%S")
-    debugdir = CKPT_DIR+today+'_plots'+'_'+enc_type
-    debug.visualizations_dir=debugdir
+    # debug.print=True
+    # debug.plot=True 
+    # debug.dataset=('validation')
+    # today = START_TIME.strftime("%Y-%m-%d_%H-%M-%S")
+    # debugdir = CKPT_DIR+today+'_plots'+'_'+enc_type
+    # debug.visualizations_dir=debugdir
 
     # TODO: 
     # variable obs_horizon   
@@ -337,7 +337,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
 
                             #save plot of first batch
                             if i == 0:
-                                debug.epoch = epoch_idx
+                                # debug.epoch = epoch_idx
                                 
                                 mdict = dict()
                                 for i in nets.keys():
@@ -352,7 +352,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                                 print('qpos',qpos.shape)
                                 print('preds', preds.shape)
                                 print('gt',gt.shape)
-                                visualize(all_images,qpos,preds,gt)
+                                # visualize(all_images,qpos,preds,gt)
             
             val_losses.append(np.mean(val_loss))
             
