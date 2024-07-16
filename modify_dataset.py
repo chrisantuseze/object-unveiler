@@ -49,6 +49,8 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
+        print("data['images_traj'], data['joints_traj']", len(data['images_traj']), len(data['joints_traj']))
+
         transition = {
             'state': data['state'], 
             'target_mask': data['target_mask'], 
@@ -61,11 +63,12 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'joints_pos': data['joints_pos']
+            'joints_traj': data['joints_traj'],
+            'images_traj': data['images_traj'],
         }
         episode_data_list.append(transition)
 
-    memory.store_episode(episode_data_list)
+    # memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
 def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):

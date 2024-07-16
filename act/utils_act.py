@@ -118,7 +118,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
                 data_list.append((images, qpos, action, c_target_mask))
             except Exception as e:
-                print("Error occurred", e)
+                print("Error occurred - ", e)
             
         return data_list
 

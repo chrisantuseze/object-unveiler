@@ -168,8 +168,8 @@ class Environment:
             color, depth, seg = cam.get_data() 
             images['color'].append(color)
             images['depth'].append(depth)
-            cv2.imwrite(os.path.join("save/misc", "color.png"), color)
-            cv2.imwrite(os.path.join("save/misc", "depth.png"), depth)
+            # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            # cv2.imwrite(os.path.join("save/misc", "depth.png"), depth)
             
         # move hand above the pre-grasp position
         pre_grasp_pos = action['pos'].copy()
