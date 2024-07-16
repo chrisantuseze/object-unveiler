@@ -228,6 +228,9 @@ def get_stats(dataset_dir, transition_dirs):
     #actual gripper minmax
     action_min = all_action_data.min(axis=0) 
     action_max = all_action_data.max(axis=0)
+
+    print("action_min", action_min)
+
     action_min[3] = 0.0 
     action_max[3] = 0.08
 
