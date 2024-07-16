@@ -122,8 +122,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        print("Episode length", len(episode_data), id)
-
         images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         sequence_len = self.args['policy_config']['num_queries']
@@ -160,11 +158,11 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         action_data = torch.from_numpy(padded_action).float()
         is_pad = torch.from_numpy(is_pad).bool()
 
-        print("image_data.shape", image_data.shape)
+        # print("image_data.shape", image_data.shape)
 
         # channel last
         image_data = torch.einsum('k h w c -> k c h w', image_data)
-        print("image_data.shape", image_data.shape)
+        # print("image_data.shape", image_data.shape)
 
         # normalize image and change dtype to float
         image_data = image_data / 255.0
