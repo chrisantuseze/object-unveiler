@@ -76,6 +76,7 @@ class Conv1dBlock(nn.Module):
         )
 
     def forward(self, x):
+        print("x.shape", x.shape)
         return self.block(x)
 
 
