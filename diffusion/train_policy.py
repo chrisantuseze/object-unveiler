@@ -88,11 +88,9 @@ def main(args):
     #7 cameras including gelsight
     obs_dim = vision_feature_dim * len(camera_names) + lowdim_obs_dim
 
-    action_dim = 4
-
     # create network object
     noise_pred_net = ConditionalUnet1D(
-        input_dim=action_dim,
+        input_dim=args['chunk_size'],
         global_cond_dim=obs_dim*obs_horizon
     )
 
