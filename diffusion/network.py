@@ -314,7 +314,7 @@ class DiffusionModel(nn.Module):
         obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
 
         # sample noise to add to actions
-        print("naction.shape", naction.shape)
+        # print("naction.shape", naction.shape) # 3 x 4
         noise = torch.randn(naction.shape, device=self.device)
 
         # sample a diffusion iteration for each data point

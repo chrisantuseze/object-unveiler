@@ -224,7 +224,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                 for nbatch in tepoch:
                     
                     noise_pred, noise = model(nbatch)
-                    print("noise_pred, noise", noise_pred.shape, noise.shape)
+                    # print("noise_pred, noise", noise_pred.shape, noise.shape)
                     # L2 loss
                     loss = nn.functional.mse_loss(noise_pred, noise)
 
@@ -256,7 +256,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                 val_loss=list()
                 with tqdm(val_dataloader, desc='Val_Batch', leave=False) as tepoch:
                     with torch.no_grad():
-                        for i,nbatch in enumerate(tepoch):
+                        for i, nbatch in enumerate(tepoch):
                             noise_pred, noise = model(nbatch)
 
                             # L2 loss
@@ -265,24 +265,24 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                             val_loss.append(loss_cpu)
                             tepoch.set_postfix(loss=loss_cpu)
 
-                            #save plot of first batch
-                            if i == 0:
-                                # debug.epoch = epoch_idx
+                            # #save plot of first batch
+                            # if i == 0:
+                            #     # debug.epoch = epoch_idx
                                 
-                                mdict = dict()
-                                for i in nets.keys():
-                                    mdict[i] = nets[i]
+                            #     mdict = dict()
+                            #     for i in nets.keys():
+                            #         mdict[i] = nets[i]
 
-                                all_images,qpos,preds,gt= predict_diff_actions(nbatch,
-                                    val_dataloader.dataset.action_qpos_normalize,
-                                    mdict,
-                                    camera_names,device
-                                )
-                                print('all_images',len(all_images),'0:',all_images[0].shape)
-                                print('qpos',qpos.shape)
-                                print('preds', preds.shape)
-                                print('gt',gt.shape)
-                                # visualize(all_images,qpos,preds,gt)
+                            #     all_images,qpos,preds,gt= predict_diff_actions(nbatch,
+                            #         val_dataloader.dataset.action_qpos_normalize,
+                            #         mdict,
+                            #         camera_names,device
+                            #     )
+                            #     print('all_images',len(all_images),'0:',all_images[0].shape)
+                            #     print('qpos',qpos.shape)
+                            #     print('preds', preds.shape)
+                            #     print('gt',gt.shape)
+                            #     visualize(all_images,qpos,preds,gt)
             
             val_losses.append(np.mean(val_loss))
             
