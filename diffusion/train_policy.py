@@ -226,6 +226,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                 for nbatch in tepoch:
                     
                     noise_pred, noise = model(nbatch)
+                    print("noise_pred, noise", noise_pred.shape, noise.shape)
                     # L2 loss
                     loss = nn.functional.mse_loss(noise_pred, noise)
 
