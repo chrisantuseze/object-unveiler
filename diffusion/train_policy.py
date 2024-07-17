@@ -293,10 +293,10 @@ def train(config, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type
             val_losses.append(np.mean(val_loss))
             
 
-            if epoch_idx % 500 == 0: 
+            if epoch_idx % 200 == 0: 
                 # _save_ckpt(START_TIME,epoch_idx,enc_type,nets,train_losses,val_losses)
 
-                ckpt_path = os.path.join(config['ckpt_dir'], f'policy_epoch_{epoch_idx}_seed_{config['seed']}.ckpt')
+                ckpt_path = os.path.join(config['ckpt_dir'], f"policy_epoch_{epoch_idx}_seed_{config['seed']}.ckpt")
                 torch.save(model.state_dict(), ckpt_path)
 
     best_epoch, min_val_loss, best_state_dict = best_ckpt_info
