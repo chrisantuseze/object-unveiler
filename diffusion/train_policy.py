@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import pickle
 # diffusion policy import
@@ -112,7 +113,7 @@ def main(args):
     for i, cam_name in enumerate(camera_names):
         nets[f"{cam_name}_encoder"] = image_encoders[i]
 
-    train(num_epochs, nets, train_dataloader, val_dataloader, enc_type, camera_names)
+    train(config, nets, train_dataloader, val_dataloader, enc_type)
     
 def _save_ckpt(start_time:datetime,epoch,enc_type,
                nets,train_losses,val_losses,test=False):
@@ -166,7 +167,7 @@ def _save_ckpt(start_time:datetime,epoch,enc_type,
         print("noise model is same as random model:", bool)
         input("press any key to continue")
 
-def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type, camera_names, device=torch.device(DEVICE_STR)):
+def train(config, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type, device=torch.device(DEVICE_STR)):
     
     # debug.print=True
     # debug.plot=True 
@@ -197,7 +198,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
         prediction_type='epsilon'
     )
 
-    model = DiffusionModel(nets, camera_names, device, noise_scheduler).to(device)
+    model = DiffusionModel(nets, config['camera_names'], device, noise_scheduler).to(device)
 
     # Standard ADAM optimizer
     # Note that EMA parametesr are not optimized
@@ -208,11 +209,11 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
         name='cosine',
         optimizer=optimizer,
         num_warmup_steps=500,
-        num_training_steps=len(train_dataloader) * num_epochs
+        num_training_steps=len(train_dataloader) * config['num_epochs']
     )
     
 
-    with tqdm(range(num_epochs), desc='Epoch') as tglobal:
+    with tqdm(range(config['num_epochs']), desc='Epoch') as tglobal:
         # epoch loop
         train_losses = list()
         val_losses = list()
@@ -249,45 +250,60 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
             tglobal.set_postfix(loss=np.mean(epoch_loss))
             
             train_losses.append(np.mean(epoch_loss))
-            # TODO:
-            if epoch_idx % 10 == 0:
                 
-                nets.eval()
-                val_loss=list()
-                with tqdm(val_dataloader, desc='Val_Batch', leave=False) as tepoch:
-                    with torch.no_grad():
-                        for i, nbatch in enumerate(tepoch):
-                            noise_pred, noise = model(nbatch)
+            nets.eval()
+            val_loss=list()
+            min_val_loss = np.inf
+            best_ckpt_info = None
 
-                            # L2 loss
-                            loss = nn.functional.mse_loss(noise_pred, noise)
-                            loss_cpu = loss.item()
-                            val_loss.append(loss_cpu)
-                            tepoch.set_postfix(loss=loss_cpu)
+            with tqdm(val_dataloader, desc='Val_Batch', leave=False) as tepoch:
+                with torch.no_grad():
+                    for i, nbatch in enumerate(tepoch):
+                        noise_pred, noise = model(nbatch)
 
-                            # #save plot of first batch
-                            # if i == 0:
-                            #     # debug.epoch = epoch_idx
-                                
-                            #     mdict = dict()
-                            #     for i in nets.keys():
-                            #         mdict[i] = nets[i]
+                        # L2 loss
+                        loss = nn.functional.mse_loss(noise_pred, noise)
+                        loss_cpu = loss.item()
+                        val_loss.append(loss_cpu)
+                        tepoch.set_postfix(loss=loss_cpu)
 
-                            #     all_images,qpos,preds,gt= predict_diff_actions(nbatch,
-                            #         val_dataloader.dataset.action_qpos_normalize,
-                            #         mdict,
-                            #         camera_names,device
-                            #     )
-                            #     print('all_images',len(all_images),'0:',all_images[0].shape)
-                            #     print('qpos',qpos.shape)
-                            #     print('preds', preds.shape)
-                            #     print('gt',gt.shape)
-                            #     visualize(all_images,qpos,preds,gt)
+                        if val_loss < min_val_loss:
+                            min_val_loss = val_loss
+                            best_ckpt_info = (epoch_idx, min_val_loss, deepcopy(model.state_dict()))
+
+                        # #save plot of first batch
+                        # if i == 0:
+                        #     # debug.epoch = epoch_idx
+                            
+                        #     mdict = dict()
+                        #     for i in nets.keys():
+                        #         mdict[i] = nets[i]
+
+                        #     all_images,qpos,preds,gt= predict_diff_actions(nbatch,
+                        #         val_dataloader.dataset.action_qpos_normalize,
+                        #         mdict,
+                        #         camera_names,device
+                        #     )
+                        #     print('all_images',len(all_images),'0:',all_images[0].shape)
+                        #     print('qpos',qpos.shape)
+                        #     print('preds', preds.shape)
+                        #     print('gt',gt.shape)
+                        #     visualize(all_images,qpos,preds,gt)
             
             val_losses.append(np.mean(val_loss))
             
 
             if epoch_idx % 500 == 0: 
-                _save_ckpt(START_TIME,epoch_idx,enc_type,nets,train_losses,val_losses)
+                # _save_ckpt(START_TIME,epoch_idx,enc_type,nets,train_losses,val_losses)
+
+                ckpt_path = os.path.join(config['ckpt_dir'], f'policy_epoch_{epoch_idx}_seed_{config['seed']}.ckpt')
+                torch.save(model.state_dict(), ckpt_path)
+
+    best_epoch, min_val_loss, best_state_dict = best_ckpt_info
+    ckpt_path = os.path.join(config['ckpt_dir'], f'policy_best.ckpt')
+    torch.save(best_state_dict, ckpt_path)
+    print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
+
+    print(f'Training finished:\nSeed {config['seed']}, val loss {min_val_loss:.6f} at epoch {best_epoch}')
    
-    _save_ckpt(START_TIME,num_epochs,enc_type,nets,train_losses,val_losses) #final save
+    # _save_ckpt(START_TIME,num_epochs,enc_type,nets,train_losses,val_losses) #final save
