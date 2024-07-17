@@ -257,40 +257,7 @@ def train(num_epochs, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_
                 with tqdm(val_dataloader, desc='Val_Batch', leave=False) as tepoch:
                     with torch.no_grad():
                         for i,nbatch in enumerate(tepoch):
-                            image_features = torch.Tensor().to(device)
-                            for cam_name in camera_names:
-                                ncur = nbatch[cam_name][:,:obs_horizon].to(device)
-
-                                ncur_features = nets[f'{cam_name}_encoder'](ncur.flatten(end_dim=1))
-                                ncur_features = ncur_features.reshape(*ncur.shape[:2],-1)
-
-                                image_features = torch.cat([image_features, ncur_features], dim=-1)
-                            
-                            nagent_pos = nbatch['agent_pos'][:,:obs_horizon].to(device)
-                            naction = nbatch['action'].to(device)
-                            B = nagent_pos.shape[0]
-                            
-                            # concatenate vision feature and low-dim obs
-                            obs_features = torch.cat([image_features, nagent_pos], dim=-1)
-
-                            obs_cond = obs_features.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
-
-                            # sample noise to add to actions
-                            noise = torch.randn(naction.shape, device=device)
-
-                            # sample a diffusion iteration for each data point
-                            timesteps = torch.randint(
-                                0, noise_scheduler.config.num_train_timesteps,
-                                (B,), device=device
-                            ).long()
-
-
-                            # add noise to the clean images according to the noise magnitude at each diffusion iteration
-                            # (this is the forward diffusion process)
-                            noisy_actions = noise_scheduler.add_noise(naction, noise, timesteps)
-                            
-                            # predict the noise residual
-                            noise_pred = nets['noise_pred_net'](noisy_actions, timesteps, global_cond=obs_cond)
+                            noise_pred, noise = model(nbatch)
 
                             # L2 loss
                             loss = nn.functional.mse_loss(noise_pred, noise)
