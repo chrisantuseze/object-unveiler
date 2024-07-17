@@ -230,7 +230,7 @@ class ConditionalUnet1D(nn.Module):
         output: (B,T,input_dim)
         """
         # (B,T,C)
-        sample = sample.moveaxis(-1,-2)
+        sample = sample.moveaxis(-1,-2) # @Chris Chunk size has to be 4 because of this rotation.
         # (B,C,T)
 
         # 1. time
