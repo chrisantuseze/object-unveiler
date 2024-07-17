@@ -267,8 +267,8 @@ def train(config, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type
                         val_loss.append(loss_cpu)
                         tepoch.set_postfix(loss=loss_cpu)
 
-                        if val_loss < min_val_loss:
-                            min_val_loss = val_loss
+                        if loss_cpu < min_val_loss:
+                            min_val_loss = loss_cpu
                             best_ckpt_info = (epoch_idx, min_val_loss, deepcopy(model.state_dict()))
 
                         # #save plot of first batch
