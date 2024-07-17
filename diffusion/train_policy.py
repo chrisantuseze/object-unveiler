@@ -304,6 +304,6 @@ def train(config, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type
     torch.save(best_state_dict, ckpt_path)
     print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
 
-    print(f'Training finished:\nSeed {config['seed']}, val loss {min_val_loss:.6f} at epoch {best_epoch}')
+    print(f"Training finished:\nSeed {config['seed']}, val loss {min_val_loss:.6f} at epoch {best_epoch}")
    
     # _save_ckpt(START_TIME,num_epochs,enc_type,nets,train_losses,val_losses) #final save
