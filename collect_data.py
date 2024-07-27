@@ -94,8 +94,7 @@ def collect_episodic_dataset(args, params):
 
             # if this is the first loop, set the initial reset obs with the joint and images from the next_obs
             if steps == 0:
-                obs['joints_traj'] = next_obs['joints_traj']
-                obs['images_traj'] = next_obs['images_traj']
+                obs['traj_data'] = next_obs['traj_data']
 
             grasp_status.append(grasp_info['stable'])
 
@@ -126,8 +125,7 @@ def collect_episodic_dataset(args, params):
                     'object_masks': new_masks,
                     'action': action, 
                     'label': grasp_info['stable'],
-                    'joints_traj': obs['joints_traj'],
-                    'images_traj': obs['images_traj'],
+                    'traj_data': obs['traj_data'],
                 }
                 episode_data_list.append(transition)
 

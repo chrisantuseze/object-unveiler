@@ -99,7 +99,7 @@ class FloatingBHand:
 
         # Move fingers to home position.
         home_aperture_value = 0.6
-        self.move_fingers([0.0, home_aperture_value, home_aperture_value, home_aperture_value])
+        self.move_fingers(agent_cams=None, final_joint_values=[0.0, home_aperture_value, home_aperture_value, home_aperture_value])
         self.configure(n_links_before=4)
 
 
@@ -151,7 +151,7 @@ class FloatingBHand:
         p.removeBody(mount_body_id)
         p.removeBody(robot_id)
 
-    def move(self, target_pos, target_quat, duration=2.0, stop_at_contact=False):
+    def move(self, agent_cams, target_pos, target_quat, duration=2.0, stop_at_contact=False):
         # compute translation
         affine_trans = np.eye(4)
         affine_trans[0:3, 0:3] = self.home_quat.rotation_matrix()
@@ -208,7 +208,14 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            commands.append((command, vels))
+            #@Chris we save the images at the beginning of the trajectory
+            images = {'color': []}
+            for cam in agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
+                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+
+            commands.append((command, vels, images))
 
         return commands, is_in_contact
 
@@ -225,7 +232,7 @@ class FloatingBHand:
                                     targetPosition=joint_position[i],
                                     force=apply_force)
             
-    def move_fingers(self, final_joint_values, duration=1, force=2):
+    def move_fingers(self, agent_cams=None, final_joint_values=[], duration=1, force=2):
         """
         Move fingers while keeping the hand to the same pose
         """
@@ -278,7 +285,17 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            commands.append((command, vels))
+            if not agent_cams:
+                return commands
+
+            #@Chris we save the images at the beginning of the trajectory
+            images = {'color': []}
+            for cam in agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
+                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+
+            commands.append((command, vels, images))
 
         return commands#, [current_pos, hand_pos] #@Chris
 
@@ -296,11 +313,11 @@ class FloatingBHand:
             positionGains=[100 * self.speed] * len(self.indices)
         )
 
-    def close(self, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
-        return self.move_fingers(joint_vals)
+    def close(self, agent_cams, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals)
 
-    def open(self, joint_vals=[0.0, 0.6, 0.6, 0.6]):
-        return self.move_fingers(joint_vals, duration=1)
+    def open(self, agent_cams, joint_vals=[0.0, 0.6, 0.6, 0.6]):
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1)
 
     def configure(self, n_links_before):
         # set friction coefficients for gripper fingers

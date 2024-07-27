@@ -221,7 +221,7 @@ def train(config, nets:nn.ModuleDict, train_dataloader, val_dataloader, enc_type
             epoch_loss = list()
             # batch loop
             nets.train()
-            with tqdm(train_dataloader, desc='Batch', leave=False) as tepoch:
+            with tqdm(train_dataloader, desc='Train Batch', leave=False) as tepoch:
                 for nbatch in tepoch:
                     
                     noise_pred, noise = model(nbatch)

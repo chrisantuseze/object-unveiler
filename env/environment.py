@@ -65,8 +65,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        p.connect(p.DIRECT)
-        # p.connect(p.GUI)
+        # p.connect(p.DIRECT)
+        p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -136,7 +136,7 @@ class Environment:
         return self.get_observation()
 
     def get_observation(self):
-        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'joints_traj': [], 'images_traj': []}
+        obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'traj_data': []}
 
         for cam in self.agent_cams:
             color, depth, seg = cam.get_data() 
@@ -159,32 +159,67 @@ class Environment:
 
         return obs
     
+    def step_act(self, action):
+        command = None
+
+        # Move HAND above the pregrasp position
+        p.setJointMotorControlArray(
+            self.bhand.robot_hand_id,
+            self.bhand.joint_ids,
+            p.POSITION_CONTROL,
+            targetPositions=command,
+            forces=[100 * self.bhand.force, 100 * self.bhand.force, 100 * self.bhand.force, 100 * self.bhand.force],
+            positionGains=[100 * self.bhand.speed, 100 * self.bhand.speed, 100 * self.bhand.speed, 100 * self.bhand.speed]
+        )
+
+        # if stop_at_contact:
+        #     points = p.getContactPoints(bodyA=self.robot_hand_id)
+        #     if len(points) > 0:
+        #         for pnt in points:
+        #             if pnt[9] > 0:
+        #                 is_in_contact = True
+        #                 break
+
+        #     if is_in_contact:
+        #         break
+
+        self.simulation.step()
+
+        # After duration == 0.1, switch to FINGER configuration
+
+
+        # Then move HAND to the pre-grasp position (below the pregrasp position)
+
+
+        # Close FINGERS
+
+
+        # Move HAND up when grasped
+
+
+        # Move HAND home
+
+
+        # Open FINGERS to drop object
+
+    
     def step(self, action):
         trajectories = []
-
-        #@Chris we save the images at the beginning of the trajectory
-        images = {'color': [], 'depth': []}
-        for cam in self.agent_cams:
-            color, depth, seg = cam.get_data() 
-            images['color'].append(color)
-            images['depth'].append(depth)
-            # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
-            # cv2.imwrite(os.path.join("save/misc", "depth.png"), depth)
             
         # move hand above the pre-grasp position
         pre_grasp_pos = action['pos'].copy()
         pre_grasp_pos[2] += 0.3
 
-        commands, _ = self.bhand.move(pre_grasp_pos, action['quat'], duration=0.1)
+        commands, _ = self.bhand.move(self.agent_cams, pre_grasp_pos, action['quat'], duration=0.1)
         trajectories.extend(commands)
 
         # set finger configuration
         theta = action['aperture']
-        commands = self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
+        commands = self.bhand.move_fingers(self.agent_cams, [0.0, theta, theta, theta], duration=0.1, force=5)
         trajectories.extend(commands)
 
         # move to the pre-grasp position
-        commands, is_in_contact = self.bhand.move(action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
+        commands, is_in_contact = self.bhand.move(self.agent_cams, action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
         trajectories.extend(commands)
         
         # check if during reaching the pre-grasp position, the hand collides with some objects
@@ -199,7 +234,7 @@ class Environment:
             grasp_pos = action['pos'] + rot[0:3, 2] * action['push_distance']
 
             # if grasping only (without power push), comment out
-            commands, _ = self.bhand.move(grasp_pos, action['quat'], duration=2)
+            commands, _ = self.bhand.move(self.agent_cams, grasp_pos, action['quat'], duration=2)
             trajectories.extend(commands)
 
             # compute the distances of each object from other objects after pushing
@@ -214,7 +249,7 @@ class Environment:
 
             
             # close the fingers
-            commands = self.bhand.close()
+            commands = self.bhand.close(agent_cams=self.agent_cams)
             trajectories.extend(commands)
         else:
             grasp_pos = action['pos']
@@ -222,11 +257,11 @@ class Environment:
         # move up when the object is picked
         final_pos = grasp_pos.copy()
         final_pos[2] += 0.4
-        commands, _ = self.bhand.move(final_pos, action['quat'], duration=0.1)
+        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.1)
         trajectories.extend(commands)
 
         # check grasp stability
-        _, _ = self.bhand.move(final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for saving grasp stability
+        _, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for saving grasp stability
 
         stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
@@ -248,18 +283,17 @@ class Environment:
                     grasp_label = False
 
         # move home
-        commands, _ = self.bhand.move(self.bhand.home_position, action['quat'], duration=0.1)
+        commands, _ = self.bhand.move(self.agent_cams, self.bhand.home_position, action['quat'], duration=0.1)
         trajectories.extend(commands)
 
         # open fingers to drop grasped object
-        commands = self.bhand.open()
+        commands = self.bhand.open(agent_cams=self.agent_cams)
         trajectories.extend(commands)
 
         self.remove_flat_objs()
 
         obs = self.get_observation()
-        obs['joints_traj'] = trajectories
-        obs['images_traj'] = images
+        obs['traj_data'] = trajectories
 
         return obs, {'collision': is_in_contact,
                                 'stable': grasp_label,
