@@ -189,8 +189,8 @@ class FloatingBHand:
                 self.joint_ids,
                 p.POSITION_CONTROL,
                 targetPositions=command,
-                forces=[100 * self.force, 100 * self.force, 100 * self.force, 100 * self.force],
-                positionGains=[100 * self.speed, 100 * self.speed, 100 * self.speed, 100 * self.speed]
+                forces=[100 * self.force] * len(self.joint_ids),
+                positionGains=[100 * self.speed] * len(self.joint_ids)
             )
 
             if stop_at_contact:
@@ -349,3 +349,112 @@ class FloatingBHand:
             assert (distal_contacts > total_contacts)
         else:
             return True, total_contacts
+        
+
+    def move_robot(self, joint_positions):
+        p.setJointMotorControlArray(
+            self.robot_hand_id,
+            self.joint_ids,
+            p.POSITION_CONTROL,
+            targetPositions=joint_positions,
+            forces=[100 * self.force] * len(self.joint_ids),
+            positionGains=[100 * self.speed] * len(self.joint_ids)
+        )
+
+    def calculate_joint_positions(self, action, current_state, duration, t):
+        target_pos = action['pos']
+        target_quat = action['quat']
+
+        if current_state == ActionState.MOVE_ABOVE_PREGRASP:
+            target_pos = target_pos.copy()
+            target_pos[2] += 0.3
+
+        if current_state == ActionState.POWER_PUSH:
+            rot = target_quat.rotation_matrix()
+            target_pos = target_pos + rot[0:3, 2] * action['push_distance']
+
+        if current_state == ActionState.MOVE_UP:
+            target_pos = target_pos.copy()
+            target_pos[2] += 0.4
+
+        if current_state == ActionState.MOVE_HOME:
+            target_pos = self.home_position
+            target_quat = self.home_quat
+
+        # Compute translation
+        affine_trans = np.eye(4)
+        affine_trans[0:3, 0:3] = self.home_quat.rotation_matrix()
+        affine_trans[0:3, 3] = self.home_position
+        target_pos = np.matmul(np.linalg.inv(affine_trans), np.append(target_pos, 1.0))[0:3]
+
+        # Compute angle
+        relative_rot = np.matmul(self.home_quat.rotation_matrix().transpose(), target_quat.rotation_matrix())
+        angle = np.arctan2(relative_rot[2, 1], relative_rot[1, 1])
+
+        # Combine position and angle
+        target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+
+        current_pos = []
+        for i in self.joint_ids:
+            current_pos.append(p.getJointState(0, i)[0])
+
+        trajectories = []
+        for i in range(len(self.joint_ids)):
+            trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
+
+
+        joint_positions = []
+        for i in range(len(self.joint_ids)):
+            joint_positions.append(trajectories[i].pos(t))
+
+        return joint_positions
+
+    def calculate_finger_positions(self, action, current_state, duration, t, force=2):
+        if current_state == ActionState.CLOSE_FINGERS:
+            joint_vals = [0.0, 1.8, 1.8, 1.8]
+
+        if current_state == ActionState.OPEN_FINGERS:
+            joint_vals = [0.0, 0.6, 0.6, 0.6]
+            
+        if current_state == ActionState.SET_FINGER_CONFIG:
+            theta = action['aperture']
+            joint_vals = [0.0, theta, theta, theta]
+
+         # get current joint positions
+        current_pos = []
+        for i in self.indices:
+            current_pos.append(p.getJointState(0, i)[0])
+
+        # print("Current joint pos:", current_pos) #@Chris
+
+        hand_pos = []
+        for i in self.joint_ids:
+            hand_pos.append(p.getJointState(0, i)[0])
+
+        final = [
+            joint_vals[0], joint_vals[0],  # Base joint
+            joint_vals[1], joint_vals[2], joint_vals[3],  # Main finger joints
+            joint_vals[1]/3, joint_vals[2]/3, joint_vals[3]/3  # Secondary finger joints
+        ]
+
+        trajectories = []
+        for i in range(len(self.indices)):
+            trajectories.append(Trajectory([0, duration], [current_pos[i], final[i]]))
+
+        finger_positions = []
+        for i in range(len(self.joint_names)):
+            finger_positions.append(trajectories[i].pos(t))
+
+        self.set_hand_joint_position(finger_positions, force)
+
+        return hand_pos
+
+class ActionState:
+    MOVE_ABOVE_PREGRASP = (0, 0.1)
+    SET_FINGER_CONFIG = (1, 0.1)
+    MOVE_TO_PREGRASP = (2, 0.5)
+    POWER_PUSH = (3, 2.0)
+    CLOSE_FINGERS = (4, 1.0)
+    MOVE_UP = (5, 0.1)
+    MOVE_HOME = (6, 0.1)
+    OPEN_FINGERS = (7, 0.1)

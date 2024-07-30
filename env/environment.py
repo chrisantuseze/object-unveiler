@@ -9,6 +9,7 @@ from utils.orientation import Affine3, Quaternion, rot_z
 import utils.pybullet_utils as p_utils
 import utils.general_utils as general_utils
 import env.env_components as env_components
+from env.env_components import ActionState
 import env.cameras as cameras
 import utils.logger as logging
 
@@ -86,6 +87,11 @@ class Environment:
         self.simulation = Simulation(self.objects)
         self.singulation_condition = False
 
+        self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+        self.state_start_time = time.time()
+        self.elapsed_time = 0
+        self.trajectories = []
+
     def reset(self):
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
@@ -160,47 +166,117 @@ class Environment:
         return obs
     
     def step_act(self, action):
-        command = None
+        # For duration=0.1 Move HAND above the pregrasp position
 
-        # Move HAND above the pregrasp position
-        p.setJointMotorControlArray(
-            self.bhand.robot_hand_id,
-            self.bhand.joint_ids,
-            p.POSITION_CONTROL,
-            targetPositions=command,
-            forces=[100 * self.bhand.force, 100 * self.bhand.force, 100 * self.bhand.force, 100 * self.bhand.force],
-            positionGains=[100 * self.bhand.speed, 100 * self.bhand.speed, 100 * self.bhand.speed, 100 * self.bhand.speed]
-        )
 
-        # if stop_at_contact:
-        #     points = p.getContactPoints(bodyA=self.robot_hand_id)
-        #     if len(points) > 0:
-        #         for pnt in points:
-        #             if pnt[9] > 0:
-        #                 is_in_contact = True
-        #                 break
+        # After that, for duration=0.1, switch to FINGER configuration
 
-        #     if is_in_contact:
-        #         break
 
+        # Then for duration=0.5 move HAND to the pre-grasp position (below the pregrasp position)
+
+
+        # For duration=2, move HAND and power push to grasp the object
+
+
+        # Close FINGERS for duration=1
+
+
+        # For duration=0.1, Move HAND up when grasped
+
+
+        # For duration=0.1, Move HAND home
+
+
+        # Finally, for duration=0.1 Open FINGERS to drop object
+        pass
+
+        dt = 0.001
+        
+        if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:
+            if self.elapsed_time < ActionState.MOVE_ABOVE_PREGRASP[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.MOVE_ABOVE_PREGRASP[1]:
+                self.current_state = ActionState.SET_FINGER_CONFIG
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.SET_FINGER_CONFIG:
+            if self.elapsed_time < ActionState.SET_FINGER_CONFIG[1]:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=0.1, t=self.elapsed_time, force=5)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.SET_FINGER_CONFIG[1]:
+                self.current_state = ActionState.MOVE_TO_PREGRASP
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.MOVE_TO_PREGRASP:
+            if self.elapsed_time < ActionState.MOVE_TO_PREGRASP[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.5, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.MOVE_TO_PREGRASP[1]:
+                self.current_state = ActionState.POWER_PUSH
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.POWER_PUSH:
+            if self.elapsed_time < ActionState.POWER_PUSH[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=2, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.POWER_PUSH[1]:
+                self.current_state = ActionState.CLOSE_FINGERS
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.CLOSE_FINGERS:
+            if self.elapsed_time < ActionState.CLOSE_FINGERS[1]:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=1, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.CLOSE_FINGERS[1]:
+                self.current_state = ActionState.MOVE_UP
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.MOVE_UP:
+            if self.elapsed_time < ActionState.MOVE_UP[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.MOVE_UP[1]:
+                self.current_state = ActionState.MOVE_HOME
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.MOVE_HOME:
+            if self.elapsed_time < ActionState.MOVE_HOME[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.MOVE_HOME[1]:
+                self.current_state = ActionState.OPEN_FINGERS
+                self.elapsed_time = 0
+        
+        elif self.current_state == ActionState.OPEN_FINGERS:
+            if self.elapsed_time < ActionState.OPEN_FINGERS[1]:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=1, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= ActionState.OPEN_FINGERS[1]:
+                # Action sequence complete
+                return self.get_observation(), {'collision': None, 'stable': None, 'num_contacts': None}
+        
+        # Step the simulation
         self.simulation.step()
-
-        # After duration == 0.1, switch to FINGER configuration
-
-
-        # Then move HAND to the pre-grasp position (below the pregrasp position)
-
-
-        # Close FINGERS
-
-
-        # Move HAND up when grasped
-
-
-        # Move HAND home
-
-
-        # Open FINGERS to drop object
+        
+        # Return intermediate observation and info
+        return self.get_observation(),  {'collision': None, 'stable': None, 'num_contacts': None}
 
     
     def step(self, action):
