@@ -106,23 +106,33 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         data_list = []        
         for data in episode_data:
-            # heightmap = data['state']
-            # c_target_mask = data['c_target_mask']
-            # action = data['action']
+            heightmap = data['state']
+            c_target_mask = data['c_target_mask']
+            c_object_masks = data['c_object_masks']
 
-            images = data['images_traj']['color'] # picks only the color top and side camera images
-            qpos = data['joints_traj'][0][0] # picks only the first trajectory and only its joints pos
-            action = data['action']
+            trajectory_data = data['traj_data'][:6]
+            joint_pos, joints_vel, images = [], [], []
+
+            for i in range(len(trajectory_data)-1):
+                qpos, qvel, img = trajectory_data[i]
+                joint_pos.append(qpos)
+                joints_vel.append(qvel)
+                images.append(img)
+
+            action = trajectory_data[-1][0]
+
+            print("images", images)
+
             c_target_mask = data['target_mask']
 
-            data_list.append((images, qpos, action, c_target_mask))
+            data_list.append((images, joint_pos, action, heightmap, c_target_mask, c_object_masks))
             
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        images, qpos, action, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, action, heightmap, c_target_mask, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
         sequence_len = self.args['policy_config']['num_queries']
 
@@ -136,14 +146,24 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         is_pad = np.zeros(sequence_len)
         is_pad[action_len:] = 1
 
+        c_object_masks = np.array(c_object_masks)
+        N, H, W = c_object_masks.shape
+        if N < self.args.num_patches:
+            object_masks = np.zeros((self.args.num_patches, H, W), dtype=c_object_masks.dtype)
+            object_masks[:c_object_masks.shape[0], :, :] = c_object_masks
+        else:
+            object_masks = c_object_masks[:self.args.num_patches]
+
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
                 image_dict[cam_name] = images[0].astype(np.float32)
             elif cam_name == 'top':
                 image_dict[cam_name] = images[1].astype(np.float32)
-            elif cam_name == 'target':
-                image_dict[cam_name] = c_target_mask.astype(np.float32)
+            elif cam_name == 'heightmap':
+                image_dict[cam_name] = heightmap.astype(np.float32)
+            else:
+                image_dict[cam_name] = object_masks.pop().astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []

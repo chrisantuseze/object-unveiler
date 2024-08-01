@@ -61,47 +61,11 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'joints_traj': data['joints_traj'],
-            'images_traj': data['images_traj'],
+            'traj_data': data['traj_data'],
         }
         episode_data_list.append(transition)
 
     # memory.store_episode(episode_data_list)
-    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
-
-def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
-    try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
-    except Exception as e:
-        logging.info(e, "- Failed episode:", episode_dir)
-
-    episode_data_list = []
-    for data in episode_data:
-        joints_traj = data['joints_traj']
-        images_traj = data['images_traj']
-
-        if len(joints_traj) == 0 or len(images_traj) == 0:
-            print("data['images_traj'], data['joints_traj']", len(data['images_traj']), len(data['joints_traj']))
-            return
-
-        transition = {
-            'color_obs': data['color_obs'], 
-            'depth_obs': data['depth_obs'], 
-            'state': data['state'], 
-            'depth_heightmap': data['depth_heightmap'],
-            'target_mask': data['target_mask'], 
-            'obstacle_mask': data['obstacle_mask'],
-            'scene_mask': data['scene_mask'],
-            'object_masks': data['object_masks'],
-            'action': data['action'], 
-            'label': data['label'],
-            'joints_traj': data['joints_traj'],
-            'images_traj': data['images_traj'],
-        }
-        
-        episode_data_list.append(transition)
-
-    memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
 def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
@@ -176,7 +140,7 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode2(segmenter, episode_dir, i)
+        modify_episode1(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
