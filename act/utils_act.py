@@ -130,16 +130,21 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         return data_list
 
     def __getitem__(self, id):
+        sample_full_episode = False
+
         episode_data = self.load_episode(self.dir_ids[id])
 
         images, qpos, action, heightmap, c_target_mask, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
-        print(images)
-
         sequence_len = self.config['policy_config']['num_queries']
 
-        qpos = np.array(qpos)
-        action = np.array(action, dtype=np.float32)
+        if sample_full_episode:
+            start_ts = 0
+        else:
+            start_ts = np.random.choice(len(episode_data))
+
+        qpos = np.array(qpos[start_ts])
+        action = np.array(action[start_ts:], dtype=np.float32)
         action = action.reshape(1, action.shape[0])
 
         action_len = action.shape[0]
@@ -156,12 +161,16 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         else:
             object_masks = c_object_masks[:self.config['num_patches']]
 
+        images = images[start_ts]
+
+        print(images)
+
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
-                image_dict[cam_name] = images[0]['color'].astype(np.float32)
+                image_dict[cam_name] = images['color'][0].astype(np.float32)
             elif cam_name == 'top':
-                image_dict[cam_name] = images[1]['color'].astype(np.float32)
+                image_dict[cam_name] = images['color'][1].astype(np.float32)
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = heightmap.astype(np.float32)
             else:
