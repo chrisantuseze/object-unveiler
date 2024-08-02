@@ -173,7 +173,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = heightmap.astype(np.float32)
             else:
-                image_dict[cam_name] = object_masks.pop(0).astype(np.float32)
+                image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
