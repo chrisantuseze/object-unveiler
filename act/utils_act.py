@@ -121,8 +121,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
             action = trajectory_data[-1][0]
 
-            print("images", images)
-
             c_target_mask = data['target_mask']
 
             data_list.append((images, joint_pos, action, heightmap, c_target_mask, c_object_masks))
@@ -164,7 +162,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         images = images[start_ts]
 
         object_masks = object_masks.tolist()
-        print("object_masks:", object_masks[0])
+        print("object_masks:", np.array(object_masks[0]).shape)
 
         image_dict = dict()
         for cam_name in self.camera_names:
