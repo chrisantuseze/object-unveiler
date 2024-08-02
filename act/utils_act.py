@@ -164,7 +164,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         images = images[start_ts]
 
         object_masks = object_masks.tolist()
-        print(object_masks[0])
+        print("object_masks:", object_masks[0])
 
         image_dict = dict()
         for cam_name in self.camera_names:
