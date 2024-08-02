@@ -233,7 +233,7 @@ def get_stats(dataset_dir, transition_dirs):
         action = np.array(data['action'])
         all_action_data.append(torch.from_numpy(action))
 
-        qpos = np.array(data['joints_traj'][0][0])
+        qpos = np.array(data['traj_data'][0][0])
         all_qpos_data.append(torch.from_numpy(qpos))
 
 
