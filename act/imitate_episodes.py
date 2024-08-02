@@ -34,6 +34,7 @@ def main(args):
     num_epochs = args['num_epochs']
 
     split_ratio = 0.8
+    num_patches = args['num_patches']
 
     # get task parameters
     is_sim = task_name[:4] == 'sim_'
@@ -91,6 +92,7 @@ def main(args):
 
         # for unveiler
         ,'split_ratio': split_ratio
+        , 'num_patches': num_patches
     }
 
     if is_eval:

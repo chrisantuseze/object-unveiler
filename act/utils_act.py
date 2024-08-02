@@ -85,9 +85,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
     
 
 class ACTUnveilerDataset(torch.utils.data.Dataset):
-    def __init__(self, args, dir_ids, dataset_dir, camera_names, norm_stats):
+    def __init__(self, config, dir_ids, dataset_dir, camera_names, norm_stats):
         super(ACTUnveilerDataset, self).__init__()
-        self.args = args
+        self.config = config
         self.dataset_dir = dataset_dir
         self.dir_ids = dir_ids
         self.camera_names = camera_names
@@ -134,7 +134,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         images, qpos, action, heightmap, c_target_mask, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
-        sequence_len = self.args['policy_config']['num_queries']
+        sequence_len = self.config['policy_config']['num_queries']
 
         qpos = np.array(qpos)
         action = np.array(action, dtype=np.float32)
@@ -148,11 +148,11 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         c_object_masks = np.array(c_object_masks)
         N, H, W = c_object_masks.shape
-        if N < self.args.num_patches:
-            object_masks = np.zeros((self.args.num_patches, H, W), dtype=c_object_masks.dtype)
+        if N < self.config['num_patches']:
+            object_masks = np.zeros((self.config['num_patches'], H, W), dtype=c_object_masks.dtype)
             object_masks[:c_object_masks.shape[0], :, :] = c_object_masks
         else:
-            object_masks = c_object_masks[:self.args.num_patches]
+            object_masks = c_object_masks[:self.config['num_patches']]
 
         image_dict = dict()
         for cam_name in self.camera_names:
@@ -269,10 +269,10 @@ def get_stats(dataset_dir, transition_dirs):
 
     return stats
 
-def load_data(args, dataset_dir, camera_names, batch_size_train, batch_size_val):
+def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_val):
     print(f'\nData from: {dataset_dir}\n')
 
-    args['batch_size'] = batch_size_train
+    config['batch_size'] = batch_size_train
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
@@ -284,23 +284,23 @@ def load_data(args, dataset_dir, camera_names, batch_size_train, batch_size_val)
 
     transition_dirs = transition_dirs[:10000]
 
-    split_index = int(args['split_ratio'] * len(transition_dirs))
+    split_index = int(config['split_ratio'] * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
 
     # this ensures that the split is done properly without causing input mismatch error
-    data_length = (len(train_ids)//args['batch_size']) * args['batch_size']
+    data_length = (len(train_ids)//config['batch_size']) * config['batch_size']
     train_ids = train_ids[:data_length]
 
-    data_length = (len(val_ids)//args['batch_size']) * args['batch_size']
+    data_length = (len(val_ids)//config['batch_size']) * config['batch_size']
     val_ids = val_ids[:data_length]
 
     norm_stats = get_stats(dataset_dir, transition_dirs)
 
     # construct dataset and dataloader
-    train_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
+    train_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats)
 
-    val_dataset = ACTUnveilerDataset(args, train_ids, dataset_dir, camera_names, norm_stats)
+    val_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
