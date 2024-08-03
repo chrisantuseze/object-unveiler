@@ -434,14 +434,49 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
-    def exploit_act(self, state, color_image, target_mask):
-        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
-        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+    def exploit_act(self, state, obs):
+        heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
-        processed_target = general_utils.preprocess_target(target_mask)#, state)
-        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
+        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(obs['color'][1])
+        masks = []
+        for id, mask in enumerate(processed_masks):
+            mask = general_utils.resize_mask(transform, mask)
+            masks.append(general_utils.extract_target_crop(mask, heightmap))
 
-        print("x.shape", x.shape, "processed_target.shape", processed_target.shape)
+        masks = np.array(masks)
+        N, H, W = masks.shape
+        if N < self.args.num_patches:
+            object_masks = np.zeros((self.args.num_patches, H, W), dtype=masks.dtype)
+            object_masks[:masks.shape[0], :, :] = masks
+        else:
+            object_masks = masks[:self.args.num_patches]
+
+        image_dict = dict()
+        for cam_name in self.camera_names:
+            if cam_name == 'front':
+                image_dict[cam_name] = images['color'][0].astype(np.float32)
+            elif cam_name == 'top':
+                image_dict[cam_name] = images['color'][1].astype(np.float32)
+            elif cam_name == 'heightmap':
+                image_dict[cam_name] = heightmap.astype(np.float32)
+            else:
+                image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
+
+        # new axis for different cameras
+        all_cam_images = []
+        for cam_name in self.camera_names:
+            image = resize_image(image_dict[cam_name])
+            all_cam_images.append(image)
+        all_cam_images = np.stack(all_cam_images, axis=0)
+
+        # construct observations
+        image_data = torch.from_numpy(all_cam_images)
+        qpos_data = torch.from_numpy(qpos).float()
+
+        trajectory_data = obs['traj_data'][0]
+        qpos, qvel, img = trajectory_data
+
+        print("heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
         image_data = torch.cat([x, processed_target], dim=0)
         print("image_data.shape", image_data.shape)

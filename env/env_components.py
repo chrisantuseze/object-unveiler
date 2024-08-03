@@ -173,6 +173,7 @@ class FloatingBHand:
 
         t = 0
         dt = 0.001
+        interval = 0
         is_in_contact = False
         commands = []
         while t < duration:
@@ -208,14 +209,16 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            #@Chris we save the images at the beginning of the trajectory
-            images = {'color': []}
-            for cam in agent_cams:
-                color, depth, seg = cam.get_data() 
-                images['color'].append(color)
-                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            if interval % 10 == 0:
+                #@Chris we save the images at the beginning of the trajectory
+                images = {'color': []}
+                for cam in agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+                    # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
 
-            commands.append((command, vels, images))
+                commands.append((command, vels, images))
+            interval += 1
 
         return commands, is_in_contact
 
@@ -260,6 +263,7 @@ class FloatingBHand:
 
         t = 0
         dt = 0.001
+        interval = 0
         commands = []
         while t < duration:
             command = []
@@ -288,14 +292,16 @@ class FloatingBHand:
             if not agent_cams:
                 return commands
 
-            #@Chris we save the images at the beginning of the trajectory
-            images = {'color': []}
-            for cam in agent_cams:
-                color, depth, seg = cam.get_data() 
-                images['color'].append(color)
-                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            if interval % 10 == 0:
+                #@Chris we save the images at the beginning of the trajectory
+                images = {'color': []}
+                for cam in agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+                    # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
 
-            commands.append((command, vels, images))
+                commands.append((command, vels, images))
+            interval += 1
 
         return commands#, [current_pos, hand_pos] #@Chris
 

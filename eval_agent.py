@@ -158,7 +158,7 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_act(state, obs['color'][1], target_mask)
+        action = policy.exploit_act(state, obs)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step_act(env_action3d)
