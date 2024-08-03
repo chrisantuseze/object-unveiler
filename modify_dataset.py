@@ -50,6 +50,8 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
+        traj_data = data['traj_data'][:100]
+
         transition = {
             'state': data['state'], 
             'target_mask': data['target_mask'], 
@@ -62,7 +64,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'traj_data': data['traj_data'],
+            'traj_data': traj_data,
         }
         episode_data_list.append(transition)
 
