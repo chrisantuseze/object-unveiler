@@ -11,8 +11,6 @@ import IPython
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 
-from skimage.transform import resize
-
 e = IPython.embed
 
 class EpisodicDataset(torch.utils.data.Dataset):
@@ -177,7 +175,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            image = resize_image(image_dict[cam_name])
+            image = general_utils.resize_image(image_dict[cam_name])
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
@@ -376,19 +374,3 @@ def detach_dict(d):
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
-
-def resize_image(image, target_size=(480, 640)):
-    # Get the shape of the input image
-    input_shape = image.shape
-
-    # Resize the image
-    if len(input_shape) == 2:  # Grayscale image
-        resized = resize(image, target_size, anti_aliasing=True)
-        # Add color channels
-        resized = np.stack((resized,) * 3, axis=-1)
-    elif len(input_shape) == 3:  # Color image
-        resized = resize(image, target_size, anti_aliasing=True)
-    else:
-        raise ValueError("Unexpected image shape. Expected 2D or 3D array.")
-    
-    return resized

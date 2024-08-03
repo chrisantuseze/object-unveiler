@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage import transform
 
+from einops import rearrange
+
 import pybullet as p
 from trainer.memory import ReplayBuffer
 
@@ -29,6 +31,8 @@ import env.cameras as cameras
 import utils.logger as logging
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
+
+from act.constants import SIM_TASK_CONFIGS
 
 class Policy:
     def __init__(self, args, params) -> None:
@@ -77,11 +81,13 @@ class Policy:
         kl_weight = 10
         hidden_dim = 512
         dim_feedforward = 3200
-        camera_names = ['top']
+        task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
         ckpt_name = f'policy_epoch_1100_seed_0.ckpt'
         state_dim = 1
+
+        self.camera_names = task_config['camera_names']
 
         policy_config = {
             'lr': lr,
@@ -434,14 +440,15 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
-    def exploit_act(self, state, obs):
-        heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-
-        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(obs['color'][1])
-        masks = []
-        for id, mask in enumerate(processed_masks):
-            mask = general_utils.resize_mask(transform, mask)
-            masks.append(general_utils.extract_target_crop(mask, heightmap))
+    def get_act_image(self, color_images, heightmap, masks):
+        # curr_images = []
+        # for cam_name in self.camera_names:
+        #     curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
+        #     curr_images.append(curr_image)
+        # curr_image = np.stack(curr_images, axis=0)
+        # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        
+        # return curr_image
 
         masks = np.array(masks)
         N, H, W = masks.shape
@@ -451,12 +458,14 @@ class Policy:
         else:
             object_masks = masks[:self.args.num_patches]
 
+        print("heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
+
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
-                image_dict[cam_name] = images['color'][0].astype(np.float32)
+                image_dict[cam_name] = color_images[0].astype(np.float32)
             elif cam_name == 'top':
-                image_dict[cam_name] = images['color'][1].astype(np.float32)
+                image_dict[cam_name] = color_images[1].astype(np.float32)
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = heightmap.astype(np.float32)
             else:
@@ -465,23 +474,34 @@ class Policy:
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            image = resize_image(image_dict[cam_name])
+            image = general_utils.resize_image(image_dict[cam_name])
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
-        # construct observations
-        image_data = torch.from_numpy(all_cam_images)
-        qpos_data = torch.from_numpy(qpos).float()
+        image_data = torch.from_numpy(all_cam_images / 255.0).float().to(self.device).unsqueeze(0)
+        image_data = torch.einsum('k h w c -> k c h w', image_data)
 
+        return image_data
+
+    def exploit_act(self, state, obs):
+        heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+
+        color_images = obs['color']
+        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
+        masks = []
+        for id, mask in enumerate(processed_masks):
+            mask = general_utils.resize_mask(transform, mask)
+            masks.append(general_utils.extract_target_crop(mask, heightmap))
+
+        image_data = self.get_act_image(color_images, heightmap, masks)
+        
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
+        qpos = torch.from_numpy(qpos).float()
 
-        print("heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
-
-        image_data = torch.cat([x, processed_target], dim=0)
         print("image_data.shape", image_data.shape)
         
-        action = self.policy(image_data).detach().cpu().numpy()[0][0]
+        action = self.policy(qpos, image_data).detach().cpu().numpy()[0][0]
         print(action)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
