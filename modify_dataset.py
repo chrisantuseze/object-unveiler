@@ -68,7 +68,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
         }
         episode_data_list.append(transition)
 
-    # memory.store_episode(episode_data_list)
+    memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
 def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
