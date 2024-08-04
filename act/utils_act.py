@@ -103,25 +103,23 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             print(e, "- Failed episode:", episode)
 
         data_list = []        
-        for data in episode_data:
-            heightmap = data['state']
-            c_target_mask = data['c_target_mask']
-            c_object_masks = data['c_object_masks']
+        # for data in episode_data:
+        data = episode_data[-1]
+        heightmap = data['state']
+        c_object_masks = data['c_object_masks']
 
-            trajectory_data = data['traj_data'][:6]
-            joint_pos, joints_vel, images = [], [], []
+        trajectory_data = data['traj_data'][:6]
+        joint_pos, joints_vel, images = [], [], []
 
-            for i in range(len(trajectory_data)-1):
-                qpos, qvel, img = trajectory_data[i]
-                joint_pos.append(qpos)
-                joints_vel.append(qvel)
-                images.append(img)
+        for i in range(len(trajectory_data)-1):
+            qpos, qvel, img = trajectory_data[i]
+            joint_pos.append(qpos)
+            joints_vel.append(qvel)
+            images.append(img)
 
-            action = trajectory_data[-1][0]
+        action = trajectory_data[-1][0]
 
-            c_target_mask = data['target_mask']
-
-            data_list.append((images, joint_pos, action, heightmap, c_target_mask, c_object_masks))
+        data_list.append((images, joint_pos, action, heightmap, c_object_masks))
             
         return data_list
 
@@ -130,7 +128,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         episode_data = self.load_episode(self.dir_ids[id])
 
-        images, qpos, action, heightmap, c_target_mask, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, action, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
         sequence_len = self.config['policy_config']['num_queries']
 
