@@ -50,15 +50,15 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
-        traj_data = data['traj_data'][:10]
+        traj_data = data['traj_data'][:7]
 
         transition = {
             'state': data['state'], 
-            'target_mask': data['target_mask'], 
+            # 'target_mask': data['target_mask'], 
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
-            'scene_mask': data['scene_mask'],
+            # 'scene_mask': data['scene_mask'],
             'c_object_masks': new_masks,
-            'object_masks': object_masks,
+            # 'object_masks': object_masks,
             'action': data['action'],
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
