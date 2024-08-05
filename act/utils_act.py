@@ -108,18 +108,17 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         heightmap = data['state']
         c_object_masks = data['c_object_masks']
 
-        trajectory_data = data['traj_data'][:6]
+        trajectory_data = data['traj_data'][:4]
         joint_pos, joints_vel, images = [], [], []
 
-        for i in range(len(trajectory_data)-1):
-            qpos, qvel, img = trajectory_data[i]
+        for data in trajectory_data:
+            qpos, qvel, img = data
             joint_pos.append(qpos)
             joints_vel.append(qvel)
             images.append(img)
 
-        action = trajectory_data[-1][0]
 
-        data_list.append((images, joint_pos, action, heightmap, c_object_masks))
+        data_list.append((images, joint_pos, heightmap, c_object_masks))
             
         return data_list
 
@@ -128,17 +127,18 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         episode_data = self.load_episode(self.dir_ids[id])
 
-        images, qpos, action, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
         sequence_len = self.config['policy_config']['num_queries']
 
-        if sample_full_episode:
-            start_ts = 0
-        else:
-            start_ts = np.random.choice(len(episode_data))
+        # if sample_full_episode:
+        #     start_ts = 0
+        # else:
+        #     start_ts = np.random.choice(len(episode_data))
+        start_ts = 0
 
         qpos = np.array(qpos[start_ts])
-        action = np.array(action[start_ts:], dtype=np.float32)
+        action = np.array(qpos[start_ts + 1:], dtype=np.float32)
         action = action.reshape(1, action.shape[0])
 
         action_len = action.shape[0]
@@ -307,8 +307,8 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
 
     val_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=4, prefetch_factor=1)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=4, prefetch_factor=1)
 
     return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
 
