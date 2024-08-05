@@ -710,8 +710,8 @@ class Policy:
         pickle.dump(self.info, open(os.path.join(folder_name, 'info'), 'wb'))
 
     def load(self, fcn_model, reg_model):
-        self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
-        self.fcn.eval()
+        # self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
+        # self.fcn.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
