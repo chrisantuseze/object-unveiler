@@ -18,11 +18,11 @@ import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
 # dataset_dir = 'save/pc-ou-dataset'
-dataset_dir = 'save/ppg-dataset'
+dataset_dir = 'save/ppg-dataset1'
 
 def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir +"1", episode_dir), 'rb'))
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
 
@@ -121,7 +121,7 @@ def show_images(obj_masks, target_mask, obstacle_mask, scene_mask):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = dataset_dir + '2'
+    new_dir = 'save/ppg-dataset2'
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
