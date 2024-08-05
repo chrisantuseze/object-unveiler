@@ -487,7 +487,7 @@ class Policy:
     def exploit_act(self, state, obs):
         print("Getting ACT actions...")
         if len(obs['traj_data']) == 0: #TODO Fix this
-            return np.random.rand(4, 1)
+            return np.random.rand(4)
         
         heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
