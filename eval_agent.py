@@ -150,7 +150,7 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
     count = 0
 
     max_steps = 400
-    while episode_data['attempts'] < max_steps:
+    while True:#episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 

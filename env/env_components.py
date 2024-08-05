@@ -457,7 +457,7 @@ class FloatingBHand:
 
 class ActionState:
     MOVE_ABOVE_PREGRASP = (0, 0.1)
-    SET_FINGER_CONFIG = (1, 0.1)
+    SET_FINGER_CONFIG = (1, 0.05)#0.1) # reduce this to maybe 0.05
     MOVE_TO_PREGRASP = (2, 0.5)
     POWER_PUSH = (3, 2.0)
     CLOSE_FINGERS = (4, 1.0)
