@@ -188,8 +188,8 @@ class Environment:
 
 
         # Finally, for duration=0.1 Open FINGERS to drop object
-        pass
 
+        print("Executing action...", self.current_state)
         dt = 0.001
         
         if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:

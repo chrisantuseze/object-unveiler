@@ -159,6 +159,7 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
 
         state = policy.state_representation(obs)
         action = policy.exploit_act(state, obs)
+        print("Raw action", action)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step_act(env_action3d)

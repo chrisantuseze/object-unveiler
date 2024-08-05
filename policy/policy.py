@@ -485,6 +485,10 @@ class Policy:
         return image_data
 
     def exploit_act(self, state, obs):
+        print("Getting ACT actions...")
+        if len(obs['traj_data']) == 0: #TODO Fix this
+            return np.random.rand(4, 1)
+        
         heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         color_images = obs['color']
