@@ -392,7 +392,7 @@ class Policy:
             bboxes.append(general_utils.resize_bbox(bbox[id]))
 
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
-        raw_obj_masks = torch.FloatTensor(raw_obj_masks).to(self.device)
+        raw_obj_masks = torch.FloatTensor(np.array(raw_obj_masks)).to(self.device)
 
         target_id = grasping.get_target_id(general_utils.resize_mask(transform, target_mask), masks)
         objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)

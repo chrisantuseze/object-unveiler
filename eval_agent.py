@@ -298,7 +298,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_multi(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False, grp_count=grasping_action_count)
+        episode_data, success_count, grasping_action_count = run_episode_act(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False, grp_count=grasping_action_count)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
