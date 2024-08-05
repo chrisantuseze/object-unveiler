@@ -31,7 +31,7 @@ pexpect==4.8.0
 # dm_control==1.0.9
 #   - py-opencv==4.7.0
 #   - matplotlib=3.7.1
-einops==0.6.0
+einops
 packaging==23.0
 h5py==3.8.0
 ipython==8.12.0
