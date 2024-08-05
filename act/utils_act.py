@@ -137,6 +137,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         #     start_ts = np.random.choice(len(episode_data))
         start_ts = 0
 
+        print("qpos.shape", np.array(qpos).shape)
+
         qpos = np.array(qpos[start_ts])
         action = np.array(qpos[start_ts + 1:], dtype=np.float32)
         action = action.reshape(1, action.shape[0])
