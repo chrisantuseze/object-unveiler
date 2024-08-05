@@ -7,7 +7,6 @@ from policy.models_attn2 import Regressor, ResFCN
 # from policy.models_obstacle_heuristics import Regressor, ResFCN
 # from policy.models_obstacle_vit import Regressor, ResFCN
 # from policy.models_target import Regressor, ResFCN
-# from act.policy import ACTPolicy
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -60,7 +59,7 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = None, None #self.make_act_policy()
+        self.policy, self.stats = self.make_act_policy()
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -71,6 +70,8 @@ class Policy:
         self.rng.seed(seed)
 
     def make_act_policy(self):
+        from act.policy import ACTPolicy
+
         lr_backbone = 1e-5
         backbone = 'resnet18'
         enc_layers = 4
@@ -84,7 +85,7 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_1100_seed_0.ckpt'
+        ckpt_name = f'policy_best.ckpt'
         state_dim = 1
 
         self.camera_names = task_config['camera_names']
@@ -100,7 +101,7 @@ class Policy:
             'enc_layers': enc_layers,
             'dec_layers': dec_layers,
             'nheads': nheads,
-            'camera_names': camera_names,
+            'camera_names': self.camera_names,
         }
 
         config = {
@@ -115,7 +116,7 @@ class Policy:
             'task_name': 'sim_transfer_cube_scripted',
             'seed': 0,
             'temporal_agg': True,
-            'camera_names': camera_names,
+            'camera_names': self.camera_names,
             'real_robot': False
 
             # for unveiler
