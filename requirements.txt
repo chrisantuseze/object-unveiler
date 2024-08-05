@@ -32,9 +32,9 @@ pexpect==4.8.0
 #   - py-opencv==4.7.0
 #   - matplotlib=3.7.1
 einops
-packaging==23.0
-h5py==3.8.0
-ipython==8.12.0
+packaging
+h5py
+ipython
 
 scikit-image
 diffusers
