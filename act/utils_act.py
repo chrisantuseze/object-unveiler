@@ -142,7 +142,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         qpos = qpos[start_ts]
         action = qpos[start_ts + 1:]
-        action = action.reshape(1, action.shape[0])
         print("action.shape", action.shape)
 
         action_len = action.shape[0]
