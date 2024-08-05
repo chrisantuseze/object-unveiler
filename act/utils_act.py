@@ -92,6 +92,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         self.norm_stats = norm_stats
 
         self.memory = ReplayBuffer(self.dataset_dir)
+        self.sequence_len = self.config['policy_config']['num_queries']
 
         self.is_sim = None
         self.__getitem__(0) # initialize self.is_sim
@@ -108,7 +109,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         heightmap = data['state']
         c_object_masks = data['c_object_masks']
 
-        trajectory_data = data['traj_data'][:4]
+        trajectory_data = data['traj_data'][:self.sequence_len + 1]
         joint_pos, joints_vel, images = [], [], []
 
         for data in trajectory_data:
@@ -123,34 +124,22 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         return data_list
 
     def __getitem__(self, id):
-        sample_full_episode = False
-
         episode_data = self.load_episode(self.dir_ids[id])
 
         images, qpos, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
 
-        sequence_len = self.config['policy_config']['num_queries']
-
-        # if sample_full_episode:
-        #     start_ts = 0
-        # else:
-        #     start_ts = np.random.choice(len(episode_data))
         start_ts = 0
 
         qpos = np.array(qpos, dtype=np.float32)
-        print("qpos.shape", qpos.shape, qpos)
 
         qpos_data = qpos[start_ts]
         action = qpos[start_ts + 1:]
-        print("action.shape", action.shape)
 
         action_len = action.shape[0]
-        padded_action = np.zeros((sequence_len, action.shape[1]), dtype=np.float32)
+        padded_action = np.zeros((self.sequence_len, action.shape[1]), dtype=np.float32)
         padded_action[:action_len] = action
-        is_pad = np.zeros(sequence_len)
+        is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
-
-        print("padded_action.shape", padded_action.shape)
 
         c_object_masks = np.array(c_object_masks)
         N, H, W = c_object_masks.shape
@@ -161,7 +150,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             object_masks = c_object_masks[:self.config['num_patches']]
 
         images = images[start_ts]
-
         object_masks = object_masks.tolist()
 
         image_dict = dict()
