@@ -22,7 +22,7 @@ dataset_dir = 'save/ppg-dataset'
 
 def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
+        episode_data = pickle.load(open(os.path.join(dataset_dir +"1", episode_dir), 'rb'))
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
 
