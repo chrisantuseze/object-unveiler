@@ -273,13 +273,14 @@ def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmente
 
 
 def eval_agent(args):
+    print("Running eval...")
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
 
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
+    # policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
 
     segmenter = ObjectSegmenter()
 
