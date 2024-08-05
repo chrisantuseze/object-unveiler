@@ -140,7 +140,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         qpos = np.array(qpos, dtype=np.float32)
         print("qpos.shape", qpos.shape, qpos)
 
-        qpos = qpos[start_ts]
+        qpos_data = qpos[start_ts]
         action = qpos[start_ts + 1:]
         print("action.shape", action.shape)
 
@@ -184,7 +184,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         # construct observations
         image_data = torch.from_numpy(all_cam_images)
-        qpos_data = torch.from_numpy(qpos).float()
+        qpos_data = torch.from_numpy(qpos_data).float()
         action_data = torch.from_numpy(padded_action).float()
         is_pad = torch.from_numpy(is_pad).bool()
 
