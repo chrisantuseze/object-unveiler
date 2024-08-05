@@ -18,6 +18,7 @@ Pillow
 scikit-image
 tensorboard
 
+# for ACT
 #   - python=3.9
 #   - pip=23.0.1
 #   - pytorch=2.0.0
@@ -36,5 +37,6 @@ packaging
 h5py
 ipython
 
+# for diffusion model
 scikit-image
 diffusers
