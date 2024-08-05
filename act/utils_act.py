@@ -140,12 +140,15 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         qpos = np.array(qpos[start_ts])
         action = np.array(qpos[start_ts + 1:], dtype=np.float32)
         action = action.reshape(1, action.shape[0])
+        print("action.shape", action.shape)
 
         action_len = action.shape[0]
         padded_action = np.zeros((sequence_len, action.shape[1]), dtype=np.float32)
         padded_action[:action_len] = action
         is_pad = np.zeros(sequence_len)
         is_pad[action_len:] = 1
+
+        print("padded_action.shape", padded_action.shape)
 
         c_object_masks = np.array(c_object_masks)
         N, H, W = c_object_masks.shape
