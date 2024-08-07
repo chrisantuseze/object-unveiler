@@ -489,6 +489,7 @@ class Policy:
         if len(obs['traj_data']) == 0: #TODO Fix this
             return np.random.rand(4)
         
+        _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
         heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         color_images = obs['color']
