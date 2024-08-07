@@ -459,7 +459,7 @@ class Policy:
         else:
             object_masks = masks[:self.args.num_patches]
 
-        print("heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
+        print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
         image_dict = dict()
         for cam_name in self.camera_names:
@@ -468,7 +468,7 @@ class Policy:
             elif cam_name == 'top':
                 image_dict[cam_name] = color_images[1].astype(np.float32)
             elif cam_name == 'heightmap':
-                image_dict[cam_name] = heightmap.astype(np.float32)
+                image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             else:
                 image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
 
@@ -493,7 +493,7 @@ class Policy:
         
         print("Getting ACT actions...")
 
-        heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         color_images = obs['color']
         processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
@@ -502,7 +502,7 @@ class Policy:
             mask = general_utils.resize_mask(transform, mask)
             masks.append(general_utils.extract_target_crop(mask, state))
 
-        image_data = self.get_act_image(color_images, heightmap, masks)
+        image_data = self.get_act_image(color_images, state, masks)
         
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
