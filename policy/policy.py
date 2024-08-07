@@ -459,7 +459,7 @@ class Policy:
         else:
             object_masks = masks[:self.args.num_patches]
 
-        print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
+        # print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
         image_dict = dict()
         for cam_name in self.camera_names:
@@ -480,7 +480,7 @@ class Policy:
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
-        image_data = torch.from_numpy(all_cam_images / 255.0).float().to(self.device).unsqueeze(0)
+        image_data = torch.from_numpy(all_cam_images / 255.0).float().unsqueeze(0).to(self.device)
         image_data = torch.einsum('b k h w c -> b k c h w', image_data)
 
         return image_data
@@ -508,9 +508,9 @@ class Policy:
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
 
-        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32))#.float()
+        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
 
-        print("image_data.shape", image_data.shape)
+        # print("image_data.shape", image_data.shape)
         
         actions = self.policy(image_data, qpos).detach()
         print("actions.shape", actions.shape)
