@@ -480,7 +480,7 @@ class Policy:
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
-        print("image_data.shape", image_data.shape)
+        print("all_cam_images.shape", all_cam_images.shape)
 
         image_data = torch.from_numpy(all_cam_images / 255.0).float().to(self.device).unsqueeze(0)
         print("image_data.shape", image_data.shape)
