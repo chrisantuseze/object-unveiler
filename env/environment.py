@@ -271,12 +271,21 @@ class Environment:
             if self.elapsed_time >= ActionState.OPEN_FINGERS[1]:
                 # Action sequence complete
                 return self.get_observation(), {'collision': None, 'stable': None, 'num_contacts': None}
+            
+        #@Chris we save the images at the beginning of the trajectory
+        images = {'color': []}
+        for cam in self.agent_cams:
+            color, depth, seg = cam.get_data() 
+            images['color'].append(color)
         
         # Step the simulation
         self.simulation.step()
+
+        obs = self.get_observation()
+        obs['traj_data'] = [(joint_positions, None, images)]
         
         # Return intermediate observation and info
-        return self.get_observation(),  {'collision': None, 'stable': None, 'num_contacts': None}
+        return obs,  {'collision': None, 'stable': None, 'num_contacts': None}
 
     
     def step(self, action):
