@@ -480,10 +480,7 @@ class Policy:
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
-        print("all_cam_images.shape", all_cam_images.shape)
-
         image_data = torch.from_numpy(all_cam_images / 255.0).float().to(self.device).unsqueeze(0)
-        print("image_data.shape", image_data.shape)
         image_data = torch.einsum('b k h w c -> b k c h w', image_data)
 
         return image_data
@@ -510,7 +507,8 @@ class Policy:
         
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
-        qpos = torch.from_numpy(qpos).float()
+
+        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32))#.float()
 
         print("image_data.shape", image_data.shape)
         
