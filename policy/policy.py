@@ -485,11 +485,13 @@ class Policy:
         return image_data
 
     def exploit_act(self, state, obs):
-        print("Getting ACT actions...")
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
-        
+
         if len(obs['traj_data']) == 0: #TODO Fix this
+            print("No traj data. Getting random actions...")
             return np.random.rand(4)
+        
+        print("Getting ACT actions...")
         
         heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
