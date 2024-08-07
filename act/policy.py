@@ -29,7 +29,7 @@ class ACTPolicy(nn.Module):
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] #@Chris
         )
 
-        # print("image.shape", image.shape)
+        print("image.shape", image.shape, "qpos.shape", qpos.shape)
         image = normalize(image)
         if actions is not None:  # training time
             #@Chris
