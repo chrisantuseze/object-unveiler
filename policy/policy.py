@@ -507,7 +507,7 @@ class Policy:
         print("image_data.shape", image_data.shape)
         
         actions = self.policy(qpos, image_data).detach()
-        print(actions, actions.shape)
+        print("actions.shape", actions.shape)
 
         return actions
 

@@ -176,18 +176,22 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             actions = policy.exploit_act(state, obs)
             print("Raw actions", actions)
 
-        if temporal_agg:
-            all_time_actions[[t], t:t+num_queries] = actions
-            actions_for_curr_step = all_time_actions[:, t]
-            actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-            actions_for_curr_step = actions_for_curr_step[actions_populated]
-            k = 0.01
-            exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-            exp_weights = exp_weights / exp_weights.sum()
-            exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
-            raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+        if t != 0:
+            if temporal_agg:
+                all_time_actions[[t], t:t+num_queries] = actions
+                actions_for_curr_step = all_time_actions[:, t]
+                actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                actions_for_curr_step = actions_for_curr_step[actions_populated]
+                k = 0.01
+                exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+                exp_weights = exp_weights / exp_weights.sum()
+                exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+                raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+            else:
+                raw_action = actions[:, t % query_frequency]
+
         else:
-            raw_action = actions[:, t % query_frequency]
+            raw_action = actions
 
         action = policy.post_process_action(state, raw_action)
         env_action3d = policy.action3d(action)
