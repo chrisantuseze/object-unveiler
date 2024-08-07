@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import yaml
 import argparse
 import copy
@@ -18,7 +19,7 @@ import utils.logger as logging
 from skimage import transform
 
 # multi output using attn
-def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -120,7 +121,19 @@ def run_episode_multi(policy: Policy, env: Environment, segmenter: ObjectSegment
     return episode_data, success_count, grp_count
 
 # multi output using attn
-def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+    query_frequency = args.chunk_size
+    temporal_agg = args.temporal_agg
+    state_dim = 14
+    if temporal_agg:
+        query_frequency = 1
+        num_queries = args.chunk_size
+
+    max_timesteps = 2000
+
+    if temporal_agg:
+        all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
+
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -150,7 +163,8 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
     count = 0
 
     max_steps = 400
-    while True:#episode_data['attempts'] < max_steps:
+    # while episode_data['attempts'] < max_steps:
+    for t in range(max_timesteps):
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
@@ -158,9 +172,24 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_act(state, obs)
-        print("Raw action", action)
+        if t % query_frequency == 0:
+            actions = policy.exploit_act(state, obs)
+            print("Raw actions", actions)
 
+        if temporal_agg:
+            all_time_actions[[t], t:t+num_queries] = actions
+            actions_for_curr_step = all_time_actions[:, t]
+            actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+            actions_for_curr_step = actions_for_curr_step[actions_populated]
+            k = 0.01
+            exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+            exp_weights = exp_weights / exp_weights.sum()
+            exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+            raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+        else:
+            raw_action = actions[:, t % query_frequency]
+
+        action = policy.post_process_action(state, raw_action)
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step_act(env_action3d)
 
@@ -223,7 +252,7 @@ def run_episode_act(policy: Policy, env: Environment, segmenter: ObjectSegmenter
     return episode_data, success_count, grp_count
 
 # original
-def run_episode_old2(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
+def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -298,7 +327,10 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_act(policy, env, segmenter, rng, episode_seed, success_count=success_count, train=False, grp_count=grasping_action_count)
+        episode_data, success_count, grasping_action_count = run_episode_act(
+            args, policy, env, segmenter, rng, episode_seed, 
+            success_count=success_count, train=False, grp_count=grasping_action_count
+        )
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

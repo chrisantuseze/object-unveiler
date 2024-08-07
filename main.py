@@ -35,6 +35,10 @@ def parse_args():
     parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
     parser.add_argument('--step', default=200, type=int, help='')
 
+    # args for act
+    parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
+    parser.add_argument('--temporal_agg', action='store_true')
+
     return parser.parse_args()
 
 

@@ -506,8 +506,14 @@ class Policy:
 
         print("image_data.shape", image_data.shape)
         
-        action = self.policy(qpos, image_data).detach().cpu().numpy()[0][0]
-        print(action)
+        actions = self.policy(qpos, image_data).detach()
+        print(actions, actions.shape)
+
+        return actions
+
+    def post_process_action(self, state, action):
+        action = action.cpu().numpy()
+        print(action, action.shape)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
         action = post_process(action)
