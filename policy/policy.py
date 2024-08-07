@@ -492,7 +492,7 @@ class Policy:
             return np.random.rand(4)
         
         print("Getting ACT actions...")
-        
+
         heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         color_images = obs['color']
@@ -500,7 +500,7 @@ class Policy:
         masks = []
         for id, mask in enumerate(processed_masks):
             mask = general_utils.resize_mask(transform, mask)
-            masks.append(general_utils.extract_target_crop(mask, heightmap))
+            masks.append(general_utils.extract_target_crop(mask, state))
 
         image_data = self.get_act_image(color_images, heightmap, masks)
         
