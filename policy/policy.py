@@ -470,7 +470,8 @@ class Policy:
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             else:
-                image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
+                idx = int(cam_name)
+                image_dict[cam_name] = np.array(object_masks[idx]).astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
