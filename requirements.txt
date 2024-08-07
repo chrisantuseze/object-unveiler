@@ -38,5 +38,4 @@ h5py
 ipython
 
 # for diffusion model
-scikit-image
 diffusers
