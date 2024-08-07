@@ -39,7 +39,7 @@ class ACTPolicy(nn.Module):
             a_hat, is_pad_hat, (mu, logvar) = self.model(
                 qpos, image, env_state, actions, is_pad
             )
-            print("a_hat.shape", a_hat.shape)
+            # print("a_hat.shape", a_hat.shape)
             total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
             loss_dict = dict()
             all_l1 = F.l1_loss(actions, a_hat, reduction="none")

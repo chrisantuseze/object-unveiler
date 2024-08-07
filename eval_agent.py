@@ -124,7 +124,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
-    state_dim = 14
+    state_dim = 4#14
     if temporal_agg:
         query_frequency = 1
         num_queries = args.chunk_size
