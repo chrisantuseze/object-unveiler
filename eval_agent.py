@@ -191,7 +191,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 raw_action = actions[:, t % query_frequency]
 
         else:
-            raw_action = actions
+            raw_action = torch.tensor(actions).to(args.device)
 
         action = policy.post_process_action(state, raw_action)
         env_action3d = policy.action3d(action)
