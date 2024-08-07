@@ -6,7 +6,12 @@ conda activate unveiler
 - Aperture is the distance between the two opposing fingers of the hand. So basically, how open is the hand?
 
 <!-- python3 main.py --mode 'eval' --fcn_model 'downloads/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
-python3 main.py --mode 'eval' --reg_model 'downloads/reg_model.pt' --fcn_model 'save/fcn/fcn_model_17.pt' --n_scenes 50
+python3 main.py \
+--mode 'eval' \
+--reg_model 'downloads/reg_model.pt' \
+--fcn_model 'save/fcn/fcn_model_17.pt'\
+--n_scenes 50 \
+--temporal_agg 
 
 python3 main.py --dataset_dir 'save/ou-dataset' --mode 'fcn' --epochs 100 --batch_size 2 --lr 0.001
 
@@ -16,7 +21,6 @@ python3 main_act.py \
 --task_name sim_object_unveiler \
 --ckpt_dir act/ckpt \
 --policy_class ACT --kl_weight 10 --chunk_size 3 --hidden_dim 512 --batch_size 1 --dim_feedforward 3200 \
---temporal_agg \
 --num_epochs 200  --lr 1e-5 \
 --num_patches 10 \
 --seed 0
