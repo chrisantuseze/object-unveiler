@@ -29,7 +29,7 @@ class ACTPolicy(nn.Module):
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] #@Chris
         )
 
-        print("image.shape", image.shape, "qpos.shape", qpos.shape)
+        # print("image.shape", image.shape, "qpos.shape", qpos.shape)
         image = normalize(image)
         if actions is not None:  # training time
             #@Chris
@@ -39,6 +39,7 @@ class ACTPolicy(nn.Module):
             a_hat, is_pad_hat, (mu, logvar) = self.model(
                 qpos, image, env_state, actions, is_pad
             )
+            print("a_hat.shape", a_hat.shape)
             total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
             loss_dict = dict()
             all_l1 = F.l1_loss(actions, a_hat, reduction="none")
@@ -51,7 +52,6 @@ class ACTPolicy(nn.Module):
             a_hat, _, (_, _) = self.model(
                 qpos, image, env_state
             )  # no action, sample from prior
-            print("a_hat.shape", a_hat.shape)
             return a_hat
 
     def configure_optimizers(self):
