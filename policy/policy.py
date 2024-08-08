@@ -490,7 +490,7 @@ class Policy:
 
         if len(obs['traj_data']) == 0: #TODO Fix this
             print("No traj data. Getting random actions...")
-            return torch.rand(1, 3, 4)
+            return torch.rand(1, 3, 4).to(self.device)
         
         print("Getting ACT actions...")
 
