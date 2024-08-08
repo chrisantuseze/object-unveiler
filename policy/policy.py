@@ -518,7 +518,7 @@ class Policy:
         return actions
 
     def post_process_action(self, state, action):
-        action = action.cpu().numpy()
+        action = action.squeeze(0).cpu().numpy()
         print("action.shape", action.shape)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
