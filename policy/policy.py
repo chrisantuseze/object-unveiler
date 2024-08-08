@@ -492,7 +492,7 @@ class Policy:
             print("No traj data. Getting random actions...")
             return torch.rand(1, 3, 4).to(self.device)
         
-        print("Getting ACT actions...")
+        # print("Getting ACT actions...")
 
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 

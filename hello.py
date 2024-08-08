@@ -2,11 +2,12 @@ import os
 import shutil
 
 
-dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
+# dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
+dir = "/home/e_chrisantus/Project/"
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "pete/ppg-dataset/"
-id = 37722
+folder_path = "ppg-dataset/"
+id = 667
 
 
 folder_path = dir + folder_path
