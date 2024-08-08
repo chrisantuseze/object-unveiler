@@ -336,9 +336,7 @@ def forward_pass(data, policy):
 
     image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), \
         action_data.to(device), is_pad.to(device)
-    
-    print("image_data.shape", image_data.shape)
-    
+        
     return policy(image_data, qpos_data, action_data, is_pad)
 
 
