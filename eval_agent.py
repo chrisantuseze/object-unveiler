@@ -174,13 +174,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         state = policy.state_representation(obs)
         if t % query_frequency == 0:
             actions = policy.exploit_act(state, obs)
-            print("Raw actions", actions)
-
-        # if t != 0:
-            
-
-        # else:
-        #     raw_action = torch.tensor(actions).to(args.device)
+            # print("Raw actions", actions)
 
         if temporal_agg:
             all_time_actions[[t], t:t+num_queries] = actions
