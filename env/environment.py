@@ -280,6 +280,7 @@ class Environment:
         
         # Step the simulation
         self.simulation.step()
+        time.sleep(dt)
 
         obs = self.get_observation()
         obs['traj_data'] = [(joint_positions, None, images)]
