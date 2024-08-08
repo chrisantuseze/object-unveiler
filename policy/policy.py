@@ -519,10 +519,11 @@ class Policy:
 
     def post_process_action(self, state, action):
         action = action.cpu().numpy()
-        print(action, action.shape)
+        print("action.shape", action.shape)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
         action = post_process(action)
+        print("action.shape", action.shape)
 
         p1 = np.array([action[3], action[2]])
         theta = action[0] * 2 * np.pi/self.rotations
