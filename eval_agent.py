@@ -175,6 +175,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         if t % query_frequency == 0:
             print("Getting fresh actions...")
             actions = policy.exploit_act(state, obs)
+            print("The actions gotten:", actions)
 
         if temporal_agg:
             all_time_actions[[t], t:t+num_queries] = actions
