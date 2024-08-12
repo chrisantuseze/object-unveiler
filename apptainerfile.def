@@ -30,7 +30,7 @@ From: nvidia/cuda:12.2.0-base-ubuntu22.04
         libglib2.0-0 \
         nvidia-container-toolkit \
 		wget 
-	wget tenacity-9.0.0-py3-none-any.whl
+	wget https://files.pythonhosted.org/packages/b6/cb/b86984bed139586d01532a587464b5805f12e397594f19f931c4c2fbfa61/tenacity-9.0.0-py3-none-any.whl
     python3 -m pip install --upgrade pip
 	python3 -m pip cache purge
 	python3 -m pip install tenacity
