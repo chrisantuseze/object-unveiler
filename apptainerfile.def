@@ -28,7 +28,8 @@ From: nvidia/cuda:12.2.0-base-ubuntu22.04
         python3-dev \
         python3-opencv \
         libglib2.0-0 \
-        nvidia-container-toolkit 
+        nvidia-container-toolkit \
+		wget 
 	wget tenacity-9.0.0-py3-none-any.whl
     python3 -m pip install --upgrade pip
 	python3 -m pip cache purge
