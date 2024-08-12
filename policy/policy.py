@@ -85,7 +85,7 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_0_seed_0.ckpt' #f'policy_best.ckpt'
+        ckpt_name = f'policy_epoch_100_seed_0.ckpt' #f'policy_best.ckpt'
         state_dim = 1
 
         self.camera_names = task_config['camera_names']
