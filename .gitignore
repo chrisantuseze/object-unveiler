@@ -31,7 +31,7 @@ downloads/
 pyvenv.cfg
 .DS_Store
 runs/
-
+*.sif
 
 
 ################# FOR ACT ############################
