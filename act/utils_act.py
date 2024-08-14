@@ -130,6 +130,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         start_ts = 0
 
+        print("qpos", qpos)
         qpos = np.array(qpos, dtype=np.float32)
 
         qpos_data = qpos[start_ts]
