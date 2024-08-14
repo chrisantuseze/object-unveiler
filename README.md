@@ -13,22 +13,37 @@ python3 main.py \
 --n_scenes 50 \
 --temporal_agg 
 
-python3 main.py --dataset_dir 'save/ou-dataset' --mode 'fcn' --epochs 100 --batch_size 2 --lr 0.001
+python3 main.py \
+--dataset_dir 'save/ou-dataset' \
+--mode 'fcn' \
+--epochs 100 \
+--batch_size 2 \
+--lr 0.001
 
 python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
 
 python3 main_act.py \
 --task_name sim_object_unveiler \
 --ckpt_dir act/ckpt \
---policy_class ACT --kl_weight 10 --chunk_size 3 --hidden_dim 512 --batch_size 1 --dim_feedforward 3200 \
---num_epochs 200  --lr 1e-5 \
+--policy_class ACT \
+--kl_weight 10 \
+--chunk_size 3 \
+--hidden_dim 512 \
+--batch_size 1 \
+--dim_feedforward 3200 \
+--num_epochs 200 \
+--lr 1e-5 \
 --num_patches 10 \
 --seed 0
 
 python3 main_diffusion.py \
 --task_name sim_object_unveiler \
---ckpt_dir diffusion/ckpt --enc_type resnet18 \
---chunk_size 4 --batch_size 8 --num_epochs 2000  --lr 1e-5 \
+--ckpt_dir diffusion/ckpt \
+--enc_type resnet18 \
+--chunk_size 4 \
+--batch_size 8 \
+--num_epochs 2000 \
+--lr 1e-5 \
 --seed 0
 
 For the Pose-FCN Pose (Paper):
