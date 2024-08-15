@@ -228,6 +228,8 @@ def parse_args():
     # not needed for this operation, but if its not here, it causes problem in policy.py
     parser.add_argument('--patch_size', default=64, type=int, help='')
     parser.add_argument('--num_patches', default=10, type=int, help='')
+
+    parser.add_argument('--chunk_size', default="3", action='store', type=int, help='chunk_size', required=False)
     
     return parser.parse_args()
 
