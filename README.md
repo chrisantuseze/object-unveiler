@@ -21,7 +21,11 @@ python3 main.py \
 --batch_size 2 \
 --lr 0.001
 
-python3 collect_data.py --singulation_condition --n_samples 30000 --seed 1
+python3 collect_data.py \
+--singulation_condition \
+--n_samples 30000 \
+--chunk_size 8 \
+--seed 1
 
 python3 main_act.py \
 --task_name sim_object_unveiler \
