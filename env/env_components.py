@@ -367,7 +367,7 @@ class FloatingBHand:
             positionGains=[100 * self.speed] * len(self.joint_ids)
         )
 
-    def calculate_joint_positions(self, action, current_state, duration, t):
+    def calculate_joint_positions(self, action, current_state, current_pos, duration, t):
         target_pos = action['pos']
         target_quat = action['quat']
 
@@ -400,10 +400,6 @@ class FloatingBHand:
         # Combine position and angle
         target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
 
-        current_pos = []
-        for i in self.joint_ids:
-            current_pos.append(p.getJointState(0, i)[0])
-
         trajectories = []
         for i in range(len(self.joint_ids)):
             trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
@@ -415,7 +411,7 @@ class FloatingBHand:
 
         return joint_positions
 
-    def calculate_finger_positions(self, action, current_state, duration, t, force=2):
+    def calculate_finger_positions(self, action, current_state, current_pos, hand_pos, duration, t, force=2):
         if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 
@@ -425,17 +421,6 @@ class FloatingBHand:
         if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
-
-         # get current joint positions
-        current_pos = []
-        for i in self.indices:
-            current_pos.append(p.getJointState(0, i)[0])
-
-        # print("Current joint pos:", current_pos) #@Chris
-
-        hand_pos = []
-        for i in self.joint_ids:
-            hand_pos.append(p.getJointState(0, i)[0])
 
         final = [
             joint_vals[0], joint_vals[0],  # Base joint
@@ -459,7 +444,7 @@ class ActionState:
     MOVE_ABOVE_PREGRASP = (0, 0.05)#0.1)
     SET_FINGER_CONFIG = (1, 0.05)#0.1) # reduce this to maybe 0.05
     MOVE_TO_PREGRASP = (2, 0.2)#0.5)
-    POWER_PUSH = (3, 1.0)#2.0)
+    POWER_PUSH = (3, 0.2)#1.0, 2.0)
     CLOSE_FINGERS = (4, 0.5)#1.0)
     MOVE_UP = (5, 0.05)#0.1)
     MOVE_HOME = (6, 0.05)#0.1)

@@ -166,35 +166,26 @@ class Environment:
         return obs
     
     def step_act(self, action):
-        # For duration=0.1 Move HAND above the pregrasp position
+        current_pos = []
+        for i in self.joint_ids:
+            current_pos.append(p.getJointState(0, i)[0])
 
+        # get current joint positions
+        finger_current_pos = []
+        for i in self.indices:
+            finger_current_pos.append(p.getJointState(0, i)[0])
 
-        # After that, for duration=0.1, switch to FINGER configuration
+        hand_pos = []
+        for i in self.joint_ids:
+            hand_pos.append(p.getJointState(0, i)[0])
 
-
-        # Then for duration=0.5 move HAND to the pre-grasp position (below the pregrasp position)
-
-
-        # For duration=2, move HAND and power push to grasp the object
-
-
-        # Close FINGERS for duration=1
-
-
-        # For duration=0.1, Move HAND up when grasped
-
-
-        # For duration=0.1, Move HAND home
-
-
-        # Finally, for duration=0.1 Open FINGERS to drop object
 
         print("Executing action...", self.current_state)
         dt = 0.001
         
         if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:
             if self.elapsed_time < ActionState.MOVE_ABOVE_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -204,7 +195,7 @@ class Environment:
         
         elif self.current_state == ActionState.SET_FINGER_CONFIG:
             if self.elapsed_time < ActionState.SET_FINGER_CONFIG[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=0.1, t=self.elapsed_time, force=5)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=0.1, t=self.elapsed_time, force=5)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -214,7 +205,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_TO_PREGRASP:
             if self.elapsed_time < ActionState.MOVE_TO_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.5, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.5, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -224,7 +215,7 @@ class Environment:
         
         elif self.current_state == ActionState.POWER_PUSH:
             # if self.elapsed_time < ActionState.POWER_PUSH[1]:
-            #     joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=2, t=self.elapsed_time)
+            #     joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=2, t=self.elapsed_time)
             #     self.bhand.move_robot(joint_positions)
             #     self.elapsed_time += dt
 
@@ -236,7 +227,7 @@ class Environment:
         
         elif self.current_state == ActionState.CLOSE_FINGERS:
             if self.elapsed_time < ActionState.CLOSE_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -246,7 +237,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_UP:
             if self.elapsed_time < ActionState.MOVE_UP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -256,7 +247,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_HOME:
             if self.elapsed_time < ActionState.MOVE_HOME[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -266,7 +257,7 @@ class Environment:
         
         elif self.current_state == ActionState.OPEN_FINGERS:
             if self.elapsed_time < ActionState.OPEN_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, duration=1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 

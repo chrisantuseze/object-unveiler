@@ -219,33 +219,34 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
-        if len(processed_masks) == n_prev_masks:
-            count += 1
+        if t % query_frequency == 0:
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+            if len(processed_masks) == n_prev_masks:
+                count += 1
 
-        if count > 1:
-            logging.info("Robot is in an infinite loop")
-            break
+            if count > 1:
+                logging.info("Robot is in an infinite loop")
+                break
 
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
-        if target_id == -1:
-            if grasp_info['stable']:
-                logging.info("Target has been grasped!")
-                success_count += 1
-            else:
-                logging.info("Target could not be grasped. And it is no longer available in the scene.")
+            target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+            if target_id == -1:
+                if grasp_info['stable']:
+                    logging.info("Target has been grasped!")
+                    success_count += 1
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
-            print('------------------------------------------')
-            break
+                print('------------------------------------------')
+                break
 
-        ############# Calculating scores ##########
-        clutter_score = grasping.measure_clutter_segmentation(processed_masks)
-        print("clutter_score:", clutter_score)
-        episode_data['clutter_score'] += clutter_score
+        # ############# Calculating scores ##########
+        # clutter_score = grasping.measure_clutter_segmentation(processed_masks)
+        # print("clutter_score:", clutter_score)
+        # episode_data['clutter_score'] += clutter_score
 
-        singulation_score = grasping.measure_singulation(target_id, processed_masks)
-        print("singulation_score:", singulation_score)
-        episode_data['singulation_score'] += singulation_score
+        # singulation_score = grasping.measure_singulation(target_id, processed_masks)
+        # print("singulation_score:", singulation_score)
+        # episode_data['singulation_score'] += singulation_score
 
         n_prev_masks = len(processed_masks)
 
