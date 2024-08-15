@@ -170,7 +170,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
     
-        for t in range(max_timesteps):
+        end_of_episode = False
+        t = 0
+        while not end_of_episode:
             state = policy.state_representation(obs)
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t)
@@ -198,6 +200,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             if t % query_frequency == 0:
                 processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+
+            t += 1
+            end_of_episode = grasp_info['eoe']
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:

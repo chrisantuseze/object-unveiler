@@ -263,7 +263,16 @@ class Environment:
                 # Action sequence complete
                 self.current_state = ActionState.MOVE_ABOVE_PREGRASP
                 self.elapsed_time = 0
-                return self.get_observation(), {'collision': None, 'stable': None, 'num_contacts': None}
+
+                images = {'color': []}
+                for cam in self.agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+
+                obs = self.get_observation()
+                obs['traj_data'] = [(joint_positions, None, images)]
+
+                return obs, {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': True} # eoe = end of episode
             
         #@Chris we save the images at the beginning of the trajectory
         images = {'color': []}
@@ -279,7 +288,7 @@ class Environment:
         obs['traj_data'] = [(joint_positions, None, images)]
         
         # Return intermediate observation and info
-        return obs,  {'collision': None, 'stable': None, 'num_contacts': None}
+        return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}
 
     
     def step(self, action):
