@@ -214,16 +214,14 @@ class Environment:
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.POWER_PUSH:
-            # if self.elapsed_time < ActionState.POWER_PUSH[1]:
-            #     joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=2, t=self.elapsed_time)
-            #     self.bhand.move_robot(joint_positions)
-            #     self.elapsed_time += dt
+            if self.elapsed_time < ActionState.POWER_PUSH[1]:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=2, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
 
-            # if self.elapsed_time >= ActionState.POWER_PUSH[1]:
-            #     self.current_state = ActionState.CLOSE_FINGERS
-            #     self.elapsed_time = 0
-            joint_positions = np.random.rand(1, 4)
-            self.current_state = ActionState.CLOSE_FINGERS
+            if self.elapsed_time >= ActionState.POWER_PUSH[1]:
+                self.current_state = ActionState.CLOSE_FINGERS
+                self.elapsed_time = 0
         
         elif self.current_state == ActionState.CLOSE_FINGERS:
             if self.elapsed_time < ActionState.CLOSE_FINGERS[1]:
