@@ -221,12 +221,12 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         if t % query_frequency == 0:
             processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
-            if len(processed_masks) == n_prev_masks:
-                count += 1
+            # if len(processed_masks) == n_prev_masks:
+            #     count += 1
 
-            if count > 1:
-                logging.info("Robot is in an infinite loop")
-                break
+            # if count > 1:
+            #     logging.info("Robot is in an infinite loop")
+            #     break
 
             target_id, target_mask = grasping.find_target(processed_masks, target_mask)
             if target_id == -1:
