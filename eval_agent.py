@@ -194,7 +194,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             action = policy.post_process_action(state, raw_action)
             env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(env_action3d)
+            next_obs, grasp_info = env.step_act(env_action3d, save_traj_data=(t + 1) % query_frequency == 0)
 
             obs = copy.deepcopy(next_obs)
 

@@ -165,7 +165,7 @@ class Environment:
 
         return obs
     
-    def step_act(self, action):
+    def step_act(self, action, save_traj_data=True):
         current_pos = []
         for i in self.bhand.joint_ids:
             current_pos.append(p.getJointState(0, i)[0])
@@ -274,18 +274,21 @@ class Environment:
 
                 return obs, {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': True} # eoe = end of episode
             
-        #@Chris we save the images at the beginning of the trajectory
-        images = {'color': []}
-        for cam in self.agent_cams:
-            color, depth, seg = cam.get_data() 
-            images['color'].append(color)
-        
+
         # Step the simulation
         self.simulation.step()
         time.sleep(dt)
 
         obs = self.get_observation()
-        obs['traj_data'] = [(joint_positions, None, images)]
+
+        if save_traj_data:
+            #@Chris we save the images at the beginning of the trajectory
+            images = {'color': []}
+            for cam in self.agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
+            
+            obs['traj_data'] = [(joint_positions, None, images)]
         
         # Return intermediate observation and info
         return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}
