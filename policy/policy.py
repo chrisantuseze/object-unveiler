@@ -78,7 +78,7 @@ class Policy:
         dec_layers = 7
         nheads = 8
         lr = 1e-5
-        chunk_size = 3
+        chunk_size = self.args.chunk_size
         kl_weight = 10
         hidden_dim = 512
         dim_feedforward = 3200
