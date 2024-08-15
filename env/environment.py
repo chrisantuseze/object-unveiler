@@ -167,16 +167,16 @@ class Environment:
     
     def step_act(self, action):
         current_pos = []
-        for i in self.joint_ids:
+        for i in self.bhand.joint_ids:
             current_pos.append(p.getJointState(0, i)[0])
 
         # get current joint positions
         finger_current_pos = []
-        for i in self.indices:
+        for i in self.bhand.indices:
             finger_current_pos.append(p.getJointState(0, i)[0])
 
         hand_pos = []
-        for i in self.joint_ids:
+        for i in self.bhand.joint_ids:
             hand_pos.append(p.getJointState(0, i)[0])
 
 
