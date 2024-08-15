@@ -180,7 +180,7 @@ class Environment:
             hand_pos.append(p.getJointState(0, i)[0])
 
 
-        print("Executing action...", self.current_state)
+        # print("Executing action...", self.current_state)
         dt = 0.001
         
         if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:

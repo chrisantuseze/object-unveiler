@@ -162,7 +162,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     n_prev_masks = 0
     count = 0
 
-    max_steps = 4
+    max_steps = 3
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -175,9 +175,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         while not end_of_episode:
             state = policy.state_representation(obs)
             if t % query_frequency == 0:
-                print("Getting fresh actions for timestep -", t)
+                print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 actions = policy.exploit_act(state, obs)
-                print("The actions gotten:", actions)
+                # print("The actions gotten:", actions)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
