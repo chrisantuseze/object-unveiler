@@ -491,7 +491,7 @@ class Policy:
 
         if len(obs['traj_data']) == 0: #TODO Fix this
             print("No traj data. Getting random actions...")
-            return torch.rand(1, 3, 4).to(self.device)
+            return torch.rand(1, self.args.chunk_size, 4).to(self.device)
         
         # print("Getting ACT actions...")
 
@@ -514,7 +514,7 @@ class Policy:
         # print("image_data.shape", image_data.shape)
         
         actions = self.policy(image_data, qpos).detach()
-        # print("actions.shape", actions.shape)
+        print("actions.shape", actions.shape)
 
         return actions
 
