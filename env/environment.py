@@ -66,8 +66,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        # p.connect(p.DIRECT)
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
+        # p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -272,7 +272,9 @@ class Environment:
                 obs = self.get_observation()
                 obs['traj_data'] = [(joint_positions, None, images)]
 
-                return obs, {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': True} # eoe = end of episode
+                stable_grasp, num_contacts = self.bhand.is_grasp_stable()
+
+                return obs, {'collision': None, 'stable': stable_grasp, 'num_contacts': num_contacts, 'eoe': True} # eoe = end of episode
             
 
         # Step the simulation
@@ -352,7 +354,7 @@ class Environment:
         trajectories.extend(commands)
 
         # check grasp stability
-        _, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for saving grasp stability
+        _, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for checking grasp stability
 
         stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
