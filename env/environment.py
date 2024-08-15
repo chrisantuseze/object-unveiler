@@ -231,6 +231,7 @@ class Environment:
             # if self.elapsed_time >= ActionState.POWER_PUSH[1]:
             #     self.current_state = ActionState.CLOSE_FINGERS
             #     self.elapsed_time = 0
+            joint_positions = np.random.rand(1, 4)
             self.current_state = ActionState.CLOSE_FINGERS
         
         elif self.current_state == ActionState.CLOSE_FINGERS:
