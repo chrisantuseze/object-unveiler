@@ -261,6 +261,8 @@ class Environment:
 
             if self.elapsed_time >= ActionState.OPEN_FINGERS[1]:
                 # Action sequence complete
+                self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+                self.elapsed_time = 0
                 return self.get_observation(), {'collision': None, 'stable': None, 'num_contacts': None}
             
         #@Chris we save the images at the beginning of the trajectory

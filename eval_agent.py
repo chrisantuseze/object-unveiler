@@ -48,7 +48,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     n_prev_masks = 0
     count = 0
 
-    max_steps = 3
+    max_steps = 4
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -162,37 +162,42 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     n_prev_masks = 0
     count = 0
 
-    max_steps = 400
-    # while episode_data['attempts'] < max_steps:
-    for t in range(max_timesteps):
+    max_steps = 4
+    while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
+    
+        for t in range(max_timesteps):
+            state = policy.state_representation(obs)
+            if t % query_frequency == 0:
+                print("Getting fresh actions for timestep -", t)
+                actions = policy.exploit_act(state, obs)
+                print("The actions gotten:", actions)
 
-        state = policy.state_representation(obs)
-        if t % query_frequency == 0:
-            print("Getting fresh actions...")
-            actions = policy.exploit_act(state, obs)
-            print("The actions gotten:", actions)
+            if temporal_agg:
+                all_time_actions[[t], t:t+num_queries] = actions
+                actions_for_curr_step = all_time_actions[:, t]
+                actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                actions_for_curr_step = actions_for_curr_step[actions_populated]
+                k = 0.01
+                exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+                exp_weights = exp_weights / exp_weights.sum()
+                exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+                raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+            else:
+                raw_action = actions[:, t % query_frequency]
 
-        if temporal_agg:
-            all_time_actions[[t], t:t+num_queries] = actions
-            actions_for_curr_step = all_time_actions[:, t]
-            actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-            actions_for_curr_step = actions_for_curr_step[actions_populated]
-            k = 0.01
-            exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-            exp_weights = exp_weights / exp_weights.sum()
-            exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
-            raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
-        else:
-            raw_action = actions[:, t % query_frequency]
+            action = policy.post_process_action(state, raw_action)
+            env_action3d = policy.action3d(action)
+            next_obs, grasp_info = env.step_act(env_action3d)
 
-        action = policy.post_process_action(state, raw_action)
-        env_action3d = policy.action3d(action)
-        next_obs, grasp_info = env.step_act(env_action3d)
+            obs = copy.deepcopy(next_obs)
+
+            if t % query_frequency == 0:
+                processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:
@@ -217,36 +222,33 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         if policy.is_terminal(next_obs):
             break
 
-        obs = copy.deepcopy(next_obs)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+        if len(processed_masks) == n_prev_masks:
+            count += 1
 
-        if t % query_frequency == 0:
-            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
-            # if len(processed_masks) == n_prev_masks:
-            #     count += 1
+        if count > 1:
+            logging.info("Robot is in an infinite loop")
+            break
 
-            # if count > 1:
-            #     logging.info("Robot is in an infinite loop")
-            #     break
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+        if target_id == -1:
+            if grasp_info['stable']:
+                logging.info("Target has been grasped!")
+                success_count += 1
+            else:
+                logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
-            target_id, target_mask = grasping.find_target(processed_masks, target_mask)
-            if target_id == -1:
-                if grasp_info['stable']:
-                    logging.info("Target has been grasped!")
-                    success_count += 1
-                else:
-                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+            print('------------------------------------------')
+            break
 
-                print('------------------------------------------')
-                break
+        ############# Calculating scores ##########
+        clutter_score = grasping.measure_clutter_segmentation(processed_masks)
+        print("clutter_score:", clutter_score)
+        episode_data['clutter_score'] += clutter_score
 
-        # ############# Calculating scores ##########
-        # clutter_score = grasping.measure_clutter_segmentation(processed_masks)
-        # print("clutter_score:", clutter_score)
-        # episode_data['clutter_score'] += clutter_score
-
-        # singulation_score = grasping.measure_singulation(target_id, processed_masks)
-        # print("singulation_score:", singulation_score)
-        # episode_data['singulation_score'] += singulation_score
+        singulation_score = grasping.measure_singulation(target_id, processed_masks)
+        print("singulation_score:", singulation_score)
+        episode_data['singulation_score'] += singulation_score
 
         n_prev_masks = len(processed_masks)
 
