@@ -4,6 +4,7 @@ Training:
 python train.py --config-name=train_diffusion_lowdim_workspace
 """
 
+import os
 import sys
 # use line-buffering for both stdout and stderr
 sys.stdout = open(sys.stdout.fileno(), mode='w', buffering=1)
@@ -26,6 +27,11 @@ def main(cfg: OmegaConf):
     # resolve immediately so all the ${now:} resolvers
     # will use the same time.
     OmegaConf.resolve(cfg)
+
+    # save dataset stats #@Chris
+    ckpt_dir = "data/ckpt"
+    if not os.path.isdir(ckpt_dir):
+        os.makedirs(ckpt_dir)
 
     cls = hydra.utils.get_class(cfg._target_)
     workspace: BaseWorkspace = cls(cfg)
