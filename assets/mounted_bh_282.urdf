@@ -387,7 +387,7 @@
 		<child link="bh_finger_11_link"/>
 		<limit effort="1000.0" lower="0.00000" upper="3.14160" velocity="10"/>
 		<dynamics damping="1.0" friction="0.0001"/>
-		<origin rpy="0.00000 0.00000 1.57080" xyz="-0.02500 0.00000 0.02520"/>
+		<origin rpy="0.00000 -0.00000 1.57080" xyz="-0.02500 0.00000 0.02520"/>
 		<axis xyz="0.00000 0.00000 -1.00000"/>
 	</joint>
 	<joint name="bh_j12_joint" type="revolute">
@@ -419,7 +419,7 @@
 		<child link="bh_finger_21_link"/>
 		<limit effort="1000.0" lower="0.00000" upper="3.14160" velocity="10"/>
 		<dynamics damping="1.0" friction="0.0001"/>
-		<origin rpy="0.00000 0.00000 1.57080" xyz="0.02500 0.00000 0.02520"/>
+		<origin rpy="0.00000 -0.00000 1.57080" xyz="0.02500 0.00000 0.02520"/>
 		<axis xyz="0.00000 0.00000 1.00000"/>
 	</joint>
 	<joint name="bh_j22_joint" type="revolute">
