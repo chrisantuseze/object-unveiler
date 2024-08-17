@@ -18,6 +18,8 @@ from act.visualize_episodes import save_videos
 
 from act.sim_env import BOX_POSE
 
+from torch.utils.tensorboard import SummaryWriter
+
 import IPython
 e = IPython.embed
 
@@ -355,6 +357,8 @@ def train_bc(train_dataloader, val_dataloader, config):
     policy.to(device)
     optimizer = make_optimizer(policy_class, policy)
 
+    writer = SummaryWriter()
+
     train_history = []
     validation_history = []
     min_val_loss = np.inf
@@ -421,6 +425,9 @@ def train_bc(train_dataloader, val_dataloader, config):
 
 
 def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
+    train_history = train_history[1:]
+    validation_history = validation_history[1:]
+    num_epochs -= 1
     # save training curves
     for key in train_history[0]:
         plot_path = os.path.join(ckpt_dir, f'train_val_{key}_seed_{seed}.png')
