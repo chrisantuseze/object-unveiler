@@ -444,7 +444,7 @@ class ActionState:
     MOVE_ABOVE_PREGRASP = (0, 0.05)#0.1)
     SET_FINGER_CONFIG = (1, 0.05)#0.1) # reduce this to maybe 0.05
     MOVE_TO_PREGRASP = (2, 0.2)#0.5)
-    POWER_PUSH = (3, 0.8)#1.0, 2.0)
+    POWER_PUSH = (3, 1.0)#2.0)
     CLOSE_FINGERS = (4, 0.5)#1.0)
     MOVE_UP = (5, 0.05)#0.1)
     MOVE_HOME = (6, 0.05)#0.1)
