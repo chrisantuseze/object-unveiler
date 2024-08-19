@@ -6,7 +6,7 @@ import shutil
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "ppg-dataset/"
+folder_path = "save/ppg-dataset2/"
 id = 0
 
 
