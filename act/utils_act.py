@@ -110,6 +110,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_object_masks = data['c_object_masks']
 
         trajectory_data = data['traj_data'][:self.sequence_len + 1]
+        if len(trajectory_data) == 0:
+            print("trajectory_data Length is zero!!")
         joint_pos, joints_vel, images = [], [], []
 
         for data in trajectory_data:
@@ -131,6 +133,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         start_ts = 0
 
         qpos = np.array(qpos, dtype=np.float32)
+        if len(qpos) == 0:
+            print("qpos Length is zero!!")
 
         qpos_data = qpos[start_ts]
         action = qpos[start_ts + 1:]
