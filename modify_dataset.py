@@ -18,7 +18,7 @@ import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
 # dataset_dir = 'save/pc-ou-dataset'
-dataset_dir = 'save/ppg-dataset'
+dataset_dir = 'ppg-dataset'
 
 def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     try:
