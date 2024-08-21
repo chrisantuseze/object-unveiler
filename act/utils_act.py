@@ -107,7 +107,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # for data in episode_data:
         data = episode_data[-1]
         heightmap = data['state']
-        c_object_masks = data['c_object_masks']
+        # c_object_masks = data['c_object_masks']
+        c_target_mask = data['c_target_mask']
 
         trajectory_data = data['traj_data'][:self.sequence_len + 1]
         if len(trajectory_data) == 0:
@@ -121,14 +122,16 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             images.append(img)
 
 
-        data_list.append((images, joint_pos, heightmap, c_object_masks))
+        # data_list.append((images, joint_pos, heightmap, c_object_masks))
+        data_list.append((images, joint_pos, heightmap, c_target_mask))
             
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        images, qpos, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
+        # images, qpos, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         start_ts = 0
 
@@ -145,13 +148,13 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
 
-        c_object_masks = np.array(c_object_masks)
-        N, H, W = c_object_masks.shape
-        if N < self.config['num_patches']:
-            object_masks = np.zeros((self.config['num_patches'], H, W), dtype=c_object_masks.dtype)
-            object_masks[:c_object_masks.shape[0], :, :] = c_object_masks
-        else:
-            object_masks = c_object_masks[:self.config['num_patches']]
+        # c_object_masks = np.array(c_object_masks)
+        # N, H, W = c_object_masks.shape
+        # if N < self.config['num_patches']:
+        #     object_masks = np.zeros((self.config['num_patches'], H, W), dtype=c_object_masks.dtype)
+        #     object_masks[:c_object_masks.shape[0], :, :] = c_object_masks
+        # else:
+        #     object_masks = c_object_masks[:self.config['num_patches']]
 
         images = images[start_ts]
         object_masks = object_masks.tolist()
@@ -165,7 +168,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = heightmap.astype(np.float32)
             else:
-                image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
+                # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
+                image_dict[cam_name] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []

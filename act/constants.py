@@ -35,7 +35,8 @@ SIM_TASK_CONFIGS = {
         'dataset_dir': DATA_DIR + '/ppg-dataset2',#'/sim_insertion_human',
         'num_episodes': 50,
         'episode_len': 3,
-        'camera_names': ['top', 'front', 'heightmap', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        # 'camera_names': ['top', 'front', 'heightmap', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        'camera_names': ['top', 'front', 'heightmap', 'target']
     },
 }
 
