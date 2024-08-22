@@ -366,6 +366,8 @@ def train_bc(train_dataloader, val_dataloader, config):
     for epoch in tqdm(range(num_epochs)):
         print(f'\nEpoch {epoch}')
         # validation
+
+        epoch_loss = {'train': 0.0, 'val': 0.0}
         with torch.inference_mode():
             policy.eval()
             epoch_dicts = []
@@ -373,6 +375,9 @@ def train_bc(train_dataloader, val_dataloader, config):
                 
                 forward_dict = forward_pass(data, policy)
                 epoch_dicts.append(forward_dict)
+
+                epoch_loss['val'] += forward_dict['loss'].detach().cpu().numpy()
+
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)
 
@@ -397,6 +402,9 @@ def train_bc(train_dataloader, val_dataloader, config):
             optimizer.step()
             optimizer.zero_grad()
             train_history.append(detach_dict(forward_dict))
+
+            epoch_loss['train'] += forward_dict['loss'].detach().cpu().numpy()
+
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
         print(f'Train loss: {epoch_train_loss:.5f}')
@@ -410,6 +418,9 @@ def train_bc(train_dataloader, val_dataloader, config):
             torch.save(policy.state_dict(), ckpt_path)
             plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
 
+        writer.add_scalar("log/train", epoch_loss['train'] / len(train_dataloader), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(val_dataloader), epoch)
+
     ckpt_path = os.path.join(ckpt_dir, f'policy_last.ckpt')
     torch.save(policy.state_dict(), ckpt_path)
 
@@ -420,14 +431,12 @@ def train_bc(train_dataloader, val_dataloader, config):
 
     # save training curves
     plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed)
+    writer.close()
 
     return best_ckpt_info
 
 
 def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
-    train_history = train_history[1:]
-    validation_history = validation_history[1:]
-    num_epochs -= 1
     # save training curves
     for key in train_history[0]:
         plot_path = os.path.join(ckpt_dir, f'train_val_{key}_seed_{seed}.png')
