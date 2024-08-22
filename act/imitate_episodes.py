@@ -385,6 +385,10 @@ def train_bc(train_dataloader, val_dataloader, config):
             if epoch_val_loss < min_val_loss:
                 min_val_loss = epoch_val_loss
                 best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
+
+                ckpt_path = os.path.join(ckpt_dir, f'policy_best_{epoch}_{min_val_loss:.6f}.ckpt')
+                torch.save(best_ckpt_info[2], ckpt_path)
+
         print(f'Val loss:   {epoch_val_loss:.5f}')
         summary_string = ''
         for k, v in epoch_summary.items():
