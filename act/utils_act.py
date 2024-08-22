@@ -111,16 +111,12 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
 
         trajectory_data = data['traj_data'][:self.sequence_len + 1]
-        if len(trajectory_data) == 0:
-            print("trajectory_data Length is zero!!")
         joint_pos, joints_vel, images = [], [], []
-
         for data in trajectory_data:
             qpos, qvel, img = data
             joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
             joints_vel.append(qvel[:4])
             images.append(img)
-
 
         # data_list.append((images, joint_pos, heightmap, c_object_masks))
         data_list.append((images, joint_pos, heightmap, c_target_mask))
