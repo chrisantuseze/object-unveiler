@@ -179,6 +179,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 actions = policy.exploit_act(state, target_mask, obs)
                 print("The actions gotten:", actions)
 
+                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
+                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
+
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
                 actions_for_curr_step = all_time_actions[:, t]
