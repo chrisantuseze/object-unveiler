@@ -176,7 +176,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             state = policy.state_representation(obs)
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
-                actions = policy.exploit_act(state, obs)
+                actions = policy.exploit_act(state, target_mask, obs)
                 print("The actions gotten:", actions)
 
             if temporal_agg:

@@ -442,7 +442,7 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
-    def get_act_image(self, color_images, heightmap, masks):
+    def get_act_image(self, color_images, heightmap, target_mask, masks):
         # curr_images = []
         # for cam_name in self.camera_names:
         #     curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
@@ -452,13 +452,13 @@ class Policy:
         
         # return curr_image
 
-        masks = np.array(masks)
-        N, H, W = masks.shape
-        if N < self.args.num_patches:
-            object_masks = np.zeros((self.args.num_patches, H, W), dtype=masks.dtype)
-            object_masks[:masks.shape[0], :, :] = masks
-        else:
-            object_masks = masks[:self.args.num_patches]
+        # masks = np.array(masks)
+        # N, H, W = masks.shape
+        # if N < self.args.num_patches:
+        #     object_masks = np.zeros((self.args.num_patches, H, W), dtype=masks.dtype)
+        #     object_masks[:masks.shape[0], :, :] = masks
+        # else:
+        #     object_masks = masks[:self.args.num_patches]
 
         # print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
@@ -471,8 +471,9 @@ class Policy:
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             else:
-                idx = int(cam_name)
-                image_dict[cam_name] = np.array(object_masks[idx]).astype(np.float32)
+                # idx = int(cam_name)
+                # image_dict[cam_name] = np.array(object_masks[idx]).astype(np.float32)
+                image_dict[cam_name] = target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
@@ -486,7 +487,7 @@ class Policy:
 
         return image_data
 
-    def exploit_act(self, state, obs):
+    def exploit_act(self, state, target_mask, obs):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
         if len(obs['traj_data']) == 0: #TODO Fix this
@@ -498,13 +499,13 @@ class Policy:
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         color_images = obs['color']
-        processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
-        masks = []
-        for id, mask in enumerate(processed_masks):
-            mask = general_utils.resize_mask(transform, mask)
-            masks.append(general_utils.extract_target_crop(mask, state))
+        # processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
+        # masks = []
+        # for id, mask in enumerate(processed_masks):
+        #     mask = general_utils.resize_mask(transform, mask)
+        #     masks.append(general_utils.extract_target_crop(mask, state))
 
-        image_data = self.get_act_image(color_images, state, masks)
+        image_data = self.get_act_image(color_images, state, target_mask, masks=[])
         
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
