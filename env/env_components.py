@@ -210,7 +210,7 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            if interval % 25 == 0:
+            if interval % 20 == 0:
                 images = {'color': []}
                 # for cam in agent_cams:
                 color, depth, seg = agent_cams.get_data() 
@@ -292,7 +292,7 @@ class FloatingBHand:
             if not agent_cams:
                 return commands
 
-            if interval % 25 == 0:
+            if interval % 20 == 0:
                 #@Chris we save the images at the beginning of the trajectory
                 images = {'color': []}
                 # for cam in agent_cams:
