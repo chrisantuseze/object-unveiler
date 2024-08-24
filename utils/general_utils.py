@@ -581,18 +581,14 @@ def get_heightmap_(obs, configs, bounds, pix_size):
     return color_heightmap, depth_heightmap
 
 def resize_image(image, target_size=(480, 640)):
-    # Get the shape of the input image
+    # # Get the shape of the input image
     input_shape = image.shape
 
-    # Resize the image
-    if len(input_shape) == 2:  # Grayscale image
-        resized = transform.resize(image, target_size, anti_aliasing=True)
-        # Add color channels
-        resized = np.stack((resized,) * 3, axis=-1)
-    elif len(input_shape) == 3:  # Color image
-        resized = transform.resize(image, target_size, anti_aliasing=True)
-    else:
+    resized = cv2.resize(image, target_size, interpolation=cv2.INTER_AREA)
+    if len(input_shape) == 2:
+        resized = cv2.cvtColor(resized.astype(np.float32), cv2.COLOR_GRAY2RGB)
+
+    elif len(input_shape) != 3:
         raise ValueError("Unexpected image shape. Expected 2D or 3D array.")
     
     return resized
-

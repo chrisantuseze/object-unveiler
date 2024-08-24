@@ -1,4 +1,5 @@
 import os
+import cv2
 import numpy as np
 import math
 import time
@@ -6,7 +7,7 @@ import pybullet as p
 
 from utils.orientation import Quaternion, rot_z, rot_y
 import utils.pybullet_utils as p_utils
-from utils import urdf_editor
+from utils import general_utils, urdf_editor
 from utils.robotics import Trajectory
 
 MOUNT_URDF_PATH = 'mount.urdf'
@@ -210,12 +211,11 @@ class FloatingBHand:
             time.sleep(dt)
 
             if interval % 25 == 0:
-                #@Chris we save the images at the beginning of the trajectory
                 images = {'color': []}
-                for cam in agent_cams:
-                    color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
-                    # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+                # for cam in agent_cams:
+                color, depth, seg = agent_cams.get_data() 
+                images['color'].append(general_utils.resize_image(color))
+                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
 
                 commands.append((command, vels, images))
             interval += 1
@@ -295,11 +295,11 @@ class FloatingBHand:
             if interval % 25 == 0:
                 #@Chris we save the images at the beginning of the trajectory
                 images = {'color': []}
-                for cam in agent_cams:
-                    color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
-                    # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
-
+                # for cam in agent_cams:
+                color, depth, seg = agent_cams.get_data() 
+                images['color'].append(general_utils.resize_image(color))
+                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+                
                 commands.append((command, vels, images))
             interval += 1
 
