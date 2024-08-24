@@ -221,8 +221,8 @@ class Environment:
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.POWER_PUSH:
-            if self.elapsed_time < ActionState.POWER_PUSH[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=2, t=self.elapsed_time)
+            if self.elapsed_time < ActionState.POWER_PUSH[1]: #duration=2
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
