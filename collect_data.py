@@ -94,29 +94,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
             print("Resetting environment:", e)
             continue
 
-
-        # state1 = cv2.resize(state, (480, 640), interpolation=cv2.INTER_AREA)
-
-        # # Step 5: Convert the grayscale image to a 3-channel image
-        # # state2 = cv2.cvtColor(state1.astype(np.float32), cv2.COLOR_GRAY2RGB)
-
-        # state2 = np.stack((state1,) * 3, axis=-1)
-
-        # print("state.shape", state.shape, state1.shape, state2.shape)
-        # # cv2.imwrite(os.path.join("save/misc", "heightmap_resized.png"), state)
-
-        # targ1 = general_utils.resize_mask(transform, target_mask)
-        # targ2 = general_utils.extract_target_crop(targ1, state)
-
-        # fig, ax = plt.subplots(4)
-
-        # ax[0].imshow(state)
-        # ax[1].imshow(state1)
-        # ax[2].imshow(state2)
-        # ax[3].imshow(targ2)
-        # plt.show()
-
-
         print(action)
 
         env_action3d = policy.action3d(action)

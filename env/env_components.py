@@ -215,7 +215,7 @@ class FloatingBHand:
                 # for cam in agent_cams:
                 color, depth, seg = agent_cams.get_data() 
                 images['color'].append(general_utils.resize_image(color))
-                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+                cv2.imwrite(os.path.join("save/misc", "color.png"), color)
 
                 commands.append((command, vels, images))
             interval += 1
