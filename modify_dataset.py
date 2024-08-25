@@ -50,10 +50,10 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
-        traj_data = data['traj_data'][:20]
+        traj_data = data['traj_data']
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
-            continue
+            return
 
         transition = {
             'state': data['state'], 

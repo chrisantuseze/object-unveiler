@@ -109,8 +109,12 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         heightmap = data['state']
         # c_object_masks = data['c_object_masks']
         c_target_mask = data['c_target_mask']
+        trajectory_data = data['traj_data']
 
-        trajectory_data = data['traj_data'][:self.sequence_len + 1]
+        start_ts = np.random.choice(len(trajectory_data) - self.sequence_len + 1)
+        print("start_ts", start_ts)
+
+        trajectory_data = trajectory_data[start_ts:self.sequence_len + 1]
         joint_pos, joints_vel, images = [], [], []
         for data in trajectory_data:
             qpos, qvel, img = data
