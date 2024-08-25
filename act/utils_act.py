@@ -112,7 +112,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         trajectory_data = data['traj_data']
 
         start_ts = random.randint(0, len(trajectory_data) - self.sequence_len + 1)
-        print("start_ts", start_ts, len(trajectory_data), trajectory_data)
+        print("start_ts", start_ts, len(trajectory_data))
 
         trajectory_data = trajectory_data[start_ts:self.sequence_len + 1]
         joint_pos, joints_vel, images = [], [], []
