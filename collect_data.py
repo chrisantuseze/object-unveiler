@@ -103,6 +103,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         if steps == 0:
             obs['traj_data'] = next_obs['traj_data']
 
+        
+        print("len(obs['traj_data'])", len(obs['traj_data']))
+
         grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:
