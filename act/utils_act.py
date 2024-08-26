@@ -122,6 +122,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             joints_vel.append(qvel[:4])
             images.append(img)
 
+        print("len(joint_pos)", len(joint_pos))
+
         # data_list.append((images, joint_pos, heightmap, c_object_masks))
         data_list.append((images, joint_pos, heightmap, c_target_mask))
             
