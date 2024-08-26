@@ -60,8 +60,8 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
         trajectory_data = []
         if len(traj_data[0][2]['color']) > 1:
             print(len(traj_data[0][2]['color']))
-            for data in traj_data:
-                qpos, qvel, img = data
+            for t_data in traj_data:
+                qpos, qvel, img = t_data
 
                 img = img['color'][:-1]
                 trajectory_data.append((qpos, qvel, img))
