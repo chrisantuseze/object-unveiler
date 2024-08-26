@@ -115,6 +115,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         print("start_ts", start_ts, len(trajectory_data), episode)
 
         trajectory_data = trajectory_data[start_ts:self.sequence_len + 1]
+        print("len(trajectory_data)", len(trajectory_data))
         joint_pos, joints_vel, images = [], [], []
         for data in trajectory_data:
             qpos, qvel, img = data
