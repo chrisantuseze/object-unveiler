@@ -57,6 +57,17 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             print("len(traj_data):", len(traj_data))
             return
 
+        trajectory_data = []
+        if len(traj_data[0][2]['color']) > 1:
+            print(len(traj_data[0][2]['color']))
+            for data in traj_data:
+                qpos, qvel, img = data
+
+                img = img['color'][:-1]
+                trajectory_data.append((qpos, qvel, img))
+        else:
+            trajectory_data = traj_data
+
         transition = {
             'state': data['state'], 
             # 'target_mask': data['target_mask'], 
@@ -69,7 +80,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'traj_data': traj_data,
+            'traj_data': trajectory_data,
         }
         episode_data_list.append(transition)
 
