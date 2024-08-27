@@ -1,4 +1,5 @@
 from random import Random
+import random
 import shutil
 from typing import Any
 import numpy as np
@@ -56,6 +57,12 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
             return
+        
+        sequence_len = 20
+        start_ts = random.randint(0, len(traj_data) - sequence_len + 1)
+        # print("start_ts", start_ts, len(trajectory_data), episode)
+
+        traj_data = traj_data[start_ts:(start_ts + sequence_len + 1)]
 
         trajectory_data = []
         if len(traj_data[0][2]['color']) > 1:
