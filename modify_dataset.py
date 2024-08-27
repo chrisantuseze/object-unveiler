@@ -50,7 +50,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
-        print("len(data['traj_data'])", len(data['traj_data']))
+        # print("len(data['traj_data'])", len(data['traj_data']))
 
         traj_data = data['traj_data'][:150]
         if len(traj_data) == 0:
@@ -59,7 +59,6 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         trajectory_data = []
         if len(traj_data[0][2]['color']) > 1:
-            print(len(traj_data[0][2]['color']))
             for t_data in traj_data:
                 qpos, qvel, img = t_data
 
