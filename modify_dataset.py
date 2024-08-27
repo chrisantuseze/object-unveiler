@@ -79,7 +79,9 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             qpos, qvel, img = t_data
 
             # img['color'] = img['color'][:-1]
-            img['color'] = img
+            img = {
+                'color': img
+            }
             trajectory_data.append((qpos, qvel, img))
 
         transition = {
