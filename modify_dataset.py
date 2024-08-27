@@ -62,7 +62,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             for t_data in traj_data:
                 qpos, qvel, img = t_data
 
-                img = img['color'][:-1]
+                img['color'] = img['color'][:-1]
                 trajectory_data.append((qpos, qvel, img))
         else:
             trajectory_data = traj_data
