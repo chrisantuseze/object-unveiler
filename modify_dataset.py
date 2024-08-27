@@ -87,7 +87,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
         transition = {
             'state': data['state'], 
             # 'target_mask': data['target_mask'], 
-            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
+            'c_target_mask': data['c_target_mask'], #general_utils.extract_target_crop(data['target_mask'], heightmap), 
             # 'scene_mask': data['scene_mask'],
                 # 'c_object_masks': new_masks,
             # 'object_masks': object_masks,
