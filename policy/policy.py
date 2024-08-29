@@ -59,7 +59,7 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = None, None #self.make_act_policy()
+        self.policy, self.stats = self.make_act_policy()
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -86,8 +86,8 @@ class Policy:
 
         ckpt_dir = "act/ckpt"
         # ckpt_name = f'policy_epoch_45_seed_0.ckpt'
-        # ckpt_name = f'policy_best_457_0.040962.ckpt'
-        ckpt_name = f'policy_best.ckpt'
+        ckpt_name = f'policy_best_653_0.000766.ckpt'
+        # ckpt_name = f'policy_best.ckpt'
         state_dim = 1
 
         self.camera_names = task_config['camera_names']
