@@ -86,7 +86,7 @@ class Policy:
 
         ckpt_dir = "act/ckpt"
         # ckpt_name = f'policy_epoch_45_seed_0.ckpt'
-        ckpt_name = f'policy_best_1475_0.000529.ckpt'
+        ckpt_name = f'policy_epoch_1583_seed_0.ckpt'
         # ckpt_name = f'policy_best.ckpt'
         state_dim = 1
 

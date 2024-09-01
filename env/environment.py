@@ -425,6 +425,8 @@ class Environment:
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
+        self.scene_nr_objs= nr_objs
+
         for i in range(len(obj_paths)):
             obj = env_components.Objects()
             base_pos, base_orient = self.workspace2world(np.array([1.0, 1.0, 0.0]), Quaternion())
@@ -464,6 +466,7 @@ class Environment:
             self.objects.append(self.add_single_object(obj_paths[i], pos, quat, size))
 
     def seed(self, seed):
+        self.session_seed = seed
         self.rng.seed(seed)
         
     def workspace2world(self, pos=None, quat=None, inv=False):

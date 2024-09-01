@@ -158,6 +158,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     if grasping.episode_status(grasp_status, is_target_grasped):
         memory.store_episode(episode_data_list)
         print("Episode was successful. So data saved to memory!")
+        print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed)
 
     # We do not need to waste the successful grasp
     elif len(episode_data_list) == 1:
@@ -166,6 +167,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         memory.store_episode([transition])
         print("Saved the only successful grasp")
+        print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed)
     else:
         print("Episode was not successful.")
 
