@@ -423,6 +423,9 @@ class Environment:
             return np.array([x, y, z])
         
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
+
+        nr_objs = 6
+
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
         self.scene_nr_objs= nr_objs
@@ -467,6 +470,9 @@ class Environment:
 
     def seed(self, seed):
         self.session_seed = seed
+
+        seed = 1791095845
+        
         self.rng.seed(seed)
         
     def workspace2world(self, pos=None, quat=None, inv=False):
