@@ -135,17 +135,19 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         traj_data = traj_data[start_ts:(start_ts + sequence_len + 1)]
 
-        trajectory_data = []
-        if len(traj_data[0][2]['color']) > 1:
-            for t_data in traj_data:
-                qpos, qvel, img = t_data
+        # trajectory_data = []
+        # if len(traj_data[0][2]['color']) > 1:
+        #     for t_data in traj_data:
+        #         qpos, qvel, img = t_data
 
-                img = {
-                    'color': img['color'][:-1]
-                }
-                trajectory_data.append((qpos, qvel, img))
-        else:
-            trajectory_data = traj_data
+        #         img = {
+        #             'color': img['color'][:-1]
+        #         }
+        #         trajectory_data.append((qpos, qvel, img))
+        # else:
+        #     trajectory_data = traj_data
+
+        trajectory_data = traj_data
 
         transition = {
             'state': data['state'], 
