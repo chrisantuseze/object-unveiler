@@ -111,7 +111,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
 
         actions = data['actions']
-        
+
         trajectory_data = data['traj_data']
 
         start_ts = random.randint(0, len(actions) - self.sequence_len + 1)
@@ -164,7 +164,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         #     object_masks = c_object_masks[:self.config['num_patches']]
 
         # object_masks = object_masks.tolist()
-        images = images[start_ts]
+        # images = images[start_ts]
 
         image_dict = dict()
         for cam_name in self.camera_names:
