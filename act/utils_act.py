@@ -109,6 +109,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         heightmap = data['state']
         # c_object_masks = data['c_object_masks']
         c_target_mask = data['c_target_mask']
+
+        actions = data['actions']
+        
         trajectory_data = data['traj_data']
 
         start_ts = random.randint(0, len(actions) - self.sequence_len + 1)
@@ -122,7 +125,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         #     joints_vel.append(qvel[:4])
         #     images.append(img)
 
-        actions = data['actions']
+        
         actions = actions[start_ts: (start_ts + self.sequence_len + 1)]
 
         # data_list.append((images, joint_pos, heightmap, c_target_mask))
