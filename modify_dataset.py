@@ -27,79 +27,6 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
 
-    # episode_data_list = []
-    # for data in episode_data:
-    #     heightmap = data['state']
-    #     # object_masks = data['object_masks']
-
-    #     # # object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
-
-    #     # # new_masks = []
-    #     # # masks = []
-    #     # # new_bboxes = []
-    #     # # for id, mask in enumerate(object_masks):
-    #     # #     mask = general_utils.resize_mask(transform, mask)
-    #     # #     masks.append(mask)
-    #     # #     new_masks.append(general_utils.extract_target_crop(mask, heightmap))
-
-    #     # #     new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
-
-    #     # # # get optimal nodes
-    #     # # target_id = grasping.get_target_id(data['target_mask'], masks)
-    #     # # objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
-    #     # print(target_id, objects_to_remove[0])
-
-    #     # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
-
-    #     # print("len(data['traj_data'])", len(data['traj_data']))
-
-    #     traj_data = data['traj_data'][:150]
-    #     if len(traj_data) == 0:
-    #         print("len(traj_data):", len(traj_data))
-    #         return
-        
-    #     sequence_len = 20
-    #     start_ts = random.randint(0, len(traj_data) - sequence_len + 1)
-    #     # print("start_ts", start_ts, len(trajectory_data), episode)
-
-    #     traj_data = traj_data[start_ts:(start_ts + sequence_len + 1)]
-
-    #     trajectory_data = []
-    #     # if len(traj_data[0][2]['color']) > 1:
-    #     #     for t_data in traj_data:
-    #     #         qpos, qvel, img = t_data
-
-    #     #         # img['color'] = img['color'][:-1]
-    #     #         img['color'] = img
-    #     #         trajectory_data.append((qpos, qvel, img))
-    #     # else:
-    #     #     trajectory_data = traj_data
-
-    #     for t_data in traj_data:
-    #         qpos, qvel, img = t_data
-
-    #         # img['color'] = img['color'][:-1]
-    #         img = {
-    #             'color': img
-    #         }
-    #         trajectory_data.append((qpos, qvel, img))
-
-    #     transition = {
-    #         'state': data['state'], 
-    #         # 'target_mask': data['target_mask'], 
-    #         'c_target_mask': data['c_target_mask'], #general_utils.extract_target_crop(data['target_mask'], heightmap), 
-    #         # 'scene_mask': data['scene_mask'],
-    #             # 'c_object_masks': new_masks,
-    #         # 'object_masks': object_masks,
-    #         'action': data['action'],
-    #             # 'optimal_nodes': objects_to_remove,
-    #         'label': data['label'],
-    #             # 'bboxes': new_bboxes,
-    #             # 'target_id': target_id,
-    #         'traj_data': trajectory_data,
-    #     }
-    #     episode_data_list.append(transition)
-
     episode_data_list = []
     for data in episode_data:
         heightmap = data['state']
@@ -124,30 +51,10 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
-        traj_data = data['traj_data'][:150]
+        traj_data = data['traj_data'][:20]
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
             return
-        
-        sequence_len = 20
-        start_ts = random.randint(0, len(traj_data) - sequence_len + 1)
-        # print("start_ts", start_ts, len(trajectory_data), episode)
-
-        traj_data = traj_data[start_ts:(start_ts + sequence_len + 1)]
-
-        # trajectory_data = []
-        # if len(traj_data[0][2]['color']) > 1:
-        #     for t_data in traj_data:
-        #         qpos, qvel, img = t_data
-
-        #         img = {
-        #             'color': img['color'][:-1]
-        #         }
-        #         trajectory_data.append((qpos, qvel, img))
-        # else:
-        #     trajectory_data = traj_data
-
-        trajectory_data = traj_data
 
         transition = {
             'state': data['state'], 
@@ -161,7 +68,9 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'traj_data': trajectory_data,
+            'traj_data': traj_data,
+
+            'actions': data['actions'],
         }
         episode_data_list.append(transition)
 

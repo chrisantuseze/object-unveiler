@@ -114,24 +114,28 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         start_ts = random.randint(0, len(trajectory_data) - self.sequence_len + 1)
         # print("start_ts", start_ts, len(trajectory_data), episode)
 
-        trajectory_data = trajectory_data[start_ts:(start_ts + self.sequence_len + 1)]
-        joint_pos, joints_vel, images = [], [], []
-        for data in trajectory_data:
-            qpos, qvel, img = data
-            joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
-            joints_vel.append(qvel[:4])
-            images.append(img)
+        # trajectory_data = trajectory_data[start_ts:(start_ts + self.sequence_len + 1)]
+        # joint_pos, joints_vel, images = [], [], []
+        # for data in trajectory_data:
+        #     qpos, qvel, img = data
+        #     joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
+        #     joints_vel.append(qvel[:4])
+        #     images.append(img)
 
-        # data_list.append((images, joint_pos, heightmap, c_object_masks))
-        data_list.append((images, joint_pos, heightmap, c_target_mask))
+        actions = data['actions']
+        actions = actions[start_ts: (start_ts + self.sequence_len + 1)]
+
+        # data_list.append((images, joint_pos, heightmap, c_target_mask))
+
+        data_list.append((actions, heightmap, c_target_mask))
             
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
 
-        # images, qpos, heightmap, c_object_masks = episode_data[-1] # images is a list containing the front and top camera images 
-        images, qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
+        # images, qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
+        qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         start_ts = 0
 
@@ -161,11 +165,13 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         image_dict = dict()
         for cam_name in self.camera_names:
-            if cam_name == 'front':
-                image_dict[cam_name] = images['color'][0].astype(np.float32)
-            elif cam_name == 'top':
-                image_dict[cam_name] = images['color'][1].astype(np.float32)
-            elif cam_name == 'heightmap':
+            # if cam_name == 'front':
+            #     image_dict[cam_name] = images['color'][0].astype(np.float32)
+            # elif cam_name == 'top':
+            #     image_dict[cam_name] = images['color'][1].astype(np.float32)
+            # elif cam_name == 'heightmap':
+            #     image_dict[cam_name] = heightmap.astype(np.float32)
+            if cam_name == 'heightmap':
                 image_dict[cam_name] = heightmap.astype(np.float32)
             else:
                 # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)

@@ -59,7 +59,7 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = self.make_act_policy()
+        self.policy, self.stats = None, None #self.make_act_policy()
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -315,6 +315,85 @@ class Policy:
 
         # logging.info("action:", action)
 
+        return action
+    
+    def generate_trajectory(self, state, target_mask, sample_limits=[0.1, 0.15], num_steps=400):
+        resized_target = general_utils.resize_mask(transform, target_mask)
+        full_crop = general_utils.extract_target_crop(resized_target, state)
+        if np.all(full_crop == 0):
+            state = resized_target
+        else:
+            state = full_crop
+
+        obj_ids = np.argwhere(state > self.z)
+        
+        # Generate initial position and target position
+        initial_position, pushing_direction = self._sample_initial_position(state, obj_ids, sample_limits)
+        target_position = initial_position + pushing_direction
+        
+        # Generate trajectory
+        trajectory = self._interpolate_trajectory(initial_position, target_position, num_steps)
+        
+        # Generate actions for each step in the trajectory
+        actions = []
+        for position in trajectory:
+            action = self._generate_action(position, pushing_direction)
+            actions.append(action)
+        
+        return actions
+
+    def _sample_initial_position(self, state, obj_ids, sample_limits):
+        valid_pxl_map = np.zeros(state.shape)
+        for x in range(state.shape[0]):
+            for y in range(state.shape[1]):
+                dists = np.linalg.norm(np.array([y, x]) - obj_ids, axis=1)
+                if len(dists) < 1:
+                    continue
+                if sample_limits[0]/self.pxl_size < np.min(dists) < sample_limits[1]/self.pxl_size:
+                    valid_pxl_map[y, x] = 255
+        
+        valid_pxls = np.argwhere(valid_pxl_map == 255)
+        valid_ids = np.arange(0, valid_pxls.shape[0])
+        
+        objects_mask = np.zeros(state.shape)
+        objects_mask[state > self.z] = 255
+        _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        while True:
+            pxl = valid_pxls[self.rng.choice(valid_ids, 1)[0]]
+            initial_position = np.array([pxl[1], pxl[0]])
+            
+            pushing_area = self.push_distance / self.pxl_size
+            points = []
+            for cnt in contours:
+                for pnt in cnt:
+                    if (initial_position[0] - pushing_area < pnt[0, 0] < initial_position[0] + pushing_area) and \
+                       (initial_position[1] - pushing_area < pnt[0, 1] < initial_position[1] + pushing_area):
+                        points.append(pnt[0])
+            if len(points) > 0:
+                break
+        
+        random_point = points[self.rng.choice(len(points), 1)[0]]
+        pushing_direction = random_point - initial_position
+        
+        return initial_position, pushing_direction
+
+    def _interpolate_trajectory(self, initial_position, target_position, num_steps):
+        return [initial_position + i/num_steps * (target_position - initial_position) for i in range(num_steps + 1)]
+
+    def _generate_action(self, position, pushing_direction):
+        theta = -np.arctan2(pushing_direction[1], pushing_direction[0])
+        step_angle = 2 * np.pi / self.rotations
+        discrete_theta = round(theta / step_angle) * step_angle
+        aperture = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
+        
+        action = np.zeros((4,))
+        action[0] = position[0] * 1.05
+        action[1] = position[1] * 1.05
+        action[2] = discrete_theta
+        action[3] = aperture
+        
         return action
     
     def exploit(self, state, target_mask):

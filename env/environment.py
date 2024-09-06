@@ -216,6 +216,11 @@ class Environment:
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
+                self.is_in_contact = self.bhand.check_in_contact()
+                # if self.is_in_contact:
+                #     self.current_state = ActionState.MOVE_UP
+                #     self.elapsed_time = 0
+
             if self.elapsed_time >= ActionState.MOVE_TO_PREGRASP[1]:
                 self.current_state = ActionState.POWER_PUSH
                 self.elapsed_time = 0
@@ -281,7 +286,7 @@ class Environment:
 
                 stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
-                return obs, {'collision': None, 'stable': stable_grasp, 'num_contacts': num_contacts, 'eoe': True} # eoe = end of episode
+                return obs, {'collision': self.is_in_contact, 'stable': stable_grasp, 'num_contacts': num_contacts, 'eoe': True} # eoe = end of episode
             
 
         # Step the simulation
@@ -424,7 +429,7 @@ class Environment:
         
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
 
-        nr_objs = 6
+        # nr_objs = 6
 
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
@@ -471,7 +476,7 @@ class Environment:
     def seed(self, seed):
         self.session_seed = seed
 
-        seed = 1791095845
+        # seed = 1791095845
         
         self.rng.seed(seed)
         

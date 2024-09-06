@@ -196,13 +196,7 @@ class FloatingBHand:
             )
 
             if stop_at_contact:
-                points = p.getContactPoints(bodyA=self.robot_hand_id)
-                if len(points) > 0:
-                    for pnt in points:
-                        if pnt[9] > 0:
-                            is_in_contact = True
-                            break
-
+                is_in_contact = self.check_in_contact()
                 if is_in_contact:
                     break
 
@@ -439,13 +433,25 @@ class FloatingBHand:
         self.set_hand_joint_position(finger_positions, force)
 
         return hand_pos
+    
+    def check_in_contact(self):
+        points = p.getContactPoints(bodyA=self.robot_hand_id)
+        if len(points) > 0:
+            for pnt in points:
+                if pnt[9] > 0:
+                    return True
+        return False
 
 class ActionState:
-    MOVE_ABOVE_PREGRASP = (0, 0.1)#0.1)
+    MOVE_ABOVE_PREGRASP = (0, 0.08)#0.1)
     SET_FINGER_CONFIG = (1, 0.1)#0.1) # reduce this to maybe 0.05
-    MOVE_TO_PREGRASP = (2, 0.5)#0.5)
-    POWER_PUSH = (3, 0.5)#2.0)
-    CLOSE_FINGERS = (4, 0.5)#1.0)
-    MOVE_UP = (5, 0.1)#0.1)
-    MOVE_HOME = (6, 0.1)#0.1)
+    MOVE_TO_PREGRASP = (2, 0.1)#0.5)
+    POWER_PUSH = (3, 0.25)#2.0)
+    CLOSE_FINGERS = (4, 0.45)#1.0)
+    MOVE_UP = (5, 0.06)#0.1)
+    MOVE_HOME = (6, 0.07)#0.1)
     OPEN_FINGERS = (7, 0.1)#0.1)
+
+
+    NUM_STEPS = int (sum([steps[1] for steps in 
+                     [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, MOVE_HOME, OPEN_FINGERS]])/0.001)

@@ -177,7 +177,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 actions = policy.exploit_act(state, target_mask, obs)
-                print("The actions gotten:", actions)
+                # print("The actions gotten:", actions)
 
                 cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
