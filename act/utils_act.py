@@ -111,7 +111,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
         trajectory_data = data['traj_data']
 
-        start_ts = random.randint(0, len(trajectory_data) - self.sequence_len + 1)
+        start_ts = random.randint(0, len(actions) - self.sequence_len + 1)
         # print("start_ts", start_ts, len(trajectory_data), episode)
 
         # trajectory_data = trajectory_data[start_ts:(start_ts + self.sequence_len + 1)]
