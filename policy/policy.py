@@ -59,7 +59,7 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = None, None #self.make_act_policy()
+        self.policy, self.stats = self.make_act_policy()
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -543,11 +543,13 @@ class Policy:
 
         image_dict = dict()
         for cam_name in self.camera_names:
-            if cam_name == 'front':
-                image_dict[cam_name] = color_images[0].astype(np.float32)
-            elif cam_name == 'top':
-                image_dict[cam_name] = color_images[1].astype(np.float32)
-            elif cam_name == 'heightmap':
+            # if cam_name == 'front':
+            #     image_dict[cam_name] = color_images[0].astype(np.float32)
+            # elif cam_name == 'top':
+            #     image_dict[cam_name] = color_images[1].astype(np.float32)
+            # elif cam_name == 'heightmap':
+            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            if cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             else:
                 # idx = int(cam_name)
