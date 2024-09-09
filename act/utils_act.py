@@ -115,7 +115,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         for data in trajectory_data:
             qpos, qvel, img = data
             joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
-            joints_vel.append(qvel[:4])
+            # joints_vel.append(qvel[:4])
             images.append(img)
         
         actions = data['actions'][:self.sequence_len]
