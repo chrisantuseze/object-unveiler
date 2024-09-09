@@ -429,7 +429,7 @@ class Environment:
         
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
 
-        # nr_objs = 6
+        nr_objs = 6
 
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 

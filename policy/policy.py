@@ -60,6 +60,7 @@ class Policy:
         self.reg_criterion = nn.L1Loss()
 
         self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -67,6 +68,7 @@ class Policy:
         self.replay_buffer = ReplayBuffer(demo_save_dir)
 
     def seed(self, seed):
+        seed = 4018109721
         self.rng.seed(seed)
 
     def make_act_policy(self):
