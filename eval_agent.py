@@ -347,7 +347,7 @@ def get_obs():
         joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
         images.append(img)
 
-    return (joint_pos, actions, images, heightmap, c_target_mask)
+    return joint_pos, actions, images, heightmap, c_target_mask
 
 def eval_agent(args):
     print("Running eval...")
