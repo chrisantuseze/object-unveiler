@@ -337,7 +337,7 @@ def get_obs():
 
     data = episode_data[-1]
     heightmap = data['state']
-    c_target_mask = data['c_target_mask']
+    c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap), 
     actions = data['actions']
 
     trajectory_data = data['traj_data'][:5 + 1]
