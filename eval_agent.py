@@ -178,6 +178,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         t = 0
 
         qpos, obs_actions, images, heightmap, c_target_mask = get_obs()
+        print(c_target_mask)
 
         while not end_of_episode:
             state = policy.state_representation(obs)
@@ -338,6 +339,7 @@ def get_obs():
     data = episode_data[-1]
     heightmap = data['state']
     c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap), 
+    print(c_target_mask)
     actions = data['actions']
 
     trajectory_data = data['traj_data'][:5 + 1]
