@@ -545,14 +545,14 @@ class Policy:
 
         image_dict = dict()
         for cam_name in self.camera_names:
-            # if cam_name == 'front':
-            #     image_dict[cam_name] = color_images[0].astype(np.float32)
-            # elif cam_name == 'top':
-            #     image_dict[cam_name] = color_images[1].astype(np.float32)
-            # elif cam_name == 'heightmap':
-            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            if cam_name == 'heightmap':
+            if cam_name == 'front':
+                image_dict[cam_name] = color_images[0].astype(np.float32)
+            elif cam_name == 'top':
+                image_dict[cam_name] = color_images[1].astype(np.float32)
+            elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            # if cam_name == 'heightmap':
+            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             else:
                 # idx = int(cam_name)
                 # image_dict[cam_name] = np.array(object_masks[idx]).astype(np.float32)
@@ -600,6 +600,21 @@ class Policy:
         actions = self.policy(image_data, qpos).detach()
         # print("actions.shape", actions.shape)
 
+        return actions
+    
+    def exploit_act2(self, state, target_mask, images, qpos):
+        _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
+
+        if len(qpos) == 0: #TODO Fix this
+            print("No traj data. Getting random actions...")
+            return torch.rand(1, self.args.chunk_size, 4).to(self.device)
+    
+        image_data = self.get_act_image(images, state, target_mask, masks=[])
+        print("image_data.shape", image_data.shape)
+        
+        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
+
+        actions = self.policy(image_data, qpos).detach()
         return actions
 
     def post_process_action(self, state, action):

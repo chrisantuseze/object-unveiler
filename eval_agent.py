@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import torch
 import yaml
@@ -175,12 +176,18 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     
         end_of_episode = False
         t = 0
+
+        qpos, obs_actions, images, heightmap, c_target_mask = get_obs()
+
         while not end_of_episode:
             state = policy.state_representation(obs)
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
-                actions = policy.exploit_act(state, target_mask, obs)
-                # print("The actions gotten:", actions)
+                # actions = policy.exploit_act(state, target_mask, obs)
+
+                actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
+                print("The actions gotten:", actions)
+                print("The obs actions are:", obs_actions[t])
 
                 cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
@@ -315,6 +322,32 @@ def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSe
     logging.info('--------')
     return episode_data
 
+def get_obs():
+    dataset_dir = "save/ppg-dataset"
+    transition_dirs = os.listdir(dataset_dir)
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    episode = transition_dirs[0]
+    try:
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
+    except Exception as e:
+        print(e, "- Failed episode:", episode)
+
+    data = episode_data[-1]
+    heightmap = data['state']
+    c_target_mask = data['c_target_mask']
+    actions = data['actions']
+
+    trajectory_data = data['traj_data'][:5 + 1]
+    joint_pos, joints_vel, images = [], [], []
+    for data in trajectory_data:
+        qpos, qvel, img = data
+        joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
+        images.append(img)
+
+    return (joint_pos, actions, images, heightmap, c_target_mask)
 
 def eval_agent(args):
     print("Running eval...")
