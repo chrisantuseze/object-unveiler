@@ -609,9 +609,10 @@ class Policy:
             print("No traj data. Getting random actions...")
             return torch.rand(1, self.args.chunk_size, 4).to(self.device)
     
+        print("target_mask.shape", target_mask)
         image_data = self.get_act_image(images, state, target_mask, masks=[])
         print("image_data.shape", image_data.shape)
-        
+
         qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
 
         actions = self.policy(image_data, qpos).detach()
