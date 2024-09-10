@@ -178,7 +178,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         t = 0
 
         qpos, obs_actions, images, heightmap, c_target_mask = get_obs()
-        print(c_target_mask)
 
         while not end_of_episode:
             state = policy.state_representation(obs)
