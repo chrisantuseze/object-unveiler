@@ -186,8 +186,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 # actions = policy.exploit_act(state, target_mask, obs)
 
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
-                print("The actions gotten:", actions)
-                print("The actions are: \Obs -", obs_actions[t], "\nPred -", actions[t])
+                # print("The actions gotten:", actions)
+                print("Obs action -", obs_actions[t])
 
                 cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
@@ -206,6 +206,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 raw_action = actions[:, t % query_frequency]
 
             action = policy.post_process_action(state, raw_action)
+            
+            print("Pred action -", action)
+
             env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step_act(env_action3d, save_traj_data=(t + 1) % query_frequency == 0)
 
