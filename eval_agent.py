@@ -337,7 +337,6 @@ def get_obs():
 
     data = episode_data[-1]
     heightmap = data['state']
-    print(data['target_mask'])
     c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap)
     actions = data['actions']
 
@@ -347,6 +346,8 @@ def get_obs():
         qpos, qvel, img = data
         joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
         images.append(img)
+
+    joint_pos = joint_pos[0]
 
     return joint_pos, actions, images, heightmap, c_target_mask
 
