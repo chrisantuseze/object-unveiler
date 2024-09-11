@@ -185,8 +185,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
 
-                print("qpos:", qpos)
-                actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
+                print("qpos:", qpos[t])
+                actions = policy.exploit_act2(heightmap, c_target_mask, images[t], qpos[t])
                 # print("The actions gotten:", actions)
                 print("Obs action -", obs_actions[t])
 
@@ -214,7 +214,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             next_obs, grasp_info = env.step_act(env_action3d, save_traj_data=(t + 1) % query_frequency == 0)
 
             obs = copy.deepcopy(next_obs)
-            qpos, qvel, img = obs['traj_data'][0]
 
             if t % query_frequency == 0:
                 processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
@@ -345,7 +344,7 @@ def get_obs():
     c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap)
     actions = data['actions']
 
-    trajectory_data = data['traj_data'][:5 + 1]
+    trajectory_data = data['traj_data']#[:5 + 1]
     joint_pos, joints_vel, images = [], [], []
     for data in trajectory_data:
         qpos, qvel, img = data
