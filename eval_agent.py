@@ -362,7 +362,7 @@ def save_arrays_to_file(array_list, filename):
     with open(filename, 'w') as f:
         for i, arr in enumerate(array_list):
             f.write(f"Array {i+1}:\n")
-            f.write(arr)#np.array2string(arr, separator=', '))
+            f.write(str(arr))#np.array2string(arr, separator=', '))
             f.write("\n\n")
 
 def eval_agent(args):
