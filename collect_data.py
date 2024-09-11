@@ -222,6 +222,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         state, depth_heightmap = policy.get_state_representation(obs)
         actions = policy.generate_trajectory(state, processed_masks[node_id], num_steps=ActionState.NUM_STEPS)
 
+        traj_data = []
         while not end_of_episode:
             try:
                 action = actions[t]
@@ -238,6 +239,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             next_obs, grasp_info = env.step_act(env_action3d)
 
             # print("len(obs['traj_data'])", len(obs['traj_data']))
+            traj_data.append(next_obs['traj_data'])
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -282,7 +284,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 'object_masks': new_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
-                'traj_data': obs['traj_data'],
+                'traj_data': traj_data,
                 'actions': actions, 
             }
             episode_data_list.append(transition)
