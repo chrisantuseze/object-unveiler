@@ -626,7 +626,7 @@ class Policy:
         pred_action = post_process(pred_action)
 
         p1 = np.array([pred_action[3], pred_action[2]])
-        theta = action[0] * 2 * np.pi/self.rotations
+        theta = pred_action[0] * 2 * np.pi/self.rotations
 
         # ################################################################
         # out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
