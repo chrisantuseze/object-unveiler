@@ -264,7 +264,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        save = int(input("Do you want to save this episode? (0/1): "))
+        save = 0 #int(input("Do you want to save this episode? (0/1): "))
 
         if grasp_info['stable'] or save == 1:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)

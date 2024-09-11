@@ -51,6 +51,7 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
+        print("traj len:", len(data['traj_data']))
         traj_data = data['traj_data'][:20]
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
