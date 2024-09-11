@@ -354,6 +354,12 @@ def get_obs():
     #     joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
     #     images.append(img)
 
+    # Convert the list of arrays into a 2D array
+    combined_array = np.vstack(trajectory_data)
+
+    # Save the combined array to a text file
+    np.savetxt('output.txt', combined_array, fmt='%d', delimiter=',')
+
     return trajectory_data, actions, heightmap, c_target_mask
 
 def eval_agent(args):
