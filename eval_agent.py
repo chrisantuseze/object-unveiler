@@ -177,7 +177,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         end_of_episode = False
         t = 0
 
-        qpos, obs_actions, images, heightmap, c_target_mask = get_obs()
+        traj_data, obs_actions, heightmap, c_target_mask = get_obs()
 
         while not end_of_episode:
             state = policy.state_representation(obs)
@@ -185,8 +185,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
 
-                print("qpos:", qpos[t])
-                actions = policy.exploit_act2(heightmap, c_target_mask, images[t], qpos[t])
+                qpos, qvel, images = traj_data[t]
+                print("qpos:", qpos)
+                
+                actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos[:4])
                 # print("The actions gotten:", actions)
                 print("Obs action -", obs_actions[t])
 
@@ -345,13 +347,13 @@ def get_obs():
     actions = data['actions']
 
     trajectory_data = data['traj_data']#[:5 + 1]
-    joint_pos, joints_vel, images = [], [], []
-    for data in trajectory_data:
-        qpos, qvel, img = data
-        joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
-        images.append(img)
+    # joint_pos, joints_vel, images = [], [], []
+    # for data in trajectory_data:
+    #     qpos, qvel, img = data
+    #     joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
+    #     images.append(img)
 
-    return joint_pos, actions, images, heightmap, c_target_mask
+    return trajectory_data, actions, heightmap, c_target_mask
 
 def eval_agent(args):
     print("Running eval...")
