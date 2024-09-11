@@ -649,7 +649,7 @@ class Policy:
         action[0] = pred_action[0]
         action[1] = pred_action[1]
         action[2] = pred_action[2]
-        action[3] = aperture
+        action[3] = pred_action[3]
 
         return action
     
