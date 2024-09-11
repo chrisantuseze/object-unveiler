@@ -239,7 +239,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             next_obs, grasp_info = env.step_act(env_action3d)
 
             # print("len(obs['traj_data'])", len(obs['traj_data']))
-            traj_data.append(next_obs['traj_data'])
+            traj_data.extend(next_obs['traj_data'])
 
             t += 1
             end_of_episode = grasp_info['eoe']
