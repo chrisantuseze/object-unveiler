@@ -336,7 +336,7 @@ def get_obs():
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    episode = transition_dirs[0]
+    episode = transition_dirs[-1]
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
     except Exception as e:
