@@ -605,7 +605,7 @@ class Policy:
     def exploit_act2(self, state, target_mask, images, qpos):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
-        if len(qpos) == 0: #TODO Fix this
+        if len(qpos) == 0:
             print("No traj data. Getting random actions...")
             return torch.rand(1, self.args.chunk_size, 4).to(self.device)
     
@@ -649,7 +649,7 @@ class Policy:
         action[0] = pred_action[0]
         action[1] = pred_action[1]
         action[2] = pred_action[2]
-        action[3] = pred_action[3]
+        action[3] = aperture
 
         return action
     

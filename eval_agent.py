@@ -185,6 +185,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
 
+                print("qpos:", qpos)
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
                 # print("The actions gotten:", actions)
                 print("Obs action -", obs_actions[t])
