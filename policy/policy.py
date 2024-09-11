@@ -619,14 +619,21 @@ class Policy:
         return actions
 
     def post_process_action(self, state, action):
-        action = action.squeeze(0).cpu().numpy()
+        pred_action = action.squeeze(0).cpu().numpy()
         # print("action.shape", action.shape)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
-        action = post_process(action)
+        pred_action = post_process(pred_action)
 
-        p1 = np.array([action[3], action[2]])
+        p1 = np.array([pred_action[3], pred_action[2]])
         theta = action[0] * 2 * np.pi/self.rotations
+
+        # ################################################################
+        # out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
+        # best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        # p1 = np.array([best_action[3], best_action[2]])
+        # theta = best_action[0] * 2 * np.pi/self.rotations
+        # ################################################################
 
         # find optimal aperture
         aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
@@ -639,9 +646,9 @@ class Policy:
                                                      self.aperture_limits[1]])
 
         action = np.zeros((4,))
-        action[0] = p1[0]
-        action[1] = p1[1]
-        action[2] = theta
+        action[0] = pred_action[0]
+        action[1] = pred_action[1]
+        action[2] = pred_action[2]
         action[3] = aperture
 
         return action
