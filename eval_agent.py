@@ -185,7 +185,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
 
-                print(t, len(traj_data))
                 qpos, qvel, images = traj_data[t]
                 # print("qpos:", qpos)
                 
@@ -206,10 +205,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 # exp_weights = exp_weights / exp_weights.sum()
                 # exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
                 # raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
-                raw_action = actions[:, 1]
+                raw_action = actions[:, 0]
             else:
                 raw_action = actions[:, t % query_frequency]
 
+            print(actions)
             action = policy.post_process_action(state, raw_action)
             
             print("Pred action -", action)
