@@ -192,8 +192,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 # print("The actions gotten:", actions)
                 print("Obs action -", obs_actions[t])
 
-                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
-                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
+                # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
+                # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
+
+                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images[0])
+                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images[1])
 
             if temporal_agg:
                 # all_time_actions[[t], t:t+num_queries] = actions
@@ -209,7 +212,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-            print(actions)
             action = policy.post_process_action(state, raw_action)
             
             print("Pred action -", action)
