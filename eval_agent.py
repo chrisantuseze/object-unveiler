@@ -187,7 +187,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
                 print(t, len(traj_data))
                 qpos, qvel, images = traj_data[t]
-                print("qpos:", qpos)
+                # print("qpos:", qpos)
                 
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos[:4])
                 # print("The actions gotten:", actions)
@@ -197,15 +197,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
 
             if temporal_agg:
-                all_time_actions[[t], t:t+num_queries] = actions
-                actions_for_curr_step = all_time_actions[:, t]
-                actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-                actions_for_curr_step = actions_for_curr_step[actions_populated]
-                k = 0.01
-                exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-                exp_weights = exp_weights / exp_weights.sum()
-                exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
-                raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+                # all_time_actions[[t], t:t+num_queries] = actions
+                # actions_for_curr_step = all_time_actions[:, t]
+                # actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                # actions_for_curr_step = actions_for_curr_step[actions_populated]
+                # k = 0.01
+                # exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+                # exp_weights = exp_weights / exp_weights.sum()
+                # exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+                # raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+                raw_action = actions[:, 1]
             else:
                 raw_action = actions[:, t % query_frequency]
 
