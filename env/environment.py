@@ -277,9 +277,12 @@ class Environment:
                 self.elapsed_time = 0
 
                 images = {'color': []}
-                # for cam in self.agent_cams:
-                color, depth, seg = self.traj_cam.get_data() 
-                images['color'].append(color)
+
+                # color, depth, seg = self.traj_cam.get_data() 
+                # images['color'].append(color)
+                for cam in self.agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
 
                 obs = self.get_observation()
                 obs['traj_data'] = [(joint_positions, None, images)]
@@ -298,9 +301,13 @@ class Environment:
         if save_traj_data:
             #@Chris we save the images at the beginning of the trajectory
             images = {'color': []}
-            # for cam in self.agent_cams:
-            color, depth, seg = self.traj_cam.get_data() 
-            images['color'].append(color)
+
+            # color, depth, seg = self.traj_cam.get_data() 
+            # images['color'].append(color)
+
+            for cam in self.agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
             
             obs['traj_data'] = [(joint_positions, None, images)]
         

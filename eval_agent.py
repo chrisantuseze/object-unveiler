@@ -186,8 +186,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 # actions = policy.exploit_act(state, target_mask, obs)
 
                 qpos, qvel, images = traj_data[t]
-                # print("qpos:", qpos)
-                print(images)
+                images = images['color']
                 
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos[:4])
                 # print("The actions gotten:", actions)
