@@ -122,6 +122,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # data_list.append((images, joint_pos, heightmap, c_target_mask))
 
         data_list.append((images, joint_pos, actions, heightmap, c_target_mask))
+
+        print(images)
             
         return data_list
 
