@@ -122,8 +122,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # data_list.append((images, joint_pos, heightmap, c_target_mask))
 
         data_list.append((images, joint_pos, actions, heightmap, c_target_mask))
-
-        print(images)
             
         return data_list
 
@@ -140,6 +138,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             print("qpos Length is zero!!")
 
         qpos_data = qpos[start_ts]
+        images = images[start_ts]
+        
         # action = qpos[start_ts + 1:]
         action = np.array(actions, dtype=np.float32)
 
@@ -158,7 +158,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         #     object_masks = c_object_masks[:self.config['num_patches']]
 
         # object_masks = object_masks.tolist()
-        # images = images[start_ts]
 
         image_dict = dict()
         for cam_name in self.camera_names:
