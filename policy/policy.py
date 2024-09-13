@@ -543,6 +543,13 @@ class Policy:
 
         # print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
+        color_images = []
+        for i in range(2):
+            color_images.append(np.random.random(size=(480, 640, 3)))
+
+        heightmap = np.random.random(size=(480, 640, 3))
+        target_mask = np.random.random(size=(480, 640, 3))
+
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
