@@ -153,6 +153,13 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         # object_masks = object_masks.tolist()
 
+        images = {'color': []}
+        for i in range(2):
+            images['color'].append(np.random.random(size=(480, 640, 3)))
+
+        heightmap = np.random.random(size=(480, 640, 3))
+        c_target_mask = np.random.random(size=(480, 640, 3))
+
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
