@@ -349,24 +349,9 @@ def get_obs():
     heightmap = data['state']
     c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap)
     actions = data['actions']
-
-    trajectory_data = data['traj_data']#[:5 + 1]
-    # joint_pos, joints_vel, images = [], [], []
-    # for data in trajectory_data:
-    #     qpos, qvel, img = data
-    #     joint_pos.append(qpos[:4]) # 4 is the number of joint in the FBHand NB: From self.joint_ids in environment.py
-    #     images.append(img)
-
-    save_arrays_to_file(trajectory_data, 'output.txt')
+    trajectory_data = data['traj_data']
 
     return trajectory_data, actions, heightmap, c_target_mask
-
-def save_arrays_to_file(array_list, filename):
-    with open(filename, 'w') as f:
-        for i, arr in enumerate(array_list):
-            f.write(f"Array {i+1}:\n")
-            f.write(str(arr))#np.array2string(arr, separator=', '))
-            f.write("\n\n")
 
 def eval_agent(args):
     print("Running eval...")
