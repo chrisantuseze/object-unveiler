@@ -160,7 +160,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'top':
                 image_dict[cam_name] = images['color'][1].astype(np.float32)
             elif cam_name == 'heightmap':
-                image_dict[cam_name] = images['color'][0].astype(np.float32) #heightmap.astype(np.float32)
+                image_dict[cam_name] = heightmap.astype(np.float32)
             else:
                 # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
                 image_dict[cam_name] = c_target_mask.astype(np.float32)
