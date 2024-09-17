@@ -59,8 +59,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = self.make_act_policy()
-        # self.policy, self.stats = None, None
+        # self.policy, self.stats = self.make_act_policy()
+        self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -622,8 +622,16 @@ class Policy:
 
         actions = self.policy(image_data, qpos).detach()
         return actions
+    
+    def post_process_action(self, action):
+        pred_action = action.squeeze(0).cpu().numpy()
+        # print("action.shape", action.shape)
 
-    def post_process_action(self, state, action):
+        post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
+        pred_action = post_process(pred_action)
+        return pred_action
+
+    def post_process_action_(self, state, action):
         pred_action = action.squeeze(0).cpu().numpy()
         # print("action.shape", action.shape)
 

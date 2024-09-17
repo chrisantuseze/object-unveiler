@@ -72,7 +72,7 @@ class FloatingBHand:
         )
 
         # Mount joints.
-        self.joint_ids = [0, 1, 2, 3]
+        self.joint_ids = [_ for _ in range(8)] #[0, 1, 2, 3]
         self.simulation = simulation
 
 
@@ -362,6 +362,9 @@ class FloatingBHand:
         )
 
     def calculate_joint_positions(self, action, current_state, current_pos, duration, t):
+        if len(action) == 8:   # this is eval
+            return action
+        
         target_pos = action['pos']
         target_quat = action['quat']
 
@@ -392,7 +395,13 @@ class FloatingBHand:
         angle = np.arctan2(relative_rot[2, 1], relative_rot[1, 1])
 
         # Combine position and angle
-        target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+        # target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+
+        target_states = [
+            target_pos[0], target_pos[1],  # Base joint
+            target_pos[2], angle, target_pos[0],  # Main finger joints
+            target_pos[1], target_pos[2], angle  # Secondary finger joints
+        ]
 
         trajectories = []
         for i in range(len(self.joint_ids)):
@@ -406,6 +415,10 @@ class FloatingBHand:
         return joint_positions
 
     def calculate_finger_positions(self, action, current_state, current_pos, hand_pos, duration, t, force=2):
+        if len(action) == 8:   # this is eval
+            self.set_hand_joint_position(action, force)
+            return hand_pos
+        
         if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 

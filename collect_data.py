@@ -264,8 +264,9 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        save = int(input("Do you want to save this episode? (0/1): "))
+        # save = int(input("Do you want to save this episode? (0/1): "))
 
+        save = 0
         if grasp_info['stable'] or save == 1:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
             
@@ -308,7 +309,9 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
     if grasping.episode_status(grasp_status, is_target_grasped):
         memory.store_episode(episode_data_list)
         print("Episode was successful. So data saved to memory!")
-        print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed, ", Target id:", target_id)
+
+        with open('episode_info.txt', 'a') as file:
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
 
     # We do not need to waste the successful grasp
     elif len(episode_data_list) == 1:
@@ -317,7 +320,9 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         memory.store_episode([transition])
         print("Saved the only successful grasp")
-        print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed, ", Target id:", new_id)
+        
+        with open('episode_info.txt', 'a') as file:
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
     else:
         print("Episode was not successful.")
 
@@ -397,5 +402,9 @@ if __name__ == "__main__":
 
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
+
+    # Writing to a file
+    with open('episode_info.txt', 'w') as file:
+        file.write("\n")
 
     collect_episodic_dataset(args, params)
