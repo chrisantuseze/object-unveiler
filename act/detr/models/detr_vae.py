@@ -243,7 +243,7 @@ def build_encoder(args):
 
 
 def build(args):
-    state_dim = 4 # TODO hardcode #@Chris
+    # state_dim = 4 # TODO hardcode #@Chris
 
     # From state
     # backbone = None # from state for now, no need for conv nets
@@ -260,7 +260,7 @@ def build(args):
         backbones,
         transformer,
         encoder,
-        state_dim=state_dim,
+        state_dim=args.state_dim,
         num_queries=args.num_queries,
         camera_names=args.camera_names,
     )
@@ -271,7 +271,7 @@ def build(args):
     return model
 
 def build_cnnmlp(args):
-    state_dim = 14 # TODO hardcode
+    # state_dim = 14 # TODO hardcode
 
     # From state
     # backbone = None # from state for now, no need for conv nets
@@ -283,7 +283,7 @@ def build_cnnmlp(args):
 
     model = CNNMLP(
         backbones,
-        state_dim=state_dim,
+        state_dim=args.state_dim,
         camera_names=args.camera_names,
     )
 
