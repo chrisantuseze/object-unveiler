@@ -619,7 +619,7 @@ class Policy:
         # print("image_data.shape", image_data.shape)
 
         qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
-        print("qpos", qpos)
+        # print("qpos.shape", qpos.shape)
 
         actions = self.policy(image_data, qpos).detach()
         return actions
