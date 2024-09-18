@@ -353,6 +353,8 @@ def train_bc(train_dataloader, val_dataloader, config):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    print("policy_config", policy_config)
+
     policy = make_policy(policy_class, policy_config)
     policy.to(device)
     optimizer = make_optimizer(policy_class, policy)

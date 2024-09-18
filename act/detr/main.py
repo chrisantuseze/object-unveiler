@@ -90,6 +90,7 @@ def build_ACT_model_and_optimizer(args_override):
     for k, v in args_override.items():
         setattr(args, k, v)
 
+    print(args)
     model = build_ACT_model(args)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
