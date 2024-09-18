@@ -105,6 +105,7 @@ class Policy:
             'dec_layers': dec_layers,
             'nheads': nheads,
             'camera_names': self.camera_names,
+            'state_dim': 8
         }
 
         config = {
