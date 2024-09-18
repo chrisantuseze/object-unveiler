@@ -188,7 +188,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 qpos, qvel, images = traj_data[t]
                 images = images['color']
 
-                # qpos = qpos[:4]
                 print("qpos", qpos)
                 
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)

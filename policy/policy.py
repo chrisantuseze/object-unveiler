@@ -624,7 +624,7 @@ class Policy:
         actions = self.policy(image_data, qpos).detach()
         return actions
     
-    def post_process_action(self, action):
+    def post_process_action(self, state, action):
         pred_action = action.squeeze(0).cpu().numpy()
         # print("action.shape", action.shape)
 
