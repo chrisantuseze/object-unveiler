@@ -363,6 +363,7 @@ class FloatingBHand:
 
     def calculate_joint_positions(self, action, current_state, current_pos, duration, t):
         if len(action) == 8:   # this is eval
+            print("eval", len(action))
             return action
         
         target_pos = action['pos']
