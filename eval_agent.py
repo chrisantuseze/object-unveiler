@@ -181,19 +181,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         while not end_of_episode:
             state = policy.state_representation(obs)
+            qpos, qvel, images = traj_data[t]
+
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
-
-                qpos, qvel, images = traj_data[t]
 
                 images = images['color']
                 
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
                 # print("The actions gotten:", actions)
-
-                obs_action = [round(num, 4) for num in traj_data[t + 1][0]]
-                print("Obs action -", obs_action)
 
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
@@ -214,12 +211,15 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-            action = policy.post_process_action(state, raw_action)
+
+            obs_action = [round(num, 4) for num in traj_data[t + 1][0]]
+            print("Obs action -", obs_action)
             
+            action = policy.post_process_action(state, raw_action)
             print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(action, save_traj_data=(t + 1) % query_frequency == 0)
+            next_obs, grasp_info = env.step_act(obs_action, save_traj_data=(t + 1) % query_frequency == 0)
 
             obs = copy.deepcopy(next_obs)
 
