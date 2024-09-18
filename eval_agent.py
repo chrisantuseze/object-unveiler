@@ -191,7 +191,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
                 # print("The actions gotten:", actions)
 
-                obs_action = [round(num, 4) for num in qpos[t + 1]]
+                obs_action = [round(num, 4) for num in len(qpos[t + 1])]
                 print("Obs action -", obs_action)
 
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
