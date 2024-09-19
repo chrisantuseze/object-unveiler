@@ -211,8 +211,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-
-            obs_action = [round(num, 2) for num in traj_data[t + 1][0]]
+            obs_action = [round(num, 2) for num in traj_data[t][0]]
             print("Obs action -", obs_action)
             
             action = policy.post_process_action(state, raw_action)
