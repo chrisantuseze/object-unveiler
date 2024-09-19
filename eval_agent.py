@@ -212,7 +212,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 raw_action = actions[:, t % query_frequency]
 
 
-            obs_action = [round(num, 4) for num in traj_data[t + 1][0]]
+            obs_action = [round(num, 2) for num in traj_data[t + 1][0]]
             print("Obs action -", obs_action)
             
             action = policy.post_process_action(state, raw_action)
@@ -341,7 +341,7 @@ def get_obs():
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    episode = transition_dirs[-1]
+    episode = transition_dirs[0]
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
     except Exception as e:
