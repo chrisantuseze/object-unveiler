@@ -126,9 +126,6 @@ class Policy:
             # for unveiler
             ,'split_ratio': 0.8
         }
-
-        torch.set_printoptions(precision=16)
-
         
         policy = ACTPolicy(policy_config)
 
@@ -142,6 +139,8 @@ class Policy:
         stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
         with open(stats_path, 'rb') as f:
             stats = pickle.load(f)
+
+        torch.set_printoptions(precision=16)
 
         return policy, stats
 
