@@ -211,7 +211,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
 
             if t % 10 == 0:
-                obs_action = [round(num, 3) for num in traj_data[t][0]]
+                obs_action = traj_data[t][0] #[round(num, 3) for num in traj_data[t][0]]
                 print("Obs action -", obs_action, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 
