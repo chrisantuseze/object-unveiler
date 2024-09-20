@@ -627,7 +627,7 @@ class Policy:
         return actions
     
     def post_process_action(self, state, action):
-        pred_action = action.squeeze(0).cpu().numpy()
+        pred_action = action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
         print("raw action:", pred_action)
 
