@@ -622,6 +622,7 @@ class Policy:
         # print("qpos.shape", qpos.shape)
 
         actions = self.policy(image_data, qpos).detach()
+        print("raw actions", actions)
         return actions
     
     def post_process_action(self, state, action):
