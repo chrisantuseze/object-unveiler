@@ -56,6 +56,8 @@ class ACTPolicy(nn.Module):
             a_hat, _, (_, _) = self.model(
                 qpos, image, env_state
             )  # no action, sample from prior
+
+            print("a_hat", a_hat)
             return a_hat
 
     def configure_optimizers(self):
