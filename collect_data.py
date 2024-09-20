@@ -245,14 +245,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             end_of_episode = grasp_info['eoe']
 
         obs = copy.deepcopy(next_obs)
-        
-        # if this is the first loop, set the initial reset obs with the joint and images from the next_obs
-        if steps == 0:
-            obs['traj_data'] = next_obs['traj_data']
-
-        
-        print("len(obs['traj_data'])", len(obs['traj_data']))
-
         grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:

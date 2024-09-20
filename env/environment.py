@@ -173,18 +173,14 @@ class Environment:
         return obs
     
     def step_act(self, action, save_traj_data=True):
-        current_pos = []
-        for i in self.bhand.joint_ids:
-            current_pos.append(p.getJointState(0, i)[0])
-
         # get current joint positions
         finger_current_pos = []
         for i in self.bhand.indices:
             finger_current_pos.append(p.getJointState(0, i)[0])
 
-        hand_pos = []
+        hand_current_pos = []
         for i in self.bhand.joint_ids:
-            hand_pos.append(p.getJointState(0, i)[0])
+            hand_current_pos.append(p.getJointState(0, i)[0])
 
 
         # print("Executing action...", self.current_state)
@@ -192,7 +188,7 @@ class Environment:
         
         if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:
             if self.elapsed_time < ActionState.MOVE_ABOVE_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -202,8 +198,8 @@ class Environment:
         
         elif self.current_state == ActionState.SET_FINGER_CONFIG:
             if self.elapsed_time < ActionState.SET_FINGER_CONFIG[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=0.1, t=self.elapsed_time, force=5)
-                self.bhand.move_robot(joint_positions)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=0.1, t=self.elapsed_time, force=5)
+                self.bhand.move_robot(hand_current_pos)
                 self.elapsed_time += dt
 
             if self.elapsed_time >= ActionState.SET_FINGER_CONFIG[1]:
@@ -212,7 +208,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_TO_PREGRASP:
             if self.elapsed_time < ActionState.MOVE_TO_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.5, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.5, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -227,7 +223,7 @@ class Environment:
         
         elif self.current_state == ActionState.POWER_PUSH:
             if self.elapsed_time < ActionState.POWER_PUSH[1]: #duration=2
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -237,8 +233,8 @@ class Environment:
         
         elif self.current_state == ActionState.CLOSE_FINGERS:
             if self.elapsed_time < ActionState.CLOSE_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=1, t=self.elapsed_time)
-                self.bhand.move_robot(joint_positions)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=1, t=self.elapsed_time)
+                self.bhand.move_robot(hand_current_pos)
                 self.elapsed_time += dt
 
             if self.elapsed_time >= ActionState.CLOSE_FINGERS[1]:
@@ -247,7 +243,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_UP:
             if self.elapsed_time < ActionState.MOVE_UP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -257,7 +253,7 @@ class Environment:
         
         elif self.current_state == ActionState.MOVE_HOME:
             if self.elapsed_time < ActionState.MOVE_HOME[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, current_pos, duration=0.1, t=self.elapsed_time)
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
@@ -267,8 +263,8 @@ class Environment:
         
         elif self.current_state == ActionState.OPEN_FINGERS:
             if self.elapsed_time < ActionState.OPEN_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, hand_pos, duration=1, t=self.elapsed_time)
-                self.bhand.move_robot(joint_positions)
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=1, t=self.elapsed_time)
+                self.bhand.move_robot(hand_current_pos)
                 self.elapsed_time += dt
 
             if self.elapsed_time >= ActionState.OPEN_FINGERS[1]:
@@ -293,7 +289,7 @@ class Environment:
             
 
         # Step the simulation
-        self.simulation.step()
+        self.bhand.simulation.step()
         time.sleep(dt)
 
         obs = self.get_observation()
@@ -309,7 +305,7 @@ class Environment:
                 color, depth, seg = cam.get_data() 
                 images['color'].append(color)
             
-            obs['traj_data'] = [(joint_positions, None, images)]
+            obs['traj_data'] = [(joint_positions, images)]
         
         # Return intermediate observation and info
         return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}

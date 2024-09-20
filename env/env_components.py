@@ -162,7 +162,12 @@ class FloatingBHand:
         # compute angle
         relative_rot = np.matmul(self.home_quat.rotation_matrix().transpose(), target_quat.rotation_matrix())
         angle = np.arctan2(relative_rot[2, 1], relative_rot[1, 1])
-        target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+        # target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+
+        target_states = [
+            target_pos[0], target_pos[1], target_pos[2], angle, 
+            target_pos[0], target_pos[1], target_pos[2], angle 
+        ]
 
         current_pos = []
         for i in self.joint_ids:
@@ -179,11 +184,9 @@ class FloatingBHand:
         commands = []
         while t < duration:
             command = []
-            vels = []
 
             for i in range(len(self.joint_ids)):
                 command.append(trajectories[i].pos(t))
-                vels.append(trajectories[i].vel(t)) #@Chris
 
             # print("command", len(command), command)
             p.setJointMotorControlArray(
@@ -211,7 +214,7 @@ class FloatingBHand:
                 images['color'].append(general_utils.resize_image(color))
                 cv2.imwrite(os.path.join("save/misc", "color.png"), color)
 
-                commands.append((command, vels, images))
+                commands.append((command, images))
             interval += 1
 
         return commands, is_in_contact
@@ -228,6 +231,15 @@ class FloatingBHand:
                                     controlMode=p.POSITION_CONTROL,
                                     targetPosition=joint_position[i],
                                     force=apply_force)
+            
+        # p.setJointMotorControlArray(
+        #     0,
+        #     self.indices,
+        #     p.POSITION_CONTROL,
+        #     targetPositions=joint_position,
+        #     forces= [1.7 * force if self.joint_names[i] in ['bh_j32_joint', 'bh_j33_joint'] else force for i in range(len(self.joint_names))],
+        #     positionGains=[100 * self.speed] * len(self.indices)
+        # )
             
     def move_fingers(self, agent_cams=None, final_joint_values=[], duration=1, force=2):
         """
@@ -261,11 +273,9 @@ class FloatingBHand:
         commands = []
         while t < duration:
             command = []
-            vels = []
 
             for i in range(len(self.joint_names)):
                 command.append(trajectories[i].pos(t))
-                vels.append(trajectories[i].vel(t))
 
             self.set_hand_joint_position(command, force)
 
@@ -294,7 +304,7 @@ class FloatingBHand:
                 images['color'].append(general_utils.resize_image(color))
                 # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
                 
-                commands.append((command, vels, images))
+                commands.append((command, images))
             interval += 1
 
         return commands#, [current_pos, hand_pos] #@Chris
@@ -398,9 +408,8 @@ class FloatingBHand:
         # target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
 
         target_states = [
-            target_pos[0], target_pos[1],  # Base joint
-            target_pos[2], angle, target_pos[0],  # Main finger joints
-            target_pos[1], target_pos[2], angle  # Secondary finger joints
+            target_pos[0], target_pos[1], target_pos[2], angle, 
+            target_pos[0], target_pos[1], target_pos[2], angle 
         ]
 
         trajectories = []
@@ -414,10 +423,10 @@ class FloatingBHand:
 
         return joint_positions
 
-    def calculate_finger_positions(self, action, current_state, current_pos, hand_pos, duration, t, force=2):
+    def calculate_finger_positions(self, action, current_state, current_pos, duration, t, force=2):
         if len(action) == 8:   # this is eval
             self.set_hand_joint_position(action, force)
-            return hand_pos
+            return action
         
         if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
@@ -445,7 +454,7 @@ class FloatingBHand:
 
         self.set_hand_joint_position(finger_positions, force)
 
-        return hand_pos
+        return finger_positions
     
     def check_in_contact(self):
         points = p.getContactPoints(bodyA=self.robot_hand_id)
@@ -457,14 +466,13 @@ class FloatingBHand:
 
 class ActionState:
     MOVE_ABOVE_PREGRASP = (0, 0.08)#0.1)
-    SET_FINGER_CONFIG = (1, 0.1)#0.1) # reduce this to maybe 0.05
+    SET_FINGER_CONFIG = (1, 0.06)#0.1) # reduce this to maybe 0.05
     MOVE_TO_PREGRASP = (2, 0.1)#0.5)
     POWER_PUSH = (3, 0.25)#2.0)
     CLOSE_FINGERS = (4, 0.45)#1.0)
     MOVE_UP = (5, 0.06)#0.1)
     MOVE_HOME = (6, 0.07)#0.1)
     OPEN_FINGERS = (7, 0.1)#0.1)
-
 
     NUM_STEPS = int (sum([steps[1] for steps in 
                      [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, MOVE_HOME, OPEN_FINGERS]])/0.001)

@@ -158,7 +158,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     # get a randomly picked target mask from the segmented image
     # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
 
-    target_mask, target_id = processed_masks[2], 2
+    target_mask, target_id = processed_masks[5], 5
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -181,22 +181,19 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         while not end_of_episode:
             state = policy.state_representation(obs)
-            qpos, qvel, images = traj_data[t]
+            qpos, images = traj_data[t]
 
             if t % query_frequency == 0:
                 print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
-
-                images = images['color']
-                
-                actions = policy.exploit_act2(heightmap, c_target_mask, images, qpos)
+                actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
                 # print("The actions gotten:", actions)
 
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
 
-                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images[0])
-                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images[1])
+                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images['color'][0])
+                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images['color'][1])
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -211,19 +208,19 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-            obs_action = [round(num, 2) for num in traj_data[t][0]]
-            print("Obs action -", obs_action)
-            
-            action = policy.post_process_action(state, raw_action)
-            print("Pred action -", action)
+            # action = policy.post_process_action(state, raw_action)
+
+            if t % 10 == 0:
+                obs_action = [round(num, 3) for num in traj_data[t][0]]
+                print("Obs action -", obs_action, ",", t, ",", env.current_state)
+                # print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(obs_action, save_traj_data=(t + 1) % query_frequency == 0)
-
+            next_obs, grasp_info = env.step_act(qpos, save_traj_data=(t + 1) % query_frequency == 0)
             obs = copy.deepcopy(next_obs)
 
-            if t % query_frequency == 0:
-                processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+            # if t % query_frequency == 0:
+            #     processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -242,9 +239,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         else:
             episode_data['fails'] += 1
 
-        print(action)
         print(grasp_info)
-        print('---------')
+        print('---------') # 16 dp
 
         general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
@@ -349,7 +345,7 @@ def get_obs():
     data = episode_data[-1]
     heightmap = data['state']
     c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap)
-    actions = data['actions']
+    actions = None #data['actions']
     trajectory_data = data['traj_data']
 
     return trajectory_data, actions, heightmap, c_target_mask
