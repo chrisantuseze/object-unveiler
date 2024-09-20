@@ -48,8 +48,8 @@ class ACTPolicy(nn.Module):
             loss_dict["kl"] = total_kld[0]
             loss_dict["loss"] = loss_dict["l1"] + loss_dict["kl"] * self.kl_weight
 
-            print("gt:", actions)
-            print("pr:", a_hat)
+            # print("gt:", actions)
+            # print("pr:", a_hat)
 
             return loss_dict
         else:  # inference time
