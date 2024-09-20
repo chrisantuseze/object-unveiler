@@ -127,6 +127,8 @@ class Policy:
             ,'split_ratio': 0.8
         }
 
+        torch.set_printoptions(precision=16)
+
         
         policy = ACTPolicy(policy_config)
 
