@@ -158,7 +158,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     # get a randomly picked target mask from the segmented image
     # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
 
-    target_mask, target_id = processed_masks[5], 5
+    target_mask, target_id = processed_masks[4], 4
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -183,40 +183,40 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             state = policy.state_representation(obs)
             qpos, images = traj_data[t]
 
-            if t % query_frequency == 0:
-                # print("Getting fresh actions for timestep -", t, ", ", env.current_state)
-                # actions = policy.exploit_act(state, target_mask, obs)
-                actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
-                # print("The actions gotten:", actions)
+            # if t % query_frequency == 0:
+            #     # print("Getting fresh actions for timestep -", t, ", ", env.current_state)
+            #     # actions = policy.exploit_act(state, target_mask, obs)
+            #     actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
+            #     # print("The actions gotten:", actions)
 
-                # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
-                # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
+            #     # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
+            #     # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
 
-                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images['color'][0])
-                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images['color'][1])
+            #     cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images['color'][0])
+            #     cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images['color'][1])
 
-            if temporal_agg:
-                all_time_actions[[t], t:t+num_queries] = actions
-                actions_for_curr_step = all_time_actions[:, t]
-                actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-                actions_for_curr_step = actions_for_curr_step[actions_populated]
-                k = 0.01
-                exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-                exp_weights = exp_weights / exp_weights.sum()
-                exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
-                raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
-            else:
-                raw_action = actions[:, t % query_frequency]
+            # if temporal_agg:
+            #     all_time_actions[[t], t:t+num_queries] = actions
+            #     actions_for_curr_step = all_time_actions[:, t]
+            #     actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+            #     actions_for_curr_step = actions_for_curr_step[actions_populated]
+            #     k = 0.01
+            #     exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+            #     exp_weights = exp_weights / exp_weights.sum()
+            #     exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+            #     raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+            # else:
+            #     raw_action = actions[:, t % query_frequency]
 
-            action = policy.post_process_action(state, raw_action)
+            # action = policy.post_process_action(state, raw_action)
 
             if t % 10 == 0:
                 obs_action = [round(num, 3) for num in traj_data[t][0]]
                 print("Obs action -", obs_action, ",", t, ",", env.current_state)
-                print("Pred action -", action)
+                # print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(action, save_traj_data=(t + 1) % query_frequency == 0)
+            next_obs, grasp_info = env.step_act(qpos, save_traj_data=(t + 1) % query_frequency == 0)
             obs = copy.deepcopy(next_obs)
 
             # if t % query_frequency == 0:
