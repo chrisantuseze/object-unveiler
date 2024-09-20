@@ -339,8 +339,13 @@ def forward_pass(data, policy):
 
     image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), \
         action_data.to(device), is_pad.to(device)
+    
+    out = policy(image_data, qpos_data, action_data, is_pad)
+
+    print("gt:", action_data)
+    print("pr:", out)
         
-    return policy(image_data, qpos_data, action_data, is_pad)
+    return out
 
 
 def train_bc(train_dataloader, val_dataloader, config):
