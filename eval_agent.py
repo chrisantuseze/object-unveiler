@@ -184,7 +184,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             qpos, images = traj_data[t]
 
             if t % query_frequency == 0:
-                print("Getting fresh actions for timestep -", t, ", ", env.current_state)
+                # print("Getting fresh actions for timestep -", t, ", ", env.current_state)
                 # actions = policy.exploit_act(state, target_mask, obs)
                 actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
                 # print("The actions gotten:", actions)
