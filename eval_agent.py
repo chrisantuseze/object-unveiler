@@ -208,12 +208,12 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-            # action = policy.post_process_action(state, raw_action)
+            action = policy.post_process_action(state, raw_action)
 
             if t % 10 == 0:
                 obs_action = [round(num, 3) for num in traj_data[t][0]]
                 print("Obs action -", obs_action, ",", t, ",", env.current_state)
-                # print("Pred action -", action)
+                print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step_act(qpos, save_traj_data=(t + 1) % query_frequency == 0)
