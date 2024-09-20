@@ -141,6 +141,7 @@ class Policy:
             stats = pickle.load(f)
 
         torch.set_printoptions(precision=16)
+        np.set_printoptions(precision=16)
 
         return policy, stats
 
