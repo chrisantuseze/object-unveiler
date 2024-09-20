@@ -207,7 +207,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
             else:
                 raw_action = actions[:, t % query_frequency]
-                print("raw_action", raw_action)
+                print("raw_action", raw_action.cpu().numpy())
 
             action = policy.post_process_action(state, raw_action)
 
