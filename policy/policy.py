@@ -627,14 +627,14 @@ class Policy:
         return actions
     
     def post_process_action(self, state, action):
-        pred_action = np.array(action.squeeze(0).cpu().tolist())
+        pred_action = action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
         print("raw action:", pred_action)
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
         pred_action = post_process(pred_action)
 
-        print(self.stats['action_std'], self.stats['action_mean'], pred_action)
+        print(self.stats['action_std'], self.stats['action_mean'], type(self.stats['action_std']), type(self.stats['action_mean']))
         return pred_action
 
     def post_process_action_(self, state, action):
