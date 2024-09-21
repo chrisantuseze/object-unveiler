@@ -629,15 +629,13 @@ class Policy:
     def post_process_action(self, state, action):
         pred_action = action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
-        print("raw action:", pred_action)
+        # print("raw action:", pred_action)
 
-        post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
-        action = post_process(pred_action)
+        # post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
+        # action = post_process(pred_action)
+
+        action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in pred_action]
         
-        print("old pred action:", action)
-        print("new pred action:", [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in pred_action])
-
-        # print(self.stats['action_std'], self.stats['action_mean'], type(self.stats['action_std']), type(self.stats['action_mean']))
         return action
 
     def post_process_action_(self, state, action):
