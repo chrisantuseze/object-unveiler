@@ -140,7 +140,7 @@ class Policy:
         with open(stats_path, 'rb') as f:
             stats = pickle.load(f)
 
-        torch.set_printoptions(precision=16)
+        torch.set_printoptions(precision=17)
         np.set_printoptions(precision=17)
 
         return policy, stats
