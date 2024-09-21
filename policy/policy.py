@@ -627,10 +627,10 @@ class Policy:
         return actions
     
     def post_process_action(self, state, action):
-        pred_action = action.squeeze(0).cpu().tolist()
+        action = action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
 
-        action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in pred_action]
+        # action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in action]
         
         return action
 
