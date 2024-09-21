@@ -633,6 +633,8 @@ class Policy:
 
         post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
         pred_action = post_process(pred_action)
+
+        print(self.stats['action_std'], self.stats['action_mean'], pred_action)
         return pred_action
 
     def post_process_action_(self, state, action):
