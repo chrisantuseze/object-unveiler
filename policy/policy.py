@@ -141,7 +141,7 @@ class Policy:
             stats = pickle.load(f)
 
         torch.set_printoptions(precision=16)
-        np.set_printoptions(precision=16)
+        np.set_printoptions(precision=17)
 
         return policy, stats
 
@@ -629,10 +629,6 @@ class Policy:
     def post_process_action(self, state, action):
         pred_action = action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
-        # print("raw action:", pred_action)
-
-        # post_process = lambda a: a * self.stats['action_std'] + self.stats['action_mean']
-        # action = post_process(pred_action)
 
         action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in pred_action]
         
