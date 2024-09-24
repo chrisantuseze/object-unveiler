@@ -479,7 +479,7 @@ class Environment:
     def seed(self, seed):
         self.session_seed = seed
 
-        # seed = 1791095845
+        seed = 4005303368
         
         self.rng.seed(seed)
         
