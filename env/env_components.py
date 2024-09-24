@@ -207,14 +207,13 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            if interval % 20 == 0:
-                images = {'color': []}
-                # for cam in agent_cams:
-                color, depth, seg = agent_cams.get_data() 
-                images['color'].append(general_utils.resize_image(color))
-                cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            # if interval % 20 == 0:
+            images = {'color': []}
+            for cam in agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
 
-                commands.append((command, images))
+            commands.append((command, images))
             interval += 1
 
         return commands, is_in_contact
@@ -296,15 +295,14 @@ class FloatingBHand:
             if not agent_cams:
                 return commands
 
-            if interval % 20 == 0:
-                #@Chris we save the images at the beginning of the trajectory
-                images = {'color': []}
-                # for cam in agent_cams:
-                color, depth, seg = agent_cams.get_data() 
-                images['color'].append(general_utils.resize_image(color))
-                # cv2.imwrite(os.path.join("save/misc", "color.png"), color)
+            # if interval % 20 == 0:
+            #@Chris we save the images at the beginning of the trajectory
+            images = {'color': []}
+            for cam in agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
                 
-                commands.append((command, images))
+            commands.append((command, images))
             interval += 1
 
         return commands#, [current_pos, hand_pos] #@Chris
@@ -324,10 +322,10 @@ class FloatingBHand:
         )
 
     def close(self, agent_cams, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals)
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=0.45) #1.0
 
     def open(self, agent_cams, joint_vals=[0.0, 0.6, 0.6, 0.6]):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1)
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1) #1.0
 
     def configure(self, n_links_before):
         # set friction coefficients for gripper fingers

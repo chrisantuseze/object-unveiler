@@ -181,7 +181,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         while not end_of_episode:
             state = policy.state_representation(obs)
-            qpos, images = traj_data[t]
+            qpos = traj_data[t][0]
+            images = traj_data[t][-1]
 
             if t % query_frequency == 0:
                 # print("Getting fresh actions for timestep -", t, ", ", env.current_state)
@@ -211,8 +212,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
 
             if t % 10 == 0:
-                obs_action = traj_data[t][0] #[round(num, 3) for num in traj_data[t][0]]
-                print("Obs action -", obs_action, ",", t, ",", env.current_state)
+                print("Obs action -", qpos, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)

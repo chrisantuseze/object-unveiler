@@ -40,7 +40,7 @@ def collect_episodic_dataset(args, params):
 
     for i in range(args.n_samples):
         try:
-            run_episode_act(i, policy, segmenter, env, memory, rng)
+            run_episode(i, policy, segmenter, env, memory, rng)
         except Exception as e:
             print(e)
 
@@ -118,7 +118,10 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        if grasp_info['stable']:
+        # save = int(input("Do you want to save this episode? (0/1): "))
+
+        save = 0
+        if grasp_info['stable'] or save == 1:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
             
             new_masks = []

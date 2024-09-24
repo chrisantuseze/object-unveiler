@@ -48,18 +48,6 @@ class RealSense():
     }
   ]
 
-  TRAJ_CAM = {
-      'type': 'front',
-      'image_size': (640, 840),
-      'intrinsics': intrinsics,
-      'pos': front_position,
-      'target_pos': front_target_pos,
-      'up_vector': front_up_vector,
-      'zrange': (0.01, 10.),
-      'noise': False,
-    }
-
-
 class SimCamera:
     def __init__(self, config) -> None:
         self.config = config
