@@ -40,7 +40,7 @@ def collect_episodic_dataset(args, params):
 
     for i in range(args.n_samples):
         try:
-            run_episode(i, policy, segmenter, env, memory, rng)
+            run_episode_act(i, policy, segmenter, env, memory, rng)
         except Exception as e:
             print(e)
 
