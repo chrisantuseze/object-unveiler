@@ -66,8 +66,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        # p.connect(p.DIRECT)
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
+        # p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -466,7 +466,7 @@ class Environment:
     def seed(self, seed):
         self.session_seed = seed
 
-        # seed = 4005303368
+        seed = 1791095845
         
         self.rng.seed(seed)
         

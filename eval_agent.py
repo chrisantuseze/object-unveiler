@@ -1,4 +1,5 @@
 import pickle
+from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import yaml
@@ -158,7 +159,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
 
-    target_mask, target_id = processed_masks[3], 3
+    id = 5
+    target_mask, target_id = processed_masks[5], 5
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -178,6 +180,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         t = 0
 
         traj_data, obs_actions, heightmap, c_target_mask = get_obs()
+        preds = []
 
         while not end_of_episode:
             state = policy.state_representation(obs)
@@ -210,6 +213,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 raw_action = actions[:, t % query_frequency]
 
             action = policy.post_process_action(state, raw_action)
+            preds.append(action)
 
             if t % 10 == 0:
                 print("Obs action -", qpos, ",", t, ",", env.current_state)
@@ -224,6 +228,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             t += 1
             end_of_episode = grasp_info['eoe']
+
+        gt = np.array([data[0] for data in traj_data])
+        preds = np.array(preds)
+        plot_joint_positions_over_time(gt, preds)
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:
@@ -349,6 +357,40 @@ def get_obs():
     trajectory_data = data['traj_data']
 
     return trajectory_data, actions, heightmap, c_target_mask
+
+def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_positions_plot.png'):
+    """
+    Plot ground truth and predicted joint positions over time and save to a file.
+    
+    :param ground_truth: Numpy array of shape (time_steps, 8) for ground truth joint positions
+    :param predicted: Numpy array of shape (time_steps, 8) for predicted joint positions
+    :param filename: String, the filename to save the plot (default: 'joint_positions_plot.png')
+    """
+    time_steps = ground_truth.shape[0]
+    joint_count = ground_truth.shape[1]
+    
+    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
+    fig.suptitle('Comparison of Ground Truth and Predicted Joint Positions Over Time', fontsize=16)
+    
+    for joint in range(joint_count):
+        ax = axes[joint // 2, joint % 2]
+        
+        ax.plot(range(time_steps), ground_truth[:, joint], label='Ground Truth', color='blue')
+        ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
+        
+        ax.set_title(f'Joint {joint + 1}')
+        ax.set_xlabel('Time Step')
+        ax.set_ylabel('Position')
+        ax.legend()
+        ax.grid(True, linestyle='--', alpha=0.7)
+    
+    plt.tight_layout()
+    
+    # Save the plot to a file
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free up memory
+    
+    print(f"Plot saved to {filename}")
 
 def eval_agent(args):
     print("Running eval...")

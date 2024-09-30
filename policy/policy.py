@@ -59,8 +59,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        # self.policy, self.stats = self.make_act_policy()
-        self.policy, self.stats = None, None
+        self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -68,7 +68,7 @@ class Policy:
         self.replay_buffer = ReplayBuffer(demo_save_dir)
 
     def seed(self, seed):
-        seed = 4018109721
+        seed = 1791095845
         self.rng.seed(seed)
 
     def make_act_policy(self):
@@ -87,7 +87,7 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_100_seed_0.ckpt'
+        ckpt_name = f'policy_epoch_200_seed_0.ckpt'
         # ckpt_name = f'policy_best.ckpt'
         state_dim = 1
 

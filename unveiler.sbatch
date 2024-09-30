@@ -23,7 +23,7 @@ apptainer run --nv apptainerfile.sif python3 main_act.py \
 --hidden_dim 512 \
 --batch_size 2 \
 --dim_feedforward 3200 \
---num_epochs 4000 \
+--num_epochs 1000 \
 --lr 1e-5 \
 --num_patches 10 \
 --seed 0
