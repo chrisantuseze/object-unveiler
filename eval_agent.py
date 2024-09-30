@@ -159,8 +159,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
 
-    id = 5
-    target_mask, target_id = processed_masks[5], 5
+    id = 3
+    target_mask, target_id = processed_masks[id], id
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
