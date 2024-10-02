@@ -125,11 +125,17 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, actions, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
-        start_ts = 0
-
         qpos = np.array(qpos, dtype=np.float32)
         if len(qpos) == 0:
             print("qpos Length is zero!!")
+
+        episode_len = qpos.shape[0]
+        
+        sample_full_episode = False
+        if sample_full_episode:
+            start_ts = 0
+        else:
+            start_ts = np.random.choice(episode_len)
 
         qpos_data = qpos[start_ts]
         images = images[start_ts]
