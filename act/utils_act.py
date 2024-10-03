@@ -143,6 +143,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # action = qpos[start_ts + 1:]
         # action = np.array(actions, dtype=np.float32)
 
+        actions = np.array(actions, dtype=np.float32)
         action_len = actions.shape[0]
         padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float32)
         padded_action[:action_len] = actions
