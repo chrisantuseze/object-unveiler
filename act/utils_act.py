@@ -10,6 +10,8 @@ import IPython
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
+import matplotlib.pyplot as plt
+import cv2
 
 e = IPython.embed
 
@@ -108,22 +110,20 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         data = episode_data[-1]
         heightmap = data['state']
         c_target_mask = data['c_target_mask']
-        actions = data['actions'][:self.sequence_len]
+        # actions = data['actions'][:self.sequence_len]
 
-        trajectory_data = data['traj_data'][:self.sequence_len + 1]
-        joint_pos, images = [], []
-        for data in trajectory_data:
-            qpos, img = data
-            joint_pos.append(qpos)
-            images.append(img)
+        images = data['traj_data']['images']
+        joint_pos = data['traj_data']['qpos']
+        actions = data['traj_data']['actions']
+        start_ts = data['traj_data']['start_ts']
 
-        data_list.append((images, joint_pos, actions, heightmap, c_target_mask))
+        data_list.append((images, joint_pos, actions, start_ts, heightmap, c_target_mask))
             
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, actions, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, actions, start_ts, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         qpos = np.array(qpos, dtype=np.float32)
         if len(qpos) == 0:
@@ -131,21 +131,20 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         episode_len = qpos.shape[0]
         
-        sample_full_episode = False
-        if sample_full_episode:
-            start_ts = 0
-        else:
-            start_ts = np.random.choice(episode_len)
+        # sample_full_episode = False
+        # if sample_full_episode:
+        #     start_ts = 0
+        # else:
+        #     start_ts = np.random.choice(episode_len)
 
-        qpos_data = qpos[start_ts]
-        images = images[start_ts]
-        
-        action = qpos[start_ts + 1:]
+        # qpos_data = qpos[start_ts]
+        # images = images[start_ts]
+        # action = qpos[start_ts + 1:]
         # action = np.array(actions, dtype=np.float32)
 
-        action_len = action.shape[0]
-        padded_action = np.zeros((self.sequence_len, action.shape[1]), dtype=np.float32)
-        padded_action[:action_len] = action
+        action_len = actions.shape[0]
+        padded_action = np.zeros((self.sequence_len, actions.shape[1]), dtype=np.float32)
+        padded_action[:action_len] = actions
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
 
@@ -159,9 +158,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         # object_masks = object_masks.tolist()
 
-        images = {'color': []}
-        for i in range(2):
-            images['color'].append(np.random.random(size=(480, 640, 3)))
+        # images = {'color': []}
+        # for i in range(2):
+        #     images['color'].append(np.random.random(size=(480, 640, 3)))
 
         heightmap = np.random.random(size=(480, 640, 3))
         c_target_mask = np.random.random(size=(480, 640, 3))
@@ -177,6 +176,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # else:
             #     # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
             #     image_dict[cam_name] = c_target_mask.astype(np.float32)
+
+        cv2.imwrite(f"save/images/image__front_{id}_{start_ts}.png", image_dict['front'])
+        cv2.imwrite(f"save/images/image__top_{id}_{start_ts}.png", image_dict['top'])
 
         # new axis for different cameras
         all_cam_images = []

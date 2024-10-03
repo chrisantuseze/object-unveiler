@@ -57,6 +57,23 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             print("len(traj_data):", len(traj_data))
             return
 
+        start_ts = np.random.choice(len(traj_data))
+        qpos_data, img = traj_data[start_ts]
+
+        joint_pos = []
+        for data in traj_data:
+            qpos, _ = data
+            joint_pos.append(qpos)
+
+        actions = qpos[start_ts + 1:]
+
+        traj_data = {
+            "qpos": qpos_data,
+            "images": img,
+            "actions": actions,
+            "start_ts": start_ts
+        }
+
         transition = {
             'state': data['state'], 
             # 'target_mask': data['target_mask'], 
