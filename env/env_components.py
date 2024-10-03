@@ -472,5 +472,5 @@ class ActionState:
     MOVE_HOME = (6, 0.07)#0.1)
     OPEN_FINGERS = (7, 0.1)#0.1)
 
-    NUM_STEPS = int (sum([steps[1] for steps in 
+    NUM_STEPS = int(sum([steps[1] for steps in 
                      [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, MOVE_HOME, OPEN_FINGERS]])/0.001)

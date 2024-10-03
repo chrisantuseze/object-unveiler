@@ -13,6 +13,8 @@ import utils.general_utils as general_utils
 import matplotlib.pyplot as plt
 import cv2
 
+from env.env_components import ActionState
+
 e = IPython.embed
 
 class EpisodicDataset(torch.utils.data.Dataset):
@@ -129,8 +131,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         if len(qpos) == 0:
             print("qpos Length is zero!!")
 
-        episode_len = qpos.shape[0]
-        
+        # episode_len = qpos.shape[0]
         # sample_full_episode = False
         # if sample_full_episode:
         #     start_ts = 0
@@ -143,7 +144,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # action = np.array(actions, dtype=np.float32)
 
         action_len = actions.shape[0]
-        padded_action = np.zeros((self.sequence_len, actions.shape[1]), dtype=np.float32)
+        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float32)
         padded_action[:action_len] = actions
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
@@ -243,10 +244,13 @@ def get_stats(dataset_dir, transition_dirs):
     episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
     all_action_data, all_qpos_data = [], []
     for data in episode_data:
-        action = np.array(data['action'])
+        traj_data = data['traj_data']
+
+
+        action = np.array(traj_data['actions'])
         all_action_data.append(torch.from_numpy(action))
 
-        qpos = np.array(data['traj_data'][0][0])
+        qpos = np.array(traj_data['qpos'])
         all_qpos_data.append(torch.from_numpy(qpos))
 
 
