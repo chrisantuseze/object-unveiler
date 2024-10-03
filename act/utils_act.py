@@ -130,6 +130,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         qpos = np.array(qpos, dtype=np.float32)
         if len(qpos) == 0:
             print("qpos Length is zero!!")
+        qpos_data = qpos
 
         # episode_len = qpos.shape[0]
         # sample_full_episode = False
