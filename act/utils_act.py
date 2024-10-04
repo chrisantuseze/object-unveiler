@@ -392,4 +392,4 @@ def detach_dict(d):
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
-    torch.set_printoptions(precision=17)
+    # torch.set_printoptions(precision=17)
