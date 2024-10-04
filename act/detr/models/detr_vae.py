@@ -87,7 +87,6 @@ class DETRVAE(nn.Module):
         ### Obtain latent z from action sequence
         if is_training:
             # project action sequence to embedding dim, and concat with a CLS token
-            actions = actions.double()
             print(self.encoder_action_proj.weight.dtype, self.encoder_joint_proj.weight.dtype)
             print(actions.dtype, qpos.dtype)
             action_embed = self.encoder_action_proj(actions) # (bs, seq, hidden_dim)
