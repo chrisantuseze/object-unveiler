@@ -127,7 +127,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, actions, start_ts, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
-        qpos = np.array(qpos, dtype=np.float32)
+        qpos = np.array(qpos, dtype=np.float64)
         if len(qpos) == 0:
             print("qpos Length is zero!!")
         qpos_data = qpos
@@ -144,9 +144,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # action = qpos[start_ts + 1:]
         # action = np.array(actions, dtype=np.float32)
 
-        actions = np.array(actions)
+        actions = np.array(actions, dtype=np.float64)
         action_len = actions.shape[0]
-        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))
+        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float64)
         padded_action[:action_len] = actions
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
