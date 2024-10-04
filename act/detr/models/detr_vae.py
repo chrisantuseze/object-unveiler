@@ -87,7 +87,7 @@ class DETRVAE(nn.Module):
         ### Obtain latent z from action sequence
         if is_training:
             # project action sequence to embedding dim, and concat with a CLS token
-            print("actions.shape", actions.shape)
+            print("actions.shape", actions.shape, type(actions))
             action_embed = self.encoder_action_proj(actions) # (bs, seq, hidden_dim)
             qpos_embed = self.encoder_joint_proj(qpos)  # (bs, hidden_dim)
             qpos_embed = torch.unsqueeze(qpos_embed, axis=1)  # (bs, 1, hidden_dim)
