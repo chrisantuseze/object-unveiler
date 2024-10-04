@@ -208,8 +208,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         image_data = image_data / 255.0
         action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
-
-        print("action_data.shape", action_data.shape, type(action_data))
         
         return image_data, qpos_data, action_data, is_pad
     
