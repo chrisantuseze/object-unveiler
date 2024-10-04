@@ -11,7 +11,7 @@ python3 main.py \
 --reg_model 'downloads/reg_model.pt' \
 --fcn_model 'save/fcn/fcn_model_17.pt' \
 --n_scenes 50 \
---chunk_size 5 \
+--chunk_size 100 \
 --temporal_agg 
 
 python3 main.py \
@@ -32,7 +32,7 @@ python3 main_act.py \
 --ckpt_dir act/ckpt \
 --policy_class ACT \
 --kl_weight 10 \
---chunk_size 5 \
+--chunk_size 100 \
 --hidden_dim 512 \
 --batch_size 2 \
 --dim_feedforward 3200 \
