@@ -83,6 +83,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
         action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
 
+        new_dir = "save/images"
+        if not os.path.exists(new_dir):
+            os.mkdir(new_dir)
+
         return image_data, qpos_data, action_data, is_pad
     
 
