@@ -83,10 +83,6 @@ class EpisodicDataset(torch.utils.data.Dataset):
         action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
 
-        new_dir = "save/images"
-        if not os.path.exists(new_dir):
-            os.mkdir(new_dir)
-
         return image_data, qpos_data, action_data, is_pad
     
 
@@ -101,6 +97,10 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         self.memory = ReplayBuffer(self.dataset_dir)
         self.sequence_len = self.config['policy_config']['num_queries']
+
+        new_dir = "save/images"
+        if not os.path.exists(new_dir):
+            os.mkdir(new_dir)
 
         self.is_sim = None
         self.__getitem__(0) # initialize self.is_sim
