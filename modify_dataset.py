@@ -66,7 +66,8 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             "qpos": qpos_data,
             "images": img,
             "actions": actions,
-            "start_ts": start_ts
+            "start_ts": start_ts,
+            # "full_data": data['traj_data'],
         }
 
         transition = {
