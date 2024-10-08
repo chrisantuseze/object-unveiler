@@ -118,18 +118,20 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
         # actions = data['actions'][:self.sequence_len]
 
+        ############################################
         images = data['traj_data']['images']
         joint_pos = data['traj_data']['qpos']
         actions = data['traj_data']['actions']
         start_ts = data['traj_data']['start_ts']
+        ############################################
 
-        # ############################################
-        # full_data = data['traj_data']['full_data']
-        # images, joint_pos = [], []
-        # for traj in full_data:
-        #     joint_pos.append(traj[0])
-        #     images.append(traj[1])
-        # ############################################
+        ############################################
+        full_data = data['traj_data']['full_data']
+        images, joint_pos = [], []
+        for traj in full_data:
+            joint_pos.append(traj[0])
+            images.append(traj[1])
+        ############################################
 
         data_list.append((images, joint_pos, actions, start_ts, heightmap, c_target_mask))
             
@@ -143,24 +145,24 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         if len(qpos) == 0:
             print("qpos Length is zero!!")
 
-        # ############################################
-        # episode_len = qpos.shape[0]
-        # sample_full_episode = False
-        # if sample_full_episode:
-        #     start_ts = 0
-        # else:
-        #     start_ts = np.random.choice(episode_len)
-
-        # qpos_data = qpos[start_ts]
-        # images = images[start_ts]
-        # actions = qpos[start_ts + 1:]
-        # actions = np.array(actions, dtype=np.float32)
-        # ############################################
-
         ############################################
-        qpos_data = qpos
-        actions = np.array(actions, dtype=np.float64)
+        episode_len = qpos.shape[0]
+        sample_full_episode = False
+        if sample_full_episode:
+            start_ts = 0
+        else:
+            start_ts = np.random.choice(episode_len)
+
+        qpos_data = qpos[start_ts]
+        images = images[start_ts]
+        actions = qpos[start_ts + 1:]
+        actions = np.array(actions, dtype=np.float32)
         ############################################
+
+        # ############################################
+        # qpos_data = qpos
+        # actions = np.array(actions, dtype=np.float64)
+        # ############################################
 
         action_len = actions.shape[0]
         padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float64)
