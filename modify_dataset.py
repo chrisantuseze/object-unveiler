@@ -57,18 +57,86 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
             print("len(traj_data):", len(traj_data))
             return
 
-        start_ts = np.random.choice(len(traj_data))
-        qpos_data, img = traj_data[start_ts]
+        transition = {
+            'state': data['state'], 
+            # 'target_mask': data['target_mask'], 
+            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
+            # 'scene_mask': data['scene_mask'],
+            'c_object_masks': new_masks,
+            # 'object_masks': object_masks,
+            'action': data['action'],
+            'optimal_nodes': objects_to_remove,
+            'label': data['label'],
+            'bboxes': new_bboxes,
+            'target_id': target_id,
+            'traj_data': traj_data,
 
-        joint_pos = [td[0] for td in traj_data]
-        actions = joint_pos[start_ts + 1:]
-        traj_data = {
-            "qpos": qpos_data,
-            "images": img,
-            "actions": actions,
-            "start_ts": start_ts,
-            "full_data": data['traj_data'],
+            'actions': data['actions'],
         }
+        episode_data_list.append(transition)
+
+    memory.store_episode(episode_data_list)
+    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
+
+def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
+    try:
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
+    except Exception as e:
+        logging.info(e, "- Failed episode:", episode_dir)
+
+    episode_data_list = []
+    for data in episode_data:
+        heightmap = data['state']
+        object_masks = data['object_masks']
+
+        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
+
+        new_masks = []
+        masks = []
+        new_bboxes = []
+        for id, mask in enumerate(object_masks):
+            mask = general_utils.resize_mask(transform, mask)
+            masks.append(mask)
+            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
+
+            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
+
+        # get optimal nodes
+        target_id = grasping.get_target_id(data['target_mask'], masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
+        # print(target_id, objects_to_remove[0])
+
+        # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
+
+        print("traj len:", len(data['traj_data']))
+        traj_data = data['traj_data']
+        if len(traj_data) == 0:
+            print("len(traj_data):", len(traj_data))
+            return
+
+        # #####################################################
+        # start_ts = np.random.choice(len(traj_data))
+        # qpos_data, img = traj_data[start_ts]
+
+        # joint_pos = [td[0] for td in traj_data]
+        # actions = joint_pos[start_ts + 1:]
+        # traj_data = {
+        #     "qpos": qpos_data,
+        #     "images": img,
+        #     "actions": actions,
+        #     "start_ts": start_ts,
+        #     "full_data": data['traj_data'],
+        # }
+        # #####################################################
+
+        #####################################################
+        traj_data2 = []
+        for i, td in enumerate(traj_data):
+            if i % 4 == 0:
+                traj_data2.append(td)
+
+        traj_data = traj_data2
+        #####################################################
 
         transition = {
             'state': data['state'], 

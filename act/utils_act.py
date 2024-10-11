@@ -118,28 +118,31 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
         # actions = data['actions'][:self.sequence_len]
 
-        ############################################
-        images = data['traj_data']['images']
-        joint_pos = data['traj_data']['qpos']
-        actions = data['traj_data']['actions']
-        start_ts = data['traj_data']['start_ts']
-        ############################################
+        # ############################################
+        # images = data['traj_data']['images']
+        # joint_pos = data['traj_data']['qpos']
+        # actions = data['traj_data']['actions']
+        # start_ts = data['traj_data']['start_ts']
+        # full_data = data['traj_data']['full_data']
+        # traj_data = full_data
+        # ############################################
+
+        traj_data = data['traj_data']
 
         ############################################
-        full_data = data['traj_data']['full_data']
         images, joint_pos = [], []
-        for traj in full_data:
+        for traj in traj_data:
             joint_pos.append(traj[0])
             images.append(traj[1])
         ############################################
 
-        data_list.append((images, joint_pos, actions, start_ts, heightmap, c_target_mask))
+        data_list.append((images, joint_pos, heightmap, c_target_mask))
             
         return data_list
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, actions, start_ts, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
+        images, qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
 
         qpos = np.array(qpos, dtype=np.float64)
         if len(qpos) == 0:
