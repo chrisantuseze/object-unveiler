@@ -140,11 +140,8 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
 
         transition = {
             'state': data['state'], 
-            # 'target_mask': data['target_mask'], 
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
-            # 'scene_mask': data['scene_mask'],
             'c_object_masks': new_masks,
-            # 'object_masks': object_masks,
             'action': data['action'],
             'optimal_nodes': objects_to_remove,
             'label': data['label'],
@@ -232,7 +229,7 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode1(segmenter, episode_dir, i)
+        modify_episode2(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
