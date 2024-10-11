@@ -133,9 +133,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
     max_timesteps = 2000
 
-    print("query_frequency", query_frequency)
-    query_frequency = 1
-
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
 
