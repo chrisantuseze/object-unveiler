@@ -580,7 +580,7 @@ def get_heightmap_(obs, configs, bounds, pix_size):
 
     return color_heightmap, depth_heightmap
 
-def resize_image(image, target_size=(256, 256)):#(480, 640)):
+def resize_image(image, target_size=(224, 224)):#(480, 640)):
     # # Get the shape of the input image
     input_shape = image.shape
 
