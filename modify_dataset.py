@@ -129,15 +129,6 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
         # }
         # #####################################################
 
-        # #####################################################
-        # traj_data2 = []
-        # for i, td in enumerate(traj_data):
-        #     if i % 4 == 0:
-        #         traj_data2.append(td)
-
-        # traj_data = traj_data2
-        # #####################################################
-
         transition = {
             'state': data['state'], 
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
