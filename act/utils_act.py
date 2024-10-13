@@ -118,14 +118,14 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         c_target_mask = data['c_target_mask']
         # actions = data['actions'][:self.sequence_len]
 
-        # ############################################
-        # images = data['traj_data']['images']
-        # joint_pos = data['traj_data']['qpos']
-        # actions = data['traj_data']['actions']
-        # start_ts = data['traj_data']['start_ts']
-        # full_data = data['traj_data']['full_data']
-        # traj_data = full_data
-        # ############################################
+        ############################################
+        images = data['traj_data']['images']
+        joint_pos = data['traj_data']['qpos']
+        actions = data['traj_data']['actions']
+        start_ts = data['traj_data']['start_ts']
+        full_data = data['traj_data']['full_data']
+        traj_data = full_data
+        ############################################
 
         traj_data = data['traj_data']
 
