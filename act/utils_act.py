@@ -267,11 +267,11 @@ def get_stats(dataset_dir, transition_dirs):
     for data in episode_data:
         traj_data = data['traj_data']
 
-        # action = np.array(traj_data['actions'])
-        # qpos = np.array(traj_data['qpos'])
+        action = np.array(traj_data['actions'])
+        qpos = np.array(traj_data['qpos'])
 
-        action = np.array(traj_data[0][0])
-        qpos = np.array(traj_data[0][0])
+        # action = np.array(traj_data[0][0])
+        # qpos = np.array(traj_data[0][0])
 
         all_action_data.append(torch.from_numpy(action))
         all_qpos_data.append(torch.from_numpy(qpos))
