@@ -127,7 +127,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         traj_data = full_data
         ############################################
 
-        traj_data = data['traj_data']
+        # traj_data = data['traj_data']
 
         ############################################
         images, joint_pos = [], []
