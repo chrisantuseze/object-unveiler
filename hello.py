@@ -7,7 +7,7 @@ import shutil
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "save/ppg-dataset/"
+folder_path = "save/ppg-dataset-extended/"
 id = 0
 
 
@@ -17,7 +17,7 @@ for i, filename in enumerate(os.listdir(folder_path)):
     old_name = os.path.join(folder_path, filename)
     
     arr = filename.split("_")
-    new_filename = arr[0] + "_" + str(id).zfill(5)
+    new_filename = arr[0] + "_" + str(id).zfill(6)
 
     # Rename the file
     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
