@@ -625,7 +625,7 @@ class Policy:
     
     def post_process_action(self, state, raw_action):
         # action = raw_action.squeeze(0).cpu().tolist()
-        # print("action.shape", action.shape)
+        print("raw_action", raw_action.squeeze(0).cpu().tolist())
 
         # action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in action]
 
