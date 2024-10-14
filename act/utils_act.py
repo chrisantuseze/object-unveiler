@@ -112,29 +112,16 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             print(e, "- Failed episode:", episode)
 
         data_list = []        
-        # for data in episode_data:
         data = episode_data[-1]
         heightmap = data['state']
         c_target_mask = data['c_target_mask']
         # actions = data['actions'][:self.sequence_len]
 
-        # ############################################
-        # images = data['traj_data']['images']
-        # joint_pos = data['traj_data']['qpos']
-        # actions = data['traj_data']['actions']
-        # start_ts = data['traj_data']['start_ts']
-        # full_data = data['traj_data']['full_data']
-        # traj_data = full_data
-        # ############################################
-
         traj_data = data['traj_data']
-
-        ############################################
         images, joint_pos = [], []
         for traj in traj_data:
             joint_pos.append(traj[0])
             images.append(traj[1])
-        ############################################
 
         data_list.append((images, joint_pos, heightmap, c_target_mask))
             
@@ -142,13 +129,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, heightmap, c_target_mask = episode_data[-1] # images is a list containing the front and top camera images 
-
+        images, qpos, heightmap, c_target_mask = episode_data[-1]
         qpos = np.array(qpos, dtype=np.float64)
-        if len(qpos) == 0:
-            print("qpos Length is zero!!")
 
-        ############################################
         episode_len = qpos.shape[0]
         sample_full_episode = False
         if sample_full_episode:
@@ -159,14 +142,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         qpos_data = qpos[start_ts]
         images = images[start_ts]
         actions = qpos[start_ts + 1:]
+
         actions = np.array(actions, dtype=np.float32)
-        ############################################
-
-        # ############################################
-        # qpos_data = qpos
-        # actions = np.array(actions, dtype=np.float64)
-        # ############################################
-
         action_len = actions.shape[0]
         padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float64)
         padded_action[:action_len] = actions
@@ -198,9 +175,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # else:
             #     # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
             #     image_dict[cam_name] = c_target_mask.astype(np.float32)
-
-        cv2.imwrite(f"save/images/image__front_{id}_{start_ts}.png", image_dict['front'])
-        cv2.imwrite(f"save/images/image__top_{id}_{start_ts}.png", image_dict['top'])
 
         # new axis for different cameras
         all_cam_images = []
@@ -262,20 +236,15 @@ def get_norm_stats(dataset_dir, num_episodes):
     return stats
 
 def get_stats(dataset_dir, transition_dirs):
-    episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
     all_action_data, all_qpos_data = [], []
-    for data in episode_data:
-        traj_data = data['traj_data']
-
-        # action = np.array(traj_data['actions'])
-        # qpos = np.array(traj_data['qpos'])
-
+    for demo in transition_dirs:
+        episode_data = pickle.load(open(os.path.join(dataset_dir, demo), 'rb'))[-1]
+        traj_data = episode_data['traj_data']
         action = np.array(traj_data[0][0])
         qpos = np.array(traj_data[0][0])
 
         all_action_data.append(torch.from_numpy(action))
         all_qpos_data.append(torch.from_numpy(qpos))
-
 
     all_action_data = torch.stack(all_action_data)
     all_qpos_data = torch.stack(all_qpos_data)
@@ -285,27 +254,15 @@ def get_stats(dataset_dir, transition_dirs):
     action_std = all_action_data.std(dim=[0, 1], keepdim=True)
     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
 
-    #actual gripper minmax
-    action_min = all_action_data.min(axis=0).values
-    action_max = all_action_data.max(axis=0).values
-    action_min[3] = 0.0 
-    action_max[3] = 0.08
-
     # normalize qpos data
     qpos_mean = all_qpos_data.mean(dim=[0, 1], keepdim=True)
     qpos_std = all_qpos_data.std(dim=[0, 1], keepdim=True)
     qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
 
-    #actual gripper minmax
-    qpos_min = all_qpos_data.min(axis=0).values
-    qpos_max = all_qpos_data.max(axis=0).values
-    qpos_min[3] = 0.0
-    qpos_max[3] = 0.08
-
     stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze(),
-             "action_min": action_min, "action_max": action_max,
              "qpos_mean": qpos_mean.numpy().squeeze(), "qpos_std": qpos_std.numpy().squeeze(),
-             "qpos_min": qpos_min, "qpos_max": qpos_max}
+             "example_qpos": qpos
+    }
 
     return stats
 

@@ -60,7 +60,7 @@ def main(args):
         dec_layers = 7
         nheads = 8
         policy_config = {'lr': args['lr'],
-                         'num_queries': args['chunk_size'], #@Chris: ensure the chunk size is 3 and not 100
+                         'num_queries': args['chunk_size'],
                          'kl_weight': args['kl_weight'],
                          'hidden_dim': args['hidden_dim'],
                          'dim_feedforward': args['dim_feedforward'],
@@ -331,16 +331,13 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
 
 def forward_pass(data, policy):
-    image_data, qpos_data, action_data, is_pad = data
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # print("image_data.shape", image_data.shape, "action_data.shape", action_data.shape, "is_pad.shape", is_pad.shape)
-
+    image_data, qpos_data, action_data, is_pad = data
     image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), \
         action_data.to(device), is_pad.to(device)
         
-    return policy(image_data, qpos_data, action_data, is_pad)
+    return policy(qpos_data, image_data, action_data, is_pad)
 
 
 def train_bc(train_dataloader, val_dataloader, config):
@@ -373,7 +370,6 @@ def train_bc(train_dataloader, val_dataloader, config):
             policy.eval()
             epoch_dicts = []
             for batch_idx, data in enumerate(val_dataloader):
-                
                 forward_dict = forward_pass(data, policy)
                 epoch_dicts.append(forward_dict)
 
@@ -386,10 +382,6 @@ def train_bc(train_dataloader, val_dataloader, config):
             if epoch_val_loss < min_val_loss:
                 min_val_loss = epoch_val_loss
                 best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
-
-                # ckpt_path = os.path.join(ckpt_dir, f'policy_best_{epoch}_{min_val_loss:.6f}.ckpt')
-                # torch.save(best_ckpt_info[2], ckpt_path)
-
         print(f'Val loss:   {epoch_val_loss:.5f}')
         summary_string = ''
         for k, v in epoch_summary.items():

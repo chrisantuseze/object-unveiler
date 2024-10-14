@@ -89,13 +89,13 @@ class Policy:
         ckpt_dir = "act/ckpt"
         ckpt_name = f'policy_epoch_100_seed_0.ckpt'
         # ckpt_name = f'policy_best.ckpt'
-        state_dim = 1
+        state_dim = 8
 
         self.camera_names = task_config['camera_names']
 
         policy_config = {
             'lr': lr,
-            'num_queries': chunk_size, #@Chris: ensure the chunk size is 3 and not 100
+            'num_queries': chunk_size,
             'kl_weight': kl_weight,
             'hidden_dim': hidden_dim,
             'dim_feedforward': dim_feedforward,
@@ -105,7 +105,7 @@ class Policy:
             'dec_layers': dec_layers,
             'nheads': nheads,
             'camera_names': self.camera_names,
-            'state_dim': 8
+            'state_dim': state_dim
         }
 
         config = {
@@ -132,6 +132,7 @@ class Policy:
         # load policy and stats
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
         loading_status = policy.load_state_dict(torch.load(ckpt_path))
+        print(loading_status)
 
         policy.to(self.device)
         policy.eval()
@@ -140,8 +141,11 @@ class Policy:
         with open(stats_path, 'rb') as f:
             stats = pickle.load(f)
 
-        torch.set_printoptions(precision=17)
-        np.set_printoptions(precision=17)
+        # torch.set_printoptions(precision=17)
+        # np.set_printoptions(precision=17)
+
+        self.pre_process = lambda s_qpos: (s_qpos - stats['qpos_mean']) / stats['qpos_std']
+        self.post_process = lambda a: a * stats['action_std'] + stats['action_mean']
 
         return policy, stats
 
@@ -546,13 +550,6 @@ class Policy:
 
         # print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
 
-        color_images = []
-        for i in range(2):
-            color_images.append(np.random.random(size=(480, 640, 3)))
-
-        heightmap = np.random.random(size=(480, 640, 3))
-        target_mask = np.random.random(size=(480, 640, 3))
-
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
@@ -585,8 +582,6 @@ class Policy:
             print("No traj data. Getting random actions...")
             return torch.rand(1, self.args.chunk_size, 4).to(self.device)
         
-        # print("Getting ACT actions...")
-
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         trajectory_data = obs['traj_data'][0]
@@ -599,13 +594,14 @@ class Policy:
         #     mask = general_utils.resize_mask(transform, mask)
         #     masks.append(general_utils.extract_target_crop(mask, state))
 
+        qpos_numpy = np.array(qpos, dtype=np.float32)
+        qpos = self.pre_process(qpos_numpy)
+        qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
         image_data = self.get_act_image(color_images, state, target_mask, masks=[])
-
-        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
 
         # print("image_data.shape", image_data.shape)
         
-        actions = self.policy(image_data, qpos).detach()
+        actions = self.policy(qpos, image_data).detach()
         # print("actions.shape", actions.shape)
 
         return actions
@@ -617,20 +613,24 @@ class Policy:
             print("No traj data. Getting random actions...")
             return torch.rand(1, self.args.chunk_size, 4).to(self.device)
     
+        qpos_numpy = np.array(qpos, dtype=np.float32)
+        qpos = self.pre_process(qpos_numpy)
+        qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
         image_data = self.get_act_image(images, state, target_mask, masks=[])
+
         # print("image_data.shape", image_data.shape)
-
-        qpos = torch.from_numpy(np.array(qpos, dtype=np.float32)).unsqueeze(0).to(self.device)
-        # print("qpos.shape", qpos.shape)
-
-        actions = self.policy(image_data, qpos).detach()
+        
+        actions = self.policy(qpos, image_data).detach()
         return actions
     
-    def post_process_action(self, state, action):
-        action = action.squeeze(0).cpu().tolist()
+    def post_process_action(self, state, raw_action):
+        # action = raw_action.squeeze(0).cpu().tolist()
         # print("action.shape", action.shape)
 
         # action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in action]
+
+        raw_action = raw_action.squeeze(0).cpu().numpy()
+        action = self.post_process(raw_action)
         
         return action
 
