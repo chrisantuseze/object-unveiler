@@ -87,7 +87,7 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_100_seed_0.ckpt'
+        ckpt_name = f'policy_epoch_500_seed_0.ckpt'
         # ckpt_name = f'policy_best.ckpt'
         state_dim = 8
 
@@ -625,7 +625,7 @@ class Policy:
     
     def post_process_action(self, state, raw_action):
         # action = raw_action.squeeze(0).cpu().tolist()
-        print("raw_action", raw_action.squeeze(0).cpu().tolist())
+        # print("raw_action", raw_action.squeeze(0).cpu().tolist())
 
         # action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in action]
 
