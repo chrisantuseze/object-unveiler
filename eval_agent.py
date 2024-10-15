@@ -19,6 +19,7 @@ import policy.grasping as grasping
 
 import utils.logger as logging
 from skimage import transform
+from env.env_components import ActionState
 
 # multi output using attn
 def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
@@ -126,12 +127,12 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
-    state_dim = 8#14
+    state_dim = 8
     if temporal_agg:
         query_frequency = 1
         num_queries = args.chunk_size
 
-    max_timesteps = 2000
+    max_timesteps = ActionState.NUM_STEPS
 
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
