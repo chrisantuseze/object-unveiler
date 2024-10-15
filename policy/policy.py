@@ -87,8 +87,8 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_500_seed_0.ckpt'
-        # ckpt_name = f'policy_best.ckpt'
+        # ckpt_name = f'policy_epoch_1000_seed_0.ckpt'
+        ckpt_name = f'policy_best.ckpt'
         state_dim = 8
 
         self.camera_names = task_config['camera_names']
@@ -108,25 +108,6 @@ class Policy:
             'state_dim': state_dim
         }
 
-        config = {
-            'num_epochs': 2000,
-            'ckpt_dir': ckpt_dir,
-            'episode_len': 50,
-            'state_dim': state_dim,
-            'lr': lr,
-            'policy_class': "ACT",
-            'onscreen_render': True,
-            'policy_config': policy_config,
-            'task_name': 'sim_transfer_cube_scripted',
-            'seed': 0,
-            'temporal_agg': True,
-            'camera_names': self.camera_names,
-            'real_robot': False
-
-            # for unveiler
-            ,'split_ratio': 0.8
-        }
-        
         policy = ACTPolicy(policy_config)
 
         # load policy and stats
