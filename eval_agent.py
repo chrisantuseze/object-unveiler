@@ -197,9 +197,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), obs['color'][1])
 
-                cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), images['color'][0])
-                cv2.imwrite(os.path.join(TEST_DIR, "color_1.png"), images['color'][1])
-
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
                 actions_for_curr_step = all_time_actions[:, t]
@@ -216,7 +213,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
             preds.append(action)
 
-            if t % 10 == 0:
+            if t % 20 == 0:
                 print("Obs action -", qpos, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 

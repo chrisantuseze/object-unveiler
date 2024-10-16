@@ -88,7 +88,8 @@ class Policy:
 
         ckpt_dir = "act/ckpt"
         # ckpt_name = f'policy_epoch_1000_seed_0.ckpt'
-        ckpt_name = f'policy_best.ckpt'
+        # ckpt_name = f'policy_best.ckpt'
+        ckpt_name = f'policy_last.ckpt'
         state_dim = 8
 
         self.camera_names = task_config['camera_names']
