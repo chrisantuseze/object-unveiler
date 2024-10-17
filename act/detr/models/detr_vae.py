@@ -87,9 +87,6 @@ class DETRVAE(nn.Module):
         ### Obtain latent z from action sequence
         if is_training:
             # project action sequence to embedding dim, and concat with a CLS token
-            actions = actions.float()
-            # print(self.encoder_action_proj.weight.dtype, self.encoder_joint_proj.weight.dtype)
-            # print(actions.dtype, qpos.dtype)
             action_embed = self.encoder_action_proj(actions) # (bs, seq, hidden_dim)
             qpos_embed = self.encoder_joint_proj(qpos)  # (bs, hidden_dim)
             qpos_embed = torch.unsqueeze(qpos_embed, axis=1)  # (bs, 1, hidden_dim)
@@ -121,8 +118,6 @@ class DETRVAE(nn.Module):
             all_cam_features = []
             all_cam_pos = []
             for cam_id, cam_name in enumerate(self.camera_names):
-                # print("image[:, cam_id].shape", image[:, cam_id].shape) #@Chris
-                
                 features, pos = self.backbones[0](image[:, cam_id]) # HARDCODED
                 features = features[0] # take the last layer feature
                 pos = pos[0]
@@ -133,26 +128,13 @@ class DETRVAE(nn.Module):
             # fold camera dimension into width dimension
             src = torch.cat(all_cam_features, axis=3)
             pos = torch.cat(all_cam_pos, axis=3)
-
-            hs = self.transformer(
-                src,
-                None,
-                self.query_embed.weight,
-                pos,
-                latent_input,
-                proprio_input,
-                self.additional_pos_embed.weight,
-            )[0]
+            hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[0]
         else:
             qpos = self.input_proj_robot_state(qpos)
             env_state = self.input_proj_env_state(env_state)
             transformer_input = torch.cat([qpos, env_state], axis=1) # seq length = 2
             hs = self.transformer(transformer_input, None, self.query_embed.weight, self.pos.weight)[0]
-
-        # print("hs.shape", hs.shape) #@Chris
         a_hat = self.action_head(hs)
-
-        # print("a_hat.shape", a_hat.shape) #@Chris
         is_pad_hat = self.is_pad_head(hs)
         return a_hat, is_pad_hat, [mu, logvar]
 
@@ -236,9 +218,8 @@ def build_encoder(args):
     normalize_before = args.pre_norm # False
     activation = "relu"
 
-    encoder_layer = TransformerEncoderLayer(
-        d_model, nhead, dim_feedforward, dropout, activation, normalize_before
-    )
+    encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward,
+                                            dropout, activation, normalize_before)
     encoder_norm = nn.LayerNorm(d_model) if normalize_before else None
     encoder = TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
 
@@ -246,7 +227,7 @@ def build_encoder(args):
 
 
 def build(args):
-    # state_dim = 4 # TODO hardcode #@Chris
+    state_dim = 14 # TODO hardcode
 
     # From state
     # backbone = None # from state for now, no need for conv nets
@@ -269,12 +250,12 @@ def build(args):
     )
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("number of parameters: %.2fM" % (n_parameters / 1e6,))
+    print("number of parameters: %.2fM" % (n_parameters/1e6,))
 
     return model
 
 def build_cnnmlp(args):
-    # state_dim = 14 # TODO hardcode
+    state_dim = 14 # TODO hardcode
 
     # From state
     # backbone = None # from state for now, no need for conv nets
@@ -291,6 +272,6 @@ def build_cnnmlp(args):
     )
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("number of parameters: %.2fM" % (n_parameters / 1e6,))
+    print("number of parameters: %.2fM" % (n_parameters/1e6,))
 
     return model

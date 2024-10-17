@@ -513,15 +513,6 @@ class Policy:
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
     def get_act_image(self, color_images, heightmap, target_mask, masks):
-        # curr_images = []
-        # for cam_name in self.camera_names:
-        #     curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
-        #     curr_images.append(curr_image)
-        # curr_image = np.stack(curr_images, axis=0)
-        # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
-        # return curr_image
-
         # masks = np.array(masks)
         # N, H, W = masks.shape
         # if N < self.args.num_patches:
@@ -595,7 +586,7 @@ class Policy:
             print("No traj data. Getting random actions...")
             return torch.rand(1, self.args.chunk_size, 4).to(self.device)
     
-        qpos_numpy = np.array(qpos, dtype=np.float32)
+        qpos_numpy = np.array(qpos, dtype=np.float64)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
         image_data = self.get_act_image(images, state, target_mask, masks=[])
