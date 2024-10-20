@@ -35,7 +35,7 @@ def main(args):
     batch_size_val = args['batch_size']
     num_epochs = args['num_epochs']
 
-    split_ratio = 0.8
+    split_ratio = 0.9
     num_patches = args['num_patches']
 
     # get task parameters
