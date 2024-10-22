@@ -182,6 +182,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         traj_data, obs_actions, heightmap, c_target_mask = get_obs()
         preds = []
+        gt = []
 
         while not end_of_episode:
             state = policy.state_representation(obs)
@@ -213,12 +214,14 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
             preds.append(action)
 
+            gt.append(qpos)
+
             if t % 20 == 0:
                 print("Obs action -", qpos, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 
             # env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(action, save_traj_data=(t + 1) % query_frequency == 0)
+            next_obs, grasp_info = env.step_act(qpos, save_traj_data=(t + 1) % query_frequency == 0)
             obs = copy.deepcopy(next_obs)
 
             # if t % query_frequency == 0:
@@ -227,7 +230,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             t += 1
             end_of_episode = grasp_info['eoe']
 
-        gt = np.array([data[0] for data in traj_data])
+        gt = np.array(gt)
         preds = np.array(preds)
         plot_joint_positions_over_time(gt, preds)
 
