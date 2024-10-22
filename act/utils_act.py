@@ -130,7 +130,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, heightmap, c_target_mask = episode_data[-1]
-        qpos = np.array(qpos, dtype=np.float64)
+        qpos = np.array(qpos)#, dtype=np.float64)
 
         episode_len = qpos.shape[0]
         sample_full_episode = False
@@ -143,9 +143,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         images = images[start_ts]
         actions = qpos[start_ts + 1:]
 
-        actions = np.array(actions, dtype=np.float32)
+        actions = np.array(actions)#, dtype=np.float32)
         action_len = actions.shape[0]
-        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]), dtype=np.float64)
+        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))#, dtype=np.float64)
         padded_action[:action_len] = actions
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
