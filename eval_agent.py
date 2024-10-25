@@ -137,6 +137,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
 
+    idx = 0
+    traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
+    episode_seeds = [1791095845]
+    episode_seed = episode_seeds[idx]
+
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -180,7 +185,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         end_of_episode = False
         t = 0
 
-        traj_data, obs_actions, heightmap, c_target_mask = get_obs()
         preds = []
         gt = []
 
@@ -338,14 +342,14 @@ def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSe
     logging.info('--------')
     return episode_data
 
-def get_obs():
+def get_obs(idx):
     dataset_dir = "save/working-ds/ppg-dataset"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    episode = transition_dirs[0]
+    episode = transition_dirs[idx]
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
     except Exception as e:
