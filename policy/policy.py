@@ -87,8 +87,8 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        # ckpt_name = f'policy_epoch_1000_seed_0.ckpt'
-        ckpt_name = f'policy_best.ckpt'
+        ckpt_name = f'policy_epoch_1200_seed_0.ckpt'
+        # ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
         state_dim = 8
 
