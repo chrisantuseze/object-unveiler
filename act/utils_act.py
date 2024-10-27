@@ -98,6 +98,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
         self.sequence_len = self.config['policy_config']['num_queries']
 
+        self.timestep = np.random.choice(ActionState.NUM_STEPS)
+
         new_dir = "save/images"
         if not os.path.exists(new_dir):
             os.mkdir(new_dir)
@@ -137,7 +139,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         if sample_full_episode:
             start_ts = 0
         else:
-            start_ts = np.random.choice(episode_len)
+            start_ts = self.timestep #np.random.choice(episode_len)
 
         qpos_data = qpos[start_ts]
         images = images[start_ts]
@@ -150,31 +152,12 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         is_pad = np.zeros(self.sequence_len)
         is_pad[action_len:] = 1
 
-        # c_object_masks = np.array(c_object_masks)
-        # N, H, W = c_object_masks.shape
-        # if N < self.config['num_patches']:
-        #     object_masks = np.zeros((self.config['num_patches'], H, W), dtype=c_object_masks.dtype)
-        #     object_masks[:c_object_masks.shape[0], :, :] = c_object_masks
-        # else:
-        #     object_masks = c_object_masks[:self.config['num_patches']]
-
-        # object_masks = object_masks.tolist()
-
-        # images = {'color': []}
-        # for i in range(2):
-        #     images['color'].append(np.random.random(size=(480, 640, 3)))
-
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
                 image_dict[cam_name] = images['color'][0].astype(np.float32)
             elif cam_name == 'top':
                 image_dict[cam_name] = images['color'][1].astype(np.float32)
-            # elif cam_name == 'heightmap':
-            #     image_dict[cam_name] = heightmap.astype(np.float32)
-            # else:
-            #     # image_dict[cam_name] = np.array(object_masks.pop(0)).astype(np.float32)
-            #     image_dict[cam_name] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
@@ -197,6 +180,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         image_data = image_data / 255.0
         action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
+
+        self.timestep = (self.timestep + 1) % ActionState.NUM_STEPS
         
         return image_data, qpos_data, action_data, is_pad
     
@@ -280,7 +265,7 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    # transition_dirs = transition_dirs[:10000]
+    transition_dirs = transition_dirs[:50]
 
     split_index = int(config['split_ratio'] * len(transition_dirs))
     train_ids = transition_dirs[:split_index]

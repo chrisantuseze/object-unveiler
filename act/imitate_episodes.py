@@ -355,6 +355,17 @@ def train_bc(train_dataloader, val_dataloader, config):
     policy.to(device)
     optimizer = make_optimizer(policy_class, policy)
 
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=1e-3,          # Peak learning rate
+        epochs=num_epochs,          # Total epochs
+        steps_per_epoch=1,    # Steps per epoch (1 if you update once per epoch)
+        pct_start=0.3,        # Spend 30% of training in ramp-up phase
+        div_factor=25,        # Initial lr = max_lr/25 (so initial_lr = 4e-5)
+        final_div_factor=1e4, # Final lr = initial_lr/1e4
+        anneal_strategy='cos'  # Use cosine annealing
+    )
+
     writer = SummaryWriter()
 
     train_history = []
@@ -398,6 +409,10 @@ def train_bc(train_dataloader, val_dataloader, config):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+
+            # Important: step the scheduler after optimizer
+            scheduler.step()
+
             train_history.append(detach_dict(forward_dict))
 
             epoch_loss['train'] += forward_dict['loss'].detach().cpu().numpy()
@@ -408,6 +423,9 @@ def train_bc(train_dataloader, val_dataloader, config):
         summary_string = ''
         for k, v in epoch_summary.items():
             summary_string += f'{k}: {v.item():.3f} '
+
+        current_lr = optimizer.param_groups[0]['lr']
+        summary_string += f'LR: {current_lr:.2e}'
         print(summary_string)
 
         if epoch % 50 == 0:
