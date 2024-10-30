@@ -181,7 +181,10 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
 
-        self.timestep = (self.timestep + 1) % ActionState.NUM_STEPS
+        # Randomly choose stride length
+        stride = np.random.randint(1, 4)
+        
+        self.timestep = (self.timestep + stride) % ActionState.NUM_STEPS
         
         return image_data, qpos_data, action_data, is_pad
     
@@ -265,7 +268,7 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:50]
+    transition_dirs = transition_dirs[:10]
 
     split_index = int(config['split_ratio'] * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
