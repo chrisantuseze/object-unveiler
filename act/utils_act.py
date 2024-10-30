@@ -286,7 +286,7 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
     # construct dataset and dataloader
     train_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats)
 
-    val_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats)
+    val_dataset = ACTUnveilerDataset(config, train_ids, dataset_dir, camera_names, norm_stats) #val_ids
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=4, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=4, prefetch_factor=1)
