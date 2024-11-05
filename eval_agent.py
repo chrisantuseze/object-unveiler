@@ -224,12 +224,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Obs action -", qpos, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 
-            # env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(action, save_traj_data=(t + 1) % query_frequency == 0)
+            next_obs, grasp_info = env.step_act(qpos, save_traj_data=(t + 1) % query_frequency == 0)
             obs = copy.deepcopy(next_obs)
-
-            # if t % query_frequency == 0:
-            #     processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
 
             t += 1
             end_of_episode = grasp_info['eoe']
