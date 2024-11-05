@@ -268,8 +268,6 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    # transition_dirs = transition_dirs[:10]
-
     split_index = int(config['split_ratio'] * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
