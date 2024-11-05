@@ -12,7 +12,7 @@ python3 main.py \
 --fcn_model 'save/fcn/fcn_model_17.pt' \
 --n_scenes 50 \
 --chunk_size 100 \
---temporal_agg 
+--temporal_agg
 
 python3 main.py \
 --dataset_dir 'save/ou-dataset' \
