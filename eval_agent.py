@@ -220,7 +220,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             gt.append(qpos)
 
-            if t % 20 == 0:
+            if t % 1 == 0:
                 print("Obs action -", qpos, ",", t, ",", env.current_state)
                 print("Pred action -", action)
 
