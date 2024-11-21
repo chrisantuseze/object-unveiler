@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p bullet
-#SBATCH -t 84:00:00
+#SBATCH -t 120:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=10
 #SBATCH --mail-user=chrisantus.eze@okstate.edu
@@ -24,9 +24,9 @@ apptainer run --nv apptainerfile.sif python3 main_act.py \
 --kl_weight 10 \
 --chunk_size 100 \
 --hidden_dim 512 \
---batch_size 32 \
+--batch_size 16 \
 --dim_feedforward 3200 \
 --num_epochs 5000 \
---lr 1e-3 \
+--lr 1e-4 \
 --num_patches 10 \
 --seed 0
