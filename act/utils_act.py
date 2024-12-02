@@ -113,7 +113,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         except Exception as e:
             print(e, "- Failed episode:", episode)
 
-        data_list = []        
         data = episode_data[-1]
         heightmap = data['state']
         c_target_mask = data['c_target_mask']
@@ -124,14 +123,12 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         for traj in traj_data:
             joint_pos.append(traj[0])
             images.append(traj[1])
-
-        data_list.append((images, joint_pos, heightmap, c_target_mask))
             
-        return data_list
+        return images, joint_pos, heightmap, c_target_mask
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, heightmap, c_target_mask = episode_data[-1]
+        images, qpos, heightmap, c_target_mask = episode_data
         qpos = np.array(qpos)#, dtype=np.float64)
 
         episode_len = qpos.shape[0]
@@ -150,7 +147,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         action_len = actions.shape[0]
         padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))#, dtype=np.float64)
         padded_action[:action_len] = actions
-        is_pad = np.zeros(self.sequence_len)
+        is_pad = np.zeros(ActionState.NUM_STEPS)
         is_pad[action_len:] = 1
 
         image_dict = dict()

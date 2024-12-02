@@ -543,7 +543,7 @@ class Policy:
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
-        image_data = torch.from_numpy(all_cam_images / 255.0).float().unsqueeze(0).to(self.device)
+        image_data = torch.from_numpy(all_cam_images / 255.0).float().to(self.device).unsqueeze(0)
         image_data = torch.einsum('b k h w c -> b k c h w', image_data)
 
         return image_data
@@ -588,7 +588,7 @@ class Policy:
     
         qpos_numpy = np.array(qpos)#, dtype=np.float64)
         qpos = self.pre_process(qpos_numpy)
-        qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
+        qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
         image_data = self.get_act_image(images, state, target_mask, masks=[])
 
         # print("image_data.shape", image_data.shape)
