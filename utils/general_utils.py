@@ -590,7 +590,5 @@ def resize_image(image, target_size=(224, 224)):#(480, 640)):
 
     elif len(input_shape) != 3:
         raise ValueError("Unexpected image shape. Expected 2D or 3D array.")
-    
-    cv2.imwrite(os.path.join(TEST_DIR, "resized.png"), resized)
-    
+        
     return resized

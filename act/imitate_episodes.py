@@ -366,6 +366,32 @@ def train_bc(train_dataloader, val_dataloader, config):
     #     anneal_strategy='cos'  # Use cosine annealing
     # )
 
+    # Learning Rate Scheduler with Warmup
+    from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR
+
+
+    # Combine schedulers
+    from torch.optim.lr_scheduler import SequentialLR
+
+    # Create a combined scheduler with warmup
+    warmup_scheduler = LinearLR(
+        optimizer, 
+        start_factor=0.1, 
+        total_iters=5  # Warmup for first 5 epochs
+    )
+
+    cosine_scheduler = CosineAnnealingLR(
+        optimizer, 
+        T_max=num_epochs - 5,  # Remaining epochs
+        eta_min=1e-6  # Minimum learning rate
+    )
+
+    scheduler = SequentialLR(
+        optimizer, 
+        schedulers=[warmup_scheduler, cosine_scheduler], 
+        milestones=[5]
+    )
+
     writer = SummaryWriter()
 
     train_history = []
@@ -410,12 +436,12 @@ def train_bc(train_dataloader, val_dataloader, config):
             optimizer.step()
             optimizer.zero_grad()
 
-            # # Important: step the scheduler after optimizer
-            # scheduler.step()
-
             train_history.append(detach_dict(forward_dict))
 
             epoch_loss['train'] += forward_dict['loss'].detach().cpu().numpy()
+
+        # Step the scheduler after each epoch
+        scheduler.step()
 
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
