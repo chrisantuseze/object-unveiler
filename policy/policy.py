@@ -90,7 +90,7 @@ class Policy:
         # ckpt_name = f'policy_epoch_3150_seed_0.ckpt'
         ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
-        state_dim = 8
+        self.state_dim = 8
 
         self.camera_names = task_config['camera_names']
 
@@ -106,7 +106,7 @@ class Policy:
             'dec_layers': dec_layers,
             'nheads': nheads,
             'camera_names': self.camera_names,
-            'state_dim': state_dim
+            'state_dim': self.state_dim
         }
 
         policy = ACTPolicy(policy_config)
@@ -553,7 +553,7 @@ class Policy:
 
         if len(obs['traj_data']) == 0: #TODO Fix this
             print("No traj data. Getting random actions...")
-            return torch.rand(1, self.args.chunk_size, 4).to(self.device)
+            return torch.rand(1, self.args.chunk_size, self.state_dim).to(self.device)
         
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
@@ -580,7 +580,7 @@ class Policy:
 
         if len(qpos) == 0:
             print("No traj data. Getting random actions...")
-            return torch.rand(1, self.args.chunk_size, 4).to(self.device)
+            return torch.rand(1, self.args.chunk_size, self.state_dim).to(self.device)
     
         qpos_numpy = np.array(qpos)#, dtype=np.float64)
         qpos = self.pre_process(qpos_numpy)
