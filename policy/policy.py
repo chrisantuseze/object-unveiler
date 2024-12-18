@@ -558,7 +558,7 @@ class Policy:
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         trajectory_data = obs['traj_data'][0]
-        qpos, qvel, img = trajectory_data
+        qpos, img = trajectory_data
         color_images = img['color']
 
         # processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
