@@ -399,39 +399,6 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     
     print(f"Plot saved to {filename}")
 
-def plot_joint_positions_over_time2(predicted, filename='pred_joint_positions_plot.png'):
-    """
-    Plot ground truth and predicted joint positions over time and save to a file.
-    
-    :param ground_truth: Numpy array of shape (time_steps, 8) for ground truth joint positions
-    :param predicted: Numpy array of shape (time_steps, 8) for predicted joint positions
-    :param filename: String, the filename to save the plot (default: 'joint_positions_plot.png')
-    """
-    time_steps = predicted.shape[0]
-    joint_count = predicted.shape[1]
-    
-    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
-    fig.suptitle('Comparison of Ground Truth and Predicted Joint Positions Over Time', fontsize=16)
-    
-    for joint in range(joint_count):
-        ax = axes[joint // 2, joint % 2]
-        
-        ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
-        
-        ax.set_title(f'Joint {joint + 1}')
-        ax.set_xlabel('Time Step')
-        ax.set_ylabel('Position')
-        ax.legend()
-        ax.grid(True, linestyle='--', alpha=0.7)
-    
-    plt.tight_layout()
-    
-    # Save the plot to a file
-    plt.savefig(filename, dpi=300, bbox_inches='tight')
-    plt.close(fig)  # Close the figure to free up memory
-    
-    print(f"Plot saved to {filename}")
-
 def eval_agent(args):
     print("Running eval...")
     with open('yaml/bhand.yml', 'r') as stream:
