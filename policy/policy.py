@@ -559,8 +559,8 @@ class Policy:
 
         trajectory_data = obs['traj_data'][0]
         qpos, qvel, img = trajectory_data
-
         color_images = img['color']
+
         # processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
         # masks = []
         # for id, mask in enumerate(processed_masks):
@@ -572,11 +572,7 @@ class Policy:
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
         image_data = self.get_act_image(color_images, state, target_mask, masks=[])
 
-        # print("image_data.shape", image_data.shape)
-        
         actions = self.policy(qpos, image_data).detach()
-        # print("actions.shape", actions.shape)
-
         return actions
     
     def exploit_act2(self, state, target_mask, images, qpos):

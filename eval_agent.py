@@ -137,10 +137,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
 
+    ############ FOR GTRUTH EVAL ############
     idx = 0
     traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
     episode_seeds = [1791095845]
     episode_seed = episode_seeds[idx]
+
+    rng = np.random.RandomState()
+    rng.seed(episode_seed)
+
+    #########################################
 
     env.seed(episode_seed)
     obs = env.reset()
@@ -195,8 +201,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             if t % query_frequency == 0:
                 # print("Getting fresh actions for timestep -", t, ", ", env.current_state)
-                # actions = policy.exploit_act(state, target_mask, obs)
-                actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
+                actions = policy.exploit_act(state, target_mask, obs)
+                # actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
                 # print("The actions gotten:", actions)
 
                 # cv2.imwrite(os.path.join(TEST_DIR, "color_0.png"), obs['color'][0])
@@ -224,7 +230,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
-            next_obs, grasp_info = env.step_act(action, save_traj_data=(t + 1) % query_frequency == 0)
+            next_obs, grasp_info = env.step_act(action, save_traj_data=True)#(t + 1) % query_frequency == 0)
             obs = copy.deepcopy(next_obs)
 
             t += 1
@@ -377,6 +383,39 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
         ax = axes[joint // 2, joint % 2]
         
         ax.plot(range(time_steps), ground_truth[:, joint], label='Ground Truth', color='blue')
+        ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
+        
+        ax.set_title(f'Joint {joint + 1}')
+        ax.set_xlabel('Time Step')
+        ax.set_ylabel('Position')
+        ax.legend()
+        ax.grid(True, linestyle='--', alpha=0.7)
+    
+    plt.tight_layout()
+    
+    # Save the plot to a file
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free up memory
+    
+    print(f"Plot saved to {filename}")
+
+def plot_joint_positions_over_time2(predicted, filename='pred_joint_positions_plot.png'):
+    """
+    Plot ground truth and predicted joint positions over time and save to a file.
+    
+    :param ground_truth: Numpy array of shape (time_steps, 8) for ground truth joint positions
+    :param predicted: Numpy array of shape (time_steps, 8) for predicted joint positions
+    :param filename: String, the filename to save the plot (default: 'joint_positions_plot.png')
+    """
+    time_steps = predicted.shape[0]
+    joint_count = predicted.shape[1]
+    
+    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
+    fig.suptitle('Comparison of Ground Truth and Predicted Joint Positions Over Time', fontsize=16)
+    
+    for joint in range(joint_count):
+        ax = axes[joint // 2, joint % 2]
+        
         ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
         
         ax.set_title(f'Joint {joint + 1}')
