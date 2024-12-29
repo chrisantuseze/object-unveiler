@@ -365,13 +365,26 @@ class FloatingBHand:
             self.joint_ids,
             p.POSITION_CONTROL,
             targetPositions=joint_positions,
-            forces=[100 * self.force] * len(self.joint_ids),
-            positionGains=[100 * self.speed] * len(self.joint_ids)
+            # forces=[100 * self.force] * len(self.joint_ids),
+            # positionGains=[100 * self.speed] * len(self.joint_ids)
+            forces=[50 * self.force] * len(self.joint_ids),
+            positionGains=[50 * self.speed] * len(self.joint_ids)
         )
 
     def calculate_joint_positions(self, action, current_state, current_pos, duration, t):
         if len(action) == 8:   # this is eval
-            return action
+            # return action
+
+            # Add interpolation even for eval
+            target_states = action
+            trajectories = []
+            for i in range(len(self.joint_ids)):
+                trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
+            
+            joint_positions = []
+            for i in range(len(self.joint_ids)):
+                joint_positions.append(trajectories[i].pos(t))
+            return joint_positions
         
         target_pos = action['pos']
         target_quat = action['quat']
@@ -424,7 +437,18 @@ class FloatingBHand:
     def calculate_finger_positions(self, action, current_state, current_pos, duration, t, force=2):
         if len(action) == 8:   # this is eval
             self.set_hand_joint_position(action, force)
-            return action
+            # return action
+
+            # Add interpolation even for eval
+            target_states = action
+            trajectories = []
+            for i in range(len(self.joint_ids)):
+                trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
+            
+            joint_positions = []
+            for i in range(len(self.joint_ids)):
+                joint_positions.append(trajectories[i].pos(t))
+            return joint_positions
         
         if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
