@@ -108,23 +108,38 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         self.__getitem__(0) # initialize self.is_sim
 
     def load_episode(self, episode):
+        # Ensure there's a valid image. If there's none, search through the timesteps
         try:
+            # Load episode data
             episode_data = pickle.load(open(os.path.join(self.dataset_dir, episode), 'rb'))
+            data = episode_data[-1]
+
+            # Extract heightmap and mask
+            heightmap = data['state']
+            c_target_mask = data['c_target_mask']
+
+            # Initialize storage for valid timesteps
+            images, joint_pos = [], []
+
+            # Iterate through trajectory data and validate each timestep
+            traj_data = data['traj_data']
+            for traj in traj_data:
+                if traj[1] is not None:  # Check if the image is available
+                    joint_pos.append(traj[0])  # Append joint positions
+                    images.append(traj[1])  # Append the valid image
+
+            # If no valid images are found, raise an exception
+            if not images:
+                raise ValueError("No valid images found in the episode.")
+
+            episode_len = len(traj_data)
+            return images, joint_pos, heightmap, c_target_mask
+
         except Exception as e:
-            print(e, "- Failed episode:", episode)
+            print(f"{e} - Failed episode: {episode}")
 
-        data = episode_data[-1]
-        heightmap = data['state']
-        c_target_mask = data['c_target_mask']
-        # actions = data['actions'][:self.sequence_len]
+        return None
 
-        traj_data = data['traj_data']
-        images, joint_pos = [], []
-        for traj in traj_data:
-            joint_pos.append(traj[0])
-            images.append(traj[1])
-            
-        return images, joint_pos, heightmap, c_target_mask
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])

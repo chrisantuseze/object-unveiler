@@ -66,8 +66,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        p.connect(p.DIRECT)
-        # p.connect(p.GUI)
+        # p.connect(p.DIRECT)
+        p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -89,7 +89,7 @@ class Environment:
 
         self.current_state = ActionState.MOVE_ABOVE_PREGRASP
         self.state_start_time = time.time()
-        self.elapsed_time = 0
+        self.elapsed_time = self.interval = 0
         self.trajectories = []
 
     def reset(self):
@@ -165,8 +165,7 @@ class Environment:
 
         return obs
     
-    def step_act(self, action, save_traj_data=True):
-        # get current joint positions
+    def get_hand_finger_pose(self):
         finger_current_pos = []
         for i in self.bhand.indices:
             finger_current_pos.append(p.getJointState(0, i)[0])
@@ -175,101 +174,151 @@ class Environment:
         for i in self.bhand.joint_ids:
             hand_current_pos.append(p.getJointState(0, i)[0])
 
-
+        return hand_current_pos, finger_current_pos
+    
+    def step_act(self, action, save_traj_data=True):
         # print("Executing action...", self.current_state)
         dt = 0.001
         
         if self.current_state == ActionState.MOVE_ABOVE_PREGRASP:
-            if self.elapsed_time < ActionState.MOVE_ABOVE_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.MOVE_ABOVE_PREGRASP[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.MOVE_ABOVE_PREGRASP[1]:
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.SET_FINGER_CONFIG
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.SET_FINGER_CONFIG:
-            if self.elapsed_time < ActionState.SET_FINGER_CONFIG[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=0.1, t=self.elapsed_time, force=5)
-                self.bhand.move_robot(hand_current_pos)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+
+            length = ActionState.SET_FINGER_CONFIG[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time, force=5)
+                self.bhand.move_robot(self.hand_current_pos)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.SET_FINGER_CONFIG[1]:
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.MOVE_TO_PREGRASP
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.MOVE_TO_PREGRASP:
-            if self.elapsed_time < ActionState.MOVE_TO_PREGRASP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.5, t=self.elapsed_time)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.MOVE_TO_PREGRASP[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
                 self.is_in_contact = self.bhand.check_in_contact()
-                # if self.is_in_contact:
-                #     self.current_state = ActionState.MOVE_UP
-                #     self.elapsed_time = 0
+                if self.is_in_contact:
+                    self.current_state = ActionState.MOVE_UP
+                    self.elapsed_time = 0
 
-            if self.elapsed_time >= ActionState.MOVE_TO_PREGRASP[1]:
+            if self.elapsed_time >= length and not self.is_in_contact:
                 self.current_state = ActionState.POWER_PUSH
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.POWER_PUSH:
-            if self.elapsed_time < ActionState.POWER_PUSH[1]: #duration=2
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=1, t=self.elapsed_time)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.POWER_PUSH[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.POWER_PUSH[1]:
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.CLOSE_FINGERS
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.CLOSE_FINGERS:
-            if self.elapsed_time < ActionState.CLOSE_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=1, t=self.elapsed_time)
-                self.bhand.move_robot(hand_current_pos)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+
+            length = ActionState.CLOSE_FINGERS[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time)
+                self.bhand.move_robot(self.hand_current_pos)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.CLOSE_FINGERS[1]:
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.MOVE_UP
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.MOVE_UP:
-            if self.elapsed_time < ActionState.MOVE_UP[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.MOVE_UP[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.MOVE_UP[1]:
+            if self.elapsed_time >= length:
+                self.current_state = ActionState.GRASP_STABILITY
+                self.elapsed_time = 0
+
+        elif self.current_state == ActionState.GRASP_STABILITY:
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.GRASP_STABILITY[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+                self.bhand.move_robot(joint_positions)
+                self.elapsed_time += dt
+
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.MOVE_HOME
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.MOVE_HOME:
-            if self.elapsed_time < ActionState.MOVE_HOME[1]:
-                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, hand_current_pos, duration=0.1, t=self.elapsed_time)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+
+            length = ActionState.MOVE_HOME[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
                 self.bhand.move_robot(joint_positions)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.MOVE_HOME[1]:
+            if self.elapsed_time >= length:
                 self.current_state = ActionState.OPEN_FINGERS
                 self.elapsed_time = 0
         
         elif self.current_state == ActionState.OPEN_FINGERS:
-            if self.elapsed_time < ActionState.OPEN_FINGERS[1]:
-                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, finger_current_pos, duration=1, t=self.elapsed_time)
-                self.bhand.move_robot(hand_current_pos)
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+
+            length = ActionState.OPEN_FINGERS[1]
+            if self.elapsed_time < length:
+                joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time)
+                self.bhand.move_robot(self.hand_current_pos)
                 self.elapsed_time += dt
 
-            if self.elapsed_time >= ActionState.OPEN_FINGERS[1]:
+            if self.elapsed_time >= length:
                 # Action sequence complete
                 self.current_state = ActionState.MOVE_ABOVE_PREGRASP
                 self.elapsed_time = 0
 
                 images = {'color': []}
-
-                for cam in self.agent_cams:
-                    color, depth, seg = cam.get_data() 
+                if self.interval % 10 == 0:
+                    for cam in self.agent_cams:
+                        color, depth, seg = cam.get_data() 
                     images['color'].append(color)
+                else:
+                    images['color'].append(None)
 
                 obs = self.get_observation()
                 obs['traj_data'] = [(joint_positions, images)]
@@ -288,11 +337,15 @@ class Environment:
         if save_traj_data:
             #@Chris we save the images at the beginning of the trajectory
             images = {'color': []}
-            for cam in self.agent_cams:
-                color, depth, seg = cam.get_data() 
-                images['color'].append(color)
+            if self.interval % 25 == 0:
+                for cam in self.agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+            else:
+                images['color'].append(None)
             
             obs['traj_data'] = [(joint_positions, images)]
+            self.interval += 1
         
         # Return intermediate observation and info
         return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}
@@ -305,16 +358,16 @@ class Environment:
         pre_grasp_pos = action['pos'].copy()
         pre_grasp_pos[2] += 0.3
 
-        commands, _ = self.bhand.move(self.agent_cams, pre_grasp_pos, action['quat'], duration=0.08) #0.1
+        commands, _ = self.bhand.move(self.agent_cams, pre_grasp_pos, action['quat'], duration=0.1) #0.08
         trajectories.extend(commands)
 
         # set finger configuration
         theta = action['aperture']
-        commands = self.bhand.move_fingers(self.agent_cams, [0.0, theta, theta, theta], duration=0.06, force=5) #0.1
+        commands = self.bhand.move_fingers(self.agent_cams, [0.0, theta, theta, theta], duration=0.1, force=5) #0.06
         trajectories.extend(commands)
 
         # move to the pre-grasp position
-        commands, is_in_contact = self.bhand.move(self.agent_cams, action['pos'], action['quat'], duration=0.1, stop_at_contact=True) #0.5
+        commands, is_in_contact = self.bhand.move(self.agent_cams, action['pos'], action['quat'], duration=0.5, stop_at_contact=True) #0.1
         trajectories.extend(commands)
         
         # check if during reaching the pre-grasp position, the hand collides with some objects
@@ -329,7 +382,7 @@ class Environment:
             grasp_pos = action['pos'] + rot[0:3, 2] * action['push_distance']
 
             # if grasping only (without power push), comment out
-            commands, _ = self.bhand.move(self.agent_cams, grasp_pos, action['quat'], duration=0.25) #2.0
+            commands, _ = self.bhand.move(self.agent_cams, grasp_pos, action['quat'], duration=2) #0.25
             trajectories.extend(commands)
 
             # compute the distances of each object from other objects after pushing
@@ -352,11 +405,12 @@ class Environment:
         # move up when the object is picked
         final_pos = grasp_pos.copy()
         final_pos[2] += 0.4
-        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.06) #0.1
+        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.1) #0.05
         trajectories.extend(commands)
 
         # check grasp stability
-        _, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.5) #@Chris no need to save traj since it was just for checking grasp stability
+        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.05) #0.5 #@Chris no need to save traj since it was just for checking grasp stability
+        trajectories.extend(commands)
 
         stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
@@ -378,7 +432,7 @@ class Environment:
                     grasp_label = False
 
         # move home
-        commands, _ = self.bhand.move(self.agent_cams, self.bhand.home_position, action['quat'], duration=0.07) #0.1
+        commands, _ = self.bhand.move(self.agent_cams, self.bhand.home_position, action['quat'], duration=0.1) #0.07
         trajectories.extend(commands)
 
         # open fingers to drop grasped object

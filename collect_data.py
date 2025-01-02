@@ -93,18 +93,13 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         except Exception as e:
             obs = env.reset()
             print("Resetting environment:", e)
-            continue
+            break
 
         print(action)
 
         env_action3d = policy.action3d(action)
-        next_obs, grasp_info = env.step(env_action3d)
+        obs, grasp_info = env.step(env_action3d)
 
-        # if this is the first loop, set the initial reset obs with the joint and images from the next_obs
-        if steps == 0:
-            obs['traj_data'] = next_obs['traj_data']
-
-        
         print("len(obs['traj_data'])", len(obs['traj_data']))
 
         grasp_status.append(grasp_info['stable'])
@@ -149,8 +144,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 print('------------------------------------------')
                 break
 
-        obs = copy.deepcopy(next_obs)
-
         processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
         if target_id == -1:
@@ -164,6 +157,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print("Episode was successful. So data saved to memory!")
         print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed)
 
+        with open('episode_info.txt', 'a') as file:
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
+
     # We do not need to waste the successful grasp
     elif len(episode_data_list) == 1:
         transition = episode_data_list[0]
@@ -172,9 +168,11 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         memory.store_episode([transition])
         print("Saved the only successful grasp")
         print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed, ", Target id:", target_id)
+
+        with open('episode_info.txt', 'a') as file:
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
     else:
         print("Episode was not successful.")
-
 
 def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -203,14 +201,11 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
     steps = 0
     max_steps = 4
 
-
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
-    while steps < max_steps: #node_id != target_id:
+    while steps < max_steps:
         objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
-
-        # node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)
 
         node_id = objects_to_remove[0]
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
@@ -223,45 +218,49 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         t = 0
 
         state, depth_heightmap = policy.get_state_representation(obs)
-        actions = policy.generate_trajectory(state, processed_masks[node_id], num_steps=ActionState.NUM_STEPS)
+        actions = policy.generate_trajectory(state, processed_masks[node_id], num_steps=ActionState.NUM_STEPS + 1)
+        print("ActionState.NUM_STEPS", ActionState.NUM_STEPS, len(actions))
 
         traj_data = []
         while not end_of_episode:
             try:
                 action = actions[t]
             except Exception as e:
-                obs = env.reset()
                 t = 0
                 print("Resetting environment:", e)
-                continue
+                obs = env.reset()
+                break
 
-            if t % 10 == 0:
+            if t % 1 == 0:
                 print(action, t, env.current_state)
 
             env_action3d = policy.action3d(action)
-            next_obs, grasp_info = env.step_act(env_action3d)
+            obs, grasp_info = env.step_act(env_action3d, save_traj_data=True)
 
-            # print("len(obs['traj_data'])", len(obs['traj_data']))
-            traj_data.extend(next_obs['traj_data'])
+            traj_data.extend(obs['traj_data'])
 
             t += 1
             end_of_episode = grasp_info['eoe']
-
-        obs = copy.deepcopy(next_obs)
+        
+        print("len(traj_data)", len(traj_data))
         grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:
         #     print("A failure has been recorded. Episode cancelled.")
         #     break
 
+        if len(traj_data) < ActionState.NUM_STEPS:
+            steps += 1
+            continue
+
         print(grasp_info)
         print('---------')
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        # save = int(input("Do you want to save this episode? (0/1): "))
+        save = int(input("Do you want to save this episode? (0/1): "))
 
-        save = 0
+        # save = 0
         if grasp_info['stable'] or save == 1:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
             
@@ -290,8 +289,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 print(">>>>>>>>>>> Target retrieved! >>>>>>>>>>>>>")
                 print('------------------------------------------')
                 break
-
-        obs = copy.deepcopy(next_obs)
 
         processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)

@@ -207,15 +207,18 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            # if interval % 20 == 0:
             images = {'color': []}
-            for cam in agent_cams:
-                color, depth, seg = cam.get_data() 
-                images['color'].append(color)
+            if interval % 25 == 0:
+                for cam in agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+            else:
+                images['color'].append(None)
 
             commands.append((command, images))
             interval += 1
 
+        print("move t", t, interval)
         return commands, is_in_contact
 
     def set_hand_joint_position(self, joint_position, force):
@@ -295,15 +298,18 @@ class FloatingBHand:
             if not agent_cams:
                 return commands
 
-            # if interval % 20 == 0:
-            #@Chris we save the images at the beginning of the trajectory
             images = {'color': []}
-            for cam in agent_cams:
-                color, depth, seg = cam.get_data() 
-                images['color'].append(color)
+            if interval % 25 == 0:
+                for cam in agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+            else:
+                images['color'].append(None)
                 
             commands.append((command, images))
             interval += 1
+
+        print("move fingers t", t, interval)
 
         return commands#, [current_pos, hand_pos] #@Chris
 
@@ -322,10 +328,10 @@ class FloatingBHand:
         )
 
     def close(self, agent_cams, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=0.45) #1.0
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1.0) #0.45 #1.0
 
     def open(self, agent_cams, joint_vals=[0.0, 0.6, 0.6, 0.6]):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1) #1.0
+        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=.1)
 
     def configure(self, n_links_before):
         # set friction coefficients for gripper fingers
@@ -371,7 +377,8 @@ class FloatingBHand:
             positionGains=[50 * self.speed] * len(self.joint_ids)
         )
 
-    def calculate_joint_positions(self, action, current_state, current_pos, duration, t):
+    def calculate_joint_positions(self, action, current_state, current_pos, t):
+        duration = current_state[1]
         if len(action) == 8:   # this is eval
             # return action
 
@@ -397,7 +404,7 @@ class FloatingBHand:
             rot = target_quat.rotation_matrix()
             target_pos = target_pos + rot[0:3, 2] * action['push_distance']
 
-        if current_state == ActionState.MOVE_UP:
+        if current_state in [ActionState.MOVE_UP, ActionState.GRASP_STABILITY]:
             target_pos = target_pos.copy()
             target_pos[2] += 0.4
 
@@ -434,7 +441,8 @@ class FloatingBHand:
 
         return joint_positions
 
-    def calculate_finger_positions(self, action, current_state, current_pos, duration, t, force=2):
+    def calculate_finger_positions(self, action, current_state, current_pos, t, force=2):
+        duration = current_state[1]
         if len(action) == 8:   # this is eval
             self.set_hand_joint_position(action, force)
             # return action
@@ -450,12 +458,20 @@ class FloatingBHand:
                 joint_positions.append(trajectories[i].pos(t))
             return joint_positions
         
+        if current_state == ActionState.SET_FINGER_CONFIG:
+            theta = action['aperture']
+            joint_vals = [0.0, theta, theta, theta]
+
         if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 
         if current_state == ActionState.OPEN_FINGERS:
             joint_vals = [0.0, 0.6, 0.6, 0.6]
             
+        if current_state == ActionState.SET_FINGER_CONFIG:
+            theta = action['aperture']
+            joint_vals = [0.0, theta, theta, theta]
+
         if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
@@ -487,14 +503,15 @@ class FloatingBHand:
         return False
 
 class ActionState:
-    MOVE_ABOVE_PREGRASP = (0, 0.08)#0.1)
-    SET_FINGER_CONFIG = (1, 0.06)#0.1) # reduce this to maybe 0.05
-    MOVE_TO_PREGRASP = (2, 0.1)#0.5)
-    POWER_PUSH = (3, 0.25)#2.0)
-    CLOSE_FINGERS = (4, 0.45)#1.0)
-    MOVE_UP = (5, 0.06)#0.1)
-    MOVE_HOME = (6, 0.07)#0.1)
+    MOVE_ABOVE_PREGRASP = (0, 0.1)#0.08
+    SET_FINGER_CONFIG = (1, 0.1)#0.06
+    MOVE_TO_PREGRASP = (2, 0.5)#0.1
+    POWER_PUSH = (3, 2.0)#0.25
+    CLOSE_FINGERS = (4, 1.0)#0.45
+    MOVE_UP = (5, 0.1)#0.06
+    GRASP_STABILITY = (5, 0.05)#0.5
+    MOVE_HOME = (6, 0.1)#0.07
     OPEN_FINGERS = (7, 0.1)#0.1)
 
     NUM_STEPS = int(sum([steps[1] for steps in 
-                     [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, MOVE_HOME, OPEN_FINGERS]])/0.001)
+                     [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, MOVE_HOME, OPEN_FINGERS]])/0.001)
