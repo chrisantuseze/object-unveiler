@@ -170,7 +170,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             if cam_name == 'front':
                 image_dict[cam_name] = images['color'][0].astype(np.float32)
             elif cam_name == 'top':
-                image_dict[cam_name] = images['color'][1].astype(np.float32)
+                if len(images['color']) > 1: #@TODO Remove this when new data is collected
+                    image_dict[cam_name] = images['color'][1].astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []

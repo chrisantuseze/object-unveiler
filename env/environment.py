@@ -316,7 +316,7 @@ class Environment:
                 if self.interval % 10 == 0:
                     for cam in self.agent_cams:
                         color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
+                        images['color'].append(color)
                 else:
                     images['color'].append(None)
 
