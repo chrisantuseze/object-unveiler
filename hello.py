@@ -9,7 +9,7 @@ import numpy as np
 # dir = ""
 # # Specify the path to the folder containing the files you want to rename
 
-# folder_path = "save/ppg-dataset-single/"
+# folder_path = "save/ppg-dataset2/"
 # id = 0
 
 
@@ -44,7 +44,7 @@ def load_episode(dataset_dir, episode):
         # Iterate through trajectory data and validate each timestep
         traj_data = data['traj_data']
         for traj in traj_data:
-            if traj[1]['color'] is not None:  # Check if the image is available
+            if len(traj[1]['color']) > 1:
                 joint_pos.append(traj[0])  # Append joint positions
                 images.append(traj[1])  # Append the valid image
 
@@ -68,11 +68,14 @@ def main():
             transition_dirs.remove(file_)
 
     for id in transition_dirs:
+        print("id", id)
+
         images, joint_pos, heightmap, c_target_mask = load_episode(dataset_dir, id)
         images = images[0]
-        color1 = images['color'][0].astype(np.float32)
-        color2 = images['color'][1].astype(np.float32)
+        color1 = images['color'][0]
+        color2 = images['color'][1]
 
-        print("id", id)
+        print(color1)
+        print(color2)
 
 main()

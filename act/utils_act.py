@@ -124,7 +124,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Iterate through trajectory data and validate each timestep
             traj_data = data['traj_data']
             for traj in traj_data:
-                if traj[1]['color'] is not None:  # Check if the image is available
+                if len(traj[1]['color']) > 1:
                     joint_pos.append(traj[0])  # Append joint positions
                     images.append(traj[1])  # Append the valid image
 
@@ -170,8 +170,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             if cam_name == 'front':
                 image_dict[cam_name] = images['color'][0].astype(np.float32)
             elif cam_name == 'top':
-                if len(images['color']) > 1: #@TODO Remove this when new data is collected
-                    image_dict[cam_name] = images['color'][1].astype(np.float32)
+                image_dict[cam_name] = images['color'][1].astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
