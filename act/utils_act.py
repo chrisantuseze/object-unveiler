@@ -124,7 +124,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Iterate through trajectory data and validate each timestep
             traj_data = data['traj_data']
             for traj in traj_data:
-                if traj[1] is not None:  # Check if the image is available
+                if traj[1]['color'] is not None:  # Check if the image is available
                     joint_pos.append(traj[0])  # Append joint positions
                     images.append(traj[1])  # Append the valid image
 
