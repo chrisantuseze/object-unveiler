@@ -2,40 +2,77 @@ import os
 import pickle
 import shutil
 
-
-# dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
-dir = ""
-# Specify the path to the folder containing the files you want to rename
-
-folder_path = "save/ppg-dataset-single/"
-id = 0
+import numpy as np
 
 
-folder_path = dir + folder_path
-# Loop through the files in the folder
-for i, filename in enumerate(os.listdir(folder_path)):
-    old_name = os.path.join(folder_path, filename)
-    
-    arr = filename.split("_")
-    new_filename = arr[0] + "_" + str(id).zfill(5)
+# # dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
+# dir = ""
+# # Specify the path to the folder containing the files you want to rename
 
-    # Rename the file
-    os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
-    id += 1
+# folder_path = "save/ppg-dataset-single/"
+# id = 0
 
-print(id)
 
 # folder_path = dir + folder_path
 # # Loop through the files in the folder
 # for i, filename in enumerate(os.listdir(folder_path)):
-#     try:
-#         dir = os.path.join(folder_path, filename)
-#         episode_data = pickle.load(open(dir, 'rb'))
-#     except Exception as e:
-#         #logging.info(e, "- Failed episode:", episode_dir)
-#         pass
+#     old_name = os.path.join(folder_path, filename)
+    
+#     arr = filename.split("_")
+#     new_filename = arr[0] + "_" + str(id).zfill(5)
 
-#     data = episode_data[-1]
-#     traj_data = data['traj_data'][:150]
-#     if len(traj_data) == 0:
-#         print(dir)
+#     # Rename the file
+#     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
+#     id += 1
+
+# print(id)
+
+def load_episode(dataset_dir, episode):
+    # Ensure there's a valid image. If there's none, search through the timesteps
+    try:
+        # Load episode data
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
+        data = episode_data[-1]
+
+        # Extract heightmap and mask
+        heightmap = data['state']
+        c_target_mask = None #data['c_target_mask']
+
+        # Initialize storage for valid timesteps
+        images, joint_pos = [], []
+
+        # Iterate through trajectory data and validate each timestep
+        traj_data = data['traj_data']
+        for traj in traj_data:
+            if traj[1]['color'] is not None:  # Check if the image is available
+                joint_pos.append(traj[0])  # Append joint positions
+                images.append(traj[1])  # Append the valid image
+
+        # If no valid images are found, raise an exception
+        if not images:
+            raise ValueError("No valid images found in the episode.")
+
+        episode_len = len(traj_data)
+        return images, joint_pos, heightmap, c_target_mask
+
+    except Exception as e:
+        print(f"{e} - Failed episode: {episode}")
+
+    return None
+
+def main():
+    dataset_dir = "save/ppg-dataset2"
+    transition_dirs = os.listdir(dataset_dir)
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    for id in transition_dirs:
+        images, joint_pos, heightmap, c_target_mask = load_episode(dataset_dir, id)
+        images = images[0]
+        color1 = images['color'][0].astype(np.float32)
+        color2 = images['color'][1].astype(np.float32)
+
+        print("id", id)
+
+main()
