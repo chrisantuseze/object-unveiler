@@ -518,10 +518,7 @@ class Environment:
             self.objects.append(self.add_single_object(obj_paths[i], pos, quat, size))
 
     def seed(self, seed):
-        self.session_seed = seed
-
-        # seed = 1791095845
-        
+        self.session_seed = seed        
         self.rng.seed(seed)
         
     def workspace2world(self, pos=None, quat=None, inv=False):
