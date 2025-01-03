@@ -380,18 +380,18 @@ class FloatingBHand:
     def calculate_joint_positions(self, action, current_state, current_pos, t):
         duration = current_state[1]
         if len(action) == 8:   # this is eval
-            # return action
+            return action
 
-            # Add interpolation even for eval
-            target_states = action
-            trajectories = []
-            for i in range(len(self.joint_ids)):
-                trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
+            # # Add interpolation even for eval
+            # target_states = action
+            # trajectories = []
+            # for i in range(len(self.joint_ids)):
+            #     trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
             
-            joint_positions = []
-            for i in range(len(self.joint_ids)):
-                joint_positions.append(trajectories[i].pos(t))
-            return joint_positions
+            # joint_positions = []
+            # for i in range(len(self.joint_ids)):
+            #     joint_positions.append(trajectories[i].pos(t))
+            # return joint_positions
         
         target_pos = action['pos']
         target_quat = action['quat']
@@ -445,18 +445,18 @@ class FloatingBHand:
         duration = current_state[1]
         if len(action) == 8:   # this is eval
             self.set_hand_joint_position(action, force)
-            # return action
+            return action
 
-            # Add interpolation even for eval
-            target_states = action
-            trajectories = []
-            for i in range(len(self.joint_ids)):
-                trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
+            # # Add interpolation even for eval
+            # target_states = action
+            # trajectories = []
+            # for i in range(len(self.joint_ids)):
+            #     trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
             
-            joint_positions = []
-            for i in range(len(self.joint_ids)):
-                joint_positions.append(trajectories[i].pos(t))
-            return joint_positions
+            # joint_positions = []
+            # for i in range(len(self.joint_ids)):
+            #     joint_positions.append(trajectories[i].pos(t))
+            # return joint_positions
         
         if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']

@@ -113,7 +113,7 @@ class Policy:
 
         # load policy and stats
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
-        loading_status = policy.load_state_dict(torch.load(ckpt_path))
+        loading_status = policy.load_state_dict(torch.load(ckpt_path, map_location=self.device))
         print(loading_status)
 
         policy.to(self.device)

@@ -235,7 +235,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
-            obs, grasp_info = env.step_act(qpos, save_traj_data=False)
+            obs, grasp_info = env.step_act(action, save_traj_data=False)
             # obs = copy.deepcopy(next_obs)
 
             t += 1
