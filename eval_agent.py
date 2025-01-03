@@ -138,13 +138,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
 
     ############ FOR GTRUTH EVAL ############
-    idx = 1
+    idx = 0
     traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
     episode_seeds = [1791095845, 1298508491]
     episode_seed = episode_seeds[idx]
 
     rng = np.random.RandomState()
     rng.seed(episode_seed)
+
+    ids = [5, 5]
+    id = ids[idx]
 
     #########################################
 
@@ -168,11 +171,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
+    ############ FOR REAL EVAL ############
     # # get a randomly picked target mask from the segmented image
     # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    #########################################
 
-    ids = [5, 5]
-    id = ids[idx]
     target_mask, target_id = processed_masks[id], id
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
@@ -199,30 +202,32 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             qpos = traj_data[t][0]
             images = traj_data[t][-1]
 
-            # if t % query_frequency == 0:
-            #     state = policy.state_representation(obs)
+            if t % query_frequency == 0:
+                state = policy.state_representation(obs)
+                # actions = policy.exploit_act(state, target_mask, obs)
 
-            #     # actions = policy.exploit_act(state, target_mask, obs)
-            #     actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
+                if images['color'] > 1: # takes care of the case when the timestep image was not saved
+                    images['color'] = [obs['color'][0], obs['color'][1]]
+                actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
 
-            # if temporal_agg:
-            #     all_time_actions[[t], t:t+num_queries] = actions
-            #     actions_for_curr_step = all_time_actions[:, t]
-            #     actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-            #     actions_for_curr_step = actions_for_curr_step[actions_populated]
-            #     k = 0.01
-            #     exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-            #     exp_weights = exp_weights / exp_weights.sum()
-            #     exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
-            #     raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
-            # else:
-            #     raw_action = actions[:, t % query_frequency]
+            if temporal_agg:
+                all_time_actions[[t], t:t+num_queries] = actions
+                actions_for_curr_step = all_time_actions[:, t]
+                actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                actions_for_curr_step = actions_for_curr_step[actions_populated]
+                k = 0.01
+                exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+                exp_weights = exp_weights / exp_weights.sum()
+                exp_weights = torch.from_numpy(exp_weights).to(args.device).unsqueeze(dim=1)
+                raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+            else:
+                raw_action = actions[:, t % query_frequency]
 
-            # action = policy.post_process_action(state, raw_action)
-            # preds.append(action)
-
-            action = qpos
+            action = policy.post_process_action(state, raw_action)
             preds.append(action)
+
+            # action = qpos
+            # preds.append(action)
 
             gt.append(qpos)
 
@@ -359,7 +364,7 @@ def get_obs(idx):
 
     data = episode_data[-1]
     heightmap = data['state']
-    c_target_mask = general_utils.extract_target_crop(data['target_mask'], heightmap)
+    c_target_mask = None #general_utils.extract_target_crop(data['target_mask'], heightmap)
     actions = None #data['actions']
     trajectory_data = data['traj_data']
 
