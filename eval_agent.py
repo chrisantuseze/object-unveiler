@@ -146,7 +146,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     rng = np.random.RandomState()
     rng.seed(episode_seed)
 
-    ids = [5, 5]
+    ids = [4, 5]
     id = ids[idx]
 
     #########################################
@@ -206,7 +206,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 state = policy.state_representation(obs)
                 # actions = policy.exploit_act(state, target_mask, obs)
 
-                if images['color'] > 1: # takes care of the case when the timestep image was not saved
+                if len(images['color']) > 1: # takes care of the case when the timestep image was not saved
                     images['color'] = [obs['color'][0], obs['color'][1]]
                 actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
 
