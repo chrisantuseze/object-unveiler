@@ -11,7 +11,7 @@ python3 main.py \
 --reg_model 'downloads/reg_model.pt' \
 --fcn_model 'save/fcn/fcn_model_17.pt' \
 --n_scenes 50 \
---chunk_size 100 \
+--chunk_size 200 \
 --temporal_agg
 
 python3 main.py \

@@ -350,7 +350,7 @@ def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSe
     return episode_data
 
 def get_obs(idx):
-    dataset_dir = "save/ppg-dataset"
+    dataset_dir = "save/ppg-dataset2"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
