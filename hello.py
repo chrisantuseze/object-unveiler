@@ -6,26 +6,26 @@ import numpy as np
 
 
 # # dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
-# dir = ""
-# # Specify the path to the folder containing the files you want to rename
+dir = ""
+# Specify the path to the folder containing the files you want to rename
 
-# folder_path = "save/ppg-dataset2/"
-# id = 0
+folder_path = "save/ppg-dataset2/"
+id = 0
 
 
-# folder_path = dir + folder_path
-# # Loop through the files in the folder
-# for i, filename in enumerate(os.listdir(folder_path)):
-#     old_name = os.path.join(folder_path, filename)
+folder_path = dir + folder_path
+# Loop through the files in the folder
+for i, filename in enumerate(os.listdir(folder_path)):
+    old_name = os.path.join(folder_path, filename)
     
-#     arr = filename.split("_")
-#     new_filename = arr[0] + "_" + str(id).zfill(5)
+    arr = filename.split("_")
+    new_filename = arr[0] + "_" + str(id).zfill(5)
 
-#     # Rename the file
-#     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
-#     id += 1
+    # Rename the file
+    os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
+    id += 1
 
-# print(id)
+print(id)
 
 def load_episode(dataset_dir, episode):
     # Ensure there's a valid image. If there's none, search through the timesteps
@@ -78,4 +78,4 @@ def main():
         print(color1)
         print(color2)
 
-main()
+# main()
