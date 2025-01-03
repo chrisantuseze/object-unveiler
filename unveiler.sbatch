@@ -20,7 +20,7 @@ apptainer run --nv apptainerfile.sif python3 main_act.py \
 --ckpt_dir act/ckpt \
 --policy_class ACT \
 --kl_weight 10 \
---chunk_size 200 \
+--chunk_size 100 \
 --hidden_dim 512 \
 --batch_size 16 \
 --dim_feedforward 3200 \
