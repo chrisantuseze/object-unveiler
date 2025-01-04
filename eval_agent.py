@@ -146,7 +146,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     rng = np.random.RandomState()
     rng.seed(episode_seed)
 
-    ids = [4, 5]
+    ids = [5, 5]
     id = ids[idx]
 
     #########################################

@@ -90,7 +90,7 @@ class Policy:
         # ckpt_name = f'policy_epoch_3150_seed_0.ckpt'
         ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
-        self.state_dim = 8
+        self.state_dim = 4 #8
 
         self.camera_names = task_config['camera_names']
 

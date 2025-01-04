@@ -52,7 +52,7 @@ def main(args):
     camera_names = task_config['camera_names']
 
     # fixed parameters
-    state_dim = 8
+    state_dim = 4 #8
     lr_backbone = 1e-5
     backbone = 'resnet18'
     if policy_class == 'ACT':
@@ -355,43 +355,6 @@ def train_bc(train_dataloader, val_dataloader, config):
     policy.to(device)
     optimizer = make_optimizer(policy_class, policy)
 
-    # scheduler = torch.optim.lr_scheduler.OneCycleLR(
-    #     optimizer,
-    #     max_lr=1e-3,          # Peak learning rate
-    #     epochs=num_epochs,          # Total epochs
-    #     steps_per_epoch=1,    # Steps per epoch (1 if you update once per epoch)
-    #     pct_start=0.3,        # Spend 30% of training in ramp-up phase
-    #     div_factor=25,        # Initial lr = max_lr/25 (so initial_lr = 4e-5)
-    #     final_div_factor=1e4, # Final lr = initial_lr/1e4
-    #     anneal_strategy='cos'  # Use cosine annealing
-    # )
-
-    # Learning Rate Scheduler with Warmup
-    from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR
-
-
-    # Combine schedulers
-    from torch.optim.lr_scheduler import SequentialLR
-
-    # Create a combined scheduler with warmup
-    warmup_scheduler = LinearLR(
-        optimizer, 
-        start_factor=0.1, 
-        total_iters=5  # Warmup for first 5 epochs
-    )
-
-    cosine_scheduler = CosineAnnealingLR(
-        optimizer, 
-        T_max=num_epochs - 5,  # Remaining epochs
-        eta_min=1e-6  # Minimum learning rate
-    )
-
-    scheduler = SequentialLR(
-        optimizer, 
-        schedulers=[warmup_scheduler, cosine_scheduler], 
-        milestones=[5]
-    )
-
     writer = SummaryWriter()
 
     train_history = []
@@ -439,9 +402,6 @@ def train_bc(train_dataloader, val_dataloader, config):
             train_history.append(detach_dict(forward_dict))
 
             epoch_loss['train'] += forward_dict['loss'].detach().cpu().numpy()
-
-        # Step the scheduler after each epoch
-        scheduler.step()
 
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']

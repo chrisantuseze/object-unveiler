@@ -116,24 +116,27 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
             # Extract heightmap and mask
             heightmap = data['state']
+            actions = data['actions']
+
             c_target_mask = None #data['c_target_mask']
 
             # Initialize storage for valid timesteps
-            images, joint_pos = [], []
+            images, joint_pos, actions_ = [], [], []
 
             # Iterate through trajectory data and validate each timestep
             traj_data = data['traj_data']
-            for traj in traj_data:
+            for i, traj in enumerate(traj_data):
                 if len(traj[1]['color']) > 1:
-                    joint_pos.append(traj[0])  # Append joint positions
-                    images.append(traj[1])  # Append the valid image
+                    joint_pos.append(traj[0])
+                    images.append(traj[1])
+                    actions_.append(actions[i])
 
             # If no valid images are found, raise an exception
             if not images:
                 raise ValueError("No valid images found in the episode.")
 
             episode_len = len(traj_data)
-            return images, joint_pos, heightmap, c_target_mask
+            return images, joint_pos, heightmap, c_target_mask, actions_
 
         except Exception as e:
             print(f"{e} - Failed episode: {episode}")
@@ -143,8 +146,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, heightmap, c_target_mask = episode_data
+        images, qpos, heightmap, c_target_mask, actions = episode_data
         qpos = np.array(qpos)#, dtype=np.float64)
+        actions = np.array(actions)
 
         episode_len = qpos.shape[0]
         sample_full_episode = False
@@ -156,7 +160,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         qpos_data = qpos[start_ts]
         images = images[start_ts]
-        actions = qpos[start_ts + 1:]
+        # actions = qpos[start_ts + 1:]
+        actions = qpos[start_ts:]
 
         actions = np.array(actions)#, dtype=np.float32)
         action_len = actions.shape[0]
@@ -240,7 +245,9 @@ def get_stats(dataset_dir, transition_dirs):
     for demo in transition_dirs:
         episode_data = pickle.load(open(os.path.join(dataset_dir, demo), 'rb'))[-1]
         traj_data = episode_data['traj_data']
-        action = np.array(traj_data[1][0])
+        actions = episode_data['actions']
+        # action = np.array(traj_data[1][0])
+        action = np.array(actions[0])
         qpos = np.array(traj_data[0][0])
 
         all_action_data.append(torch.from_numpy(action))
