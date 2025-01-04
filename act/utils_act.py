@@ -161,7 +161,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         qpos_data = qpos[start_ts]
         images = images[start_ts]
         # actions = qpos[start_ts + 1:]
-        actions = qpos[start_ts:]
+        actions = actions[start_ts:]
 
         actions = np.array(actions)#, dtype=np.float32)
         action_len = actions.shape[0]
