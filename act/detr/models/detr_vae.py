@@ -84,6 +84,8 @@ class DETRVAE(nn.Module):
         """
         is_training = actions is not None # train or val
         bs, _ = qpos.shape
+
+        print("actions.shape", actions.shape)
         ### Obtain latent z from action sequence
         if is_training:
             # project action sequence to embedding dim, and concat with a CLS token
@@ -227,8 +229,6 @@ def build_encoder(args):
 
 
 def build(args):
-    state_dim = 14 # TODO hardcode
-
     # From state
     # backbone = None # from state for now, no need for conv nets
     # From image
@@ -255,8 +255,6 @@ def build(args):
     return model
 
 def build_cnnmlp(args):
-    state_dim = 14 # TODO hardcode
-
     # From state
     # backbone = None # from state for now, no need for conv nets
     # From image
