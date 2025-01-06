@@ -22,7 +22,7 @@ apptainer run --nv apptainerfile.sif python3 main_act.py \
 --kl_weight 10 \
 --chunk_size 100 \
 --hidden_dim 512 \
---batch_size 16 \
+--batch_size 8 \
 --dim_feedforward 3200 \
 --num_epochs 3000 \
 --lr 1e-4 \

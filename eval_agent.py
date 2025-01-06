@@ -127,7 +127,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
-    state_dim = 8
+    state_dim = 4 #8
     if temporal_agg:
         query_frequency = 1
         num_queries = args.chunk_size
@@ -171,10 +171,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
-    ############ FOR REAL EVAL ############
-    # # get a randomly picked target mask from the segmented image
-    # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
-    #########################################
+    ########### FOR REAL EVAL ############
+    # get a randomly picked target mask from the segmented image
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    ########################################
 
     target_mask, target_id = processed_masks[id], id
 
@@ -201,14 +201,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         while not end_of_episode:
             qpos = traj_data[t][0]
             images = traj_data[t][-1]
+            obs_action = obs_actions[t]
 
             if t % query_frequency == 0:
+                print("Fresh actions")
                 state = policy.state_representation(obs)
-                # actions = policy.exploit_act(state, target_mask, obs)
+                actions = policy.exploit_act(state, target_mask, obs)
 
-                if len(images['color']) < 2: # takes care of the case when the timestep image was not saved
-                    images['color'] = [obs['color'][0], obs['color'][1]]
-                actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
+                # if len(images['color']) < 2: # takes care of the case when the timestep image was not saved
+                #     images['color'] = [obs['color'][0], obs['color'][1]]
+                # actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -229,14 +231,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             # action = qpos
             # preds.append(action)
 
-            gt.append(qpos)
+            # gt.append(qpos)
+            gt.append(obs_action)
 
             if t % 1 == 0:
-                print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
+                print("Obs action -", [float(f'{q:.2f}') for q in obs_action], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
-            obs, grasp_info = env.step_act(action, save_traj_data=False)
-            # obs = copy.deepcopy(next_obs)
+            env_action3d = policy.action3d(action)
+
+            obs, grasp_info = env.step_act(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -365,7 +369,7 @@ def get_obs(idx):
     data = episode_data[-1]
     heightmap = data['state']
     c_target_mask = None #general_utils.extract_target_crop(data['target_mask'], heightmap)
-    actions = None #data['actions']
+    actions = data['actions']
     trajectory_data = data['traj_data']
 
     return trajectory_data, actions, heightmap, c_target_mask

@@ -5,6 +5,8 @@ import cv2
 
 import pybullet as p
 import numpy as np
+import random
+
 from utils.orientation import Affine3, Quaternion, rot_z
 import utils.pybullet_utils as p_utils
 import utils.general_utils as general_utils
@@ -139,7 +141,13 @@ class Environment:
         logging.info(">>>>>>>>>> Scene building complete >>>>>>>>>>")
         general_utils.recreate_train()
 
-        return self.get_observation()
+        obs = self.get_observation()
+        images = {'color': []}
+        for cam in self.agent_cams:
+            color, depth, seg = cam.get_data() 
+            images['color'].append(color)
+        obs['traj_data'] = [([random.random() for _ in range(8)], images)]
+        return obs
 
     def get_observation(self):
         obs = {'color': [], 'depth': [], 'seg': [], 'full_state': [], 'traj_data': []}
@@ -176,7 +184,7 @@ class Environment:
 
         return hand_current_pos, finger_current_pos
     
-    def step_act(self, action, save_traj_data=True):
+    def step_act(self, action, save_traj_data=True, eval=True):
         # print("Executing action...", self.current_state)
         dt = 0.001
         
@@ -330,18 +338,18 @@ class Environment:
 
         obs = self.get_observation()
 
-        if save_traj_data:
-            #@Chris we save the images at the beginning of the trajectory
-            images = {'color': []}
-            if self.interval % 10 == 0:
-                for cam in self.agent_cams:
-                    color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
-            else:
-                images['color'].append(None)
-            
-            obs['traj_data'] = [(joint_positions, images)]
-            self.interval += 1
+        # if save_traj_data:
+        #@Chris we save the images at the beginning of the trajectory
+        images = {'color': []}
+        if eval or self.interval % 10 == 0:
+            for cam in self.agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(color)
+        else:
+            images['color'].append(None)
+        
+        obs['traj_data'] = [(joint_positions, images)]
+        self.interval += 1
         
         # Return intermediate observation and info
         return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}

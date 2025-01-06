@@ -551,10 +551,6 @@ class Policy:
     def exploit_act(self, state, target_mask, obs):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
-        if len(obs['traj_data']) == 0: #TODO Fix this
-            print("No traj data. Getting random actions...")
-            return torch.rand(1, self.args.chunk_size, self.state_dim).to(self.device)
-        
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         trajectory_data = obs['traj_data'][0]
@@ -578,16 +574,10 @@ class Policy:
     def exploit_act2(self, state, target_mask, images, qpos):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
-        if len(qpos) == 0:
-            print("No traj data. Getting random actions...")
-            return torch.rand(1, self.args.chunk_size, self.state_dim).to(self.device)
-    
         qpos_numpy = np.array(qpos)#, dtype=np.float64)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
         image_data = self.get_act_image(images, state, target_mask, masks=[])
-
-        # print("image_data.shape", image_data.shape)
         
         actions = self.policy(qpos, image_data).detach()
         return actions
