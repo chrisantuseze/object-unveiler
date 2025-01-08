@@ -574,7 +574,7 @@ class Policy:
     def exploit_act2(self, state, target_mask, images, qpos):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
-        qpos_numpy = np.array(qpos)#, dtype=np.float64)
+        qpos_numpy = np.array(qpos)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
         image_data = self.get_act_image(images, state, target_mask, masks=[])

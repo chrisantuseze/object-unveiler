@@ -135,7 +135,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             if not images:
                 raise ValueError("No valid images found in the episode.")
 
-            episode_len = len(traj_data)
             return images, joint_pos, heightmap, c_target_mask, actions_
 
         except Exception as e:
@@ -147,7 +146,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, heightmap, c_target_mask, actions = episode_data
-        qpos = np.array(qpos)#, dtype=np.float64)
+        qpos = np.array(qpos)
         actions = np.array(actions)
 
         episode_len = qpos.shape[0]
@@ -163,9 +162,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # actions = qpos[start_ts + 1:]
         actions = actions[start_ts:]
 
-        actions = np.array(actions)#, dtype=np.float32)
+        actions = np.array(actions)
         action_len = actions.shape[0]
-        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))#, dtype=np.float64)
+        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))
         padded_action[:action_len] = actions
         is_pad = np.zeros(ActionState.NUM_STEPS)
         is_pad[action_len:] = 1

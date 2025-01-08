@@ -132,10 +132,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         query_frequency = 1
         num_queries = args.chunk_size
 
-    max_timesteps = ActionState.NUM_STEPS
+    max_timesteps = ActionState.NUM_STEPS + 1
 
     if temporal_agg:
-        all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(args.device)
+        all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
+        print("All time actions shape -", all_time_actions.shape)
 
     ############ FOR GTRUTH EVAL ############
     idx = 0
