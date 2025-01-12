@@ -127,7 +127,8 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
-    state_dim = 4 #8
+    state_dim = 8
+    # state_dim = 4
     if temporal_agg:
         query_frequency = 1
         num_queries = args.chunk_size
@@ -229,19 +230,17 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
             preds.append(action)
 
-            # action = qpos
-            # preds.append(action)
-
-            # gt.append(qpos)
-            gt.append(obs_action)
+            gt.append(qpos)
+            # gt.append(obs_action)
 
             if t % 1 == 0:
-                print("Obs action -", [float(f'{q:.2f}') for q in obs_action], ",", t, ",", env.current_state)
+                print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
-            env_action3d = policy.action3d(action)
+            obs, grasp_info = env.step_act(action, eval=True)
 
-            obs, grasp_info = env.step_act(env_action3d, eval=True)
+            # env_action3d = policy.action3d(action)
+            # obs, grasp_info = env.step_act(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
