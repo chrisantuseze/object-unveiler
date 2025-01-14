@@ -514,16 +514,6 @@ class Policy:
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
     def get_act_image(self, color_images, heightmap, target_mask, masks):
-        # masks = np.array(masks)
-        # N, H, W = masks.shape
-        # if N < self.args.num_patches:
-        #     object_masks = np.zeros((self.args.num_patches, H, W), dtype=masks.dtype)
-        #     object_masks[:masks.shape[0], :, :] = masks
-        # else:
-        #     object_masks = masks[:self.args.num_patches]
-
-        # print("color_images[0].shape", color_images[0].shape, "heightmap.shape", heightmap.shape, "object_masks.shape", object_masks.shape)
-
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
@@ -532,10 +522,10 @@ class Policy:
                 image_dict[cam_name] = color_images[1].astype(np.float32)
             # elif cam_name == 'heightmap':
             #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            # else:
-            #     # idx = int(cam_name)
-            #     # image_dict[cam_name] = np.array(object_masks[idx]).astype(np.float32)
-            #     image_dict[cam_name] = target_mask.astype(np.float32)
+
+        # resized_target_mask = general_utils.resize_mask(transform, target_mask)
+        # c_target_mask = general_utils.extract_target_crop(resized_target_mask, heightmap)
+        # image_dict["target"] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
@@ -557,12 +547,6 @@ class Policy:
         trajectory_data = obs['traj_data'][0]
         qpos, img = trajectory_data
         color_images = img['color']
-
-        # processed_masks, pred_mask, raw_masks = self.segmenter.from_maskrcnn(color_images[1])
-        # masks = []
-        # for id, mask in enumerate(processed_masks):
-        #     mask = general_utils.resize_mask(transform, mask)
-        #     masks.append(general_utils.extract_target_crop(mask, state))
 
         qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)

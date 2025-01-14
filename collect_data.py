@@ -123,12 +123,14 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
             for mask in processed_masks:
                 new_masks.append(general_utils.resize_mask(transform, mask))
                 
+            resized_target_mask = general_utils.resize_mask(transform, processed_masks[target_id])
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
                 'state': state, 
                 'depth_heightmap': depth_heightmap,
-                'target_mask': general_utils.resize_mask(transform, processed_masks[target_id]), 
+                'target_mask': resized_target_mask, 
+                'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
                 'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'object_masks': new_masks,
@@ -268,12 +270,14 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             for mask in processed_masks:
                 new_masks.append(general_utils.resize_mask(transform, mask))
                 
+            resized_target_mask = general_utils.resize_mask(transform, processed_masks[target_id])
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
                 'state': state, 
                 'depth_heightmap': depth_heightmap,
-                'target_mask': general_utils.resize_mask(transform, processed_masks[target_id]), 
+                'target_mask': resized_target_mask, 
+                'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
                 'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'object_masks': new_masks,
