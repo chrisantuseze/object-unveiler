@@ -159,8 +159,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         qpos_data = qpos[start_ts]
         images = images[start_ts]
-        actions = qpos[start_ts + 1:]
-        # actions = actions[start_ts:]
+        # actions = qpos[start_ts + 1:]
+        actions = actions[start_ts:]
 
         actions = np.array(actions)
         action_len = actions.shape[0]
@@ -245,8 +245,8 @@ def get_stats(dataset_dir, transition_dirs):
         episode_data = pickle.load(open(os.path.join(dataset_dir, demo), 'rb'))[-1]
         traj_data = episode_data['traj_data']
         actions = episode_data['actions']
-        action = np.array(traj_data[1][0])
-        # action = np.array(actions[0])
+        # action = np.array(traj_data[1][0])
+        action = np.array(actions[0])
         qpos = np.array(traj_data[0][0])
 
         all_action_data.append(torch.from_numpy(action))
