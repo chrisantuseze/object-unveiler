@@ -242,6 +242,7 @@ def get_norm_stats(dataset_dir, num_episodes):
 def get_stats(dataset_dir, transition_dirs):
     all_action_data, all_qpos_data = [], []
     for demo in transition_dirs:
+        print(demo)
         episode_data = pickle.load(open(os.path.join(dataset_dir, demo), 'rb'))[-1]
         traj_data = episode_data['traj_data']
         actions = episode_data['actions']
@@ -251,8 +252,6 @@ def get_stats(dataset_dir, transition_dirs):
 
         all_action_data.append(torch.from_numpy(action))
         all_qpos_data.append(torch.from_numpy(qpos))
-
-        print(demo)
 
     all_action_data = torch.stack(all_action_data)
     all_qpos_data = torch.stack(all_qpos_data)
