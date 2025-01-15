@@ -252,6 +252,8 @@ def get_stats(dataset_dir, transition_dirs):
         all_action_data.append(torch.from_numpy(action))
         all_qpos_data.append(torch.from_numpy(qpos))
 
+        print(demo)
+
     all_action_data = torch.stack(all_action_data)
     all_qpos_data = torch.stack(all_qpos_data)
     all_action_data = all_action_data
