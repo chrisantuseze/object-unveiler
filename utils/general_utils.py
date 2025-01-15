@@ -454,7 +454,7 @@ def extract_target_crop(resized_target, heightmap):
         full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
 
         if np.all(full_crop == 0):
-            full_crop = heightmap
+            full_crop = np.array(heightmap)
 
         # fig, ax = plt.subplots(1, 3)
         # ax[0].imshow(heightmap)

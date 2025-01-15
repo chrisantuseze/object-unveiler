@@ -118,8 +118,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             heightmap = data['state']
             actions = data['actions']
 
-            # target_mask = data['target_mask']
-            c_target_mask = None #general_utils.extract_target_crop(target_mask, heightmap)
+            target_mask = data['target_mask']
+            c_target_mask = general_utils.extract_target_crop(target_mask, heightmap) #@TODO: remove ones new data is collected
 
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
@@ -175,6 +175,10 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
                 image_dict[cam_name] = images['color'][0].astype(np.float32)
             elif cam_name == 'top':
                 image_dict[cam_name] = images['color'][1].astype(np.float32)
+            elif cam_name == 'heightmap':
+                image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            elif cam_name == 'target':
+                image_dict["target"] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []

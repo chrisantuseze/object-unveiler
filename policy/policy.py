@@ -520,12 +520,12 @@ class Policy:
                 image_dict[cam_name] = color_images[0].astype(np.float32)
             elif cam_name == 'top':
                 image_dict[cam_name] = color_images[1].astype(np.float32)
-            # elif cam_name == 'heightmap':
-            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-
-        # resized_target_mask = general_utils.resize_mask(transform, target_mask)
-        # c_target_mask = general_utils.extract_target_crop(resized_target_mask, heightmap)
-        # image_dict["target"] = c_target_mask.astype(np.float32)
+            elif cam_name == 'heightmap':
+                image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            elif cam_name == 'target':
+                resized_target_mask = general_utils.resize_mask(transform, target_mask)
+                c_target_mask = general_utils.extract_target_crop(resized_target_mask, heightmap)
+                image_dict["target"] = c_target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
