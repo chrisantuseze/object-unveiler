@@ -157,7 +157,7 @@ def modify_episode3(segmenter: ObjectSegmenter, episode_dir, index):
 
         transition = {
             'color_obs': data['color_obs'], 
-            'depth_obs': data['depth'], 
+            'depth_obs': data['depth_obs'], 
             'state': data['state'], 
             'depth_heightmap': data['depth_heightmap'],
             'target_mask': data['target_mask'], 
