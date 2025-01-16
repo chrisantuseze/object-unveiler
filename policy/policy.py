@@ -59,8 +59,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = self.make_act_policy()
-        # self.policy, self.stats = None, None
+        # self.policy, self.stats = self.make_act_policy()
+        self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -87,11 +87,11 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        # ckpt_name = f'policy_epoch_3150_seed_0.ckpt'
-        ckpt_name = f'policy_best.ckpt'
+        ckpt_name = f'policy_epoch_0_seed_0.ckpt'
+        # ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
-        self.state_dim = 8
-        # self.state_dim = 4
+        # self.state_dim = 8
+        self.state_dim = 4
 
         self.camera_names = task_config['camera_names']
 

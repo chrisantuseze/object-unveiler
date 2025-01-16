@@ -237,7 +237,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 print(action, t, env.current_state)
 
             env_action3d = policy.action3d(action)
-            obs, grasp_info = env.step_act(env_action3d, save_traj_data=True)
+            obs, grasp_info = env.step_act(env_action3d, eval=False)
 
             traj_data.extend(obs['traj_data'])
 

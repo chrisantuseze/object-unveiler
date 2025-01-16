@@ -7,6 +7,7 @@ import pybullet as p
 import numpy as np
 import random
 
+from utils.constants import TRAIN_DIR
 from utils.orientation import Affine3, Quaternion, rot_z
 import utils.pybullet_utils as p_utils
 import utils.general_utils as general_utils
@@ -184,7 +185,7 @@ class Environment:
 
         return hand_current_pos, finger_current_pos
     
-    def step_act(self, action, save_traj_data=True, eval=True):
+    def step_act(self, action, eval=True):
         # print("Executing action...", self.current_state)
         dt = 0.001
         
@@ -341,10 +342,10 @@ class Environment:
         # if save_traj_data:
         #@Chris we save the images at the beginning of the trajectory
         images = {'color': []}
-        if eval or self.interval % 10 == 0:
+        if eval or self.interval % 20 == 0:
             for cam in self.agent_cams:
                 color, depth, seg = cam.get_data() 
-                images['color'].append(color)
+                images['color'].append(general_utils.resize_image(color))
         else:
             images['color'].append(None)
         
@@ -452,7 +453,6 @@ class Environment:
                                 'stable': grasp_label,
                                 'num_contacts': num_contacts}
 
-    
     def add_single_object(self, obj_path, pos, quat, size):
         """
         Adds an object to the scene
