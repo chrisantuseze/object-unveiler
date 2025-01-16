@@ -140,7 +140,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         print("All time actions shape -", all_time_actions.shape)
 
     ############ FOR GTRUTH EVAL ############
-    idx = 0
+    idx = 1
     traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
     episode_seeds = [1791095845, 1298508491]
     episode_seed = episode_seeds[idx]
@@ -199,6 +199,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         preds = []
         gt = []
+        c_target_mask = general_utils.extract_target_crop(general_utils.resize_mask(transform, target_mask), heightmap)
 
         while not end_of_episode:
             qpos = traj_data[t][0]
@@ -208,7 +209,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             if t % query_frequency == 0:
                 print("Fresh actions")
                 state = policy.state_representation(obs)
-                actions = policy.exploit_act(state, target_mask, obs)
+                actions = policy.exploit_act(state, c_target_mask, obs)
 
                 # if len(images['color']) < 2: # takes care of the case when the timestep image was not saved
                 #     images['color'] = [obs['color'][0], obs['color'][1]]
@@ -230,17 +231,17 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
             preds.append(action)
 
-            gt.append(qpos)
-            # gt.append(obs_action)
+            # gt.append(qpos)
+            gt.append(obs_action)
 
             if t % 1 == 0:
                 print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
-            obs, grasp_info = env.step_act(action, eval=True)
+            # obs, grasp_info = env.step_act(action, eval=True)
 
-            # env_action3d = policy.action3d(action)
-            # obs, grasp_info = env.step_act(env_action3d, eval=True)
+            env_action3d = policy.action3d(action)
+            obs, grasp_info = env.step_act(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -354,7 +355,7 @@ def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSe
     return episode_data
 
 def get_obs(idx):
-    dataset_dir = "save/ppg-dataset2"
+    dataset_dir = "save/ppg-dataset"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):

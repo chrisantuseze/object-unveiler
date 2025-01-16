@@ -59,8 +59,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        # self.policy, self.stats = self.make_act_policy()
-        self.policy, self.stats = None, None
+        self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -87,8 +87,8 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        ckpt_name = f'policy_epoch_0_seed_0.ckpt'
-        # ckpt_name = f'policy_best.ckpt'
+        # ckpt_name = f'policy_epoch_0_seed_0.ckpt'
+        ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
         # self.state_dim = 8
         self.state_dim = 4
@@ -523,9 +523,7 @@ class Policy:
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             elif cam_name == 'target':
-                resized_target_mask = general_utils.resize_mask(transform, target_mask)
-                c_target_mask = general_utils.extract_target_crop(resized_target_mask, heightmap)
-                image_dict["target"] = c_target_mask.astype(np.float32)
+                image_dict["target"] = target_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
