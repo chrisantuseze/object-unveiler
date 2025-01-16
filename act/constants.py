@@ -32,7 +32,7 @@ SIM_TASK_CONFIGS = {
     },
 
     'sim_object_unveiler': {
-        'dataset_dir': DATA_DIR + '/ppg-dataset22',
+        'dataset_dir': DATA_DIR + '/ppg-dataset23',
         'num_episodes': 50,
         'episode_len': 1170, #from env
         'camera_names': ['top', 'front', 'heightmap', 'target']
