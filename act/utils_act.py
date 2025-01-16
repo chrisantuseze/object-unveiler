@@ -117,9 +117,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Extract heightmap and mask
             heightmap = data['state']
             actions = data['actions']
-
-            target_mask = data['target_mask']
-            c_target_mask = general_utils.extract_target_crop(target_mask, heightmap) #@TODO: remove ones new data is collected
+            c_target_mask = data['c_target_mask']
 
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
@@ -242,7 +240,6 @@ def get_norm_stats(dataset_dir, num_episodes):
 def get_stats(dataset_dir, transition_dirs):
     all_action_data, all_qpos_data = [], []
     for demo in transition_dirs:
-        print(demo)
         episode_data = pickle.load(open(os.path.join(dataset_dir, demo), 'rb'))[-1]
         traj_data = episode_data['traj_data']
         actions = episode_data['actions']
