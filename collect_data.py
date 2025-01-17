@@ -210,7 +210,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("\nobjects_to_remove:", objects_to_remove)
 
         node_id = objects_to_remove[0]
-        cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
+        cv2.imwrite(os.path.join(TRAIN_DIR, "obstacle_mask.png"), processed_masks[node_id])
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
         
@@ -271,6 +271,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 new_masks.append(general_utils.resize_mask(transform, mask))
                 
             resized_target_mask = general_utils.resize_mask(transform, processed_masks[target_id])
+            resized_obstacle_mask = general_utils.resize_mask(transform, obj_mask)
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
@@ -278,7 +279,8 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 'depth_heightmap': depth_heightmap,
                 'target_mask': resized_target_mask, 
                 'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
-                'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
+                'obstacle_mask': resized_obstacle_mask,
+                'c_obstacle_mask': general_utils.extract_target_crop(resized_obstacle_mask, state), 
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'object_masks': new_masks,
                 'action': action, 

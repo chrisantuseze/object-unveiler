@@ -513,7 +513,7 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
-    def get_act_image(self, color_images, heightmap, target_mask, masks):
+    def get_act_image(self, color_images, heightmap, object_mask, masks):
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
@@ -523,7 +523,7 @@ class Policy:
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             elif cam_name == 'target':
-                image_dict["target"] = target_mask.astype(np.float32)
+                image_dict["target"] = object_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
@@ -537,7 +537,7 @@ class Policy:
 
         return image_data
 
-    def exploit_act(self, state, target_mask, obs):
+    def exploit_act(self, state, object_mask, obs):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
@@ -549,18 +549,18 @@ class Policy:
         qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
-        image_data = self.get_act_image(color_images, state, target_mask, masks=[])
+        image_data = self.get_act_image(color_images, state, object_mask, masks=[])
 
         actions = self.policy(qpos, image_data).detach()
         return actions
     
-    def exploit_act2(self, state, target_mask, images, qpos):
+    def exploit_act2(self, state, object_mask, images, qpos):
         _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
 
         qpos_numpy = np.array(qpos)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
-        image_data = self.get_act_image(images, state, target_mask, masks=[])
+        image_data = self.get_act_image(images, state, object_mask, masks=[])
         
         actions = self.policy(qpos, image_data).detach()
         return actions

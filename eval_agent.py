@@ -12,6 +12,7 @@ from scipy import ndimage
 
 from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
+from policy import grasping2
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -143,10 +144,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     idx = 1
     traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
     episode_seeds = [1791095845, 1298508491]
-    episode_seed = episode_seeds[idx]
+    # episode_seed = episode_seeds[idx]
 
-    rng = np.random.RandomState()
-    rng.seed(episode_seed)
+    # rng = np.random.RandomState()
+    # rng.seed(episode_seed)
 
     ids = [5, 5]
     id = ids[idx]
@@ -178,7 +179,9 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     ########################################
 
-    target_mask, target_id = processed_masks[id], id
+    ############ FOR GTRUTH EVAL ############
+    # target_mask, target_id = processed_masks[id], id
+    ########################################
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -191,15 +194,22 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        print("\nobjects_to_remove:", objects_to_remove)
+
+        obstacle_id = objects_to_remove[0]
+        object_mask = processed_masks[obstacle_id]
+
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
+        cv2.imwrite(os.path.join(TEST_DIR, "obstacle.png"), object_mask)
     
         end_of_episode = False
         t = 0
 
         preds = []
         gt = []
-        c_target_mask = general_utils.extract_target_crop(general_utils.resize_mask(transform, target_mask), heightmap)
+        c_object_mask = general_utils.extract_target_crop(general_utils.resize_mask(transform, object_mask), heightmap)
 
         while not end_of_episode:
             qpos = traj_data[t][0]
@@ -209,11 +219,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             if t % query_frequency == 0:
                 print("Fresh actions")
                 state = policy.state_representation(obs)
-                actions = policy.exploit_act(state, c_target_mask, obs)
+                actions = policy.exploit_act(state, c_object_mask, obs)
 
                 # if len(images['color']) < 2: # takes care of the case when the timestep image was not saved
                 #     images['color'] = [obs['color'][0], obs['color'][1]]
-                # actions = policy.exploit_act2(heightmap, c_target_mask, images['color'], qpos)
+                # actions = policy.exploit_act2(heightmap, c_object_mask, images['color'], qpos)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -235,7 +245,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             gt.append(obs_action)
 
             if t % 1 == 0:
-                print("Obs action -", [float(f'{q:.2f}') for q in qpos], ",", t, ",", env.current_state)
+                print("Obs action -", [float(f'{q:.2f}') for q in obs_action], ",", t, ",", env.current_state)
                 print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
 
             # obs, grasp_info = env.step_act(action, eval=True)

@@ -117,7 +117,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Extract heightmap and mask
             heightmap = data['state']
             actions = data['actions']
-            c_target_mask = data['c_target_mask']
+            object_mask = data['c_obstacle_mask']
 
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
@@ -134,7 +134,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             if not images:
                 raise ValueError("No valid images found in the episode.")
 
-            return images, joint_pos, heightmap, c_target_mask, actions_
+            return images, joint_pos, heightmap, object_mask, actions_
 
         except Exception as e:
             print(f"{e} - Failed episode: {episode}")
@@ -144,7 +144,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, heightmap, c_target_mask, actions = episode_data
+        images, qpos, heightmap, object_mask, actions = episode_data
         qpos = np.array(qpos)
         actions = np.array(actions)
 
@@ -176,7 +176,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'heightmap':
                 image_dict[cam_name] = np.array(heightmap).astype(np.float32)
             elif cam_name == 'target':
-                image_dict["target"] = c_target_mask.astype(np.float32)
+                image_dict["target"] = object_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
