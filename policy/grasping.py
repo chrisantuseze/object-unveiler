@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import math
 from typing import List
@@ -275,14 +276,15 @@ def find_topmost_right_object(segmentation_masks, top_weight=2, right_weight=1):
     return best_object
 
 def measure_singulation(target_id, masks: List, dilation_radius=5):
-    target_mask = masks[target_id]
+    seg_masks = deepcopy(masks)
+    target_mask = seg_masks[target_id]
     # Dilate the target mask
     dilated_target = dilation(target_mask, disk(dilation_radius))
 
-    masks.pop(target_id)
+    seg_masks.pop(target_id)
     
     # Create a combined mask of all other objects
-    other_objects = np.any(masks, axis=0)
+    other_objects = np.any(seg_masks, axis=0)
     
     # Calculate the overlap between dilated target and other objects
     overlap = np.logical_and(dilated_target, other_objects)
