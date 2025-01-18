@@ -22,8 +22,25 @@ import utils.logger as logging
 from skimage import transform
 from env.env_components import ActionState
 
-# multi output using attn
-def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, grp_count=0):
+    """
+    Runs a single episode of the multi-step grasping task using the object-unveiler policy in a cluttered environment.
+    Args:
+        args: Additional arguments for the episode.
+        policy (Policy): The policy object that defines the agent's behavior.
+        env (Environment): The environment in which the agent operates.
+        segmenter (ObjectSegmenter): The object segmenter used to process observations.
+        rng: Random number generator for reproducibility.
+        episode_seed: Seed for the episode to ensure reproducibility.
+        success_count (int): Counter for successful grasps.
+        max_steps (int, optional): Maximum number of steps in the episode. Defaults to 15.
+        grp_count (int, optional): Counter for the number of grasp attempts. Defaults to 0.
+    Returns:
+        tuple: A tuple containing:
+            - episode_data (dict): Data collected during the episode, including success rates, failures, attempts, collisions, objects removed, clutter score, and singulation score.
+            - success_count (int): Updated counter for successful grasps.
+            - grp_count (int): Updated counter for the number of grasp attempts.
+    """
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -124,8 +141,25 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     logging.info('--------')
     return episode_data, success_count, grp_count
 
-# multi output using attn
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+    """
+    Runs a single episode of obstacle and target grasping using ACT with heuristics.
+    Args:
+        args: Additional arguments for the episode.
+        policy (Policy): The policy object that defines the agent's behavior.
+        env (Environment): The environment in which the agent operates.
+        segmenter (ObjectSegmenter): The object segmenter used to process observations.
+        rng: Random number generator for reproducibility.
+        episode_seed: Seed for the episode to ensure reproducibility.
+        success_count (int): Counter for successful grasps.
+        max_steps (int, optional): Maximum number of steps in the episode. Defaults to 15.
+        grp_count (int, optional): Counter for the number of grasp attempts. Defaults to 0.
+    Returns:
+        tuple: A tuple containing:
+            - episode_data (dict): Data collected during the episode, including success rates, failures, attempts, collisions, objects removed, clutter score, and singulation score.
+            - success_count (int): Updated counter for successful grasps.
+            - grp_count (int): Updated counter for the number of grasp attempts.
+    """
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
     # state_dim = 8
@@ -315,8 +349,86 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     logging.info('--------')
     return episode_data, success_count, grp_count
 
-# original
-def run_episode_old2(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
+def run_episode_original(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count=0, max_steps=15, train=True):
+    """
+    Runs a single episode of the environment to clear the scene using the given policy.
+    Args:
+        args: Additional arguments for the episode.
+        policy (Policy): The policy to be used for decision making.
+        env (Environment): The environment in which the episode is run.
+        segmenter (ObjectSegmenter): The object segmenter used in the environment.
+        rng: Random number generator for seeding.
+        episode_seed: Seed for the episode to ensure reproducibility.
+        success_count (int, optional): Initial count of successful grasps. Defaults to 0.
+        max_steps (int, optional): Maximum number of steps in the episode. Defaults to 15.
+        train (bool, optional): Flag indicating whether the episode is for training. Defaults to True.
+    Returns:
+        dict: A dictionary containing episode data with the following keys:
+            - 'sr-1': Success rate for the first attempt.
+            - 'sr-n': Success rate for all attempts.
+            - 'fails': Number of failed grasps.
+            - 'attempts': Total number of grasp attempts.
+            - 'collisions': Number of collisions during the episode.
+            - 'objects_removed': Number of objects successfully removed.
+            - 'objects_in_scene': Initial number of objects in the scene.
+    """
+    # Initialize the environment and reset it to get the initial observation
+    env.seed(episode_seed)
+    obs = env.reset()
+
+    # Ensure the initial state is valid according to the policy
+    while not policy.is_state_init_valid(obs):
+        obs = env.reset()
+
+    # Initialize episode data to track various metrics
+    episode_data = {
+        'sr-1': 0,
+        'sr-n': 0,
+        'fails': 0,
+        'attempts': 0,
+        'collisions': 0,
+        'objects_removed': 0,
+        'objects_in_scene': len(obs['full_state']),
+    }
+
+    # Initialize variables for the episode loop
+    i = 0
+    while episode_data['attempts'] < max_steps:
+        # Get the state representation and decide on an action using the policy
+        state = policy.state_representation(obs)
+        action = policy.exploit_old(state)
+        env_action3d = policy.action3d(action)
+
+        # Take a step in the environment using the chosen action
+        next_obs, grasp_info = env.step(env_action3d)
+        episode_data['attempts'] += 1
+
+        # Update episode data based on the grasp information
+        if grasp_info['collision']:
+            episode_data['collisions'] += 1
+
+        if grasp_info['stable'] and i == 0:
+            episode_data['sr-1'] += 1
+
+        if grasp_info['stable']:
+            episode_data['sr-n'] += 1
+            episode_data['objects_removed'] += 1
+        else:
+            episode_data['fails'] += 1
+
+        # Check if the episode should terminate
+        if policy.is_terminal(next_obs):
+            break
+
+        # Update the observation for the next step
+        obs = copy.deepcopy(next_obs)
+        i += 1
+
+    logging.info('--------')
+    return episode_data
+    '''
+    original
+    '''
     env.seed(episode_seed)
     obs = env.reset()
 

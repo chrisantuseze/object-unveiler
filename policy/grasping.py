@@ -306,7 +306,8 @@ def measure_clutter_segmentation(segmentation_masks, k=3):
     positions = np.array(positions)
     
     # k-NN regression to estimate x_hat_i and y_hat_i
-    nbrs = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(positions)
+    # nbrs = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(positions)
+    nbrs = NearestNeighbors(n_neighbors=n-1, algorithm='auto').fit(positions)
     distances, indices = nbrs.kneighbors(positions)
     
     # Remove the self-distance (distance to itself which is 0)

@@ -17,8 +17,34 @@ import policy.grasping as grasping
 import utils.logger as logging
 from skimage import transform
 
-# single output with heuristics for evaluating obstacle then target grasping 
 def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+    """
+    Run a single episode of obstacle and target grasping with heuristics.
+    This function evaluates the performance of a policy in an environment where the goal is to grasp a target object
+    while potentially removing obstacles in the way. The episode continues until the target is grasped or a terminal
+    state is reached.
+    Parameters:
+    policy (Policy): The policy to be evaluated.
+    env (Environment): The environment in which the policy operates.
+    segmenter (ObjectSegmenter): The object segmenter used to process observations.
+    rng: Random number generator for reproducibility.
+    episode_seed: Seed for the episode to ensure reproducibility.
+    success_count (int): Counter for the number of successful grasps.
+    max_steps (int, optional): Maximum number of steps in the episode. Default is 15.
+    train (bool, optional): Flag indicating whether the episode is for training or evaluation. Default is True.
+    Returns:
+    tuple: A tuple containing:
+        - episode_data (dict): A dictionary with episode statistics including:
+            - 'sr-1': Success rate for the first attempt.
+            - 'sr-n': Success rate for multiple attempts.
+            - 'fails': Number of failed grasps.
+            - 'attempts': Number of grasp attempts.
+            - 'collisions': Number of collisions.
+            - 'objects_removed': Number of objects removed.
+            - 'objects_in_scene': Number of objects in the initial scene.
+        - success_count (int): Updated counter for the number of successful grasps.
+    """
+    
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -46,7 +72,6 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     n_prev_masks = 0
     count = 0
     prev_node = -1
-    grasp_status = []
 
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
@@ -54,6 +79,8 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
         node_id, prev_node = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
 
         obstacle_mask = processed_masks[node_id]
+        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
+        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
         state = policy.state_representation(obs)
@@ -76,8 +103,6 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
 
         else:
             episode_data['fails'] += 1
-
-        grasp_status.append(grasp_info['stable'])
 
         print(action)
         print(grasp_info)
@@ -113,15 +138,35 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
 
             break
 
-        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
-        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
     return episode_data, success_count
 
-# single output for evaluating direct target grasping 
 def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True):
+    """
+    Runs a single episode for evaluating direct target grasping with heuristics.
+    Parameters:
+    policy (Policy): The policy to be used for decision making.
+    env (Environment): The environment in which the agent operates.
+    segmenter (ObjectSegmenter): The object segmenter used for processing observations.
+    rng: Random number generator for reproducibility.
+    episode_seed: Seed for the episode to ensure reproducibility.
+    success_count (int): Counter for successful grasps.
+    max_steps (int, optional): Maximum number of steps in the episode. Default is 15.
+    train (bool, optional): Flag indicating whether the agent is in training mode. Default is True.
+    Returns:
+    tuple: A tuple containing episode data and updated success count.
+    Episode Data Dictionary:
+    - 'sr-1': Success rate for the first attempt.
+    - 'sr-n': Success rate for multiple attempts.
+    - 'fails': Number of failed grasp attempts.
+    - 'attempts': Total number of grasp attempts.
+    - 'collisions': Number of collisions encountered.
+    - 'objects_removed': Number of objects successfully removed.
+    - 'objects_in_scene': Number of objects present in the initial scene.
+    """
+
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -156,9 +201,8 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
         action = policy.exploit_old(state, target_mask)
 
         env_action3d = policy.action3d(action)
-        logging.info("env_action3d:", env_action3d)
-
         next_obs, grasp_info = env.step(env_action3d)
+
         episode_data['attempts'] += 1
 
         if grasp_info['collision']:
@@ -173,6 +217,10 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
 
         else:
             episode_data['fails'] += 1
+
+        print(action)
+        print(grasp_info)
+        print('---------')
 
         general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
