@@ -16,29 +16,6 @@ import matplotlib.pyplot as plt
 import utils.object_comparison as compare
 import utils.logger as logging
 
-def get_object_centroid_old(segmentation_mask):
-    # Find the contours in the segmentation mask
-    contours, _ = cv2.findContours(segmentation_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Initialize variables to store the center of mass and maximum contour area
-    max_contour_area = 0
-    center_of_mass = None
-
-    # Iterate through all the contours to find the largest one and its center of mass
-    for contour in contours:
-        # Calculate the area of the current contour
-        contour_area = cv2.contourArea(contour)
-
-        # Update the maximum contour area and center of mass if a larger contour is found
-        if contour_area > max_contour_area:
-            max_contour_area = contour_area
-            moments = cv2.moments(contour)
-            if moments["m00"] != 0:
-                center_of_mass = (int(moments["m10"] / moments["m00"]), int(moments["m01"] / moments["m00"]))
-
-    center_of_mass = list(center_of_mass)
-    return center_of_mass
-
 def get_object_centroid(mask):
     # Calculate the centroid (center of mass)
     M = cv2.moments(mask)
@@ -50,36 +27,6 @@ def get_object_centroid(mask):
         cx, cy = 0, 0
 
     return [cx, cy]
-
-def calculate_iou(mask1, mask2):
-    """Calculates the intersection over union (IoU) between two object masks."""
-    intersection = torch.sum(mask1 * mask2)
-    union = torch.sum(mask1) + torch.sum(mask2) - intersection
-    return intersection / union
-
-def add_edge(relationships, i, j):
-    for edge in relationships:
-        if edge[0] == j and edge[1] == i:
-            return relationships
-
-    relationships.append((i, j))
-    return relationships
-
-def extract_relationships(object_masks, threshold_iou=0.0001):
-    relationships = []
-
-    for i, mask_i in enumerate(object_masks):
-        for j, mask_j in enumerate(object_masks):
-            if i != j:  # Avoid self-comparison
-                mask_i = torch.Tensor.float(mask_i)
-                mask_j = torch.Tensor.float(mask_j)
-
-                iou = calculate_iou(mask_i, mask_j)
-
-                if iou >= threshold_iou:
-                    add_edge(relationships, i, j)
-
-    return relationships
 
 def check_occlusion(target_bbox, other_bboxes, overlap_threshold=0.5):
     # Check if the target object is occluded by other objects

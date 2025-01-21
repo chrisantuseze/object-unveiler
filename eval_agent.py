@@ -128,12 +128,8 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             break
 
         ############# Calculating scores ##########
-        clutter_score = grasping.measure_clutter_segmentation(processed_masks)
-        print("clutter_score:", clutter_score)
+        clutter_score, singulation_score = compute_clutter_score_and_singulation(processed_masks, target_id)
         episode_data['clutter_score'] += clutter_score
-
-        singulation_score = grasping.measure_singulation(target_id, processed_masks)
-        print("singulation_score:", singulation_score)
         episode_data['singulation_score'] += singulation_score
 
         n_prev_masks = len(processed_masks)
@@ -223,7 +219,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     n_prev_masks = 0
     count = 0
 
-    max_steps = 3
+    max_steps = 5
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -233,18 +229,15 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         obstacle_id = objects_to_remove[0]
         object_mask = processed_masks[obstacle_id]
-
+        cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), object_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
-        cv2.imwrite(os.path.join(TEST_DIR, "obstacle.png"), object_mask)
-    
-        end_of_episode = False
-        t = 0
 
-        preds = []
-        gt = []
         c_object_mask = general_utils.extract_target_crop(general_utils.resize_mask(transform, object_mask), heightmap)
 
+        end_of_episode = False
+        t = 0
+        preds = gt = []
         while not end_of_episode:
             qpos = traj_data[t][0]
             images = traj_data[t][-1]
@@ -335,13 +328,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             print('------------------------------------------')
             break
 
+        #@TODO: To be revisited. Need to save only for successful episodes
         ############# Calculating scores ##########
-        clutter_score = grasping.measure_clutter_segmentation(processed_masks)
-        print("clutter_score:", clutter_score)
+        clutter_score, singulation_score = compute_clutter_score_and_singulation(processed_masks, target_id)
         episode_data['clutter_score'] += clutter_score
-
-        singulation_score = grasping.measure_singulation(target_id, processed_masks)
-        print("singulation_score:", singulation_score)
         episode_data['singulation_score'] += singulation_score
 
         n_prev_masks = len(processed_masks)
@@ -426,55 +416,6 @@ def run_episode_original(args, policy: Policy, env: Environment, segmenter: Obje
 
     logging.info('--------')
     return episode_data
-    '''
-    original
-    '''
-    env.seed(episode_seed)
-    obs = env.reset()
-
-    while not policy.is_state_init_valid(obs):
-        obs = env.reset()
-
-    episode_data = {'sr-1': 0,
-                    'sr-n': 0,
-                    'fails': 0,
-                    'attempts': 0,
-                    'collisions': 0,
-                    'objects_removed': 0,
-                    'objects_in_scene': len(obs['full_state'])}
-    
-    
-    i = 0
-    while episode_data['attempts'] < max_steps:
-        state = policy.state_representation(obs)
-        action = policy.exploit_old(state)
-        env_action3d = policy.action3d(action)
-
-        next_obs, grasp_info = env.step(env_action3d)
-        episode_data['attempts'] += 1
-
-        if grasp_info['collision']:
-            episode_data['collisions'] += 1
-
-        if grasp_info['stable'] and i ==0:
-            episode_data['sr-1'] += 1
-
-        if grasp_info['stable']:
-            episode_data['sr-n'] += 1
-            episode_data['objects_removed'] += 1
-
-        else:
-            episode_data['fails'] += 1
-
-        if policy.is_terminal(next_obs):
-            break
-
-        obs = copy.deepcopy(next_obs)
-
-        i += 1
-
-    logging.info('--------')
-    return episode_data
 
 def get_obs(idx):
     dataset_dir = "save/ppg-dataset"
@@ -530,6 +471,11 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     plt.close(fig)  # Close the figure to free up memory
     
     print(f"Plot saved to {filename}")
+
+def compute_clutter_score_and_singulation(processed_masks, target_id):
+    clutter_score = grasping.measure_clutter_segmentation(processed_masks)
+    singulation_score = grasping.measure_singulation(target_id, processed_masks)
+    return clutter_score, singulation_score
 
 def eval_agent(args):
     print("Running eval...")

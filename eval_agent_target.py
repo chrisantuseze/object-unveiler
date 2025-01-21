@@ -9,6 +9,7 @@ from scipy import ndimage
 
 from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
+from policy import grasping2
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -76,8 +77,10 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
-        node_id, prev_node = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id=prev_node)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        print("\nobjects_to_remove:", objects_to_remove)
 
+        node_id = objects_to_remove[0]
         obstacle_mask = processed_masks[node_id]
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)

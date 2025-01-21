@@ -76,13 +76,10 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
-        # node_id, prev_node_id = grasping.get_obstacle_id(raw_masks, target_id, prev_node_id)
-
         node_id = objects_to_remove[0]
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
-        
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
@@ -101,7 +98,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         obs, grasp_info = env.step(env_action3d)
 
         print("len(obs['traj_data'])", len(obs['traj_data']))
-
         grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:
@@ -113,9 +109,12 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        # save = int(input("Do you want to save this episode? (0/1): "))
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
+        # save = int(input("Do you want to save this episode? (0/1): "))
         save = 0
+
         if grasp_info['stable'] or save == 1:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
             
@@ -146,8 +145,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 print('------------------------------------------')
                 break
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
         if target_id == -1:
             print("Target is no longer available in the scene.")
             break
@@ -209,20 +206,19 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
-        node_id = objects_to_remove[0]
-        cv2.imwrite(os.path.join(TRAIN_DIR, "obstacle_mask.png"), processed_masks[node_id])
+        obstacle_id = objects_to_remove[0]
+        object_mask = processed_masks[obstacle_id]
+        cv2.imwrite(os.path.join(TRAIN_DIR, "obstacle_mask.png"), object_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
-        
         print("target id:", target_id)
+
+        state, depth_heightmap = policy.get_state_representation(obs)
+        actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
+        print("ActionState.NUM_STEPS", ActionState.NUM_STEPS, len(actions))
 
         end_of_episode = False
         t = 0
-
-        state, depth_heightmap = policy.get_state_representation(obs)
-        actions = policy.generate_trajectory(state, processed_masks[node_id], num_steps=ActionState.NUM_STEPS + 1)
-        print("ActionState.NUM_STEPS", ActionState.NUM_STEPS, len(actions))
-
         traj_data = []
         while not end_of_episode:
             try:
@@ -245,7 +241,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             end_of_episode = grasp_info['eoe']
         
         print("len(traj_data)", len(traj_data))
-        grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:
         #     print("A failure has been recorded. Episode cancelled.")
@@ -260,18 +255,33 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        save = int(input("Do you want to save this episode? (0/1): "))
+        old_objects_count = len(processed_masks)
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
+        obstacle_id, object_mask = grasping.find_target(processed_masks, object_mask)
+        new_objects_count = len(processed_masks)
 
+        # save = int(input("Do you want to save this episode? (0/1): "))
         # save = 0
-        if grasp_info['stable'] or save == 1:
-            new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
+
+        if len(traj_data) >= ActionState.NUM_STEPS and (obstacle_id != -1 or old_objects_count == new_objects_count):
+            print("Scene rearranged. Episode cancelled.")
+            break
+        
+        # if grasp_info['stable'] or save == 1:
+        if old_objects_count != new_objects_count and obstacle_id == -1:
+            new_id, object_mask = grasping.get_grasped_object(processed_masks, action)
+            print("new_id", new_id)
+
+            if new_id == -1:
+                print("Grasped object not found.")
+                break
             
             new_masks = []
             for mask in processed_masks:
                 new_masks.append(general_utils.resize_mask(transform, mask))
                 
-            resized_target_mask = general_utils.resize_mask(transform, processed_masks[target_id])
-            resized_obstacle_mask = general_utils.resize_mask(transform, obj_mask)
+            resized_target_mask = general_utils.resize_mask(transform, target_mask) # Doesn't matter if the target mask has changed a bit after resegmentation. We don't need it anyway
+            resized_obstacle_mask = general_utils.resize_mask(transform, object_mask)
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
@@ -290,37 +300,22 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             }
             episode_data_list.append(transition)
 
-            if grasping.is_target(processed_masks[target_id], mask):
-                is_target_grasped = True
-                print(">>>>>>>>>>> Target retrieved! >>>>>>>>>>>>>")
-                print('------------------------------------------')
-                break
+            print(">>>>>>>>>>> Object grasped! >>>>>>>>>>>>>")
+            print('------------------------------------------')
+            break
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
-        if target_id == -1:
-            print("Target is no longer available in the scene.")
+        if obstacle_id == -1:
+            print("Object is no longer available in the scene.")
             break
 
         steps += 1
 
-    if grasping.episode_status(grasp_status, is_target_grasped):
+    if len(episode_data_list) == 1:
         memory.store_episode(episode_data_list)
-        print("Episode was successful. So data saved to memory!")
-
-        with open('episode_info.txt', 'a') as file:
-            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
-
-    # We do not need to waste the successful grasp
-    elif len(episode_data_list) == 1:
-        transition = episode_data_list[0]
-        transition['target_mask'] = transition['obstacle_mask']
-
-        memory.store_episode([transition])
         print("Saved the only successful grasp")
         
         with open('episode_info.txt', 'a') as file:
-            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
     else:
         print("Episode was not successful.")
 
