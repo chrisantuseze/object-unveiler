@@ -273,7 +273,8 @@ def accuracy(loss, corrects, loader):
 
 def resize_mask(transform, mask, new_size = (100, 100)):
     # Resize the image using seam carving to match with the heightmap
-    resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
+    # resized = transform.resize(mask, new_size, mode='reflect', anti_aliasing=True, order=1)
+    resized = cv2.resize(mask, new_size, interpolation=cv2.INTER_AREA)
     return resized
 
 def resize_bbox(bbox):

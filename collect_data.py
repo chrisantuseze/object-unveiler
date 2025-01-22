@@ -280,8 +280,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             resized_target_mask = general_utils.resize_mask(transform, target_mask) # Doesn't matter if the target mask has changed a bit after resegmentation. We don't need it anyway
             resized_obstacle_mask = general_utils.resize_mask(transform, object_mask)
 
-            cv2.imwrite(os.path.join(TRAIN_DIR, "resized_obstacle_maskv.png"), resized_obstacle_mask)
-
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
@@ -291,6 +289,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
                 'obstacle_mask': resized_obstacle_mask,
                 'c_obstacle_mask': general_utils.extract_target_crop(resized_obstacle_mask, state), 
+                'cc_obstacle_mask': general_utils.extract_target_crop2(object_mask, obs['color'][1]),
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'object_masks': new_masks,
                 'action': action, 
