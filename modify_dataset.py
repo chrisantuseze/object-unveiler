@@ -182,7 +182,7 @@ def show_images(obj_masks, target_mask, obstacle_mask, scene_mask):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = 'save/ppg-dataset3'
+    new_dir = 'save/ppg-dataset-act1022'
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode3(segmenter, episode_dir, i)
+        modify_episode2(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
