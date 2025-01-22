@@ -112,10 +112,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
-        # save = int(input("Do you want to save this episode? (0/1): "))
-        save = 0
-
-        if grasp_info['stable'] or save == 1:
+        if grasp_info['stable']:
             new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
             
             new_masks = []

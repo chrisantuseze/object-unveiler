@@ -18,8 +18,7 @@ import env.cameras as cameras
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
-# dataset_dir = 'save/pc-ou-dataset'
-dataset_dir = 'save/ppg-dataset22'
+dataset_dir = 'save/pc-ou-dataset'
 
 def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
     try:
@@ -77,104 +76,6 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
-
-def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
-    try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
-    except Exception as e:
-        logging.info(e, "- Failed episode:", episode_dir)
-
-    episode_data_list = []
-    for data in episode_data:
-        heightmap = data['state']
-        object_masks = data['object_masks']
-
-        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
-
-        new_masks = []
-        masks = []
-        new_bboxes = []
-        for id, mask in enumerate(object_masks):
-            mask = general_utils.resize_mask(transform, mask)
-            masks.append(mask)
-            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
-
-            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
-
-        # get optimal nodes
-        target_id = grasping.get_target_id(data['target_mask'], masks)
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
-        # print(target_id, objects_to_remove[0])
-
-        # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
-
-        print("traj len:", len(data['traj_data']))
-        traj_data = data['traj_data']
-        if len(traj_data) == 0:
-            print("len(traj_data):", len(traj_data))
-            return
-
-        transition = {
-            'state': data['state'], 
-            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
-            'c_object_masks': new_masks,
-            'action': data['action'],
-            'optimal_nodes': objects_to_remove,
-            'label': data['label'],
-            'bboxes': new_bboxes,
-            'target_id': target_id,
-            'traj_data': traj_data,
-
-            'actions': data['actions'],
-        }
-        episode_data_list.append(transition)
-
-    memory.store_episode(episode_data_list)
-    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
-
-def modify_episode3(segmenter: ObjectSegmenter, episode_dir, index):
-    try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
-    except Exception as e:
-        logging.info(e, "- Failed episode:", episode_dir)
-
-    episode_data_list = []
-    for data in episode_data:
-        heightmap = data['state']
-        object_masks = data['object_masks']
-
-        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
-
-        new_masks = []
-        masks = []
-        new_bboxes = []
-        for id, mask in enumerate(object_masks):
-            mask = general_utils.resize_mask(transform, mask)
-            masks.append(mask)
-            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
-
-            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
-
-        transition = {
-            'color_obs': data['color_obs'], 
-            'depth_obs': data['depth_obs'], 
-            'state': data['state'], 
-            'depth_heightmap': data['depth_heightmap'],
-            'target_mask': data['target_mask'], 
-            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], data['state']), 
-            'obstacle_mask': data['obstacle_mask'],
-            'scene_mask': data['scene_mask'],
-            'object_masks': new_masks,
-            'action': data['action'], 
-            'label': data['label'],
-            'traj_data': data['traj_data'],
-            'actions': data['actions'], 
-        }
-        episode_data_list.append(transition)
-
-    memory.store_episode(episode_data_list)
-    logging.info(f"{index} - Episode with dir {episode_dir} updated...")
-
 
 def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
     heightmap = cv2.imread(os.path.join(dataset_dir, transition_dir, 'heightmap.exr'), -1)
