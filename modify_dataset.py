@@ -101,7 +101,7 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
 
             new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
-        cc_obstacle_mask = general_utils.extract_target_crop(data['obstacle_mask'], data['color_obs'])
+        cc_obstacle_mask = general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs'])
 
         print("traj len:", len(data['traj_data']))
         traj_data = data['traj_data']

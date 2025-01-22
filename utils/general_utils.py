@@ -444,30 +444,45 @@ def get_index(index, min):
     return index if index > 98 else index + 2
 
 def extract_target_crop(resized_target, heightmap):
-        non_zero_indices = np.nonzero(resized_target)
-        xmin = get_index(np.min(non_zero_indices[1]), min=True)
-        xmax = get_index(np.max(non_zero_indices[1]), min=False)
-        ymin = get_index(np.min(non_zero_indices[0]), min=True)
-        ymax = get_index(np.max(non_zero_indices[0]), min=False)
+    non_zero_indices = np.nonzero(resized_target)
+    xmin = get_index(np.min(non_zero_indices[1]), min=True)
+    xmax = get_index(np.max(non_zero_indices[1]), min=False)
+    ymin = get_index(np.min(non_zero_indices[0]), min=True)
+    ymax = get_index(np.max(non_zero_indices[0]), min=False)
 
-        full_crop = np.zeros((100, 100))
-        full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
+    full_crop = np.zeros((100, 100))
+    full_crop[ymin:ymax, xmin:xmax] = heightmap[ymin:ymax, xmin:xmax]
 
-        if np.all(full_crop == 0):
-            full_crop = np.array(heightmap)
+    if np.all(full_crop == 0):
+        full_crop = np.array(heightmap)
 
-        # fig, ax = plt.subplots(1, 3)
-        # ax[0].imshow(heightmap)
-        # ax[1].imshow(resized_target)
-        # ax[2].imshow(full_crop)
+    # fig, ax = plt.subplots(1, 3)
+    # ax[0].imshow(heightmap)
+    # ax[1].imshow(resized_target)
+    # ax[2].imshow(full_crop)
 
-        # # bg1, bg2 = overlay_images(heightmap, resized_target)
-        # # ax[3].imshow(bg1)
-        # # ax[4].imshow(bg2)
-        # plt.show()   
-        # # plt.close('all')
+    # # bg1, bg2 = overlay_images(heightmap, resized_target)
+    # # ax[3].imshow(bg1)
+    # # ax[4].imshow(bg2)
+    # plt.show()   
+    # # plt.close('all')
 
-        return full_crop
+    return full_crop
+
+def extract_target_crop2(target, scene):
+    non_zero_indices = np.nonzero(target)
+    xmin = get_index(np.min(non_zero_indices[1]), min=True)
+    xmax = get_index(np.max(non_zero_indices[1]), min=False)
+    ymin = get_index(np.min(non_zero_indices[0]), min=True)
+    ymax = get_index(np.max(non_zero_indices[0]), min=False)
+
+    full_crop = np.zeros(scene.shape)
+    full_crop[ymin:ymax, xmin:xmax] = scene[ymin:ymax, xmin:xmax]
+
+    if np.all(full_crop == 0):
+        full_crop = np.array(scene)
+
+    return full_crop
 
 def overlay_images(heightmap, overlay):
     import copy
