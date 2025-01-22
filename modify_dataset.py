@@ -104,8 +104,9 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
         cc_obstacle_mask = general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs'])
 
         cv2.imwrite(os.path.join("save/misc", "cc_obstacle_mask.png"), cc_obstacle_mask)
+        cv2.imwrite(os.path.join("save/misc", "obstacle_mask.png"), data['obstacle_mask'])
+        cv2.imwrite(os.path.join("save/misc", "color_obs.png"), data['color_obs'])
 
-        print("traj len:", len(data['traj_data']))
         traj_data = data['traj_data']
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
