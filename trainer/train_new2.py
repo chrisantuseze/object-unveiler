@@ -16,6 +16,20 @@ import utils.logger as logging
 
 
 def train_fcn_net(args):
+    """
+    Trains a Fully Convolutional Network (FCN) policy model for target grasping using the provided arguments.
+    Args:
+        args: An object containing the following attributes:
+            - dataset_dir (str): Directory containing the dataset.
+            - split_ratio (float): Ratio to split the dataset into training and validation sets.
+            - batch_size (int): Batch size for training and validation.
+            - epochs (int): Number of epochs to train the model.
+            - lr (float): Learning rate for the optimizer.
+            - device (str): Device to run the model on (e.g., 'cpu' or 'cuda').
+    Returns:
+        None
+    """
+
     writer = SummaryWriter()
 
     save_path = 'save/fcn'

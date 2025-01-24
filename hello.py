@@ -9,8 +9,8 @@ import numpy as np
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "save/ppg-dataset/"
-id = 86
+folder_path = "save/ppg-dataset3/"
+id = 33
 
 
 folder_path = dir + folder_path
