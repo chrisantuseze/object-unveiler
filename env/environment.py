@@ -69,8 +69,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        p.connect(p.DIRECT)
-        # p.connect(p.GUI)
+        # p.connect(p.DIRECT)
+        p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
