@@ -513,7 +513,7 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
     
-    def get_act_image(self, color_images, heightmap, object_mask, masks):
+    def get_act_image(self, color_images, heightmap, object_mask):
         image_dict = dict()
         for cam_name in self.camera_names:
             if cam_name == 'front':
@@ -549,7 +549,7 @@ class Policy:
         qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
-        image_data = self.get_act_image(color_images, state, object_mask, masks=[])
+        image_data = self.get_act_image(color_images, state, object_mask)
 
         actions = self.policy(qpos, image_data).detach()
         return actions
@@ -560,7 +560,7 @@ class Policy:
         qpos_numpy = np.array(qpos)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
-        image_data = self.get_act_image(images, state, object_mask, masks=[])
+        image_data = self.get_act_image(images, state, object_mask)
         
         actions = self.policy(qpos, image_data).detach()
         return actions

@@ -171,7 +171,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         print("All time actions shape -", all_time_actions.shape)
 
     ############ FOR GTRUTH EVAL ############
-    idx = 1
+    idx = 0
     traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
     episode_seeds = [1791095845, 1298508491]
     # episode_seed = episode_seeds[idx]
@@ -219,7 +219,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     n_prev_masks = 0
     count = 0
 
-    max_steps = 5
+    max_steps = 3#5
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -233,7 +233,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
-        c_object_mask = general_utils.extract_target_crop(general_utils.resize_mask(transform, object_mask), heightmap)
+        c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1]) #general_utils.extract_target_crop(general_utils.resize_mask(transform, object_mask), heightmap)
 
         end_of_episode = False
         t = 0
