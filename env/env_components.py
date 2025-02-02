@@ -218,7 +218,6 @@ class FloatingBHand:
             commands.append((command, images))
             interval += 1
 
-        print("move t", t, interval)
         return commands, is_in_contact
 
     def set_hand_joint_position(self, joint_position, force):
@@ -308,8 +307,6 @@ class FloatingBHand:
                 
             commands.append((command, images))
             interval += 1
-
-        print("move fingers t", t, interval)
 
         return commands#, [current_pos, hand_pos] #@Chris
 

@@ -148,6 +148,8 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         steps += 1
 
+    # Note: Even though we are collecting the data for the entire episodes (2 or 3 grasps), we only use the first grasp for training
+
     if grasping.episode_status(grasp_status, is_target_grasped):
         memory.store_episode(episode_data_list)
         print("Episode was successful. So data saved to memory!")

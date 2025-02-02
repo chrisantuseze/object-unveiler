@@ -181,14 +181,8 @@ class ObstacleSelector(nn.Module):
 
         return iou.item()
 
-    def preprocess_inputs(self, scene_mask, target_mask, object_masks):
+    def preprocess_inputs(self, target_mask, object_masks):
         B, N, C, H, W = object_masks.shape
-
-        # scene_mask = scene_mask.repeat(1, 3, 1, 1)
-        # scene_feats = self.model(scene_mask)
-        # scene_feats = scene_feats.view(B, 1, -1)
-
-        scene_feats = None
 
         target_mask = target_mask.repeat(1, 3, 1, 1)
         target_feats = self.model(target_mask)
@@ -200,7 +194,7 @@ class ObstacleSelector(nn.Module):
         object_feats = object_feats.view(B, N, -1)
         # print(object_feats.shape)
 
-        return scene_feats, target_feats, object_feats
+        return target_feats, object_feats
 
     def compute_edge_features(self, bboxes, object_masks, target_mask):
         B, N, C, H, W = object_masks.shape
@@ -262,24 +256,50 @@ class ObstacleSelector(nn.Module):
         
         return output
 
-    def spatial_rel(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
+
+    def ablation1(self, attn_scores, sampled_attention_weights, batch_idx):
+        '''
+        Replacing Gumbel-Softmax with regular softmax
+        '''
+        # Apply regular softmax
+        soft_weights = F.softmax(attn_scores[batch_idx, :], dim=0)
+        
+        # Option 1: Still get discrete selection by taking argmax
+        max_idx = torch.argmax(soft_weights)
+        one_hot = torch.zeros_like(soft_weights)
+        one_hot[max_idx] = 1.0
+        sampled_attention_weights[batch_idx, :] = one_hot
+
+        # Option 2: Use soft weights directly (true softmax ablation)
+        # sampled_attention_weights[batch_idx, :] = soft_weights
+
+        return sampled_attention_weights
+    
+    def ablation2(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
+        '''
+        Removing the edge features and using the target as both the query and value
+        '''
         scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
-        B, N, C, H, W = object_masks.shape
+        B, N, D = object_feats.shape
 
-        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
-        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
+        ######### scaled-dot product attention #########
+        target_feats = target_feats.reshape(B, -1)
+        query = self.W_t(target_feats).view(B, N, -1)
+        value = query
 
-        object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
-        # print("object_rel_feats.shape", object_rel_feats.shape)
+        object_feats = object_feats.reshape(B, -1)
+        key = self.W_o(object_feats).view(B, N, -1)
 
-        attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
-        # attn_output = self.cross_attention(target_feats, object_feats)
-        # print("attn_output.shape", attn_output.shape)
+        # Compute attention scores
+        scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(key.size(-1))
+        weights = F.softmax(scores, dim=-1)
 
-        out = torch.cat([attn_output, object_rel_feats], dim=-1)
-        # print("out.shape", out.shape)
+        # Apply attention weights to the value
+        weighted_values = torch.matmul(weights, value)
+        ################################################
+        print("weighted_values.shape", weighted_values.shape)
 
-        attn_scores = self.attn(out.reshape(B, -1))
+        attn_scores = self.attn(weighted_values.reshape(B, -1))
 
         object_masks = object_masks.squeeze(2)
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
@@ -296,7 +316,39 @@ class ObstacleSelector(nn.Module):
 
         # Multiplying the encoder outputs with the hard attention weights
         sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
-        # print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
+        print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
+        context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
+        context = context.unsqueeze(1)
+
+        return context, attn_scores, top_indices
+        
+    def spatial_rel(self, target_mask, object_masks, raw_object_masks, bboxes):
+        target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
+        B, N, C, H, W = object_masks.shape
+
+        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
+
+        object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
+        # print("object_rel_feats.shape", object_rel_feats.shape)
+
+        attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
+        # attn_output = self.cross_attention(target_feats, object_feats)
+        out = torch.cat([attn_output, object_rel_feats], dim=-1)
+        attn_scores = self.attn(out.reshape(B, -1))
+
+        object_masks = object_masks.squeeze(2)
+        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
+        padding_mask_expanded = padding_masks.expand_as(attn_scores)
+        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
+        
+        # Sampling from the attention weights to get hard attention
+        sampled_attention_weights = torch.zeros_like(attn_scores)
+        for batch_idx in range(target_mask.shape[0]):
+            sampled_attention_weights[batch_idx, :] = F.gumbel_softmax(attn_scores[batch_idx, :], hard=True)
+
+        # Multiplying the encoder outputs with the hard attention weights
+        sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
@@ -306,11 +358,11 @@ class ObstacleSelector(nn.Module):
         else:
             raw_context = None
 
-        return context, raw_context, attn_scores, top_indices
+        return context, raw_context
     
-    # def forward(self, scene_mask, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
-    def forward(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
-        selected_object, raw_object, attn_scores, top_indices = self.spatial_rel(scene_mask, target_mask, object_masks, raw_object_masks, bboxes)
+    # def forward(self, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
+    def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
+        selected_object, raw_object = self.spatial_rel(target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
@@ -398,42 +450,11 @@ class ResFCN(nn.Module):
         out = self.final_conv(x)
         return out
     
-    def obstacle_scorer(self, scene_mask, target_mask, object_masks):
-        object_feats = self.preprocess_input(object_masks)
-        target_feats = self.predict(target_mask).unsqueeze(1)
-        scene_feats = self.predict(scene_mask).unsqueeze(1)
-
-        x = torch.cat([target_feats, scene_feats, object_feats], dim=1)
-        # print(x.shape, x.reshape(x.shape[0], -1).shape)
-        # attn_scores = self.projection(x.reshape(x.shape[0], -1))
-
-        
-        object_masks = object_masks.squeeze(2)
-        padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
-        padding_mask_expanded = padding_masks.expand_as(attn_scores)
-        attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float('-inf'))
-        # print("attn_scores", attn_scores)
-
-        # Sampling from the attention weights to get hard attention
-        sampled_attention_weights = torch.zeros_like(attn_scores)
-        for batch_idx in range(target_mask.shape[0]):
-            sampled_attention_weights[batch_idx, :] = F.gumbel_softmax(attn_scores[batch_idx, :], hard=True)
-
-        # Multiplying the encoder outputs with the hard attention weights
-        sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
-        # print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
-        context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
-        context = context.unsqueeze(1)
-
-        # print(context.shape)
-
-        return context
-    
-    def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, bboxes, specific_rotation=-1, is_volatile=[]):
+    def forward(self, depth_heightmap, target_mask, object_masks, bboxes, specific_rotation=-1, is_volatile=[]):
     # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
          
-        # selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
-        selected_objects = self.obstacle_selector(depth_heightmap, target_mask, object_masks, raw_object_masks=None, bboxes=bboxes)
+        # selected_objects = self.obstacle_selector(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
+        selected_objects = self.obstacle_selector(target_mask, object_masks, raw_object_masks=None, bboxes=bboxes)
 
         selected_objects = selected_objects.squeeze(1)
 

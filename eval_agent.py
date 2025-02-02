@@ -54,20 +54,23 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     'collisions': 0,
                     'objects_removed': 0,
                     'objects_in_scene': len(obs['full_state']),
-                    'clutter_score': 0.0,
-                    'singulation_score': 0.0,
+                    'avg_clutter_score': 0.0,
+                    'final_clutter_score': 0.0,
                 }
     
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
+    cv2.imwrite(os.path.join(TEST_DIR, "color0.png"), obs['color'][0])
+    cv2.imwrite(os.path.join(TEST_DIR, "color1.png"), obs['color'][1])
 
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
-    n_prev_masks = 0
-    count = 0
+    n_prev_masks = count = 0
+    avg_clutter_score = 0.0
 
     max_steps = 4
     while episode_data['attempts'] < max_steps:
@@ -108,19 +111,22 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         obs = copy.deepcopy(next_obs)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
-        if len(processed_masks) == n_prev_masks:
+        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+        if len(new_masks) == n_prev_masks:
             count += 1
 
         if count > 1:
             logging.info("Robot is in an infinite loop")
             break
 
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+        target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
             if grasp_info['stable']:
                 logging.info("Target has been grasped!")
                 success_count += 1
+
+                episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+                episode_data['avg_clutter_score'] = avg_clutter_score
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -128,16 +134,15 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             break
 
         ############# Calculating scores ##########
-        clutter_score, singulation_score = compute_clutter_score_and_singulation(processed_masks, target_id)
-        episode_data['clutter_score'] += clutter_score
-        episode_data['singulation_score'] += singulation_score
+        avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
+        processed_masks = copy.deepcopy(new_masks)
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
     return episode_data, success_count, grp_count
 
-def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, train=True, grp_count=0):
+def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, grp_count=0):
     """
     Runs a single episode of obstacle and target grasping using ACT with heuristics.
     Args:
@@ -197,11 +202,12 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                     'collisions': 0,
                     'objects_removed': 0,
                     'objects_in_scene': len(obs['full_state']),
-                    'clutter_score': 0.0,
-                    'singulation_score': 0.0,
+                    'avg_clutter_score': 0.0,
+                    'final_clutter_score': 0.0,
                 }
     
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     ########### FOR REAL EVAL ############
@@ -216,8 +222,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
-    n_prev_masks = 0
-    count = 0
+    n_prev_masks = count = 0
+    avg_clutter_score = 0.0
 
     max_steps = 3#5
     while episode_data['attempts'] < max_steps:
@@ -309,31 +315,33 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         if policy.is_terminal(obs):
             break
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
-        if len(processed_masks) == n_prev_masks:
+        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+        if len(new_masks) == n_prev_masks:
             count += 1
 
         if count > 1:
             logging.info("Robot is in an infinite loop")
             break
 
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+        target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
             if grasp_info['stable']:
                 logging.info("Target has been grasped!")
                 success_count += 1
+
+                episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+                episode_data['avg_clutter_score'] = avg_clutter_score
+
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
             print('------------------------------------------')
             break
 
-        #@TODO: To be revisited. Need to save only for successful episodes
         ############# Calculating scores ##########
-        clutter_score, singulation_score = compute_clutter_score_and_singulation(processed_masks, target_id)
-        episode_data['clutter_score'] += clutter_score
-        episode_data['singulation_score'] += singulation_score
+        avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
+        processed_masks = copy.deepcopy(new_masks)
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
@@ -472,11 +480,6 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     
     print(f"Plot saved to {filename}")
 
-def compute_clutter_score_and_singulation(processed_masks, target_id):
-    clutter_score = grasping.measure_clutter_segmentation(processed_masks)
-    singulation_score = grasping.measure_singulation(target_id, processed_masks)
-    return clutter_score, singulation_score
-
 def eval_agent(args):
     print("Running eval...")
     with open('yaml/bhand.yml', 'r') as stream:
@@ -485,7 +488,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    # policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
+    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
 
     segmenter = ObjectSegmenter()
 
@@ -494,7 +497,7 @@ def eval_agent(args):
 
     eval_data = []
     sr_n, sr_1, attempts, objects_removed = 0, 0, 0, 0
-    clutter_score, singulation_score = 0.0, 0.0
+    avg_clutter_score, final_clutter_score = 0.0, 0.0
 
     success_count = 0
     grasping_action_count = 0
@@ -503,17 +506,17 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_act(
+        episode_data, success_count, grasping_action_count = run_episode_multi(
             args, policy, env, segmenter, rng, episode_seed, 
-            success_count=success_count, train=False, grp_count=grasping_action_count
+            success_count=success_count, grp_count=grasping_action_count
         )
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
         sr_n += episode_data['sr-n']
         attempts += episode_data['attempts']
-        clutter_score += episode_data['clutter_score']
-        singulation_score += episode_data['singulation_score']
+        avg_clutter_score += (episode_data['avg_clutter_score']/attempts)
+        final_clutter_score += episode_data['final_clutter_score']
 
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])
 
@@ -523,10 +526,10 @@ def eval_agent(args):
             # logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
             #                                                                    sr_n / attempts,
             #                                                                    objects_removed / len(eval_data)))
-            logging.info('Episode: {}, Clutter Score:{}, Singulation Score: {}'.format(i, clutter_score, singulation_score))
+            logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}'.format(i, avg_clutter_score, final_clutter_score))
 
     # logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
     #                                                       sr_n / attempts,
     #                                                       objects_removed / len(eval_data)))
-    logging.info('Avg Clutter Score:{}, Avg Singulation Score: {}'.format(clutter_score / attempts, singulation_score / attempts))
+    logging.info('Avg Clutter Score:{}, Avg Singulation Score: {}'.format(avg_clutter_score / attempts, final_clutter_score / attempts))
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

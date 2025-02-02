@@ -253,7 +253,6 @@ def measure_clutter_segmentation(segmentation_masks, k=3):
     positions = np.array(positions)
     
     # k-NN regression to estimate x_hat_i and y_hat_i
-    # nbrs = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(positions)
     nbrs = NearestNeighbors(n_neighbors=n-1, algorithm='auto').fit(positions)
     distances, indices = nbrs.kneighbors(positions)
     
@@ -272,3 +271,58 @@ def measure_clutter_segmentation(segmentation_masks, k=3):
     clutter_coefficient = -np.log(avg_distance)
     
     return clutter_coefficient
+
+def compute_singulation(before_masks, after_masks):
+    """
+    Measures the degree of clutter reduction after an object is removed.
+
+    Parameters:
+        before_masks (list of np.array): List of binary masks for objects in the scene before removal.
+        after_masks (list of np.array): List of binary masks for objects after removal.
+
+    Returns:
+        dict: Clutter reduction metrics including average centroid distance change and density change.
+    """
+    
+    def get_centroids(masks):
+        """Compute centroids of object masks."""
+        centroids = []
+        for mask in masks:
+            y, x = np.where(mask > 0)
+            if len(x) > 0 and len(y) > 0:
+                centroids.append((np.mean(x), np.mean(y)))
+        return np.array(centroids)
+    
+    def bounding_box_area(masks):
+        """Compute the bounding box area that contains all objects."""
+        all_y, all_x = np.where(np.any(np.stack(masks), axis=0))
+        if len(all_x) > 0 and len(all_y) > 0:
+            width = max(all_x) - min(all_x)
+            height = max(all_y) - min(all_y)
+            return width * height
+        return 0
+
+    # Get centroids
+    before_centroids = get_centroids(before_masks)
+    after_centroids = get_centroids(after_masks)
+    
+    # Compute average pairwise distance
+    def avg_pairwise_distance(centroids):
+        return np.mean(pdist(centroids)) if len(centroids) > 1 else 0
+
+    avg_dist_before = avg_pairwise_distance(before_centroids)
+    avg_dist_after = avg_pairwise_distance(after_centroids)
+
+    # Compute bounding box area
+    bbox_area_before = bounding_box_area(before_masks)
+    bbox_area_after = bounding_box_area(after_masks)
+
+    # Clutter metrics
+    clutter_reduction = avg_dist_after - avg_dist_before
+    density_reduction = (bbox_area_before - bbox_area_after) / bbox_area_before if bbox_area_before > 0 else 0
+
+    # return {
+    #     "clutter_reduction": clutter_reduction,  # Positive means better singulation
+    #     "density_reduction": density_reduction,  # Positive means reduced density
+    # }
+    return clutter_reduction

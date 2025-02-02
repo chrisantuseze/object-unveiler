@@ -585,11 +585,9 @@ class Policy:
         raw_pred_mask, raw_target_mask, raw_processed_mask,\
               objects_to_remove, gt_object, bboxes = self.get_inputs(state, color_image, target_mask)
 
-        object_logits, out_prob = self.fcn(x,
-            # processed_target, processed_obj_masks, objects_to_remove,
-            processed_target, processed_obj_masks, processed_pred_mask, 
-            raw_pred_mask, raw_target_mask, raw_processed_mask, bboxes, 
-            is_volatile=True
+        object_logits, out_prob = self.fcn(x, processed_target, processed_obj_masks, 
+            # processed_pred_mask, raw_pred_mask, raw_target_mask, raw_processed_mask, bboxes, 
+            bboxes, is_volatile=True
         )
         out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
 

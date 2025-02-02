@@ -67,6 +67,66 @@ class UnveilerDataset(data.Dataset):
         labels = np.array(labels)
         return scene_color, target_mask, rot_ids, labels
 
+    # single - input, multi - output and multi-obstacles for models_attn with processed inputs
+    def __getitem__2(self, id):
+        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
+        # based on my little observation, picking the first isn't horrible, but I feel the best should be the last since that has the most valid target.
+        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
+
+        processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
+
+        # commented out heightmap since we already extracted the crop in real-ou-dataset2
+        processed_target_mask = general_utils.preprocess_target(c_target_mask)#, heightmap)
+        processed_scene_mask = general_utils.preprocess_target(scene_mask)#, heightmap)
+
+        _processed_obj_masks = []
+        for obj_mask in c_object_masks:
+            processed_obj_mask = general_utils.preprocess_target(obj_mask)#, heightmap)
+            _processed_obj_masks.append(processed_obj_mask)
+        _processed_obj_masks = np.array(_processed_obj_masks)
+
+        # get labels and rot_ids
+        labels, rot_ids, obstacle_ids = [], [], []
+        for data in episode_data:
+            heightmap, _, _, _, _, _, objects_to_remove, _, _, action = data # we use the different heightmap for the different steps here to ensure the labels reflect that.
+
+            # we need one obstacle per episode
+            obstacle_ids.append(objects_to_remove[0])
+
+            # convert theta to range 0-360 and then compute the rot_id
+            angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
+            rot_id = round(angle / (2 * np.pi / 16)) 
+            rot_ids.append(rot_id)
+            
+            action_area = np.zeros((heightmap.shape[0], heightmap.shape[1]))
+
+            if int(action[1]) > 99 or int(action[0]):
+                i = min(int(action[1]) * 0.95, 99)
+                j = min(int(action[0]) * 0.95, 99)
+            else:
+                i = action[1]
+                j = action[0]
+
+            action_area[int(i), int(j)] = 1.0
+            label = np.zeros((1, processed_heightmap.shape[1], processed_heightmap.shape[2]))
+            label[0, padding_width_depth:processed_heightmap.shape[1] - padding_width_depth,
+                    padding_width_depth:processed_heightmap.shape[2] - padding_width_depth] = action_area
+            
+            labels.append(label)
+
+        # pad labels and rot_ids. The object_ids are not required anymore
+        labels, rot_ids = self.pad_labels_and_rot(len(episode_data), processed_heightmap, labels, rot_ids)
+        obstacle_ids = obstacle_ids[0] if obstacle_ids[0] < self.args.num_patches else self.args.num_patches-1 # Refer to notebook for why I did this.
+
+        # pad object masks
+        processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, bboxes)
+
+        return processed_heightmap, processed_target_mask, processed_obj_masks\
+             , processed_scene_mask, rot_ids, labels, obstacle_ids, bbox
+
+        # return processed_heightmap, processed_target_mask, processed_obj_masks\
+        #         , processed_scene_mask, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids, bbox
+
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from scipy.ndimage import center_of_mass
 
-from policy.grasping import get_distance, get_object_centroid
+from policy.grasping import get_distance
 
 def find_obstacles_to_remove(target_index, segmentation_masks):
     if len(segmentation_masks) <= 3:
