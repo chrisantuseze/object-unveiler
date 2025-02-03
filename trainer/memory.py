@@ -9,6 +9,8 @@ import utils.logger as logging
 import utils.general_utils as general_utils
 import env.cameras as cameras
 
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
+
 class ReplayBuffer:
     def __init__(self, save_dir, buffer_size=100000) -> None:
         self.buffer_size = buffer_size
@@ -91,8 +93,8 @@ class ReplayBuffer:
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
         cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
 
-        cv2.imwrite(os.path.join(folder_name, 'depth_heightmap.png'), transition['depth_heightmap'])
-        cv2.imwrite(os.path.join(folder_name, 'color_heightmap.png'), transition['color_heightmap'])
+        # cv2.imwrite(os.path.join(folder_name, 'depth_heightmap.png'), transition['depth_heightmap'])
+        # cv2.imwrite(os.path.join(folder_name, 'color_heightmap.png'), transition['color_heightmap'])
         cv2.imwrite(os.path.join(folder_name, 'extracted_target.png'), transition['extracted_target'])
 
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))

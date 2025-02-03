@@ -21,7 +21,8 @@ from utils.constants import *
 from env.env_components import ActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset" #'save/ppg-dataset'
+    save_dir = "save/pc-ou-dataset"
+    # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -321,7 +322,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("Episode was not successful.")
 
 def collect_random_target_dataset(args, params):
-    save_dir = 'save/ppg-ou-dataset'
+    save_dir = 'save/ppg-ou-dataset--'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -357,7 +358,7 @@ def collect_random_target_dataset(args, params):
             cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
 
             state = policy.state_representation(obs)
-            action = policy.guided_exploration(state)
+            action = policy.guided_exploration_old(state, target_mask)
             env_action3d = policy.action3d(action)
             print("env_action:", env_action3d)
 
@@ -367,6 +368,7 @@ def collect_random_target_dataset(args, params):
                 extracted_target = general_utils.extract_target_crop(target_mask, state)
                 transition = {'obs': obs, 'state': state, 'target_mask': general_utils.resize_mask(transform, target_mask), 'extracted_target': extracted_target, 'action': action, 'label': grasp_info['stable']}
                 memory.store(transition)
+                break
 
             print(action)
             print(grasp_info)
