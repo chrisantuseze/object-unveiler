@@ -103,9 +103,9 @@ def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
 
         cc_obstacle_mask = general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs'])
 
-        cv2.imwrite(os.path.join("save/misc", "cc_obstacle_mask.png"), cc_obstacle_mask)
-        cv2.imwrite(os.path.join("save/misc", "obstacle_mask.png"), data['obstacle_mask'])
-        cv2.imwrite(os.path.join("save/misc", "color_obs.png"), data['color_obs'])
+        # cv2.imwrite(os.path.join("save/misc", "cc_obstacle_mask.png"), cc_obstacle_mask)
+        # cv2.imwrite(os.path.join("save/misc", "obstacle_mask.png"), data['obstacle_mask'])
+        # cv2.imwrite(os.path.join("save/misc", "color_obs.png"), data['color_obs'])
 
         traj_data = data['traj_data']
         if len(traj_data) == 0:
@@ -155,9 +155,11 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
     pxl_size = 0.005
     color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, bounds, pxl_size)
 
+    extracted_target = general_utils.extract_target_crop(target_mask, heightmap)
     transition = {
         'state': heightmap,
         'target_mask': target_mask,
+        'extracted_target': extracted_target,
         'action': action,
         'obs': obs,
         'depth_heightmap': depth_heightmap,
@@ -185,11 +187,14 @@ def show_images(obj_masks, target_mask, obstacle_mask, scene_mask):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = 'save/ppg-dataset-act1022'
+    # new_dir = 'save/ppg-dataset-act1022'
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
+
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset"
 
 
     episode_dirs = os.listdir(dataset_dir)
@@ -206,9 +211,9 @@ if __name__ == "__main__":
 
     segmenter = ObjectSegmenter()
     for i, episode_dir in enumerate(episode_dirs):
-        # modify_transitions(memory, episode_dir, i)
+        modify_transitions(memory, episode_dir, i)
 
-        modify_episode2(segmenter, episode_dir, i)
+        # modify_episode2(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

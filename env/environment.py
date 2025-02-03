@@ -45,7 +45,9 @@ class Environment:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         # self.nr_objects = [11, 15] #[5, 8]
-        self.nr_objects = [6, 9]
+        # self.nr_objects = [6, 9]
+        self.nr_objects = [9, 12]
+        # self.nr_objects = [12, 15]
 
 
         # Setup cameras.
@@ -477,7 +479,7 @@ class Environment:
         
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
 
-        nr_objs = 6
+        # nr_objs = 6
 
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 

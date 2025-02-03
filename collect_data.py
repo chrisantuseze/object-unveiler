@@ -21,7 +21,7 @@ from utils.constants import *
 from env.env_components import ActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = 'save/ppg-dataset'
+    save_dir = "save/pc-ou-dataset" #'save/ppg-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -40,7 +40,7 @@ def collect_episodic_dataset(args, params):
 
     for i in range(args.n_samples):
         try:
-            run_episode_act(i, policy, segmenter, env, memory, rng)
+            run_episode(i, policy, segmenter, env, memory, rng)
         except Exception as e:
             print(e)
 
@@ -348,13 +348,16 @@ def collect_random_target_dataset(args, params):
             obs = env.reset()
 
         for i in range(15):
+            id = 1
+            processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
+
             # get a randomly picked target mask from the segmented image
-            target_mask = obs['color'][0] #utils.get_target_mask(segmenter, obs, rng)
+            target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
 
             cv2.imwrite(os.path.join("save/misc", "target_mask.png"), target_mask)
 
             state = policy.state_representation(obs)
-            action = policy.guided_exploration(state, target_mask)
+            action = policy.guided_exploration(state)
             env_action3d = policy.action3d(action)
             print("env_action:", env_action3d)
 
