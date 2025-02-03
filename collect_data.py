@@ -321,7 +321,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("Episode was not successful.")
 
 def collect_random_target_dataset(args, params):
-    save_dir = 'save/ppg-dataset'
+    save_dir = 'save/ppg-ou-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -364,7 +364,8 @@ def collect_random_target_dataset(args, params):
             next_obs, grasp_info = env.step(env_action3d)
 
             if grasp_info['stable']:
-                transition = {'obs': obs, 'state': state, 'target_mask': general_utils.resize_mask(transform, target_mask), 'action': action, 'label': grasp_info['stable']}
+                extracted_target = general_utils.extract_target_crop(target_mask, state)
+                transition = {'obs': obs, 'state': state, 'target_mask': general_utils.resize_mask(transform, target_mask), 'extracted_target': extracted_target, 'action': action, 'label': grasp_info['stable']}
                 memory.store(transition)
 
             print(action)
@@ -404,4 +405,5 @@ if __name__ == "__main__":
     with open('episode_info.txt', 'w') as file:
         file.write("\n")
 
-    collect_episodic_dataset(args, params)
+    # collect_episodic_dataset(args, params)
+    collect_random_target_dataset(args, params)
