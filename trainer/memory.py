@@ -90,6 +90,11 @@ class ReplayBuffer:
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
         cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
+
+        cv2.imwrite(os.path.join(folder_name, 'depth_heightmap.png'), transition['depth_heightmap'])
+        cv2.imwrite(os.path.join(folder_name, 'color_heightmap.png'), transition['color_heightmap'])
+        cv2.imwrite(os.path.join(folder_name, 'extracted_target.png'), transition['extracted_target'])
+
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
 
         # Save everything that obs contains
