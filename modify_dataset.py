@@ -18,6 +18,9 @@ import env.cameras as cameras
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
 
+# import os
+os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
+
 # dataset_dir = 'save/pc-ou-dataset'
 dataset_dir = 'save/ppg-dataset-act102'
 
