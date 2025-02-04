@@ -322,7 +322,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("Episode was not successful.")
 
 def collect_random_target_dataset(args, params):
-    save_dir = 'save/ppg-ou-dataset--'
+    save_dir = 'save/ppg-ou-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)

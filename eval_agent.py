@@ -410,7 +410,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
+    # policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
 
     segmenter = ObjectSegmenter()
 
@@ -428,7 +428,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_multi(
+        episode_data, success_count, grasping_action_count = run_episode_act(
             args, policy, env, segmenter, rng, episode_seed, 
             success_count=success_count, grp_count=grasping_action_count
         )
