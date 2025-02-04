@@ -117,7 +117,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Extract heightmap and mask
             heightmap = data['state']
             actions = data['actions']
-            print("actions", actions)
+            print("actions", len(actions))
             object_mask = data['cc_obstacle_mask']
             print("After object_mask")
 
