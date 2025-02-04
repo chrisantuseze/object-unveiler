@@ -117,7 +117,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Extract heightmap and mask
             heightmap = data['state']
             actions = data['actions']
+            print("actions", actions)
             object_mask = data['cc_obstacle_mask']
+            print("After object_mask")
 
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
