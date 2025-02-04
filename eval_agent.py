@@ -175,20 +175,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
-    ############ FOR GTRUTH EVAL ############
-    idx = 0
-    traj_data, obs_actions, heightmap, c_target_mask = get_obs(idx)
-    episode_seeds = [1791095845, 1298508491]
-    # episode_seed = episode_seeds[idx]
-
-    # rng = np.random.RandomState()
-    # rng.seed(episode_seed)
-
-    ids = [5, 5]
-    id = ids[idx]
-
-    #########################################
-
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -210,14 +196,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
-    ########### FOR REAL EVAL ############
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
-    ########################################
-
-    ############ FOR GTRUTH EVAL ############
-    # target_mask, target_id = processed_masks[id], id
-    ########################################
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -245,18 +225,10 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         t = 0
         preds = gt = []
         while not end_of_episode:
-            qpos = traj_data[t][0]
-            images = traj_data[t][-1]
-            obs_action = obs_actions[t]
-
             if t % query_frequency == 0:
                 print("Fresh actions")
                 state = policy.state_representation(obs)
                 actions = policy.exploit_act(state, c_object_mask, obs)
-
-                # if len(images['color']) < 2: # takes care of the case when the timestep image was not saved
-                #     images['color'] = [obs['color'][0], obs['color'][1]]
-                # actions = policy.exploit_act2(heightmap, c_object_mask, images['color'], qpos)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -274,24 +246,14 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(state, raw_action)
             preds.append(action)
 
-            # gt.append(qpos)
-            gt.append(obs_action)
-
-            if t % 1 == 0:
-                print("Obs action -", [float(f'{q:.2f}') for q in obs_action], ",", t, ",", env.current_state)
-                print("Pred action -", [float(f'{q:.2f}') for q in list(action)])
-
-            # obs, grasp_info = env.step_act(action, eval=True)
+            if t % 10 == 0:
+                print(t, ",", env.current_state)
 
             env_action3d = policy.action3d(action)
             obs, grasp_info = env.step_act(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
-
-        gt = np.array(gt)
-        preds = np.array(preds)
-        plot_joint_positions_over_time(gt, preds)
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:
@@ -346,27 +308,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
     logging.info('--------')
     return episode_data, success_count, grp_count
-
-def get_obs(idx):
-    dataset_dir = "save/ppg-dataset"
-    transition_dirs = os.listdir(dataset_dir)
-    for file_ in transition_dirs:
-        if not file_.startswith("episode"):
-            transition_dirs.remove(file_)
-
-    episode = transition_dirs[idx]
-    try:
-        episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
-    except Exception as e:
-        print(e, "- Failed episode:", episode)
-
-    data = episode_data[-1]
-    heightmap = data['state']
-    c_target_mask = None #general_utils.extract_target_crop(data['target_mask'], heightmap)
-    actions = data['actions']
-    trajectory_data = data['traj_data']
-
-    return trajectory_data, actions, heightmap, c_target_mask
 
 def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_positions_plot.png'):
     """
