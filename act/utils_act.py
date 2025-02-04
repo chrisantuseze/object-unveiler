@@ -117,9 +117,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             # Extract heightmap and mask
             heightmap = data['state']
             actions = data['actions']
-            print("actions", len(actions))
             object_mask = data['cc_obstacle_mask']
-            print("After object_mask")
 
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
@@ -131,10 +129,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
                     joint_pos.append(traj[0])
                     # images.append(traj[1])
                     actions_.append(actions[i])
-
-            # If no valid images are found, raise an exception
-            if not images:
-                raise ValueError("No valid images found in the episode.")
 
             return images, joint_pos, heightmap, object_mask, actions_
 
