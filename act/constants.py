@@ -35,8 +35,9 @@ SIM_TASK_CONFIGS = {
         'dataset_dir': DATA_DIR + '/ppg-dataset-act672',
         'num_episodes': 50,
         'episode_len': 1170, #from env
-        'camera_names': ['top', 'front', 'heightmap', 'target']
+        # 'camera_names': ['top', 'front', 'heightmap', 'target']
         # 'camera_names': ['top', 'front']
+        'camera_names': ['target']
     },
 }
 

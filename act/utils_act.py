@@ -127,7 +127,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             for i, traj in enumerate(traj_data):
                 if len(traj[1]['color']) > 1:
                     joint_pos.append(traj[0])
-                    images.append(traj[1])
+                    # images.append(traj[1])
                     actions_.append(actions[i])
 
             # If no valid images are found, raise an exception
@@ -156,7 +156,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             start_ts = np.random.choice(episode_len)
 
         qpos_data = qpos[start_ts]
-        images = images[start_ts]
+        # images = images[start_ts]
         # actions = qpos[start_ts + 1:]
         actions = actions[start_ts:]
 
@@ -169,13 +169,16 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         image_dict = dict()
         for cam_name in self.camera_names:
-            if cam_name == 'front':
-                image_dict[cam_name] = images['color'][0].astype(np.float32)
-            elif cam_name == 'top':
-                image_dict[cam_name] = images['color'][1].astype(np.float32)
-            elif cam_name == 'heightmap':
-                image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            elif cam_name == 'target':
+            # if cam_name == 'front':
+            #     image_dict[cam_name] = images['color'][0].astype(np.float32)
+            # elif cam_name == 'top':
+            #     image_dict[cam_name] = images['color'][1].astype(np.float32)
+            # elif cam_name == 'heightmap':
+            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            # elif cam_name == 'target':
+            #     image_dict["target"] = object_mask.astype(np.float32)
+
+            if cam_name == 'target':
                 image_dict["target"] = object_mask.astype(np.float32)
 
         # new axis for different cameras

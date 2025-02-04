@@ -516,14 +516,16 @@ class Policy:
     def get_act_image(self, color_images, heightmap, object_mask):
         image_dict = dict()
         for cam_name in self.camera_names:
-            if cam_name == 'front':
-                image_dict[cam_name] = color_images[0].astype(np.float32)
-            elif cam_name == 'top':
-                image_dict[cam_name] = color_images[1].astype(np.float32)
-            elif cam_name == 'heightmap':
-                image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            elif cam_name == 'target':
-                image_dict["target"] = object_mask.astype(np.float32)
+            # if cam_name == 'front':
+            #     image_dict[cam_name] = color_images[0].astype(np.float32)
+            # elif cam_name == 'top':
+            #     image_dict[cam_name] = color_images[1].astype(np.float32)
+            # elif cam_name == 'heightmap':
+            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
+            # elif cam_name == 'target':
+            #     image_dict["target"] = object_mask.astype(np.float32)
+
+            image_dict["target"] = object_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
