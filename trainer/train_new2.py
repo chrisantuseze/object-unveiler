@@ -38,8 +38,8 @@ def train_fcn_net(args):
         os.mkdir(save_path)
 
 
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
-    transition_dirs = os.listdir(new_dir) #os.listdir(args.dataset_dir)
+    args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
+    transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
         # if not file_.startswith("episode"):
