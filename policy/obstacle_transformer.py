@@ -132,7 +132,7 @@ class TransformerObstaclePredictor(nn.Module):
         ######################################################
         # Use target features to generate query
         query = self.query_generator(target_feat)
-        # print("query.shape", query.shape)
+        print("query.shape", query.shape)
 
         # # Combine learned parameter with target features
         # query = self.query_combiner(torch.cat([
