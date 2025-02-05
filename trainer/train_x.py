@@ -38,7 +38,7 @@ def train_fcn_net(args):
         os.mkdir(save_path)
 
 
-    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
+    args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
