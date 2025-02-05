@@ -275,11 +275,11 @@ class ObstacleSelector(nn.Module):
 
         return sampled_attention_weights
     
-    def ablation2(self, scene_mask, target_mask, object_masks, raw_object_masks, bboxes):
+    def ablation2(self, target_mask, object_masks, raw_object_masks, bboxes):
         '''
         Removing the edge features and using the target as both the query and value
         '''
-        scene_feats, target_feats, object_feats = self.preprocess_inputs(scene_mask, target_mask, object_masks)
+        target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
         B, N, D = object_feats.shape
 
         ######### scaled-dot product attention #########
@@ -297,7 +297,7 @@ class ObstacleSelector(nn.Module):
         # Apply attention weights to the value
         weighted_values = torch.matmul(weights, value)
         ################################################
-        print("weighted_values.shape", weighted_values.shape)
+        # print("weighted_values.shape", weighted_values.shape)
 
         attn_scores = self.attn(weighted_values.reshape(B, -1))
 
@@ -306,9 +306,6 @@ class ObstacleSelector(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
         
-        _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top indices", top_indices)
-
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
         for batch_idx in range(target_mask.shape[0]):
@@ -316,11 +313,10 @@ class ObstacleSelector(nn.Module):
 
         # Multiplying the encoder outputs with the hard attention weights
         sampled_attention_weights = sampled_attention_weights.unsqueeze(2).unsqueeze(3).unsqueeze(4)
-        print(sampled_attention_weights.shape, object_masks.unsqueeze(2).shape)
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
-        return context, attn_scores, top_indices
+        return context, attn_scores
         
     def spatial_rel(self, target_mask, object_masks, raw_object_masks, bboxes):
         target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
@@ -362,7 +358,7 @@ class ObstacleSelector(nn.Module):
     
     # def forward(self, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
     def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
-        selected_object, raw_object = self.spatial_rel(target_mask, object_masks, raw_object_masks, bboxes)
+        selected_object, raw_object = self.ablation2(target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
