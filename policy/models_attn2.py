@@ -64,8 +64,8 @@ class ObstacleSelector(nn.Module):
         self.model.fc = nn.Linear(512, hidden_dim)
 
         self.attn = nn.Sequential(
-            nn.Linear(self.args.num_patches * dimen, hidden_dim),
-            # nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            # nn.Linear(self.args.num_patches * dimen, hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -316,7 +316,13 @@ class ObstacleSelector(nn.Module):
         context = (sampled_attention_weights * object_masks.unsqueeze(2)).sum(dim=1)
         context = context.unsqueeze(1)
 
-        return context, attn_scores
+        if raw_object_masks is not None:
+            raw_context = (sampled_attention_weights * raw_object_masks.unsqueeze(2)).sum(dim=1)
+            raw_context = raw_context.squeeze(1)
+        else:
+            raw_context = None
+
+        return context, raw_context
         
     def spatial_rel(self, target_mask, object_masks, raw_object_masks, bboxes):
         target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
@@ -360,7 +366,7 @@ class ObstacleSelector(nn.Module):
         return context, raw_context
     
     def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
-        selected_object, raw_object = self.ablation2(target_mask, object_masks, raw_object_masks, bboxes)
+        selected_object, raw_object = self.spatial_rel(target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
