@@ -127,7 +127,7 @@ class TransformerObstaclePredictor(nn.Module):
         
         # Transformer encoder
         memory = self.transformer_encoder(object_embedding, src_key_padding_mask=padding_mask)
-        # print("memory.shape", memory.shape)
+        print("memory.shape", memory.shape)
 
         ######################################################
         # Use target features to generate query
