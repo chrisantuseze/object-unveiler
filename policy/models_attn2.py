@@ -113,6 +113,21 @@ class ObstacleSelector(nn.Module):
             nn.Linear(hidden_dim, self.args.num_patches * dimen)
         )
 
+    def preprocess_inputs(self, target_mask, object_masks):
+        B, N, C, H, W = object_masks.shape
+
+        target_mask = target_mask.repeat(1, 3, 1, 1)
+        target_feats = self.model(target_mask)
+        target_feats = target_feats.view(B, 1, -1)
+
+        object_masks = object_masks.repeat(1, 1, 3, 1, 1)
+        object_masks = object_masks.view(-1, 3, H, W)
+        object_feats = self.model(object_masks)
+        object_feats = object_feats.view(B, N, -1)
+        # print(object_feats.shape)
+
+        return target_feats, object_feats
+
     def compute_edge_features_single(self, boxes, masks, target_mask):
         """
         Compute pairwise spatial relationships between objects and the target object.
@@ -181,38 +196,16 @@ class ObstacleSelector(nn.Module):
 
         return iou.item()
 
-    def preprocess_inputs(self, target_mask, object_masks):
-        B, N, C, H, W = object_masks.shape
-
-        target_mask = target_mask.repeat(1, 3, 1, 1)
-        target_feats = self.model(target_mask)
-        target_feats = target_feats.view(B, 1, -1)
-
-        object_masks = object_masks.repeat(1, 1, 3, 1, 1)
-        object_masks = object_masks.view(-1, 3, H, W)
-        object_feats = self.model(object_masks)
-        object_feats = object_feats.view(B, N, -1)
-        # print(object_feats.shape)
-
-        return target_feats, object_feats
-
     def compute_edge_features(self, bboxes, object_masks, target_mask):
         B, N, C, H, W = object_masks.shape
 
         edge_features = []
-        periphery_dists = []
         for i in range(B):
             edge_feats, _ = self.compute_edge_features_single(bboxes[i], object_masks[i], target_mask[i])
             edge_features.append(edge_feats)
 
-            # periphery_dist = compute_objects_periphery_dist(object_masks[i])
-            # periphery_dists.append(periphery_dist)
-
         edge_features = torch.stack(edge_features).to(self.device)
-        # periphery_dists = torch.stack(periphery_dists).to(self.device)
-        # print("edge_features.shape", edge_features.shape)
-
-        return edge_features, periphery_dists
+        return edge_features
     
     def scaled_dot_product_attention(self, object_feats, target_feats, objects_rel):
         B, N, D = object_feats.shape
@@ -331,8 +324,7 @@ class ObstacleSelector(nn.Module):
         target_feats, object_feats = self.preprocess_inputs(target_mask, object_masks)
         B, N, C, H, W = object_masks.shape
 
-        objects_rel, periphery_dists = self.compute_edge_features(bboxes, object_masks, target_mask)
-        # print("objects_rel", objects_rel.shape, "periphery_dists", periphery_dists.shape)
+        objects_rel = self.compute_edge_features(bboxes, object_masks, target_mask)
 
         object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
         # print("object_rel_feats.shape", object_rel_feats.shape)

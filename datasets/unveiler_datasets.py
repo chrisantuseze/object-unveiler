@@ -131,7 +131,7 @@ class UnveilerDataset(data.Dataset):
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         # based on my little observation, picking the first isn't horrible, but I feel the best should be the last since that has the most valid target.
-        heightmap, c_target_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
+        heightmap, scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
