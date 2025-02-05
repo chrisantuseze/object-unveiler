@@ -39,6 +39,8 @@ class TransformerDataset(data.Dataset):
 
         raw_scene_mask, raw_target_mask, raw_object_masks = np.array(scene_mask), np.array(c_target_mask), np.array(c_object_masks)
 
+        print(processed_target_mask.shape, processed_obj_masks.shape, bbox.shape, padded_objects_to_remove.shape, raw_scene_mask.shape, raw_target_mask.shape, raw_object_masks.shape)
+
         return processed_target_mask, processed_obj_masks, bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, raw_object_masks
 
     def __len__(self):

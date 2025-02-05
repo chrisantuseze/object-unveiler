@@ -71,8 +71,6 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # def __init__(self, hidden_dim=1024, num_encoder_layers=6, num_decoder_layers=6, nhead=8, dropout=0.1):
-
     model = TransformerObstaclePredictor(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
