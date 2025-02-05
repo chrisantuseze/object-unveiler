@@ -64,8 +64,8 @@ class ObstacleSelector(nn.Module):
         self.model.fc = nn.Linear(512, hidden_dim)
 
         self.attn = nn.Sequential(
-            # nn.Linear(self.args.num_patches * dimen, hidden_dim),
-            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            nn.Linear(self.args.num_patches * dimen, hidden_dim),
+            # nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -80,18 +80,18 @@ class ObstacleSelector(nn.Module):
             nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-        self.object_rel_fc = nn.Sequential(
-            nn.Linear(self.args.num_patches * 2, dimen),
-            nn.LayerNorm(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, dimen),
-            nn.LayerNorm(dimen),
-            nn.ReLU(),
-            nn.Linear(dimen, self.args.num_patches * dimen)
-        )
+        # self.object_rel_fc = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * 2, dimen),
+        #     nn.LayerNorm(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, hidden_dim),
+        #     nn.LayerNorm(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, dimen),
+        #     nn.LayerNorm(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, self.args.num_patches * dimen)
+        # )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -305,6 +305,9 @@ class ObstacleSelector(nn.Module):
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
+
+        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
         
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -366,7 +369,7 @@ class ObstacleSelector(nn.Module):
         return context, raw_context
     
     def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
-        selected_object, raw_object = self.spatial_rel(target_mask, object_masks, raw_object_masks, bboxes)
+        selected_object, raw_object = self.ablation2(target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object
