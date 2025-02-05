@@ -131,17 +131,16 @@ class UnveilerDataset(data.Dataset):
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
         # based on my little observation, picking the first isn't horrible, but I feel the best should be the last since that has the most valid target.
-        heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
+        heightmap, c_target_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
 
         processed_heightmap, padding_width_depth = general_utils.preprocess_heightmap(heightmap)
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
-        processed_target_mask = general_utils.preprocess_target(c_target_mask)#, heightmap)
-        processed_scene_mask = general_utils.preprocess_target(scene_mask)#, heightmap)
+        processed_target_mask = general_utils.preprocess_target(c_target_mask)
 
         _processed_obj_masks = []
         for obj_mask in c_object_masks:
-            processed_obj_mask = general_utils.preprocess_target(obj_mask)#, heightmap)
+            processed_obj_mask = general_utils.preprocess_target(obj_mask)
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
 
@@ -181,11 +180,7 @@ class UnveilerDataset(data.Dataset):
         # pad object masks
         processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, bboxes)
 
-        return processed_heightmap, processed_target_mask, processed_obj_masks\
-             , processed_scene_mask, rot_ids, labels, obstacle_ids, bbox
-
-        # return processed_heightmap, processed_target_mask, processed_obj_masks\
-        #         , processed_scene_mask, scene_mask, target_mask, obj_masks, rot_ids, labels, obstacle_ids, bbox
+        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids, bbox
 
     def __len__(self):
         return len(self.dir_ids)

@@ -472,7 +472,6 @@ class Policy:
         target_id = grasping.get_target_id(general_utils.resize_mask(transform, target_mask), masks)
         objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
-        print(objects_to_remove)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
         if processed_obj_masks.shape[0] < self.args.num_patches:

@@ -55,18 +55,15 @@ class ReplayBuffer:
         for data in episode_data:
             heightmap = data['state']
             c_target_mask = data['c_target_mask']
-            target_mask = data['target_mask']
             action = data['action']
 
-            scene_mask = data['scene_mask']
             c_object_masks = data['c_object_masks']
-            object_masks = data['object_masks']
 
-            optimal_nodes = data['optimal_nodes']
+            objects_to_remove = data['objects_to_remove']
             bboxes = data['bboxes']
             target_id = data['target_id']
 
-            data_list.append((heightmap, scene_mask, target_mask, c_target_mask, object_masks, c_object_masks, optimal_nodes, bboxes, target_id, action))
+            data_list.append((heightmap, c_target_mask, c_object_masks, objects_to_remove, bboxes, target_id, action))
 
         return data_list
     

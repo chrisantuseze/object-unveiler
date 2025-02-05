@@ -253,26 +253,15 @@ def train_fcn_net(args):
             x = batch[0].to(args.device) 
             target_mask = batch[1].to(args.device, dtype=torch.float32)
             object_masks = batch[2].to(args.device)
-            scene_masks = batch[3].to(args.device)
 
-            # raw_x = batch[4].to(args.device)
-            # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-            # raw_object_masks = batch[6].to(args.device)
-            # rotations = batch[7]
-            # y = batch[8].to(args.device, dtype=torch.float32)
-            # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
-            # bboxes = batch[10].to(args.device, dtype=torch.float32)
-
-            rotations = batch[4]
-            y = batch[5].to(args.device, dtype=torch.float32)
-            obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
-            bboxes = batch[7].to(args.device, dtype=torch.float32)
+            rotations = batch[3]
+            y = batch[4].to(args.device, dtype=torch.float32)
+            obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
+            bboxes = batch[6].to(args.device, dtype=torch.float32)
 
             obstacle_pred = model(
                 x, target_mask, object_masks, 
-                # scene_masks, raw_x, raw_target_mask, raw_object_masks,
-                bboxes,
-                rotations
+                bboxes, rotations
             )
 
             loss = criterion(obstacle_pred, y)
@@ -299,26 +288,15 @@ def train_fcn_net(args):
                 x = batch[0].to(args.device) 
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
                 object_masks = batch[2].to(args.device)
-                scene_masks = batch[3].to(args.device)
-
-                # raw_x = batch[4].to(args.device)
-                # raw_target_mask = batch[5].to(args.device, dtype=torch.float32)
-                # raw_object_masks = batch[6].to(args.device)
-                # rotations = batch[7]
-                # y = batch[8].to(args.device, dtype=torch.float32)
-                # obstacle_gt = batch[9].to(args.device, dtype=torch.float32)
-                # bboxes = batch[10].to(args.device, dtype=torch.float32)
-
-                rotations = batch[4]
-                y = batch[5].to(args.device, dtype=torch.float32)
-                obstacle_gt = batch[6].to(args.device, dtype=torch.float32)
-                bboxes = batch[7].to(args.device, dtype=torch.float32)
+                
+                rotations = batch[3]
+                y = batch[4].to(args.device, dtype=torch.float32)
+                obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
+                bboxes = batch[6].to(args.device, dtype=torch.float32)
 
                 obstacle_pred = model(
                     x, target_mask, object_masks, 
-                    # scene_masks, raw_x, raw_target_mask, raw_object_masks,
-                    bboxes,
-                    rotations
+                    bboxes, rotations
                 )
 
                 loss = criterion(obstacle_pred, y)

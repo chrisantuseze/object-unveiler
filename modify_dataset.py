@@ -20,10 +20,10 @@ import policy.grasping2 as grasping2
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
-# dataset_dir = 'save/pc-ou-dataset'
-dataset_dir = 'save/ppg-dataset-act102'
+dataset_dir = 'save/pc-ou-dataset'
+# dataset_dir = 'save/ppg-dataset-act102'
 
-def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
+def modify_episode(segmenter: ObjectSegmenter, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -53,34 +53,26 @@ def modify_episode1(segmenter: ObjectSegmenter, episode_dir, index):
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
 
-        print("traj len:", len(data['traj_data']))
-        traj_data = data['traj_data']
-        if len(traj_data) == 0:
-            print("len(traj_data):", len(traj_data))
-            return
-
         transition = {
-            'state': data['state'], 
+            'state': data['state'],
+            'depth_heightmap': data['depth_heightmap'],
             'target_mask': data['target_mask'], 
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
             'scene_mask': data['scene_mask'],
             'c_object_masks': new_masks,
-            'object_masks': object_masks,
-            'action': data['action'],
-            'optimal_nodes': objects_to_remove,
+            # 'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
+            'action': data['action'], 
             'label': data['label'],
             'bboxes': new_bboxes,
             'target_id': target_id,
-            'traj_data': traj_data,
-
-            'actions': data['actions'],
+            'objects_to_remove': objects_to_remove,
         }
         episode_data_list.append(transition)
 
     memory.store_episode(episode_data_list)
     logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
-def modify_episode2(segmenter: ObjectSegmenter, episode_dir, index):
+def modify_episode_act(segmenter: ObjectSegmenter, episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -190,32 +182,34 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # new_dir = 'save/ppg-dataset-act1022'
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
+    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset"
+    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset"
 
 
     episode_dirs = os.listdir(dataset_dir)
     print("Total length:", len(episode_dirs))
     
     for file_ in episode_dirs:
-        # if not file_.startswith("episode"):
-        #     print(file_)
-        #     episode_dirs.remove(file_)
-
-        if not file_.startswith("transition"):
+        if not file_.startswith("episode"):
+            print(file_)
             episode_dirs.remove(file_)
+
+        # if not file_.startswith("transition"):
+        #     episode_dirs.remove(file_)
 
 
     segmenter = ObjectSegmenter()
     for i, episode_dir in enumerate(episode_dirs):
-        modify_transitions(memory, episode_dir, i)
+        # modify_transitions(memory, episode_dir, i)
 
-        # modify_episode2(segmenter, episode_dir, i)
+        modify_episode(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

@@ -58,7 +58,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     'final_clutter_score': 0.0,
                 }
     
-    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_DIR)
     processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
     cv2.imwrite(os.path.join(TEST_DIR, "color0.png"), obs['color'][0])
@@ -66,13 +66,14 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
     # get a randomly picked target mask from the segmented image
     target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    print("Target ID:", target_id)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
     n_prev_masks = count = 0
     avg_clutter_score = 0.0
 
-    max_steps = 4
+    max_steps = 5
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -104,14 +105,14 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         print(grasp_info)
         print('---------')
 
-        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
+        # general_utils.delete_episodes_misc(TEST_DIR)
 
         if policy.is_terminal(next_obs):
             break
 
         obs = copy.deepcopy(next_obs)
 
-        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_DIR)
         if len(new_masks) == n_prev_masks:
             count += 1
 
@@ -351,7 +352,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    # policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
+    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
 
     segmenter = ObjectSegmenter()
 
@@ -369,7 +370,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_act(
+        episode_data, success_count, grasping_action_count = run_episode_multi(
             args, policy, env, segmenter, rng, episode_seed, 
             success_count=success_count, grp_count=grasping_action_count
         )

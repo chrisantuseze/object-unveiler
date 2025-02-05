@@ -207,15 +207,15 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            images = {'color': []}
-            if interval % 25 == 0:
-                for cam in agent_cams:
-                    color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
-            else:
-                images['color'].append(None)
+            # images = {'color': []}
+            # if interval % 25 == 0:
+            #     for cam in agent_cams:
+            #         color, depth, seg = cam.get_data() 
+            #         images['color'].append(color)
+            # else:
+            #     images['color'].append(None)
 
-            commands.append((command, images))
+            # commands.append((command, images))
             interval += 1
 
         return commands, is_in_contact
@@ -294,21 +294,21 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            if not agent_cams:
-                return commands
+            # if not agent_cams:
+            #     return commands
 
-            images = {'color': []}
-            if interval % 25 == 0:
-                for cam in agent_cams:
-                    color, depth, seg = cam.get_data() 
-                    images['color'].append(color)
-            else:
-                images['color'].append(None)
+            # images = {'color': []}
+            # if interval % 25 == 0:
+            #     for cam in agent_cams:
+            #         color, depth, seg = cam.get_data() 
+            #         images['color'].append(color)
+            # else:
+            #     images['color'].append(None)
                 
-            commands.append((command, images))
+            # commands.append((command, images))
             interval += 1
 
-        return commands#, [current_pos, hand_pos] #@Chris
+        return commands
 
     def step_constraints(self):
         current_pos = []

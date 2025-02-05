@@ -98,7 +98,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         env_action3d = policy.action3d(action)
         obs, grasp_info = env.step(env_action3d)
 
-        print("len(obs['traj_data'])", len(obs['traj_data']))
         grasp_status.append(grasp_info['stable'])
 
         # if not grasp_info['stable']:
@@ -133,7 +132,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 'object_masks': new_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
-                'traj_data': obs['traj_data'],
             }
             episode_data_list.append(transition)
 

@@ -337,6 +337,9 @@ class ObstacleSelector(nn.Module):
         padding_masks = (object_masks.sum(dim=(2, 3)) == 0)
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
+
+        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
         
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(attn_scores)
@@ -356,7 +359,6 @@ class ObstacleSelector(nn.Module):
 
         return context, raw_context
     
-    # def forward(self, target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes):
     def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
         selected_object, raw_object = self.ablation2(target_mask, object_masks, raw_object_masks, bboxes)
 
@@ -447,9 +449,6 @@ class ResFCN(nn.Module):
         return out
     
     def forward(self, depth_heightmap, target_mask, object_masks, bboxes, specific_rotation=-1, is_volatile=[]):
-    # def forward(self, depth_heightmap, target_mask, object_masks, scene_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes=None, specific_rotation=-1, is_volatile=[]):
-         
-        # selected_objects = self.obstacle_selector(target_mask, object_masks, raw_scene_mask, raw_target_mask, raw_object_masks, bboxes)
         selected_objects = self.obstacle_selector(target_mask, object_masks, raw_object_masks=None, bboxes=bboxes)
 
         selected_objects = selected_objects.squeeze(1)
