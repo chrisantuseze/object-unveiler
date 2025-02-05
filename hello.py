@@ -20,7 +20,7 @@ for i, filename in enumerate(os.listdir(folder_path)):
     old_name = os.path.join(folder_path, filename)
     
     arr = filename.split("_")
-    new_filename = arr[0] + "_" + str(id).zfill(6)
+    new_filename = arr[0] + "_" + str(id).zfill(5)
 
     # Rename the file
     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
