@@ -37,7 +37,9 @@ def train_fcn_net(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    transition_dirs = os.listdir(args.dataset_dir)
+
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
+    transition_dirs = os.listdir(new_dir) #os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
         # if not file_.startswith("episode"):
