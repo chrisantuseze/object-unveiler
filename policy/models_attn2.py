@@ -297,7 +297,7 @@ class ObstacleSelector(nn.Module):
         # Apply attention weights to the value
         weighted_values = torch.matmul(weights, value)
         ################################################
-        # print("weighted_values.shape", weighted_values.shape)
+        print("weighted_values.shape", weighted_values.shape, weighted_values.reshape(B, -1).shape)
 
         attn_scores = self.attn(weighted_values.reshape(B, -1))
 
