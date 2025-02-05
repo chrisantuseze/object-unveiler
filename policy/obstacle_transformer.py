@@ -131,7 +131,7 @@ class TransformerObstaclePredictor(nn.Module):
 
         ######################################################
         # Use target features to generate query
-        query = self.query_generator(target_feat)
+        query = self.query_generator(target_feat).view(1, B, -1)
         print("query.shape", query.shape)
 
         # # Combine learned parameter with target features
