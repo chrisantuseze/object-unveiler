@@ -64,8 +64,8 @@ class ObstacleSelector(nn.Module):
         self.model.fc = nn.Linear(512, hidden_dim)
 
         self.attn = nn.Sequential(
-            # nn.Linear(self.args.num_patches * (hidden_dim + dimen), hidden_dim),
-            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, dimen),
+            # nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
