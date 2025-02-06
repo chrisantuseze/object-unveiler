@@ -56,7 +56,7 @@ class ObstacleSelector(nn.Module):
         super(ObstacleSelector, self).__init__()
         self.args = args
         self.final_conv_units = 128
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = args.device
 
         hidden_dim = 1024
         dimen = hidden_dim//2
@@ -406,7 +406,7 @@ class ResFCN(nn.Module):
         self.args = args
         self.nr_rotations = 16
         self.final_conv_units = 128
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = args.device
 
         self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
         nn.init.xavier_uniform_(self.conv1.weight)

@@ -52,7 +52,7 @@ class ResFCN(nn.Module):
     def __init__(self, args):
         super(ResFCN, self).__init__()
         self.nr_rotations = 16
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = args.device
 
         self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.rb1 = self.make_layer(64, 128)
