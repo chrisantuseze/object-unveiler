@@ -60,8 +60,7 @@ class ReplayBuffer:
             c_object_masks = data['c_object_masks']
             scene_mask = data['scene_mask']
 
-            objects_to_remove = data['optimal_nodes']
-            # objects_to_remove = data['objects_to_remove']
+            objects_to_remove = data['objects_to_remove']
 
             bboxes = data['bboxes']
             target_id = data['target_id']
