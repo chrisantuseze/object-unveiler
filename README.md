@@ -9,7 +9,15 @@ conda activate unveiler
 python3 main.py \
 --mode 'eval' \
 --reg_model 'downloads/reg_model.pt' \
---fcn_model 'save/fcn_original/fcn_model.pt' \
+--fcn_model 'save/unveiler/unveiler_model.pt' \
+--n_scenes 50 \
+--chunk_size 10 \
+--temporal_agg
+
+python3 main.py \
+--mode 'eval' \
+--reg_model 'downloads/reg_model.pt' \
+--fcn_model 'save/fcn/fcn_model.pt' \
 --n_scenes 50 \
 --chunk_size 10 \
 --temporal_agg
