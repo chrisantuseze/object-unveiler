@@ -39,7 +39,7 @@ class TransformerDataset(data.Dataset):
 
         raw_scene_mask, raw_target_mask = np.array(scene_mask), np.array(c_target_mask)
 
-        # print(processed_target_mask.shape, processed_obj_masks.shape, bbox.shape, padded_objects_to_remove.shape, raw_scene_mask.shape, raw_target_mask.shape, obj_masks.shape)
+        print(processed_target_mask.shape, processed_obj_masks.shape, bbox.shape, padded_objects_to_remove.shape, raw_scene_mask.shape, raw_target_mask.shape, obj_masks.shape)
 
         return processed_target_mask, processed_obj_masks, bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, obj_masks
 
@@ -71,6 +71,7 @@ class TransformerDataset(data.Dataset):
             bbox = bboxes[:self.args.num_patches]
             padded_objects_to_remove = objects_to_remove[:self.args.num_patches]
 
-        padded_objects_to_remove = np.array(padded_objects_to_remove[0])
+        objects_to_remove = padded_objects_to_remove[0]
+        padded_objects_to_remove = np.array(objects_to_remove if objects_to_remove < self.args.num_patches else 0)
 
         return processed_obj_masks, obj_masks, bbox, padded_objects_to_remove
