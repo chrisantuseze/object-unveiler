@@ -95,7 +95,7 @@ def train_fcn_net(args):
 
             # Compute loss in the whole scene
             loss = criterion(pred, objects_to_remove)
-            loss = torch.sum(loss)
+            # loss = torch.sum(loss)
 
             if step % args.step == 0:
                 # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
@@ -126,7 +126,7 @@ def train_fcn_net(args):
 
                 loss = criterion(pred, objects_to_remove)
 
-                loss = torch.sum(loss)
+                # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:

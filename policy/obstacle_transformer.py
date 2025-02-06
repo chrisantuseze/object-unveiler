@@ -150,12 +150,12 @@ class TransformerObstaclePredictor(nn.Module):
         logits = self.output_projection(decoder_output.view(B, -1)) # Shape: [B, N]
         # print("logits.shape", logits.shape)
     
-        if self.training:
-            predictions = F.softmax(logits, dim=-1)         # Shape: [B, N], sums to 1 across N
-            # print("predictions.shape", predictions.shape)
+        # if self.training:
+        #     predictions = F.softmax(logits, dim=-1)         # Shape: [B, N], sums to 1 across N
+        #     # print("predictions.shape", predictions.shape)
 
-            # self.show_images(raw_object_masks, raw_target_mask, raw_scene_mask)
-            return predictions
+        #     # self.show_images(raw_object_masks, raw_target_mask, raw_scene_mask)
+        #     return predictions
         
         return logits
     
