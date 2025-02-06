@@ -38,7 +38,7 @@ def train_fcn_net(args):
         os.mkdir(save_path)
 
 
-    args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
+    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -49,7 +49,7 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:30000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
