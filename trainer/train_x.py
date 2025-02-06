@@ -49,6 +49,8 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
+    transition_dirs = transition_dirs[:1000]
+
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
     val_ids = transition_dirs[split_index:]
@@ -96,7 +98,7 @@ def train_fcn_net(args):
             loss = torch.sum(loss)
 
             if step % args.step == 0:
-                print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
+                # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
@@ -128,7 +130,7 @@ def train_fcn_net(args):
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
+                    # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
