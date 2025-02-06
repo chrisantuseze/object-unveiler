@@ -22,7 +22,7 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 
 # models_attn multi object prediction
-def train_fcn_net2(args):
+def train_unveiler2(args):
     """
     Train an attention-based policy for predicting multi-obstacles in cluttered environments.
     Args:
@@ -40,7 +40,7 @@ def train_fcn_net2(args):
 
     writer = SummaryWriter()
     
-    save_path = 'save/fcn'
+    save_path = 'save/unveiler'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -177,13 +177,13 @@ def train_fcn_net2(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path,  f'unveiler_model.pt'))
     writer.close()
 
 # models_attn
-def train_fcn_net(args):
+def train_unveiler(args):
     """
     Train an attention-based policy for object unveiling in cluttered environments.
     Args:
@@ -201,7 +201,7 @@ def train_fcn_net(args):
 
     writer = SummaryWriter()
     
-    save_path = 'save/fcn'
+    save_path = 'save/unveiler'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -316,9 +316,9 @@ def train_fcn_net(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'fcn_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path,  f'unveiler_model.pt'))
     writer.close()
 
 def calculate_gradient_norm(model):

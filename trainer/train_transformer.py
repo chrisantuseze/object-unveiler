@@ -15,7 +15,7 @@ from datasets.transformer_dataset import TransformerDataset
 import utils.logger as logging
 
 
-def train_fcn_net(args):
+def train_unveiler(args):
     """
     Trains a Fully Convolutional Network (FCN) policy model for target grasping using the provided arguments.
     Args:
@@ -32,7 +32,7 @@ def train_fcn_net(args):
 
     writer = SummaryWriter()
 
-    save_path = 'save/fcn'
+    save_path = 'save/unveiler'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -140,9 +140,9 @@ def train_fcn_net(args):
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
         if epoch % 20 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model.pt'))
     writer.close()
 
 
