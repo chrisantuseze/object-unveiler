@@ -39,7 +39,8 @@ class Policy:
         self.params = params
         self.rng = np.random.RandomState()
 
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        # self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cpu")
         self.rotations = params['agent']['fcn']['rotations']
         self.aperture_limits = params['agent']['regressor']['aperture_limits']
         self.pxl_size = params['env']['pixel_size']
