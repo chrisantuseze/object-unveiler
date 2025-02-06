@@ -76,7 +76,7 @@ def train_fcn_net(args):
     model = TransformerObstaclePredictor(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
-    criterion = nn.CrossEntropyLoss(reduction='none')
+    criterion = nn.CrossEntropyLoss()
 
     for epoch in range(args.epochs):
         model.train()
