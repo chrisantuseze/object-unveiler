@@ -127,12 +127,12 @@ class TransformerObstaclePredictor(nn.Module):
         
         # Transformer encoder
         memory = self.transformer_encoder(object_embedding, src_key_padding_mask=padding_mask)
-        print("memory.shape", memory.shape)
+        # print("memory.shape", memory.shape)
 
         ######################################################
         # Use target features to generate query
         query = self.query_generator(target_feat).view(1, B, -1)
-        print("query.shape", query.shape)
+        # print("query.shape", query.shape)
 
         # # Combine learned parameter with target features
         # query = self.query_combiner(torch.cat([
@@ -147,12 +147,12 @@ class TransformerObstaclePredictor(nn.Module):
         # print("decoder_output.shape", decoder_output.shape, decoder_output.squeeze(1).shape)
         
         # Project to scores and apply Gumbel-Softmax
-        logits = self.output_projection(decoder_output.squeeze(1)) # Shape: [B, N]
+        logits = self.output_projection(decoder_output.view(B, -1)) # Shape: [B, N]
         # print("logits.shape", logits.shape)
     
         if self.training:
             predictions = F.softmax(logits, dim=-1)         # Shape: [B, N], sums to 1 across N
-            print("predictions.shape", predictions.shape, predictions)
+            # print("predictions.shape", predictions.shape)
 
             # self.show_images(raw_object_masks, raw_target_mask, raw_scene_mask)
             return predictions
