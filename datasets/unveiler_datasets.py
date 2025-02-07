@@ -147,7 +147,7 @@ class UnveilerDataset(data.Dataset):
         # get labels and rot_ids
         labels, rot_ids, obstacle_ids = [], [], []
         for data in episode_data:
-            _, _, _, objects_to_remove, _, _, action = data
+            _, _, _, _, objects_to_remove, _, _, action = data
 
             # we need one obstacle per episode
             obstacle_ids.append(objects_to_remove[0])
