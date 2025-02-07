@@ -30,7 +30,7 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment="target_ppg")
 
     save_path = 'save/fcn'
 

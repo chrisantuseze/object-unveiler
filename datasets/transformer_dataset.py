@@ -34,14 +34,16 @@ class TransformerDataset(data.Dataset):
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
 
+        target_bbox = bboxes[target_id]
+
         # pad object masks
-        processed_obj_masks, obj_masks, bbox, padded_objects_to_remove = self.pad(_processed_obj_masks, c_object_masks, bboxes, objects_to_remove)
+        padded_processed_obj_masks, padded_obj_masks, padded_bbox, padded_objects_to_remove = self.pad(_processed_obj_masks, c_object_masks, bboxes, objects_to_remove)
 
         raw_scene_mask, raw_target_mask = np.array(scene_mask), np.array(c_target_mask)
 
         # print(processed_target_mask.shape, processed_obj_masks.shape, bbox.shape, padded_objects_to_remove.shape, raw_scene_mask.shape, raw_target_mask.shape, obj_masks.shape)
 
-        return processed_target_mask, processed_obj_masks, bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, obj_masks
+        return processed_target_mask, padded_processed_obj_masks, padded_bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, padded_obj_masks
 
     def __len__(self):
         return len(self.dir_ids)

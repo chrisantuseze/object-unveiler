@@ -80,18 +80,18 @@ class ObstacleSelector(nn.Module):
             nn.Linear(hidden_dim//2, self.args.num_patches)
         )
 
-        # self.object_rel_fc = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, dimen),
-        #     nn.LayerNorm(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, hidden_dim),
-        #     nn.LayerNorm(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, dimen),
-        #     nn.LayerNorm(dimen),
-        #     nn.ReLU(),
-        #     nn.Linear(dimen, self.args.num_patches * dimen)
-        # )
+        self.object_rel_fc = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, dimen),
+            nn.LayerNorm(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, dimen),
+            nn.LayerNorm(dimen),
+            nn.ReLU(),
+            nn.Linear(dimen, self.args.num_patches * dimen)
+        )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -361,7 +361,7 @@ class ObstacleSelector(nn.Module):
         return context, raw_context
     
     def forward(self, target_mask, object_masks, raw_object_masks, bboxes):
-        selected_object, raw_object = self.ablation2(target_mask, object_masks, raw_object_masks, bboxes)
+        selected_object, raw_object = self.spatial_rel(target_mask, object_masks, raw_object_masks, bboxes)
 
         # ################### THIS IS FOR VISUALIZATION ####################
         # raw_objects = [raw_object.detach()] if not isinstance(raw_object, list) else raw_object

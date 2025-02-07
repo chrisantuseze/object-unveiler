@@ -199,7 +199,7 @@ def train_unveiler(args):
         None
     """
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment="unveiler")
     
     save_path = 'save/unveiler'
 

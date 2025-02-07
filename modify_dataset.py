@@ -60,7 +60,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir, index):
             'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
             'scene_mask': data['scene_mask'],
             'c_object_masks': new_masks,
-            # 'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
+            'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
             'action': data['action'], 
             'label': data['label'],
             'bboxes': new_bboxes,

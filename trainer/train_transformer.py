@@ -30,7 +30,7 @@ def train_unveiler(args):
         None
     """
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment="xformer")
 
     save_path = 'save/unveiler'
 
@@ -49,7 +49,7 @@ def train_unveiler(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:30000]
+    transition_dirs = transition_dirs[:10000]
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -77,14 +77,13 @@ def train_unveiler(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
     criterion = nn.CrossEntropyLoss()
-
+    lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
             target = batch[0].to(args.device)
             object_masks = batch[1].to(args.device)
 
-            # return processed_target_mask, processed_obj_masks, bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, raw_object_masks
             bbox = batch[2].to(args.device)
             objects_to_remove = batch[3].to(args.device)
             raw_scene_mask = batch[4].to(args.device)
@@ -114,7 +113,6 @@ def train_unveiler(args):
                 target = batch[0].to(args.device)
                 object_masks = batch[1].to(args.device)
 
-                # return processed_target_mask, processed_obj_masks, bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, raw_object_masks
                 bbox = batch[2].to(args.device)
                 objects_to_remove = batch[3].to(args.device)
 
@@ -139,8 +137,9 @@ def train_unveiler(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if epoch % 20 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model.pt'))
     writer.close()

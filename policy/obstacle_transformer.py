@@ -16,7 +16,8 @@ class TransformerObstaclePredictor(nn.Module):
         self.resnet.fc = nn.Linear(512, hidden_dim)
         
         # Positional encoding for sequence information
-        self.pos_encoder = PositionalEncoding(hidden_dim, dropout)
+        # self.pos_encoder = PositionalEncoding(hidden_dim, dropout)
+        self.pos_encoder = RelativePositionalEncoding(hidden_dim)
 
         # self.query_embed = nn.Embedding(1, hidden_dim)
         
@@ -59,6 +60,85 @@ class TransformerObstaclePredictor(nn.Module):
         
         # Output projection
         self.output_projection = nn.Linear(hidden_dim, self.args.num_patches)
+
+    def compute_edge_features_single(self, boxes, masks, target_mask):
+        """
+        Compute pairwise spatial relationships between objects and the target object.
+
+        Args:
+            boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
+            masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
+            target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
+
+        Returns:
+            edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
+            edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
+        """
+        device = boxes.device
+        num_objects = boxes.size(0)
+
+        # Compute pairwise object-target relationships
+        edges = []
+        edge_features = []
+
+        for i in range(num_objects):
+            # Compute spatial features between object i and the target object
+            obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
+            # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
+
+            target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+            target_iou = self.calculate_iou(boxes[i], target_mask)  # IoU between object and target
+
+            # Compute edge features
+            edge_feat = torch.tensor([target_overlap, target_iou], device=device)
+            edge_features.append(edge_feat)
+
+            # Add edge index
+            edges.append([i, num_objects])  # Connect object node to a dummy target node
+
+        edge_features = torch.stack(edge_features, dim=0)
+        edges = torch.tensor(edges, dtype=torch.long, device=device)
+
+        return edge_features, edges
+
+    def calculate_iou(self, box, target_mask):
+        """
+        Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
+
+        Args:
+            box (Tensor): A tensor of shape (4,) representing the bounding box in (x1, y1, x2, y2) format.
+            target_mask (Tensor): A tensor of shape (H, W) representing the target mask.
+
+        Returns:
+            iou (float): The Intersection over Union between the box and the target mask.
+        """
+        # Convert box to (x1, y1, x2, y2) format
+        # print("box.shape", box.shape)
+        x1, y1, x2, y2 = box
+
+        # Create a mask for the bounding box
+        box_mask = torch.zeros_like(target_mask)
+        box_mask[int(y1):int(y2), int(x1):int(x2)] = 1
+
+        # Calculate the intersection and union
+        intersection = torch.sum(box_mask * target_mask)
+        union = torch.sum(box_mask) + torch.sum(target_mask) - intersection
+
+        # Avoid division by zero
+        iou = intersection / (union + 1e-8)
+
+        return iou.item()
+
+    def compute_edge_features(self, bboxes, object_masks, target_mask):
+        B, N, C, H, W = object_masks.shape
+
+        edge_features = []
+        for i in range(B):
+            edge_feats, _ = self.compute_edge_features_single(bboxes[i], object_masks[i], target_mask[i])
+            edge_features.append(edge_feats)
+
+        edge_features = torch.stack(edge_features).to(self.device)
+        return edge_features
         
     def compute_spatial_features(self, target_mask, object_masks, bboxes):
         """Compute spatial relationship features between target and objects"""
@@ -194,3 +274,22 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0)]
         return self.dropout(x)
+    
+class RelativePositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_relative_distance=10):
+        super().__init__()
+        self.relative_embeddings = nn.Embedding(2*max_relative_distance + 1, d_model)
+    
+    def forward(self, x):
+        # Compute relative positions
+        seq_len = x.size(0)
+        positions = torch.arange(seq_len, device=x.device)
+        relative_positions = positions[:, None] - positions[None, :]
+        relative_positions = torch.clamp(relative_positions, 
+                                         min=-10, 
+                                         max=10) + 10  # Shift to positive
+        
+        # Get relative position embeddings
+        rel_pos_emb = self.relative_embeddings(relative_positions)
+        
+        return x + rel_pos_emb

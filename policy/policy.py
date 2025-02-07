@@ -1,16 +1,13 @@
 import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
-# from policy.models_obstacle_attn import Regressor, ResFCN
-# from policy.models_obstacle_heuristics import Regressor, ResFCN
-# from policy.models_obstacle_vit import Regressor, ResFCN
+from policy.obstacle_transformer import TransformerObstaclePredictor
 # from policy.models_target import Regressor, ResFCN
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import torch.nn.functional as F
 
 import numpy as np
 import cv2
@@ -52,6 +49,8 @@ class Policy:
         self.fcn = ResFCN(args).to(self.device)
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
+
+        self.xformer = TransformerObstaclePredictor(args).to(self.device)
 
         self.segmenter = ObjectSegmenter()
 
@@ -513,7 +512,7 @@ class Policy:
         gt_object = processed_obj_masks[0, objects_to_remove_id].unsqueeze(0)
 
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes
+              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes, processed_masks
     
     def get_act_image(self, color_images, heightmap, object_mask):
         image_dict = dict()
@@ -586,11 +585,11 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_processed_mask,\
-              objects_to_remove, gt_object, bboxes = self.get_inputs(state, color_image, target_mask)
+        raw_pred_mask, raw_target_mask, raw_obj_masks,\
+              objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
 
         object_logits, out_prob = self.fcn(x, processed_target, processed_obj_masks, 
-            # processed_pred_mask, raw_pred_mask, raw_target_mask, raw_processed_mask, bboxes, 
+            # processed_pred_mask, raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, 
             bboxes, is_volatile=True
         )
         out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
@@ -623,6 +622,49 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         target = general_utils.preprocess_target(target_mask, state)
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
+        out_prob = self.fcn(x, target, is_volatile=True)
+        out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
+
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
+
+        # find optimal aperture
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
+    
+    def exploit_xformer(self, state, color_image, target_mask):
+        processed_pred_mask, processed_target, processed_obj_masks,\
+        raw_pred_mask, raw_target_mask, raw_obj_masks,\
+              objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
+        
+        logits = self.xformer(processed_target, processed_obj_masks, bboxes, objects_to_remove, raw_pred_mask, raw_target_mask, raw_obj_masks)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        print("probs", logits, top_indices, top_indices.item())
+        
+        # find optimal position and orientation
+        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        # target = general_utils.preprocess_target(target_mask, state)
+        print("processed_masks", len(processed_masks))
+        target = general_utils.preprocess_target(processed_masks[top_indices.item()], state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
         out_prob = self.fcn(x, target, is_volatile=True)
@@ -758,12 +800,15 @@ class Policy:
         self.info['learn_step_counter'] = self.learn_step_counter
         pickle.dump(self.info, open(os.path.join(folder_name, 'info'), 'wb'))
 
-    def load(self, fcn_model, reg_model):
+    def load(self, fcn_model, reg_model, unveiler_model):
         self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
         self.fcn.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
+
+        # self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
+        # self.xformer.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

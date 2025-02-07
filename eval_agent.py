@@ -352,7 +352,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model)
+    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model, unveiler_model="save/unveiler/unveiler_model.pt")
 
     segmenter = ObjectSegmenter()
 
