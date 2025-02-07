@@ -3,6 +3,7 @@ import torch
 import argparse
 from trainer.train_target_ppg import train_fcn_net, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
+from trainer.train_transformer import train_unveiler, train_regressor
 # from eval_agent_target import eval_agent
 from eval_agent import eval_agent
 import utils.general_utils as general_utils
@@ -54,6 +55,9 @@ if __name__ == "__main__":
     logging.info("The selected mode is:", args.mode, "and batch size is:", args.batch_size)
 
     if args.mode == 'unveiler':
+        train_unveiler(args)
+    
+    elif args.mode == 'xformer':
         train_unveiler(args)
 
     elif args.mode == 'fcn':

@@ -1,7 +1,7 @@
 import os
 import random
 from policy.models_target import Regressor
-from policy.obstacle_transformer import TransformerObstaclePredictor
+from policy.obstacle_encoder import SpatialTransformerPredictor
 
 import torch
 import torch.optim as optim
@@ -38,7 +38,7 @@ def train_unveiler(args):
         os.mkdir(save_path)
 
 
-    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
+    args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -73,7 +73,7 @@ def train_unveiler(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = TransformerObstaclePredictor(args).to(args.device)
+    model = SpatialTransformerPredictor(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
     criterion = nn.CrossEntropyLoss()

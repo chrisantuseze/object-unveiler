@@ -6,7 +6,7 @@ import math
 import torchvision
 
 class TransformerObstaclePredictor(nn.Module):
-    def __init__(self, args, hidden_dim=1024, num_encoder_layers=6, num_decoder_layers=6, nhead=8, dropout=0.1):
+    def __init__(self, args, hidden_dim=1024, num_encoder_layers=3, num_decoder_layers=3, nhead=8, dropout=0.1): #6,6,8
         super(TransformerObstaclePredictor, self).__init__()
         self.args = args
         self.hidden_dim = hidden_dim
@@ -16,8 +16,8 @@ class TransformerObstaclePredictor(nn.Module):
         self.resnet.fc = nn.Linear(512, hidden_dim)
         
         # Positional encoding for sequence information
-        # self.pos_encoder = PositionalEncoding(hidden_dim, dropout)
-        self.pos_encoder = RelativePositionalEncoding(hidden_dim)
+        self.pos_encoder = PositionalEncoding(hidden_dim, dropout)
+        # self.pos_encoder = RelativePositionalEncoding(hidden_dim)
 
         # self.query_embed = nn.Embedding(1, hidden_dim)
         
@@ -48,6 +48,17 @@ class TransformerObstaclePredictor(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim)
         )
+
+        # dimen = hidden_dim/2
+        # self.object_rel_fc = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * 2, dimen),
+        #     nn.LayerNorm(dimen),
+        #     nn.ReLU(),
+        #     nn.Linear(dimen, hidden_dim),
+        #     nn.LayerNorm(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.args.num_patches * dimen)
+        # )
         
         # Transformer encoder-decoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, 
@@ -184,34 +195,35 @@ class TransformerObstaclePredictor(nn.Module):
         # print("object_feats.shape", object_feats.shape)
         
         # Compute spatial features
-        spatial_feats = self.compute_spatial_features(target_mask, object_masks, bboxes)
-        # print("spatial_feats.shape", spatial_feats.shape)
+        spatial_feats = self.compute_spatial_features(target_mask, object_masks, bboxes) # Shape: [B, N, 144]
+
+        # objects_rel = self.compute_edge_features(bboxes, object_masks, target_mask)
+        # object_rel_feats = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1)
+        # print("object_rel_feats.shape", object_rel_feats.shape)
         
         # Combine visual and spatial features
-        combined_feats = torch.cat([object_feats, spatial_feats], dim=-1)
-        # print("combined_feats.shape", combined_feats.shape)
+        combined_feats = torch.cat([object_feats, spatial_feats], dim=-1) # Shape: [B, N, 1168]
 
-        object_embedding = self.spatial_mlp(combined_feats)
-        # print("1 object_embedding.shape", object_embedding.shape)
+        object_embedding = self.spatial_mlp(combined_feats) # Shape: [B, N, 1024]
         
         # Add positional encoding
-        object_embedding = object_embedding.transpose(0, 1)  # [N, B, D]
+        object_embedding = object_embedding.transpose(0, 1)  # [N, B, 1024]
         # print("2 object_embedding.shape", object_embedding.shape)
 
-        object_embedding = self.pos_encoder(object_embedding)
+        object_embedding = self.pos_encoder(object_embedding) # Shape: [N, B, 1024]
         # print("3 object_embedding.shape", object_embedding.shape)
         
         # Create attention mask for padding
-        padding_mask = (object_masks.sum(dim=(2,3,4)) == 0)  # [B, N]
+        padding_mask = (object_masks.sum(dim=(2,3,4)) == 0)  # Shape: [B, N]
         # print("padding_mask.shape", padding_mask.shape)
         
         # Transformer encoder
-        memory = self.transformer_encoder(object_embedding, src_key_padding_mask=padding_mask)
+        memory = self.transformer_encoder(object_embedding, src_key_padding_mask=padding_mask) # Shape: [N, B, 1024]
         # print("memory.shape", memory.shape)
 
         ######################################################
         # Use target features to generate query
-        query = self.query_generator(target_feat).view(1, B, -1)
+        query = self.query_generator(target_feat).view(1, B, -1) # Shape: [1, B, 1024]
         # print("query.shape", query.shape)
 
         # # Combine learned parameter with target features
@@ -223,7 +235,7 @@ class TransformerObstaclePredictor(nn.Module):
         ######################################################
         
         # Initialize decoder input
-        decoder_output = self.transformer_decoder(query, memory)
+        decoder_output = self.transformer_decoder(query, memory) # Shape: [1, B, 1024], memory = key & value
         # print("decoder_output.shape", decoder_output.shape, decoder_output.squeeze(1).shape)
         
         # Project to scores and apply Gumbel-Softmax
@@ -291,5 +303,46 @@ class RelativePositionalEncoding(nn.Module):
         
         # Get relative position embeddings
         rel_pos_emb = self.relative_embeddings(relative_positions)
+        print("rel_pos_emb.shape", rel_pos_emb.shape)
         
         return x + rel_pos_emb
+    
+class PositionEmbeddingSine(nn.Module):
+    """
+    This is a more standard version of the position embedding, very similar to the one
+    used by the Attention is all you need paper, generalized to work on images.
+    """
+    def __init__(self, num_pos_feats=64, temperature=10000, normalize=False, scale=None):
+        super().__init__()
+        self.num_pos_feats = num_pos_feats
+        self.temperature = temperature
+        self.normalize = normalize
+        if scale is not None and normalize is False:
+            raise ValueError("normalize should be True if scale is passed")
+        if scale is None:
+            scale = 2 * math.pi
+        self.scale = scale
+
+    def forward(self, tensor):
+        x = tensor
+        # mask = tensor_list.mask
+        # assert mask is not None
+        # not_mask = ~mask
+
+        not_mask = torch.ones_like(x[0, [0]])
+        y_embed = not_mask.cumsum(1, dtype=torch.float32)
+        x_embed = not_mask.cumsum(2, dtype=torch.float32)
+        if self.normalize:
+            eps = 1e-6
+            y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
+            x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
+
+        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device)
+        dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
+
+        pos_x = x_embed[:, :, :, None] / dim_t
+        pos_y = y_embed[:, :, :, None] / dim_t
+        pos_x = torch.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(3)
+        pos_y = torch.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(3)
+        pos = torch.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
+        return pos

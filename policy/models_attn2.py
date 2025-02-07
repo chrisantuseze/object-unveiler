@@ -330,7 +330,6 @@ class ObstacleSelector(nn.Module):
         # print("object_rel_feats.shape", object_rel_feats.shape)
 
         attn_output = self.scaled_dot_product_attention(object_feats, target_feats, object_rel_feats)
-        # attn_output = self.cross_attention(target_feats, object_feats)
         out = torch.cat([attn_output, object_rel_feats], dim=-1)
         attn_scores = self.attn(out.reshape(B, -1))
 
