@@ -1,8 +1,8 @@
 import os
 import pickle
-from policy.models_attn2 import Regressor, ResFCN
-from policy.obstacle_transformer import TransformerObstaclePredictor
-# from policy.models_target import Regressor, ResFCN
+# from policy.models_attn2 import Regressor, ResFCN
+from policy.obstacle_encoder import SpatialTransformerPredictor
+from policy.models_target import Regressor, ResFCN
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -50,7 +50,7 @@ class Policy:
         self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
         self.fcn_criterion = nn.BCELoss(reduction='None')
 
-        self.xformer = TransformerObstaclePredictor(args).to(self.device)
+        self.xformer = SpatialTransformerPredictor(args).to(self.device)
 
         self.segmenter = ObjectSegmenter()
 
@@ -663,7 +663,6 @@ class Policy:
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         # target = general_utils.preprocess_target(target_mask, state)
-        print("processed_masks", len(processed_masks))
         target = general_utils.preprocess_target(processed_masks[top_indices.item()], state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
@@ -807,8 +806,8 @@ class Policy:
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
 
-        # self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
-        # self.xformer.eval()
+        self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
+        self.xformer.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

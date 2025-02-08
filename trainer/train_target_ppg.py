@@ -80,7 +80,7 @@ def train_fcn_net(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
     criterion = nn.BCELoss(reduction='none')
-
+    lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
         for step, batch in enumerate(data_loader_train):
@@ -128,8 +128,9 @@ def train_fcn_net(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if epoch % 20 == 0:
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
 
     torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
     writer.close()
