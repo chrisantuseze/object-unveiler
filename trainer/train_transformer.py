@@ -15,7 +15,7 @@ from datasets.transformer_dataset import TransformerDataset
 import utils.logger as logging
 
 
-def train_unveiler(args):
+def train_xformer(args):
     """
     Trains a Fully Convolutional Network (FCN) policy model for target grasping using the provided arguments.
     Args:
@@ -90,7 +90,7 @@ def train_unveiler(args):
             raw_target = batch[5].to(args.device)
             raw_objects = batch[6].to(args.device)
             
-            pred = model(target, object_masks, bbox, objects_to_remove, raw_scene_mask, raw_target, raw_objects)
+            pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
             # Compute loss in the whole scene
             loss = criterion(pred, objects_to_remove)
@@ -120,7 +120,7 @@ def train_unveiler(args):
                 raw_target = batch[5].to(args.device)
                 raw_objects = batch[6].to(args.device)
                 
-                pred = model(target, object_masks, bbox, objects_to_remove, raw_scene_mask, raw_target, raw_objects)
+                pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
                 loss = criterion(pred, objects_to_remove)
 

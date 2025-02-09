@@ -8,8 +8,8 @@
 #SBATCH --gres=gpu:1
 module load apptainer/1.2.2 cuda/12.1
 export APPTAINER_BIND=$PWD
-apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2-double' --mode 'unveiler' --epochs 100 --batch_size 16 --lr 1e-4 #For Unveiler 8/1e-5
-# apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2-double' --mode 'xformer' --epochs 100 --batch_size 32 --lr 1e-3 #For Unveiler 8/1e-5
+apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'unveiler' --epochs 100 --batch_size 16 --lr 1e-4 #For Unveiler 8/1e-5
+# apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'xformer' --epochs 100 --batch_size 32 --lr 1e-3 #For Unveiler 8/1e-5
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/ppg-ou-dataset2' --mode 'fcn' --epochs 100 --batch_size 4 --lr 1e-4 #For Target-PPG
 # apptainer run --nv apptainerfile.sif python3 playground.py
 

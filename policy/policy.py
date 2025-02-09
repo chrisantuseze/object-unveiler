@@ -654,7 +654,7 @@ class Policy:
         raw_pred_mask, raw_target_mask, raw_obj_masks,\
               objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
         
-        logits = self.xformer(processed_target, processed_obj_masks, bboxes, objects_to_remove, raw_pred_mask, raw_target_mask, raw_obj_masks)
+        logits = self.xformer(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         print("probs", logits, top_indices, top_indices.item())
         

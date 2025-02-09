@@ -140,7 +140,7 @@ class SpatialTransformerPredictor(nn.Module):
         edge_features = torch.stack(edge_features).to(self.args.device)
         return edge_features
         
-    def forward(self, target_mask, object_masks, bboxes, object_sequence=None, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
+    def forward(self, target_mask, object_masks, bboxes, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
         B, N, C, H, W = object_masks.shape
         
         # Extract visual features

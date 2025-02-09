@@ -1,12 +1,8 @@
 import os
 import random
 import copy
-from policy.models_attn2 import Regressor, ResFCN
-# from policy.models_multi_task import Regressor, ResFCN
-# from policy.models_obstacle import Regressor, ResFCN
-# from policy.models_obstacle_attn import Regressor, ResFCN
-# from policy.models_obstacle_heuristics import Regressor, ResFCN
-# from policy.models_obstacle_vit import Regressor, ResFCN
+# from policy.models_attn2 import Regressor, ResFCN
+from policy.unveiler_policy import ResFCN
 
 import torch
 import torch.optim as optim
