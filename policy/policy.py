@@ -1,8 +1,8 @@
 import os
 import pickle
-# from policy.models_attn2 import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
 from policy.obstacle_encoder import SpatialTransformerPredictor
-from policy.models_target import Regressor, ResFCN
+# from policy.models_target import Regressor, ResFCN
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -806,8 +806,8 @@ class Policy:
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
 
-        self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
-        self.xformer.eval()
+        # self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
+        # self.xformer.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine
