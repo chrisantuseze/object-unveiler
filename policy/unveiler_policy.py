@@ -172,8 +172,8 @@ class SpatialTransformerPredictor(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(logits)
         logits = logits.masked_fill_(padding_mask_expanded, float(-1e-6))
 
-        # _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
-        # print("top indices", top_indices)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        print("top indices", top_indices)
         
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(logits)
@@ -455,3 +455,19 @@ class ResidualBlock(nn.Module):
         out = F.relu(out)
 
         return out
+
+
+class Regressor(nn.Module):
+    def __init__(self):
+        super(Regressor, self).__init__()
+        self.model = torchvision.models.resnet50(pretrained=True)
+        self.model.fc = nn.Linear(2048, 1024)
+        self.fc1 = nn.Linear(1024, 256)
+        self.fc21 = nn.Linear(256, 1)
+        self.fc22 = nn.Linear(256, 1)
+
+    def forward(self, x):
+        x = self.model(x)
+        x = F.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc21(x))
+        return x
