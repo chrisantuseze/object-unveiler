@@ -23,7 +23,7 @@ class TransformerDataset(data.Dataset):
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
+        heightmap, scene_mask, c_target_mask, c_obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
         processed_target_mask = general_utils.preprocess_target(c_target_mask)

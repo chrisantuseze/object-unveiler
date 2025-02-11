@@ -394,8 +394,8 @@ class Policy:
     def exploit(self, state, target_mask):
 
         # find optimal position and orientation
-        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
-        target = general_utils.preprocess_target(target_mask)
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
+        target = general_utils.preprocess_target(target_mask, state)
 
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
@@ -440,27 +440,20 @@ class Policy:
     
     def get_inputs(self, state, color_image, target_mask):
         processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
-        # print("processed_masks.shape", processed_masks[0].shape)
-        # print("pred_mask.shape", pred_mask.shape)
 
-        processed_pred_mask = general_utils.preprocess_target(pred_mask)
+        processed_pred_mask = general_utils.preprocess_target(pred_mask, state)
         processed_pred_mask = torch.FloatTensor(processed_pred_mask).unsqueeze(0).to(self.device)
-        # print("processed_pred_mask.shape", processed_pred_mask.shape)
 
-        processed_target = general_utils.preprocess_target(target_mask)#, state)
+        processed_target = general_utils.preprocess_target(target_mask, state)
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
-        # print("processed_target.shape", processed_target.shape)
 
         processed_obj_masks = []
         raw_obj_masks = []
         bboxes = []
-        masks = []
         for id, mask in enumerate(processed_masks):
-            processed_mask = general_utils.resize_mask(transform, mask)
-            raw_obj_masks.append(processed_mask)
-            masks.append(processed_mask)
+            raw_obj_masks.append(general_utils.resize_mask(transform, mask))
 
-            processed_mask = general_utils.preprocess_target(mask)#, state)
+            processed_mask = general_utils.preprocess_target(mask, state)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
@@ -469,8 +462,8 @@ class Policy:
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
         raw_obj_masks = torch.FloatTensor(np.array(raw_obj_masks)).to(self.device)
 
-        target_id = grasping.get_target_id(general_utils.resize_mask(transform, target_mask), masks)
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
+        target_id = grasping.get_target_id(target_mask, processed_masks)
+        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
@@ -500,9 +493,6 @@ class Policy:
 
             bboxes = bboxes[:self.args.num_patches]
             bboxes = bboxes.unsqueeze(0)
-
-        # _, top_indices = torch.topk(objects_to_remove, k=self.args.sequence_length + 1, dim=1)
-        # objects_to_remove = np.argmax(objects_to_remove)
 
         objects_to_remove_id = 0
         print("ground truth:", objects_to_remove[0])
@@ -542,7 +532,7 @@ class Policy:
         return image_data
 
     def exploit_act(self, state, object_mask, obs):
-        _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
+        _, self.padding_width = general_utils.preprocess_image(state) # only did this to get the padding_width
 
         # heightmap = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
@@ -559,7 +549,7 @@ class Policy:
         return actions
     
     def exploit_act2(self, state, object_mask, images, qpos):
-        _, self.padding_width = general_utils.preprocess_heightmap(state) # only did this to get the padding_width
+        _, self.padding_width = general_utils.preprocess_image(state) # only did this to get the padding_width
 
         qpos_numpy = np.array(qpos)
         qpos = self.pre_process(qpos_numpy)
@@ -582,7 +572,7 @@ class Policy:
 
     def exploit_attn(self, state, color_image, target_mask):
         # find optimal position and orientation
-        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         processed_pred_mask, processed_target, processed_obj_masks,\
@@ -619,7 +609,7 @@ class Policy:
     
     def exploit_old(self, state, target_mask):
         # find optimal position and orientation
-        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         target = general_utils.preprocess_target(target_mask, state)
@@ -660,7 +650,7 @@ class Policy:
         print("probs", logits, top_indices, top_indices.item())
         
         # find optimal position and orientation
-        heightmap, self.padding_width = general_utils.preprocess_heightmap(state)
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         # target = general_utils.preprocess_target(target_mask, state)

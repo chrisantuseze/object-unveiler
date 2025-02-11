@@ -402,25 +402,18 @@ def preprocess_aperture_image(state, p1, theta, crop_size, plot=False):
     
     return three_channel_img
 
-def preprocess_heightmap(heightmap):
-    return preprocess_image(heightmap, skip_transform=True)
-
 def preprocess_target(target, state=None):
     if state is not None:
         resized_target = resize_mask(transform, target)
         full_crop = extract_target_crop(resized_target, state)
-        return preprocess_image(full_crop, skip_transform=True)[0]
+        return preprocess_image(full_crop)[0]
 
-    return preprocess_image(target, skip_transform=False)[0]
+    return preprocess_image(target)[0]
 
-def preprocess_image(image, skip_transform=False):
+def preprocess_image(image):
     """
         Pre-process heightmap (padding and normalization)
     """
-    
-    if not skip_transform:
-        image = resize_mask(transform, image)
-
     # add extra padding (to handle rotations inside the network)
     diagonal_length = float(image.shape[0]) * np.sqrt(2)
     diagonal_length = np.ceil(diagonal_length / 16) * 16

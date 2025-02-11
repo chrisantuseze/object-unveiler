@@ -20,11 +20,11 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__(self, id):
+    def __getitem__1(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask, skip_transform=True)
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
+        padded_target_mask = general_utils.preprocess_target(target_mask, heightmap)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
@@ -50,12 +50,16 @@ class HeightMapDataset(data.Dataset):
         return padded_heightmap, padded_target_mask, rot_id, label
 
     # single - input, single - output for ou-dataset with target action
-    def __getitem__1(self, id):
-        episode_data = self.memory.load_episode(self.dir_ids[id])
-        heightmap, _, target_mask, _, action = episode_data[-1]
+    def __getitem__(self, id):
+        # episode_data = self.memory.load_episode(self.dir_ids[id])
+        # heightmap, _, target_mask, _, action = episode_data[-1]
 
-        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap, skip_transform=True)
-        padded_target_mask, padding_width_target = general_utils.preprocess_image(target_mask)
+        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
+        heightmap, scene_mask, c_target_mask, obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, action = episode_data[0]
+
+
+        padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
+        padded_target_mask = general_utils.preprocess_target(obstacle_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
