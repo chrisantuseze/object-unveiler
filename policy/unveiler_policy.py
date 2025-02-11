@@ -172,8 +172,8 @@ class SpatialTransformerPredictor(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(logits)
         logits = logits.masked_fill_(padding_mask_expanded, float(-1e-6))
 
-        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-        print("top indices", top_indices)
+        # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        # print("top indices", top_indices)
         
         # Sampling from the attention weights to get hard attention
         sampled_attention_weights = torch.zeros_like(logits)
