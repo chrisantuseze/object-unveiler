@@ -197,12 +197,12 @@ if __name__ == "__main__":
     print("Total length:", len(episode_dirs))
     
     for file_ in episode_dirs:
-        if not file_.startswith("episode"):
-            print(file_)
-            episode_dirs.remove(file_)
-
-        # if not file_.startswith("transition"):
+        # if not file_.startswith("episode"):
+        #     print(file_)
         #     episode_dirs.remove(file_)
+
+        if not file_.startswith("transition"):
+            episode_dirs.remove(file_)
 
 
     segmenter = ObjectSegmenter()
