@@ -52,8 +52,6 @@ def train_fcn_net(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    # transition_dirs = transition_dirs[:8000]
-
     print(f'\nData from: {args.dataset_dir}; size: {len(transition_dirs)}\n')
 
     split_index = int(args.split_ratio * len(transition_dirs))

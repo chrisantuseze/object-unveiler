@@ -20,7 +20,7 @@ class HeightMapDataset(data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
 
     # single - input, single - output for ppg-ou-dataset
-    def __getitem__1(self, id):
+    def __getitem__(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
