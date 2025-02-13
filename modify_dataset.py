@@ -182,15 +182,15 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # new_dir = 'save/ppg-dataset-act1022'
-    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset2"
+    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
-    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset"
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset"
+    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset"
 
 
     episode_dirs = os.listdir(dataset_dir)
@@ -207,9 +207,9 @@ if __name__ == "__main__":
 
     segmenter = ObjectSegmenter()
     for i, episode_dir in enumerate(episode_dirs):
-        # modify_transitions(memory, episode_dir, i)
+        modify_transitions(memory, episode_dir, i)
 
-        modify_episode(segmenter, episode_dir, i)
+        # modify_episode(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
