@@ -50,7 +50,7 @@ class HeightMapDataset(data.Dataset):
         return padded_heightmap, padded_target_mask, rot_id, label
 
     # single - input, single - output for ou-dataset with target action
-    def __getitem__(self, id):
+    def __getitem__1(self, id):
         # episode_data = self.memory.load_episode(self.dir_ids[id])
         # heightmap, _, target_mask, _, action = episode_data[-1]
 
