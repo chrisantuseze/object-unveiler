@@ -16,7 +16,6 @@ from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 import policy.grasping2 as grasping2
-import policy.grasping3 as grasping3
 from utils.constants import *
 from env.env_components import ActionState
 
@@ -400,6 +399,8 @@ if __name__ == "__main__":
 
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
+
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Writing to a file
     with open('episode_info.txt', 'w') as file:

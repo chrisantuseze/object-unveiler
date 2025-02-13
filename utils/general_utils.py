@@ -454,11 +454,7 @@ def extract_target_crop(resized_target, heightmap):
     # ax[1].imshow(resized_target)
     # ax[2].imshow(full_crop)
 
-    # # bg1, bg2 = overlay_images(heightmap, resized_target)
-    # # ax[3].imshow(bg1)
-    # # ax[4].imshow(bg2)
     # plt.show()   
-    # # plt.close('all')
 
     return full_crop
 
@@ -476,38 +472,6 @@ def extract_target_crop2(target, scene):
         full_crop = np.array(scene)
 
     return full_crop
-
-def overlay_images(heightmap, overlay):
-    import copy
-
-    # Deep copy
-    background1 = copy.deepcopy(heightmap)
-    background2 = copy.deepcopy(heightmap)
-
-    # Overlay the images
-    for i in range(100):
-        for j in range(100):
-            if overlay[i, j] != 0:
-                background1[i, j] = overlay[i, j]
-            else:
-                background2[i, j] = overlay[i, j]
-
-    return background1, background2
-
-def apply_softmax(optimal_nodes):
-    # Find the indices of non-zero elements
-    non_zero_indices = np.nonzero(optimal_nodes)
-
-    # Extract non-zero elements
-    non_zero_values = optimal_nodes[non_zero_indices]
-
-    # Apply softmax to non-zero elements
-    softmax_values = np.exp(non_zero_values) / np.sum(np.exp(non_zero_values))
-
-    # Replace non-zero elements with softmax values in the original tensor
-    optimal_nodes[non_zero_indices] = softmax_values
-
-    return np.array(optimal_nodes)
 
 def get_pointcloud_(color_img, depth_img, camera_intrinsics):
 

@@ -82,7 +82,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_attn(state, obs['color'][1], target_mask)
+        action = policy.exploit_xformer(state, obs['color'][1], target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -352,7 +352,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model, unveiler_model="save/unveiler/unveiler_model_61.pt")
+    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model, unveiler_model="save/unveiler-xformer-encoder/unveiler_model_61.pt")
 
     segmenter = ObjectSegmenter()
 
