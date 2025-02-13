@@ -24,7 +24,7 @@ class HeightMapDataset(data.Dataset):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
-        padded_target_mask = general_utils.preprocess_target(target_mask, heightmap)
+        padded_target_mask = general_utils.preprocess_target(target_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
