@@ -23,6 +23,11 @@ class HeightMapDataset(data.Dataset):
     def __getitem__(self, id):
         heightmap, target_mask, action = self.memory.load(self.dir_ids, id)
 
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(heightmap)
+        ax[1].imshow(target_mask)
+        plt.show()
+
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
         padded_target_mask = general_utils.preprocess_target(target_mask)
 

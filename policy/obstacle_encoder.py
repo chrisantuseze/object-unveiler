@@ -61,46 +61,6 @@ class SpatialTransformerPredictor(nn.Module):
             for _ in range(num_layers)
         ])
     
-    def compute_edge_features_single(self, boxes, masks, target_mask):
-        """
-        Compute pairwise spatial relationships between objects and the target object.
-
-        Args:
-            boxes (Tensor): Bounding boxes of detected objects with shape (num_objects, 4).
-            masks (Tensor): Segmentation masks of detected objects with shape (num_objects, H, W).
-            target_mask (Tensor): Segmentation mask of the target object with shape (1, H, W).
-
-        Returns:
-            edge_features (Tensor): Tensor of edge features with shape (num_edges, edge_feat_dim).
-            edges (Tensor): Tensor of edge indices with shape (num_edges, 2).
-        """
-        device = boxes.device
-        num_objects = boxes.size(0)
-
-        # Compute pairwise object-target relationships
-        edges = []
-        edge_features = []
-
-        for i in range(num_objects):
-            # Compute spatial features between object i and the target object
-            obj_mask = masks[i].unsqueeze(0)  # Shape: (1, H, W)
-            # print("obj_mask.shape", obj_mask.shape, "target_mask.shape", target_mask.shape)
-
-            target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
-            target_iou = self.calculate_iou(boxes[i], target_mask)  # IoU between object and target
-
-            # Compute edge features
-            edge_feat = torch.tensor([target_overlap, target_iou], device=device)
-            edge_features.append(edge_feat)
-
-            # Add edge index
-            edges.append([i, num_objects])  # Connect object node to a dummy target node
-
-        edge_features = torch.stack(edge_features, dim=0)
-        edges = torch.tensor(edges, dtype=torch.long, device=device)
-
-        return edge_features, edges
-
     def calculate_iou(self, box, target_mask):
         """
         Calculate the Intersection over Union (IoU) between a bounding box and a target mask.
@@ -131,14 +91,28 @@ class SpatialTransformerPredictor(nn.Module):
 
     def compute_edge_features(self, bboxes, object_masks, target_mask):
         B, N, C, H, W = object_masks.shape
+        device = object_masks.device
 
-        edge_features = []
+        all_edge_features = []
         for i in range(B):
-            edge_feats, _ = self.compute_edge_features_single(bboxes[i], object_masks[i], target_mask[i])
-            edge_features.append(edge_feats)
+            # Compute pairwise object-target relationships
+            edge_features = []
+            for j in range(N):
+                # Compute spatial features between object i and the target object
+                obj_mask = object_masks[i][j].unsqueeze(0)  # Shape: (1, H, W)
 
-        edge_features = torch.stack(edge_features).to(self.args.device)
-        return edge_features
+                target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+                target_iou = self.calculate_iou(bboxes[i][j], target_mask[i])  # IoU between object and target
+
+                # Compute edge features
+                edge_feat = torch.tensor([target_overlap, target_iou], device=device)
+                edge_features.append(edge_feat)
+
+            edge_features = torch.stack(edge_features, dim=0)
+            all_edge_features.append(edge_features)
+
+        all_edge_features = torch.stack(all_edge_features).to(self.args.device)
+        return all_edge_features
         
     def forward(self, target_mask, object_masks, bboxes, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
         B, N, C, H, W = object_masks.shape

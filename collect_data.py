@@ -362,8 +362,16 @@ def collect_random_target_dataset(args, params):
             next_obs, grasp_info = env.step(env_action3d)
 
             if grasp_info['stable']:
-                extracted_target = general_utils.extract_target_crop(target_mask, state)
-                transition = {'obs': obs, 'state': state, 'target_mask': general_utils.resize_mask(transform, target_mask), 'extracted_target': extracted_target, 'action': action, 'label': grasp_info['stable']}
+                resized_target = general_utils.resize_mask(transform, target_mask)
+                extracted_target = general_utils.extract_target_crop(resized_target, state)
+
+                fig, ax = plt.subplots(1, 3)
+                ax[0].imshow(state)
+                ax[1].imshow(resized_target)
+                ax[2].imshow(extracted_target)
+                plt.show()
+
+                transition = {'obs': obs, 'state': state, 'target_mask': resized_target, 'extracted_target': extracted_target, 'action': action, 'label': grasp_info['stable']}
                 memory.store(transition)
                 break
 
