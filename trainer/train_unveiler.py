@@ -211,7 +211,7 @@ def train_unveiler(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    # transition_dirs = transition_dirs[:50000]
+    transition_dirs = transition_dirs[:5000]
 
     print(f'\nData from: {args.dataset_dir}; size: {len(transition_dirs)}\n')
 
