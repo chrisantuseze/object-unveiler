@@ -406,6 +406,12 @@ def preprocess_target(target, state=None):
     if state is not None:
         resized_target = resize_mask(transform, target)
         full_crop = extract_target_crop(resized_target, state)
+
+        # fig, ax = plt.subplots(1, 2)
+        # ax[0].imshow(state)
+        # ax[1].imshow(full_crop)
+        # plt.show()
+
         return preprocess_image(full_crop)[0]
 
     return preprocess_image(target)[0]

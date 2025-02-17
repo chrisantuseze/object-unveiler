@@ -6,6 +6,7 @@ import os
 import sys
 import cv2
 from scipy import ndimage
+import matplotlib.pyplot as plt
 
 from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
