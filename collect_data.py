@@ -53,8 +53,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     while not policy.is_state_init_valid(obs):
         obs = env.reset()
 
-    id = 1
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
+    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR)
     cv2.imwrite(os.path.join(TRAIN_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -83,7 +82,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
-        # action = policy.guided_exploration_old(depth_heightmap, processed_masks[node_id])
         try:
             # Select action
             action = policy.guided_exploration_old(depth_heightmap, processed_masks[node_id])
@@ -95,7 +93,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print(action)
 
         env_action3d = policy.action3d(action)
-        obs, grasp_info = env.step(env_action3d)
+        next_obs, grasp_info = env.step(env_action3d)
 
         grasp_status.append(grasp_info['stable'])
 
@@ -106,39 +104,54 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print(grasp_info)
         print('---------')
 
-        general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
-
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
-        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
-
-        if grasp_info['stable']:
-            new_id, obj_mask = grasping.get_grasped_object(processed_masks, action)
-            
-            new_masks = []
+        if grasp_info['stable']:    
+            resized_new_masks = []
             for mask in processed_masks:
-                new_masks.append(general_utils.resize_mask(transform, mask))
+                resized_new_masks.append(general_utils.resize_mask(transform, mask))
                 
-            resized_target_mask = general_utils.resize_mask(transform, processed_masks[target_id])
+            resized_target_mask = general_utils.resize_mask(transform, target_mask)
+            extracted_target = general_utils.extract_target_crop(resized_target_mask, state)
+
+            # grasped_object_id = grasping.get_grasped_object(processed_masks, action) # we want to find the exact object that was grasped - Not working
+
+            resized_obstacle_mask = general_utils.resize_mask(transform, processed_masks[node_id])
+            extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, state)
             transition = {
-                'color_obs': obs['color'][1], 
-                'depth_obs': obs['depth'][1], 
+                'color_obs': next_obs['color'][1], 
+                'depth_obs': next_obs['depth'][1], 
                 'state': state, 
                 'depth_heightmap': depth_heightmap,
                 'target_mask': resized_target_mask, 
-                'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
-                'obstacle_mask': general_utils.resize_mask(transform, obj_mask),
+                'c_target_mask': extracted_target, 
+                'obstacle_mask': resized_obstacle_mask,
+                'c_obstacle_mask': extracted_obstacle, 
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
-                'object_masks': new_masks,
+                'object_masks': resized_new_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
             }
+
+            # fig, ax = plt.subplots(1, 4)
+            # ax[0].imshow(state)
+            # ax[1].imshow(obs['color'][1])
+            # ax[2].imshow(extracted_obstacle)
+            # ax[3].imshow(extracted_target)
+            # plt.show()
+
             episode_data_list.append(transition)
 
-            if grasping.is_target(processed_masks[target_id], mask):
+            if grasping.is_target(processed_masks[target_id], processed_masks[node_id]):
                 is_target_grasped = True
                 print(">>>>>>>>>>> Target retrieved! >>>>>>>>>>>>>")
                 print('------------------------------------------')
                 break
+
+        obs = copy.deepcopy(next_obs) # this needs to come after the grasping check. what we save is the obs before the grasping
+
+        general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
+
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR)
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
         if target_id == -1:
             print("Target is no longer available in the scene.")
@@ -157,11 +170,8 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
             file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}\n")
 
     # We do not need to waste the successful grasp
-    elif len(episode_data_list) == 1:
-        transition = episode_data_list[0]
-        transition['target_mask'] = transition['obstacle_mask']
-
-        memory.store_episode([transition])
+    elif len(episode_data_list) > 0:
+        memory.store_episode(episode_data_list)
         print("Saved the only successful grasp")
         print("The scene_nr_objs:", env.scene_nr_objs, ", Session seed:", env.session_seed, ", Target id:", target_id)
 
@@ -414,5 +424,5 @@ if __name__ == "__main__":
     with open('episode_info.txt', 'w') as file:
         file.write("\n")
 
-    # collect_episodic_dataset(args, params)
-    collect_random_target_dataset(args, params)
+    collect_episodic_dataset(args, params)
+    # collect_random_target_dataset(args, params)

@@ -146,16 +146,22 @@ def get_closest_neighbor(actions, target_mask):
 
     return min(new_actions, key=lambda x: x[0])[1]
 
+@DeprecationWarning("No longer used")
 def get_grasped_object(processed_masks, action):
-
+    dists = []
+    print(action[0], action[1], "\n")
     for id, mask in enumerate(processed_masks):
-        dist = get_distance(get_object_centroid(mask), (action[0], action[1]))
-        print(dist)
-        if dist < 250:
-            print("grasped object:", id, dist)
-            return id, mask
+        cx, cy = get_object_centroid(mask)
+        print(cx, cy)
 
-    return -1, None
+        dist = get_distance([cx, cy], [action[0], action[1]])
+        dists.append((id, dist))
+
+    print(dists)
+    dists.sort(key=lambda x: x[1])
+    if len(dists) > 0:
+        return dists[0][0]
+    return -1
 
 def is_target(target_mask, object_mask):
     dist = get_distance(get_object_centroid(target_mask), get_object_centroid(object_mask))
