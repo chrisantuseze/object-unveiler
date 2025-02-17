@@ -146,7 +146,7 @@ def get_closest_neighbor(actions, target_mask):
 
     return min(new_actions, key=lambda x: x[0])[1]
 
-@DeprecationWarning("No longer used")
+@DeprecationWarning
 def get_grasped_object(processed_masks, action):
     dists = []
     print(action[0], action[1], "\n")
