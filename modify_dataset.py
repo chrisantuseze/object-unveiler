@@ -22,6 +22,7 @@ os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 index = 0
 
 def modify_episode(segmenter: ObjectSegmenter, episode_dir):
+    global index
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
 
