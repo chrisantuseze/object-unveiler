@@ -45,9 +45,7 @@ def train_fcn_net(args):
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
-        # if not file_.startswith("transition"):
-        #     transition_dirs.remove(file_)
-    
+            
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
