@@ -11,8 +11,8 @@ dir = ""
 
 # folder_path = "save/pc-ou-dataset2/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-cs"
-id = 1381
+folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-mb"
+id = 1573
 
 
 folder_path = dir + folder_path
