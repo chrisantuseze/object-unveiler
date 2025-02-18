@@ -31,38 +31,37 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir, index):
     episode_data_list = []
     for data in episode_data:
         heightmap = data['state']
-        object_masks = data['object_masks']
 
         object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
 
-        new_masks = []
-        masks = []
-        new_bboxes = []
+        extracted_object_masks = []
+        resized_object_masks = []
+        resized_bboxes = []
         for id, mask in enumerate(object_masks):
             mask = general_utils.resize_mask(transform, mask)
-            masks.append(mask)
-            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
-
-            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
+            resized_object_masks.append(mask)
+            extracted_object_masks.append(general_utils.extract_target_crop(mask, heightmap))
+            resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
         # get optimal nodes
-        target_id = grasping.get_target_id(data['target_mask'], masks)
-        objects_to_remove = grasping.find_obstacles_to_remove(target_id, masks)
+        target_id = grasping.get_target_id(data['target_mask'], object_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, object_masks)
         # print(target_id, objects_to_remove[0])
 
-        # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])
-
         transition = {
+            'color_obs': data['color_obs'],
             'state': data['state'],
             'depth_heightmap': data['depth_heightmap'],
             'target_mask': data['target_mask'], 
-            'c_target_mask': general_utils.extract_target_crop(data['target_mask'], heightmap), 
+            'c_target_mask': data['c_target_mask'], 
+            'obstacle_mask': data['obstacle_mask'],
+            'c_obstacle_mask': data['c_obstacle_mask'],
             'scene_mask': data['scene_mask'],
-            'c_object_masks': new_masks,
-            'obstacle_mask': general_utils.extract_target_crop(data['obstacle_mask'], heightmap),
+            'object_masks': object_masks,
+            'c_object_masks': extracted_object_masks,
             'action': data['action'], 
             'label': data['label'],
-            'bboxes': new_bboxes,
+            'bboxes': resized_bboxes,
             'target_id': target_id,
             'objects_to_remove': objects_to_remove,
         }
@@ -161,54 +160,35 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
     memory.store(transition)
     logging.info(f"{idx} - Episode with dir {transition_dir} updated...")
 
-def show_images(obj_masks, target_mask, obstacle_mask, scene_mask):
-    fig, ax = plt.subplots(len(obj_masks) + 3)
-
-    ax[0].imshow(target_mask)
-    ax[1].imshow(obstacle_mask)
-    ax[2].imshow(scene_mask)
-
-    k = 3
-    for i in range(len(obj_masks)):
-        obj_mask = obj_masks[i]
-
-        ax[k].imshow(obj_mask)
-        k += 1
-
-    plt.show()
-
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # new_dir = 'save/ppg-dataset-act1022'
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset2"
-    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset"
-    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
 
 
     episode_dirs = os.listdir(dataset_dir)
     print("Total length:", len(episode_dirs))
     
     for file_ in episode_dirs:
-        # if not file_.startswith("episode"):
-        #     print(file_)
-        #     episode_dirs.remove(file_)
-
-        if not file_.startswith("transition"):
+        if not file_.startswith("episode"):
+            print(file_)
             episode_dirs.remove(file_)
+
+        # if not file_.startswith("transition"):
+        #     episode_dirs.remove(file_)
 
 
     segmenter = ObjectSegmenter()
     for i, episode_dir in enumerate(episode_dirs):
-        modify_transitions(memory, episode_dir, i)
+        # modify_transitions(memory, episode_dir, i)
 
-        # modify_episode(segmenter, episode_dir, i)
+        modify_episode(segmenter, episode_dir, i)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

@@ -52,7 +52,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     while not policy.is_state_init_valid(obs):
         obs = env.reset()
 
-    processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR)
+    processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR, bbox=True)
     cv2.imwrite(os.path.join(TRAIN_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
@@ -104,9 +104,10 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print('---------')
 
         if grasp_info['stable']:    
-            resized_new_masks = []
+            resized_new_masks = resized_bboxes = []
             for mask in processed_masks:
                 resized_new_masks.append(general_utils.resize_mask(transform, mask))
+                resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
                 
             resized_target_mask = general_utils.resize_mask(transform, target_mask)
             extracted_target = general_utils.extract_target_crop(resized_target_mask, state)
@@ -128,6 +129,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 'object_masks': resized_new_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
+                'bboxes': resized_bboxes
             }
 
             # fig, ax = plt.subplots(1, 4)
@@ -149,7 +151,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR)
+        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR, bbox=True)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
         if target_id == -1:
