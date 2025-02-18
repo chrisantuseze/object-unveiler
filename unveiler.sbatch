@@ -11,13 +11,8 @@ export APPTAINER_BIND=$PWD
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'unveiler' --epochs 100 --batch_size 8 --lr 1e-4 #For Unveiler 8/1e-5
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'xformer' --epochs 100 --batch_size 32 --lr 1e-3 #For Unveiler 8/1e-5
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'fcn' --epochs 100 --batch_size 4 --lr 1e-4 #For Target-PPG
-# apptainer run --nv apptainerfile.sif python3 playground.py
+apptainer run --nv apptainerfile.sif python3 playground.py
 
-apptainer run --nv apptainerfile.sif python3 collect_data.py \
---singulation_condition \
---n_samples 30000 \
---chunk_size 10 \
---seed 2
 
 # 16
 # 1e-4
