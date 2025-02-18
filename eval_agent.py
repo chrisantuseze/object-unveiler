@@ -12,7 +12,6 @@ from scipy import ndimage
 
 from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
-from policy import grasping2
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -211,7 +210,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
         obstacle_id = objects_to_remove[0]

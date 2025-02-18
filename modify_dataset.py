@@ -16,7 +16,6 @@ import utils.logger as logging
 import utils.general_utils as general_utils
 import env.cameras as cameras
 import policy.grasping as grasping
-import policy.grasping2 as grasping2
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
@@ -48,7 +47,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir, index):
 
         # get optimal nodes
         target_id = grasping.get_target_id(data['target_mask'], masks)
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, masks)
         # print(target_id, objects_to_remove[0])
 
         # show_images(masks, data['target_mask'], masks[objects_to_remove[0]], data['scene_mask'])

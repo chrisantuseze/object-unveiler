@@ -15,7 +15,6 @@ from policy.policy import Policy
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
-import policy.grasping2 as grasping2
 from utils.constants import *
 from env.env_components import ActionState
 
@@ -72,7 +71,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
         node_id = objects_to_remove[0]
@@ -210,7 +209,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while steps < max_steps:
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
         obstacle_id = objects_to_remove[0]

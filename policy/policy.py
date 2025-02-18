@@ -27,7 +27,6 @@ from utils.constants import *
 import env.cameras as cameras
 import utils.logger as logging
 import policy.grasping as grasping
-import policy.grasping2 as grasping2
 
 from act.constants import SIM_TASK_CONFIGS
 
@@ -463,7 +462,7 @@ class Policy:
         raw_obj_masks = torch.FloatTensor(np.array(raw_obj_masks)).to(self.device)
 
         target_id = grasping.get_target_id(target_mask, processed_masks)
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)

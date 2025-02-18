@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 
 from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
-from policy import grasping2
 from policy.policy import Policy
 import utils.general_utils as general_utils
 from utils.constants import *
@@ -78,7 +77,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     # NOTE: During the next iteration you need to search through the masks and identify the target, 
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
-        objects_to_remove = grasping2.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         print("\nobjects_to_remove:", objects_to_remove)
 
         node_id = objects_to_remove[0]

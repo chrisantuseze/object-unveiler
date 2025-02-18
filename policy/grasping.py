@@ -16,6 +16,84 @@ import matplotlib.pyplot as plt
 import utils.object_comparison as compare
 import utils.logger as logging
 
+def find_obstacles_to_remove(target_index, segmentation_masks):
+    if len(segmentation_masks) <= 3:
+        return [target_index]
+    
+    distances_to_edge = get_distances_to_edge(segmentation_masks)
+
+    min_dist = min(distances_to_edge)
+    min_index = distances_to_edge.index(min_dist)
+    if min_index == target_index:
+        return [target_index]
+    
+    # Identify the target mask
+    target_mask = segmentation_masks[target_index]
+
+    # Find obstacles overlapping with the target object
+    target_obj_distances = []
+    for object_idx, mask in enumerate(segmentation_masks):
+        dist = get_distance(center_of_mass(target_mask), center_of_mass(segmentation_masks[object_idx]))
+        target_obj_distances.append(dist)
+    
+    normalized_periphery_dists = normalize(distances_to_edge)
+    normalized_target_obj_dists = normalize(target_obj_distances)
+    combined_distances = [d1 + d2 for d1, d2 in zip(normalized_periphery_dists, normalized_target_obj_dists)]
+    
+    sorted_indices = sorted(range(len(combined_distances)), key=lambda k: combined_distances[k])
+
+    if sorted_indices[0] == target_index:
+        sorted_indices = sorted_indices[1:]
+    
+    return sorted_indices
+
+def normalize(distances):
+    max_distance = max(distances)
+    normalized_distances = [distance / max_distance for distance in distances]
+    return normalized_distances
+
+def get_distances_to_edge(segmentation_masks):
+    distances_list = []
+
+    # Iterate over each segmentation mask
+    for i, mask in enumerate(segmentation_masks):
+        min_distance = find_centroid_distance(mask)[0]
+        # print(i, "-", min_distance)
+        distances_list.append(min_distance)
+
+    return distances_list
+
+def find_centroid_distance(segmentation_mask):
+    # Find unique labels in the segmentation mask
+    unique_labels = np.unique(segmentation_mask)
+
+    # Remove background label if present
+    unique_labels = unique_labels[unique_labels != 0]
+
+    # Initialize an array to store the minimum distances
+    min_distances = []
+
+    # Iterate through each object
+    for obj_label in unique_labels:
+        # Create a binary mask for the current object
+        obj_mask = segmentation_mask == obj_label
+
+        # Find the centroid of the object
+        centroid = np.array(center_of_mass(obj_mask))
+
+        # Compute distances to the four edges
+        distances_to_edges = [
+            centroid[0],                      # Distance to top edge
+            segmentation_mask.shape[0] - centroid[0],  # Distance to bottom edge
+            centroid[1],                      # Distance to left edge
+            segmentation_mask.shape[1] - centroid[1]   # Distance to right edge
+        ]
+
+        # Append the minimum distance to the array
+        min_distances.append(min(distances_to_edges))
+
+    return min_distances
+
 def get_object_centroid(mask):
     # Calculate the centroid (center of mass)
     M = cv2.moments(mask)
@@ -27,27 +105,6 @@ def get_object_centroid(mask):
         cx, cy = 0, 0
 
     return [cx, cy]
-
-def check_occlusion(target_bbox, other_bboxes, overlap_threshold=0.5):
-    # Check if the target object is occluded by other objects
-    for bbox in other_bboxes:
-        overlap_area = calculate_overlap(target_bbox, bbox)
-        if overlap_area / calculate_area(target_bbox) > overlap_threshold:
-            return True
-    return False
-
-def calculate_overlap(bbox1, bbox2):
-    # Calculate the overlap area between two bounding boxes
-    x1, y1, w1, h1 = bbox1
-    x2, y2, w2, h2 = bbox2
-    x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
-    y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
-    return x_overlap * y_overlap
-
-def calculate_area(bbox):
-    # Calculate the area of a bounding box
-    _, _, width, height = bbox
-    return width * height
 
 def find_target(processed_masks, old_target_mask): 
     valid_objs = {}
@@ -80,7 +137,7 @@ def find_target(processed_masks, old_target_mask):
             id = key
             mask = value[0]
         
-    logging.info("new target id:", id)
+    logging.info("New target id:", id)
     return id, mask
 
 def get_distance(point1, point2):
@@ -112,11 +169,6 @@ def episode_status(grasping_status, is_target_grasped):
     
     return not any(item is False for item in grasping_status)
 
-def is_target_neighbor(target, action, threshold):
-    dist = get_distance(get_object_centroid(target), (action[0], action[1]))
-    # print(dist)
-    return dist < threshold
-
 def get_target_id(target, processed_masks):
     indices = []
     for index, mask in enumerate(processed_masks):
@@ -129,22 +181,6 @@ def get_target_id(target, processed_masks):
         return indices[0][0]
     
     return -1
-
-def evaluate_actions(actions, target_mask):
-    new_actions = []
-    for action in actions:
-        if is_target_neighbor(target_mask, action, threshold=100):
-            new_actions.append(action)
-            print(action)
-
-    return new_actions
-
-def get_closest_neighbor(actions, target_mask):
-    new_actions = []
-    for action in actions:
-        new_actions.append((get_distance(get_object_centroid(target_mask), (action[0], action[1])), action))
-
-    return min(new_actions, key=lambda x: x[0])[1]
 
 @DeprecationWarning
 def get_grasped_object(processed_masks, action):
@@ -203,80 +239,6 @@ def find_central_object(segmentation_masks):
 
     print("Central object id is:", central_object_index)
     return central_object_index
-
-def find_topmost_right_object(segmentation_masks, top_weight=2, right_weight=1):
-    best_score = float('-inf')
-    best_object = None
-    
-    height, width = segmentation_masks[0].shape
-    
-    for i, mask in enumerate(segmentation_masks):
-        non_zero = np.nonzero(mask)
-        if len(non_zero[0]) > 0:
-            # Find the topmost and rightmost points
-            top = np.min(non_zero[0])
-            right = np.max(non_zero[1])
-            
-            # Calculate a score favoring top position more than right position
-            # We invert top because lower y values are higher in the image
-            score = (top_weight * (height - top) / height) + (right_weight * right / width)
-            
-            if score > best_score:
-                best_score = score
-                best_object = i
-
-    print("Top-right object id is:", best_object)
-    return best_object
-
-def measure_singulation(target_id, masks: List, dilation_radius=5):
-    seg_masks = deepcopy(masks)
-    target_mask = seg_masks[target_id]
-    # Dilate the target mask
-    dilated_target = dilation(target_mask, disk(dilation_radius))
-
-    seg_masks.pop(target_id)
-    
-    # Create a combined mask of all other objects
-    other_objects = np.any(seg_masks, axis=0)
-    
-    # Calculate the overlap between dilated target and other objects
-    overlap = np.logical_and(dilated_target, other_objects)
-    
-    # Calculate singulation score (1 - overlap ratio)
-    overlap_ratio = np.sum(overlap) / np.sum(dilated_target)
-    singulation_score = 1 - overlap_ratio
-    
-    return singulation_score
-
-def measure_clutter_segmentation(segmentation_masks, k=3):
-    # Calculate the centroid for each object's segmentation mask
-    positions = []
-    for mask in segmentation_masks:
-        centroid = center_of_mass(mask)
-        positions.append(centroid)
-
-    n = len(positions)
-    positions = np.array(positions)
-    
-    # k-NN regression to estimate x_hat_i and y_hat_i
-    nbrs = NearestNeighbors(n_neighbors=n-1, algorithm='auto').fit(positions)
-    distances, indices = nbrs.kneighbors(positions)
-    
-    # Remove the self-distance (distance to itself which is 0)
-    distances = distances[:, 1:]
-    indices = indices[:, 1:]
-    
-    x_hat = np.array([np.mean(positions[indices[i], 0]) for i in range(n)])
-    y_hat = np.array([np.mean(positions[indices[i], 1]) for i in range(n)])
-    
-    # Calculate the average Euclidean distance
-    euclidean_distances = np.sqrt((positions[:, 0] - x_hat)**2 + (positions[:, 1] - y_hat)**2)
-    avg_distance = np.mean(euclidean_distances)
-    
-    # Calculate the clutter coefficient
-    clutter_coefficient = -np.log(avg_distance)
-    
-    return clutter_coefficient
 
 def compute_singulation(before_masks, after_masks):
     """
