@@ -52,10 +52,10 @@ class HeightMapDataset(data.Dataset):
     # single - input, single - output for ou-dataset with target action
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, c_target_mask, obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, action = episode_data[0]
+        heightmap, scene_mask, c_target_mask, c_obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, action = episode_data[0]
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
-        padded_target_mask = general_utils.preprocess_target(obstacle_mask)
+        padded_target_mask = general_utils.preprocess_target(c_obstacle_mask)
 
         # convert theta to range 0-360 and then compute the rot_id
         angle = (action[2] + (2 * np.pi)) % (2 * np.pi)
