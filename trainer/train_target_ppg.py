@@ -45,6 +45,8 @@ def train_fcn_net(args):
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
+
+    transition_dirs = transition_dirs[:10000]
             
     # split data to training/validation
     random.seed(0)
@@ -77,7 +79,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='mean')
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
