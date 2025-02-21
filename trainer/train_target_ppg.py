@@ -46,7 +46,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:10000]
+    # transition_dirs = transition_dirs[:10000]
             
     # split data to training/validation
     random.seed(0)
@@ -83,6 +83,7 @@ def train_fcn_net(args):
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device)
             target = batch[1].to(args.device)
@@ -94,6 +95,7 @@ def train_fcn_net(args):
             # Compute loss in the whole scene
             loss = criterion(pred, y)
             loss = torch.sum(loss)
+            epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
@@ -105,8 +107,8 @@ def train_fcn_net(args):
             debug_params(model)
 
         model.eval()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['train', 'val']:
+        # epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
                 target = batch[1].to(args.device)
