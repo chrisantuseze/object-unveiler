@@ -79,7 +79,7 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
     
-    criterion = nn.BCELoss(reduction='mean')
+    criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
