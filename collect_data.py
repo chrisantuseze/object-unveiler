@@ -104,9 +104,10 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print('---------')
 
         if grasp_info['stable']:    
-            resized_new_masks = resized_bboxes = []
+            resized_new_masks = extracted_object_masks = resized_bboxes = []
             for mask in processed_masks:
                 resized_new_masks.append(general_utils.resize_mask(transform, mask))
+                extracted_object_masks.append(general_utils.extract_target_crop(mask, state))
                 resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
                 
             resized_target_mask = general_utils.resize_mask(transform, target_mask)
@@ -127,9 +128,11 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 'c_obstacle_mask': extracted_obstacle, 
                 'scene_mask': general_utils.resize_mask(transform, pred_mask),
                 'object_masks': resized_new_masks,
+                'c_object_masks': extracted_object_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
-                'bboxes': resized_bboxes
+                'bboxes': resized_bboxes,
+                'objects_to_remove': objects_to_remove
             }
 
             # fig, ax = plt.subplots(1, 4)

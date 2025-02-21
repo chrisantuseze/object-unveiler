@@ -43,7 +43,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.15 #0.12 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN(args).to(self.device)
