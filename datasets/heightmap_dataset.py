@@ -51,8 +51,8 @@ class HeightMapDataset(data.Dataset):
 
     # single - input, single - output for ou-dataset with target action
     def __getitem__(self, id):
-        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, c_target_mask, c_obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, action = episode_data[0]
+        episode_data = self.memory.load_episode_target_ppg(self.dir_ids[id])
+        heightmap, c_obstacle_mask, action = episode_data[0]
 
         padded_heightmap, padding_width_depth = general_utils.preprocess_image(heightmap)
         padded_target_mask = general_utils.preprocess_target(c_obstacle_mask)
