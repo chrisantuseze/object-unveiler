@@ -86,6 +86,9 @@ def modify_episode_act(episode_dir, index):
             print("len(traj_data):", len(traj_data))
             return
         
+
+        object_mask = general_utils.resize_mask(transform, data['obstacle_mask'], new_size=(400, 400))
+        cc_obstacle_mask = general_utils.extract_target_crop2(object_mask, data['color_obs'])
         transition = {
             'color_obs': data['color_obs'], 
             'depth_obs': data['depth_obs'], 
@@ -95,7 +98,7 @@ def modify_episode_act(episode_dir, index):
             'c_target_mask': data['c_target_mask'], 
             'obstacle_mask': data['obstacle_mask'],
             'c_obstacle_mask': data['c_obstacle_mask'], 
-            'cc_obstacle_mask': general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs']),
+            'cc_obstacle_mask': cc_obstacle_mask,
             'scene_mask': data['scene_mask'],
             'action': data['action'], 
             'label': data['label'],
