@@ -465,19 +465,46 @@ def extract_target_crop(resized_target, heightmap):
     return full_crop
 
 def extract_target_crop2(target, scene):
-    non_zero_indices = np.nonzero(target)
-    xmin = get_index(np.min(non_zero_indices[1]), min=True)
-    xmax = get_index(np.max(non_zero_indices[1]), min=False)
-    ymin = get_index(np.min(non_zero_indices[0]), min=True)
-    ymax = get_index(np.max(non_zero_indices[0]), min=False)
+    mask = target
+    image = scene
+    _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+    
+    # Create a copy of the original image to modify
+    result = image.copy()
+    
+    # Determine the background color if not provided
+    # Estimate background color from the edges of the image
+    border_width = 10
+    top_border = image[:border_width, :, :]
+    bottom_border = image[-border_width:, :, :]
+    left_border = image[:, :border_width, :]
+    right_border = image[:, -border_width:, :]
+    
+    all_borders = np.concatenate([
+        top_border.reshape(-1, 3),
+        bottom_border.reshape(-1, 3),
+        left_border.reshape(-1, 3),
+        right_border.reshape(-1, 3)
+    ])
+    
+    background_color = tuple(map(int, np.mean(all_borders, axis=0)))
+    # print(f"Estimated background color: RGB{background_color}")
+    
+    # Create a background color image
+    background = np.ones_like(image) * np.array(background_color, dtype=np.uint8)
+    
+    # Replace non-object regions with the background color
+    # Keep the original object intact
+    result = np.where(
+        np.repeat(mask[:, :, np.newaxis], 3, axis=2) > 0,
+        image,
+        background
+    )
+    
+    # Convert result to uint8
+    result = result.astype(np.uint8)
 
-    full_crop = np.zeros(scene.shape)
-    full_crop[ymin:ymax, xmin:xmax] = scene[ymin:ymax, xmin:xmax]
-
-    if np.all(full_crop == 0):
-        full_crop = np.array(scene)
-
-    return full_crop
+    return result
 
 def get_pointcloud_(color_img, depth_img, camera_intrinsics):
 

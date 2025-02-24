@@ -58,8 +58,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        # self.policy, self.stats = self.make_act_policy()
-        self.policy, self.stats = None, None
+        self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -546,15 +546,17 @@ class Policy:
 
         actions = self.policy(qpos, image_data).detach()
         return actions
-    
-    def exploit_act2(self, state, object_mask, images, qpos):
-        _, self.padding_width = general_utils.preprocess_image(state) # only did this to get the padding_width
 
-        qpos_numpy = np.array(qpos)
+    def exploit_act2(self, state, object_mask, obs):
+        trajectory_data = obs['traj_data'][0]
+        qpos, img = trajectory_data
+        color_images = img['color']
+
+        qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)
-        qpos = torch.from_numpy(qpos).float().to(self.device).unsqueeze(0)
-        image_data = self.get_act_image(images, state, object_mask)
-        
+        qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
+        image_data = self.get_act_image(color_images, state, object_mask)
+
         actions = self.policy(qpos, image_data).detach()
         return actions
     

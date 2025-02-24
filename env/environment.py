@@ -344,7 +344,8 @@ class Environment:
         # if save_traj_data:
         #@Chris we save the images at the beginning of the trajectory
         images = {'color': []}
-        if eval or self.interval % 20 == 0:
+        # if eval or self.interval % 20 == 0:
+        if not eval and self.interval % 20 == 0:
             for cam in self.agent_cams:
                 color, depth, seg = cam.get_data() 
                 images['color'].append(general_utils.resize_image(color))

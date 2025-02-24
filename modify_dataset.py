@@ -73,7 +73,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
 
-def modify_episode_act(segmenter: ObjectSegmenter, episode_dir, index):
+def modify_episode_act(episode_dir, index):
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
     except Exception as e:
@@ -81,27 +81,6 @@ def modify_episode_act(segmenter: ObjectSegmenter, episode_dir, index):
 
     episode_data_list = []
     for data in episode_data:
-        heightmap = data['state']
-        object_masks = data['object_masks']
-
-        object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
-
-        new_masks = []
-        masks = []
-        new_bboxes = []
-        for id, mask in enumerate(object_masks):
-            mask = general_utils.resize_mask(transform, mask)
-            masks.append(mask)
-            new_masks.append(general_utils.extract_target_crop(mask, heightmap))
-
-            new_bboxes.append(general_utils.resize_bbox(bboxes[id]))
-
-        cc_obstacle_mask = general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs'])
-
-        # cv2.imwrite(os.path.join("save/misc", "cc_obstacle_mask.png"), cc_obstacle_mask)
-        # cv2.imwrite(os.path.join("save/misc", "obstacle_mask.png"), data['obstacle_mask'])
-        # cv2.imwrite(os.path.join("save/misc", "color_obs.png"), data['color_obs'])
-
         traj_data = data['traj_data']
         if len(traj_data) == 0:
             print("len(traj_data):", len(traj_data))
@@ -116,9 +95,8 @@ def modify_episode_act(segmenter: ObjectSegmenter, episode_dir, index):
             'c_target_mask': data['c_target_mask'], 
             'obstacle_mask': data['obstacle_mask'],
             'c_obstacle_mask': data['c_obstacle_mask'], 
-            'cc_obstacle_mask': cc_obstacle_mask,
+            'cc_obstacle_mask': general_utils.extract_target_crop2(data['obstacle_mask'], data['color_obs']),
             'scene_mask': data['scene_mask'],
-            'c_object_masks':new_masks,
             'action': data['action'], 
             'label': data['label'],
             'traj_data': data['traj_data'],
@@ -166,13 +144,13 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/ppg-dataset-act67-2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/ppg-dataset-act67"
 
 
     episode_dirs = os.listdir(dataset_dir)
@@ -191,7 +169,8 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode(segmenter, episode_dir)
+        modify_episode_act(episode_dir, i)
+        # modify_episode(segmenter, episode_dir)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     

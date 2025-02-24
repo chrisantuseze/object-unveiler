@@ -219,15 +219,19 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
-        c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1]) #general_utils.extract_target_crop(general_utils.resize_mask(transform, object_mask), heightmap)
+        c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1]) 
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(obs['color'][1])
+        ax[1].imshow(c_object_mask)
+        plt.show()
 
         end_of_episode = False
         t = 0
         preds = gt = []
+        state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
                 print("Fresh actions")
-                state = policy.state_representation(obs)
                 actions = policy.exploit_act(state, c_object_mask, obs)
 
             if temporal_agg:
@@ -351,7 +355,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model, unveiler_model="save/unveiler-xformer-encoder/unveiler_model_61.pt")
+    # policy.load(fcn_model=args.fcn_model, reg_model=args.reg_model, unveiler_model="save/unveiler-xformer-encoder/unveiler_model_61.pt")
 
     segmenter = ObjectSegmenter()
 
