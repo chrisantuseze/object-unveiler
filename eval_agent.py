@@ -231,7 +231,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
-                print("Fresh actions")
                 actions = policy.exploit_act(state, c_object_mask, obs)
 
             if temporal_agg:
