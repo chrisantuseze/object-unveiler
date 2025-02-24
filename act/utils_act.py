@@ -192,7 +192,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         # channel last
         image_data = torch.einsum('k h w c -> k c h w', image_data)
-        # print("image_data.shape", image_data.shape)
+        print("image_data.shape", image_data.shape)
 
         # normalize image and change dtype to float
         image_data = image_data / 255.0
