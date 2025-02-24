@@ -156,10 +156,10 @@ class ResFCN(nn.Module):
             rotate_target_mask = F.grid_sample(target_mask.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
             # Compute intermediate features
-            depth_feat = self.predict(rotate_depth)
+            # depth_feat = self.predict(rotate_depth)
             target_feat = self.predict(rotate_target_mask)
-            # masked_depth_feat = target_feat
-            masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
+            masked_depth_feat = target_feat
+            # masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
 
             # Compute sample grid for rotation after branches
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
@@ -176,7 +176,7 @@ class ResFCN(nn.Module):
             # Forward pass through branches, undo rotation on output predictions, upsample results
             out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
 
-            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
+            # out_prob = torch.mean(out_prob, dim=1, keepdim=True)
             
             # Image-wide softmax
             output_shape = out_prob.shape
