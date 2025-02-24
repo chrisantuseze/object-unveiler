@@ -205,7 +205,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     n_prev_masks = count = 0
     avg_clutter_score = 0.0
 
-    max_steps = 3#5
+    max_steps = 5
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
@@ -369,7 +369,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_multi(
+        episode_data, success_count, grasping_action_count = run_episode_act(
             args, policy, env, segmenter, rng, episode_seed, 
             success_count=success_count, grp_count=grasping_action_count
         )

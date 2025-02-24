@@ -119,6 +119,11 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             actions = data['actions']
             object_mask = data['cc_obstacle_mask']
 
+            fig, ax = plt.subplots(1, 2)
+            ax[0].imshow(heightmap)
+            ax[1].imshow(object_mask)
+            plt.show()
+
             # Initialize storage for valid timesteps
             images, joint_pos, actions_ = [], [], []
 
