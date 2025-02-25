@@ -30,7 +30,7 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg")
+    writer = SummaryWriter(comment="target_ppg-")
 
     save_path = 'save/fcn-'
 
@@ -46,7 +46,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:20000]
+    # transition_dirs = transition_dirs[:20000]
             
     # split data to training/validation
     random.seed(0)
@@ -77,7 +77,7 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
     
     criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')

@@ -240,7 +240,7 @@ class Policy:
         return action
 
     def guided_exploration_old(self, state, target_mask, sample_limits=[0.1, 0.15]):
-        resized_target = general_utils.resize_mask(transform, target_mask)
+        resized_target = general_utils.resize_mask(target_mask)
 
         full_crop = general_utils.extract_target_crop(resized_target, state)
         if np.all(full_crop == 0):
@@ -312,7 +312,7 @@ class Policy:
         return action
     
     def generate_trajectory(self, state, target_mask, sample_limits=[0.1, 0.15], num_steps=400):
-        resized_target = general_utils.resize_mask(transform, target_mask)
+        resized_target = general_utils.resize_mask(target_mask)
         full_crop = general_utils.extract_target_crop(resized_target, state)
         if np.all(full_crop == 0):
             state = resized_target
@@ -450,7 +450,7 @@ class Policy:
         raw_obj_masks = []
         bboxes = []
         for id, mask in enumerate(processed_masks):
-            raw_obj_masks.append(general_utils.resize_mask(transform, mask))
+            raw_obj_masks.append(general_utils.resize_mask(mask))
 
             processed_mask = general_utils.preprocess_target(mask, state)
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)

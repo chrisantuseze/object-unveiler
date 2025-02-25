@@ -106,16 +106,16 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         if grasp_info['stable']:    
             resized_new_masks = extracted_object_masks = resized_bboxes = []
             for mask in processed_masks:
-                resized_new_masks.append(general_utils.resize_mask(transform, mask))
+                resized_new_masks.append(general_utils.resize_mask(mask))
                 extracted_object_masks.append(general_utils.extract_target_crop(mask, state))
                 resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
                 
-            resized_target_mask = general_utils.resize_mask(transform, target_mask)
+            resized_target_mask = general_utils.resize_mask(target_mask)
             extracted_target = general_utils.extract_target_crop(resized_target_mask, state)
 
             # grasped_object_id = grasping.get_grasped_object(processed_masks, action) # we want to find the exact object that was grasped - Not working
 
-            resized_obstacle_mask = general_utils.resize_mask(transform, processed_masks[node_id])
+            resized_obstacle_mask = general_utils.resize_mask(processed_masks[node_id])
             extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, state)
             transition = {
                 'color_obs': next_obs['color'][1], 
@@ -126,7 +126,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 'c_target_mask': extracted_target, 
                 'obstacle_mask': resized_obstacle_mask,
                 'c_obstacle_mask': extracted_obstacle, 
-                'scene_mask': general_utils.resize_mask(transform, pred_mask),
+                'scene_mask': general_utils.resize_mask(pred_mask),
                 'object_masks': resized_new_masks,
                 'c_object_masks': extracted_object_masks,
                 'action': action, 
@@ -289,10 +289,10 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             
             new_masks = []
             for mask in processed_masks:
-                new_masks.append(general_utils.resize_mask(transform, mask))
+                new_masks.append(general_utils.resize_mask(mask))
                 
-            resized_target_mask = general_utils.resize_mask(transform, target_mask) # Doesn't matter if the target mask has changed a bit after resegmentation. We don't need it anyway
-            resized_obstacle_mask = general_utils.resize_mask(transform, object_mask)
+            resized_target_mask = general_utils.resize_mask(target_mask) # Doesn't matter if the target mask has changed a bit after resegmentation. We don't need it anyway
+            resized_obstacle_mask = general_utils.resize_mask(object_mask)
 
             transition = {
                 'color_obs': obs['color'][1], 
@@ -304,7 +304,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 'obstacle_mask': resized_obstacle_mask,
                 'c_obstacle_mask': general_utils.extract_target_crop(resized_obstacle_mask, state), 
                 'cc_obstacle_mask': general_utils.extract_target_crop2(object_mask, obs['color'][1]),
-                'scene_mask': general_utils.resize_mask(transform, pred_mask),
+                'scene_mask': general_utils.resize_mask(pred_mask),
                 'object_masks': new_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
@@ -376,7 +376,7 @@ def collect_random_target_dataset(args, params):
             next_obs, grasp_info = env.step(env_action3d)
 
             if grasp_info['stable']:
-                resized_target = general_utils.resize_mask(transform, target_mask)
+                resized_target = general_utils.resize_mask(target_mask)
                 extracted_target = general_utils.extract_target_crop(resized_target, state)
 
                 fig, ax = plt.subplots(1, 3)

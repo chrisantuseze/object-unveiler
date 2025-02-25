@@ -36,7 +36,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
             resized_object_masks = []
             resized_bboxes = []
             for id, mask in enumerate(object_masks):
-                mask = general_utils.resize_mask(transform, mask)
+                mask = general_utils.resize_mask(mask)
                 resized_object_masks.append(mask)
                 extracted_object_masks.append(general_utils.extract_target_crop(mask, heightmap))
                 resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
@@ -87,7 +87,7 @@ def modify_episode_act(episode_dir, index):
             return
         
 
-        object_mask = general_utils.resize_mask(transform, data['obstacle_mask'], new_size=(400, 400))
+        object_mask = general_utils.resize_mask(data['obstacle_mask'], new_size=(400, 400))
         cc_obstacle_mask = general_utils.extract_target_crop2(object_mask, data['color_obs'])
         transition = {
             'color_obs': data['color_obs'], 

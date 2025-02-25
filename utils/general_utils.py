@@ -271,7 +271,7 @@ def accuracy(loss, corrects, loader):
 
     return epoch_loss, epoch_acc
 
-def resize_mask(transform, mask, new_size = (100, 100)):
+def resize_mask(mask, new_size=(100, 100)):
     # Resize the image using seam carving to match with the heightmap
     resized = cv2.resize(mask, new_size, interpolation=cv2.INTER_AREA)
     return resized
@@ -404,7 +404,7 @@ def preprocess_aperture_image(state, p1, theta, crop_size, plot=False):
 
 def preprocess_target(target, state=None):
     if state is not None:
-        resized_target = resize_mask(transform, target)
+        resized_target = resize_mask(target)
         full_crop = extract_target_crop(resized_target, state)
 
         fig, ax = plt.subplots(1, 2)
