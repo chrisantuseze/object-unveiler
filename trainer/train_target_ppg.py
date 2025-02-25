@@ -32,7 +32,7 @@ def train_fcn_net(args):
 
     writer = SummaryWriter(comment="target_ppg-")
 
-    save_path = 'save/fcn-'
+    save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -46,7 +46,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    # transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:20000]
             
     # split data to training/validation
     random.seed(0)
