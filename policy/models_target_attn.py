@@ -157,9 +157,9 @@ class ResFCN(nn.Module):
         
         # Final processing
         x = self.rb5(attended_features)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.rb6(x)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         return out
     

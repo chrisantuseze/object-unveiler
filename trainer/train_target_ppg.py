@@ -1,7 +1,7 @@
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-from policy.models_target_new import ResFCN, Regressor
+from policy.models_target_attn import ResFCN, Regressor
 
 import torch
 import torch.optim as optim
@@ -30,9 +30,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_new")
+    writer = SummaryWriter(comment="target_ppg_attn")
 
-    save_path = 'save/fcn-new'
+    save_path = 'save/fcn-attn'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)

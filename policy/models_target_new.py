@@ -99,9 +99,9 @@ class ResFCN(nn.Module):
         x = self.scene_rb3(x)
         x = self.scene_rb4(x)
         x = self.scene_rb5(x)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.scene_rb6(x)
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         return x
     
     def process_object(self, x):
@@ -112,7 +112,7 @@ class ResFCN(nn.Module):
         x = self.obj_rb2(x)
         x = self.obj_rb3(x)
         # Upsample to match scene feature map size
-        x = nn.functional.upsample(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.obj_rb4(x)
         return x
     
