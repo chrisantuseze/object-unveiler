@@ -146,12 +146,6 @@ class ResFCN(nn.Module):
                                             prob.size(), align_corners=True)
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-            # Image-wide softmax
-            # output_shape = out_prob.shape
-            # out_prob = out_prob.view(output_shape[0], -1)
-            # out_prob = torch.softmax(out_prob, dim=1)
-            # out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-
             return out_prob
 
         else:
