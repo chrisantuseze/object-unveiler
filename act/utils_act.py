@@ -115,8 +115,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             data = episode_data[-1]
 
             # Extract heightmap and mask
-            heightmap = data['state']
             actions = data['actions']
+            scene_image = data['color_obs']
             object_mask = data['cc_obstacle_mask']
 
             # Initialize storage for valid timesteps
@@ -130,7 +130,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
                     # images.append(traj[1])
                     actions_.append(actions[i])
 
-            return images, joint_pos, heightmap, object_mask, actions_
+            return images, joint_pos, scene_image, object_mask, actions_
 
         except Exception as e:
             print(f"{e} - Failed episode: {episode}")
@@ -140,7 +140,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, id):
         episode_data = self.load_episode(self.dir_ids[id])
-        images, qpos, heightmap, object_mask, actions = episode_data
+        images, qpos, scene_image, object_mask, actions = episode_data
         qpos = np.array(qpos)
         actions = np.array(actions)
 
@@ -165,17 +165,13 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         image_dict = dict()
         for cam_name in self.camera_names:
-            # if cam_name == 'front':
-            #     image_dict[cam_name] = images['color'][0].astype(np.float32)
-            # elif cam_name == 'top':
-            #     image_dict[cam_name] = images['color'][1].astype(np.float32)
-            # elif cam_name == 'heightmap':
-            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            # elif cam_name == 'target':
-            #     image_dict["target"] = object_mask.astype(np.float32)
+            if cam_name == 'scene_image':
+                image_dict[cam_name] = scene_image.astype(np.float32)
+            elif cam_name == 'target':
+                image_dict[cam_name] = object_mask.astype(np.float32)
 
-            if cam_name == 'target':
-                image_dict["target"] = object_mask.astype(np.float32)
+            # if cam_name == 'target':
+            #     image_dict["target"] = object_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []

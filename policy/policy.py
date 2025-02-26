@@ -504,19 +504,13 @@ class Policy:
         return processed_pred_mask, processed_target, processed_obj_masks,\
               raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes, processed_masks
     
-    def get_act_image(self, color_images, heightmap, object_mask):
+    def get_act_image(self, scene_image, object_mask):
         image_dict = dict()
         for cam_name in self.camera_names:
-            # if cam_name == 'front':
-            #     image_dict[cam_name] = color_images[0].astype(np.float32)
-            # elif cam_name == 'top':
-            #     image_dict[cam_name] = color_images[1].astype(np.float32)
-            # elif cam_name == 'heightmap':
-            #     image_dict[cam_name] = np.array(heightmap).astype(np.float32)
-            # elif cam_name == 'target':
-            #     image_dict["target"] = object_mask.astype(np.float32)
-
-            image_dict["target"] = object_mask.astype(np.float32)
+            if cam_name == 'scene_image':
+                image_dict[cam_name] = scene_image.astype(np.float32)
+            elif cam_name == 'target':
+                image_dict[cam_name] = object_mask.astype(np.float32)
 
         # new axis for different cameras
         all_cam_images = []
@@ -537,12 +531,11 @@ class Policy:
 
         trajectory_data = obs['traj_data'][0]
         qpos, img = trajectory_data
-        color_images = img['color']
 
         qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
-        image_data = self.get_act_image(color_images, state, object_mask)
+        image_data = self.get_act_image(obs['color'][1], object_mask)
 
         actions = self.policy(qpos, image_data).detach()
         return actions
@@ -550,22 +543,16 @@ class Policy:
     def exploit_act2(self, state, object_mask, obs):
         trajectory_data = obs['traj_data'][0]
         qpos, img = trajectory_data
-        color_images = img['color']
 
         qpos_numpy = np.array(qpos, dtype=np.float32)
         qpos = self.pre_process(qpos_numpy)
         qpos = torch.from_numpy(qpos).float().unsqueeze(0).to(self.device)
-        image_data = self.get_act_image(color_images, state, object_mask)
+        image_data = self.get_act_image(obs['color'][1], object_mask)
 
         actions = self.policy(qpos, image_data).detach()
         return actions
     
-    def post_process_action(self, state, raw_action):
-        # action = raw_action.squeeze(0).cpu().tolist()
-        # print("raw_action", raw_action.squeeze(0).cpu().tolist())
-
-        # action = [a * self.stats['action_std'].item() + self.stats['action_mean'].item() for a in action]
-
+    def post_process_action(self, raw_action):
         raw_action = raw_action.squeeze(0).cpu().numpy()
         action = self.post_process(raw_action)
         

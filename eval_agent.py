@@ -231,7 +231,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
-                actions = policy.exploit_act(state, c_object_mask, obs)
+                actions = policy.exploit_act2(state, c_object_mask, obs)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -246,7 +246,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             else:
                 raw_action = actions[:, t % query_frequency]
 
-            action = policy.post_process_action(state, raw_action)
+            action = policy.post_process_action(raw_action)
             preds.append(action)
 
             if t % 10 == 0:
