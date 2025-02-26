@@ -180,7 +180,7 @@ class ResFCN(nn.Module):
                 affine_mat_before = np.array([[np.cos(theta), np.sin(theta), 0.0],
                                             [-np.sin(theta), np.cos(theta), 0.0]])
                 affine_mat_before.shape = (2, 3, 1)
-                affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).float()
+                affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).requires_grad_(False).float().to(self.device)
 
                 flow_grid_before = F.affine_grid(affine_mat_before, depth_heightmap.size(), align_corners=True)
 
@@ -206,7 +206,7 @@ class ResFCN(nn.Module):
             prob = self.predict(batch_rot_depth, batch_rot_obj)
 
             # Undo rotation (same as original)
-            affine_after = torch.zeros((self.nr_rotations, 2, 3))
+            affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
             for rot_id in range(self.nr_rotations):
                 theta = np.radians(rot_id * (360 / self.nr_rotations))
                 affine_mat_after = np.array([[np.cos(-theta), np.sin(-theta), 0.0],
@@ -224,7 +224,7 @@ class ResFCN(nn.Module):
             # Training mode handling (similar to two-stream)
             # ...training mode implementation similar to the above...
             thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
-            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3))
+            affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 theta = thetas[i]
                 affine_mat_before = np.array([[np.cos(theta), np.sin(theta), 0.0],
@@ -246,7 +246,7 @@ class ResFCN(nn.Module):
             prob = self.predict(rotate_depth, rotate_obj)
 
             # Undo rotations (same as original)
-            affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3))
+            affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 theta = thetas[i]
                 affine_mat_after = np.array([[np.cos(-theta), np.sin(-theta), 0.0],
