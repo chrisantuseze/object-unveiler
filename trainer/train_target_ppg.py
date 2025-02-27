@@ -79,6 +79,18 @@ def train_fcn_net(args):
     model = ResFCN(args).to(args.device)
     # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+
+    # Learning rate scheduler with warm-up and cosine annealing
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=1e-3,
+        epochs=args.epochs,
+        steps_per_epoch=len(data_loader_train),
+        pct_start=0.1,  # Warm-up period
+        anneal_strategy='cos',
+        div_factor=25.0,
+        final_div_factor=1000.0
+    )
     
     criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
@@ -105,6 +117,9 @@ def train_fcn_net(args):
             loss.backward()
             optimizer.step()
 
+            # Update learning rate
+            scheduler.step()
+
             debug_params(model)
 
         model.eval()
@@ -124,6 +139,13 @@ def train_fcn_net(args):
 
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+
+        # Additional learning rate scheduling based on validation performance
+        if epoch > 0 and epoch % 10 == 0:
+            # Reduce LR on plateau for additional stability
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = param_group['lr'] * 0.8
+                print(f"Reduced learning rate to {param_group['lr']}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
