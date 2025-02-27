@@ -31,9 +31,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_improved")
+    writer = SummaryWriter(comment="target_ppg_improved_0.9_0.1")
 
-    save_path = 'save/fcn-improved'
+    save_path = 'save/fcn-improved-0.9-0.1'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -114,12 +114,12 @@ def train_fcn_net(args):
             aux_loss = F.binary_cross_entropy_with_logits(aux, y)
             
             # Combined loss with weighting
-            alpha = 0.7  # Weight for main loss
-            beta = 0.3   # Weight for auxiliary loss
+            alpha = 0.9  # Weight for main loss
+            beta = 0.1   # Weight for auxiliary loss
             combined_loss = alpha * main_loss + beta * aux_loss
             
             # Gradient clipping to prevent explosion
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
 
             # Compute loss in the whole scene
             # loss = criterion(pred, y)
