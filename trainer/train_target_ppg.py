@@ -7,6 +7,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
+import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from datasets.aperture_dataset import ApertureDataset
 
@@ -91,8 +92,11 @@ def train_fcn_net(args):
         div_factor=25.0,
         final_div_factor=1000.0
     )
+
+    # Gradient clipping value
+    clip_value = 1.0
     
-    criterion = nn.BCELoss(reduction='none')
+    # criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
@@ -103,18 +107,33 @@ def train_fcn_net(args):
             rotations = batch[2]
             y = batch[3].to(args.device, dtype=torch.float)
 
-            pred = model(x, target, rotations)
+            pred, aux = model(x, target, rotations)
+
+            # Calculate losses
+            main_loss = F.binary_cross_entropy_with_logits(pred, y)
+            aux_loss = F.binary_cross_entropy_with_logits(aux, y)
+            
+            # Combined loss with weighting
+            alpha = 0.7  # Weight for main loss
+            beta = 0.3   # Weight for auxiliary loss
+            combined_loss = alpha * main_loss + beta * aux_loss
+            
+            # Gradient clipping to prevent explosion
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
 
             # Compute loss in the whole scene
-            loss = criterion(pred, y)
-            loss = torch.sum(loss)
-            epoch_loss['train'] += loss.detach().cpu().numpy()
+            # loss = criterion(pred, y)
+            # loss = torch.sum(loss)
+            # epoch_loss['train'] += loss.detach().cpu().numpy()
+            epoch_loss['train'] += combined_loss.item()
 
             if step % args.step == 0:
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+                # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {combined_loss.item()}")
 
             optimizer.zero_grad()
-            loss.backward()
+            # loss.backward()
+            combined_loss.backward()
             optimizer.step()
 
             # Update learning rate
@@ -131,14 +150,18 @@ def train_fcn_net(args):
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
-                pred = model(x, target, rotations)
-                loss = criterion(pred, y)
+                pred, aux = model(x, target, rotations)
+                # loss = criterion(pred, y)
+                # Calculate validation loss using only main output
+                loss = F.binary_cross_entropy_with_logits(pred, y)
 
-                loss = torch.sum(loss)
-                epoch_loss[phase] += loss.detach().cpu().numpy()
+                # loss = torch.sum(loss)
+                # epoch_loss[phase] += loss.detach().cpu().numpy()
+                epoch_loss[phase] += loss.item()
 
                 if step % args.step == 0:
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                    # logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.item()}")
 
         # Additional learning rate scheduling based on validation performance
         if epoch > 0 and epoch % 10 == 0:
