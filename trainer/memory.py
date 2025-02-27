@@ -79,7 +79,7 @@ class ReplayBuffer:
         data_list = []        
         for data in episode_data:
             heightmap = data['state']
-            c_obstacle_mask = data['obstacle_mask']
+            c_obstacle_mask = data['c_obstacle_mask']
             action = data['action']
 
             data_list.append((heightmap, c_obstacle_mask, action))

@@ -31,9 +31,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_improved_0.9_0.1")
+    writer = SummaryWriter(comment="target_ppg_improved")
 
-    save_path = 'save/fcn-improved-0.9-0.1'
+    save_path = 'save/fcn-improved'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -114,12 +114,12 @@ def train_fcn_net(args):
             aux_loss = F.binary_cross_entropy_with_logits(aux, y)
             
             # Combined loss with weighting
-            alpha = 0.9  # Weight for main loss
-            beta = 0.1   # Weight for auxiliary loss
+            alpha = 0.7  # Weight for main loss
+            beta = 0.3   # Weight for auxiliary loss
             combined_loss = alpha * main_loss + beta * aux_loss
             
             # Gradient clipping to prevent explosion
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
 
             # Compute loss in the whole scene
             # loss = criterion(pred, y)
@@ -164,7 +164,7 @@ def train_fcn_net(args):
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.item()}")
 
         # Additional learning rate scheduling based on validation performance
-        if epoch > 0 and epoch % 10 == 0:
+        if epoch > 0 and epoch % 20 == 0:
             # Reduce LR on plateau for additional stability
             for param_group in optimizer.param_groups:
                 param_group['lr'] = param_group['lr'] * 0.8

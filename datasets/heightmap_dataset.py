@@ -49,7 +49,7 @@ class HeightMapDataset(data.Dataset):
         label = np.array(label)
         return padded_heightmap, padded_target_mask, rot_id, label
 
-    # single - input, single - output for ou-dataset with target action
+    # single - input, single - output for pc-ou-dataset with target action
     def __getitem__(self, id):
         episode_data = self.memory.load_episode_target_ppg(self.dir_ids[id])
         heightmap, c_obstacle_mask, action = episode_data[0]

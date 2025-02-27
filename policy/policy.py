@@ -603,7 +603,7 @@ class Policy:
         target = general_utils.preprocess_target(target_mask, state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(x, target, is_volatile=True)
+        out_prob, _ = self.fcn(x, target, is_volatile=True)
         out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
