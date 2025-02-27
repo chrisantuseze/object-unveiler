@@ -1,7 +1,7 @@
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-from policy.models_target_attn import ResFCN, Regressor
+from policy.models_target_new import ResFCN, Regressor
 
 import torch
 import torch.optim as optim
@@ -30,9 +30,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_attn")
+    writer = SummaryWriter(comment="target_ppg_new")
 
-    save_path = 'save/fcn-attn'
+    save_path = 'save/fcn-new'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -46,7 +46,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:20000]
+    # transition_dirs = transition_dirs[:20000]
             
     # split data to training/validation
     random.seed(0)

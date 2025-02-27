@@ -119,7 +119,7 @@ class ResFCN(nn.Module):
     def predict(self, scene_depth, object_depth):
         # Process scene and object separately
         scene_features = self.process_scene(scene_depth)
-        object_features = self.process_object(object_depth)
+        object_features = self.process_scene(object_depth)
         
         # Resize object features to match scene features if needed
         if scene_features.shape[2:] != object_features.shape[2:]:

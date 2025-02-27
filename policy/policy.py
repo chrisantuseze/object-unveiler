@@ -3,7 +3,7 @@ import pickle
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.unveiler_policy import Regressor, ResFCN
 from policy.obstacle_encoder import SpatialTransformerPredictor
-from policy.models_target import Regressor, ResFCN
+from policy.models_target_new import Regressor, ResFCN
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
