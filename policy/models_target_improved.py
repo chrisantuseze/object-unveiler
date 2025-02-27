@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -57,6 +58,7 @@ class ResFCN(nn.Module):
         
         # Scene stream (from original)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)  # Added BatchNorm
         self.rb1 = self.make_layer(64, 128)
         self.rb2 = self.make_layer(128, 256)
         self.rb3 = self.make_layer(256, 512)
@@ -77,7 +79,7 @@ class ResFCN(nn.Module):
         self.q_conv = nn.Conv2d(256, 128, kernel_size=1)
         self.k_conv = nn.Conv2d(128, 128, kernel_size=1)
         self.v_conv = nn.Conv2d(128, 128, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))
+        self.gamma = nn.Parameter(torch.ones(1) * 0.1)  # Initialize with small positive value
         
         # Feature fusion
         self.fusion_conv1 = nn.Conv2d(128 + 128 + 64, 256, kernel_size=3, padding=1)
@@ -128,9 +130,10 @@ class ResFCN(nn.Module):
         keys = self.k_conv(object_features).view(batch_size, -1, h * w)
         values = self.v_conv(object_features).view(batch_size, -1, h * w)
         
-        # Compute attention scores and apply to values
+        # Compute attention scores with temperature scaling
         attention = torch.bmm(queries, keys)
-        attention = F.softmax(attention / torch.sqrt(torch.tensor(keys.size(1), dtype=torch.float32)), dim=-1)
+        attention_scale = math.sqrt(keys.size(1))  # More stable scaling
+        attention = F.softmax(attention / attention_scale, dim=-1)
         
         out = torch.bmm(attention, values.permute(0, 2, 1))
         out = out.view(batch_size, -1, h, w)
@@ -141,11 +144,11 @@ class ResFCN(nn.Module):
     def predict(self, scene_depth, object_depth, return_aux=False):
         batch_size, _, h, w = scene_depth.size()
         
-        # Process scene
-        scene_x = nn.functional.relu(self.conv1(scene_depth))
-        scene_x = nn.functional.max_pool2d(scene_x, kernel_size=2, stride=2)
+        # Process scene with BatchNorm
+        scene_x = F.relu(self.bn1(self.conv1(scene_depth)))
+        scene_x = F.max_pool2d(scene_x, kernel_size=2, stride=2)
         scene_x = self.rb1(scene_x)
-        scene_x = nn.functional.max_pool2d(scene_x, kernel_size=2, stride=2)
+        scene_x = F.max_pool2d(scene_x, kernel_size=2, stride=2)
         scene_x = self.rb2(scene_x)
         scene_x = self.rb3(scene_x)
         scene_x = self.dropout(scene_x)  # Add dropout for regularization
@@ -200,6 +203,7 @@ class ResFCN(nn.Module):
         # if return_aux:
         #     return out, aux_out
         return out, aux_out
+        # return out
     
     def forward(self, depth_heightmap, object_depth, specific_rotation=-1, is_volatile=[], return_aux=False):
         # Similar rotation handling code as before, but using the improved prediction function
@@ -248,6 +252,7 @@ class ResFCN(nn.Module):
             #     prob = self.predict(batch_rot_depth, batch_rot_obj)
 
             prob, aux_prob = self.predict(batch_rot_depth, batch_rot_obj, return_aux=True)
+            # prob = self.predict(batch_rot_depth, batch_rot_obj)
             
             # Undo rotation (same as original)
             affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
@@ -316,12 +321,6 @@ class ResFCN(nn.Module):
 
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
             
-            # Image-wide softmax
-            output_shape = out_prob.shape
-            out_prob = out_prob.view(output_shape[0], -1)
-            out_prob = torch.softmax(out_prob, dim=1)
-            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
-            
             # if return_aux:
             #     aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.size(), align_corners=True)
             #     aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
@@ -338,11 +337,7 @@ class ResFCN(nn.Module):
             aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.size(), align_corners=True)
             aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
 
-            aux_output_shape = aux_out_prob.shape
-            aux_out_prob = aux_out_prob.view(aux_output_shape[0], -1)
-            aux_out_prob = torch.softmax(aux_out_prob, dim=1)
-            aux_out_prob = aux_out_prob.view(aux_output_shape).to(dtype=torch.float)
-
+            
             return out_prob, aux_out_prob
         
  
