@@ -65,11 +65,11 @@ class ResFCN(nn.Module):
         self.scene_rb6 = self.make_layer(128, 64)
         
         # Object stream
-        self.obj_conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.obj_rb1 = self.make_layer(64, 128)
-        self.obj_rb2 = self.make_layer(128, 256)
-        self.obj_rb3 = self.make_layer(256, 128)
-        self.obj_rb4 = self.make_layer(128, 64)
+        # self.obj_conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # self.obj_rb1 = self.make_layer(64, 128)
+        # self.obj_rb2 = self.make_layer(128, 256)
+        # self.obj_rb3 = self.make_layer(256, 128)
+        # self.obj_rb4 = self.make_layer(128, 64)
         
         # Feature fusion layers
         self.fusion_conv = nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False)
