@@ -1,7 +1,7 @@
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-from policy.models_target_new import ResFCN, Regressor
+from policy.models_target_improved import ResFCN, Regressor
 
 import torch
 import torch.optim as optim
@@ -30,9 +30,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_new")
+    writer = SummaryWriter(comment="target_ppg_improved")
 
-    save_path = 'save/fcn-new'
+    save_path = 'save/fcn-improved'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -77,7 +77,8 @@ def train_fcn_net(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ResFCN(args).to(args.device)
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
+    # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
     
     criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')

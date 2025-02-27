@@ -491,13 +491,39 @@ class FloatingBHand:
 
         return finger_positions
     
-    def check_in_contact(self):
+    # def check_in_contact(self):
+    #     points = p.getContactPoints(bodyA=self.robot_hand_id)
+    #     if len(points) > 0:
+    #         for pnt in points:
+    #             if pnt[9] > 0:
+    #                 return True
+    #     return False
+    
+    def check_in_contact(self, force_threshold=0.5, min_contacts=2):
+        """
+        Check if the robot hand is in meaningful contact with objects.
+        
+        Args:
+            force_threshold: Minimum force required to consider a contact point significant
+            min_contacts: Minimum number of contact points required to trigger a collision
+        
+        Returns:
+            bool: True if meaningful contact detected, False otherwise
+        """
         points = p.getContactPoints(bodyA=self.robot_hand_id)
-        if len(points) > 0:
-            for pnt in points:
-                if pnt[9] > 0:
-                    return True
-        return False
+        
+        # No contacts at all
+        if len(points) == 0:
+            return False
+        
+        # Count significant contacts (those with force above threshold)
+        significant_contacts = 0
+        for pnt in points:
+            if pnt[9] > force_threshold:  # Check if normal force exceeds threshold
+                significant_contacts += 1
+        
+        # Return True only if we have enough significant contacts
+        return significant_contacts >= min_contacts
 
 class ActionState:
     MOVE_ABOVE_PREGRASP = (0, 0.1)#0.08
