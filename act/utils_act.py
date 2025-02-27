@@ -176,7 +176,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
-            image = general_utils.resize_image(image_dict[cam_name])
+            image = general_utils.resize_image(image_dict[cam_name], target_size=(144, 144))
             all_cam_images.append(image)
         all_cam_images = np.stack(all_cam_images, axis=0)
 
