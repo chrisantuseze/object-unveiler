@@ -104,8 +104,8 @@ def train_fcn_net(args):
             pred = model(x, target, rotations)
 
             # Calculate losses - using focal loss for better handling of imbalanced data
-            # loss = focal_loss(pred, y)
-            loss = F.binary_cross_entropy_with_logits(pred, y)
+            loss = focal_loss(pred, y)
+            # loss = F.binary_cross_entropy_with_logits(pred, y)
             
             # Compute loss in the whole scene
             # loss = criterion(pred, y)
