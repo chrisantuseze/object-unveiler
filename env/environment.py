@@ -45,9 +45,9 @@ class Environment:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         # self.nr_objects = [11, 15] #[5, 8]
-        self.nr_objects = [6, 9]
+        self.nr_objects = [4, 6]
+        # self.nr_objects = [6, 9]
         # self.nr_objects = [9, 12]
-        # self.nr_objects = [12, 15]
 
 
         # Setup cameras.
@@ -182,7 +182,7 @@ class Environment:
             finger_current_pos.append(p.getJointState(0, i)[0])
 
         hand_current_pos = []
-        for i in self.bhand.joint_ids:
+        for i in self.bhand.joint_ids_act:
             hand_current_pos.append(p.getJointState(0, i)[0])
 
         return hand_current_pos, finger_current_pos
@@ -231,6 +231,7 @@ class Environment:
 
                 self.is_in_contact = self.bhand.check_in_contact()
                 if self.is_in_contact:
+                    print("Collision occurred!")
                     self.current_state = ActionState.MOVE_UP
                     self.elapsed_time = 0
 

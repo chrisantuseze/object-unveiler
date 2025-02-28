@@ -219,10 +219,13 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
-        c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1]) 
+        # c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1])
+        c_target_mask = general_utils.extract_target_crop2(target_mask, obs['color'][1])
+
         fig, ax = plt.subplots(1, 2)
         ax[0].imshow(obs['color'][1])
-        ax[1].imshow(c_object_mask)
+        # ax[1].imshow(c_object_mask)
+        ax[1].imshow(c_target_mask)
         plt.show()
 
         end_of_episode = False
@@ -231,7 +234,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
-                actions = policy.exploit_act(state, c_object_mask, obs)
+                actions = policy.exploit_act(state, c_target_mask, obs)
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
