@@ -87,7 +87,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_old(state, obstacle_mask)
+        action = policy.exploit(state, obstacle_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -201,7 +201,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_old(state, target_mask)
+        action = policy.exploit(state, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -280,7 +280,7 @@ def run_episode(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rn
     i = 0
     while episode_data['attempts'] < max_steps:
         state = policy.state_representation(obs)
-        action = policy.exploit_old(state)
+        action = policy.exploit(state)
         env_action3d = policy.action3d(action)
 
         next_obs, grasp_info = env.step(env_action3d)

@@ -72,7 +72,8 @@ class FloatingBHand:
         )
 
         # Mount joints.
-        self.joint_ids = [_ for _ in range(8)] #[0, 1, 2, 3]
+        self.joint_ids_act = [_ for _ in range(8)]
+        self.joint_ids = [0, 1, 2, 3]
         self.simulation = simulation
 
 
@@ -100,7 +101,7 @@ class FloatingBHand:
 
         # Move fingers to home position.
         home_aperture_value = 0.6
-        self.move_fingers(agent_cams=None, final_joint_values=[0.0, home_aperture_value, home_aperture_value, home_aperture_value])
+        self.move_fingers(final_joint_values=[0.0, home_aperture_value, home_aperture_value, home_aperture_value])
         self.configure(n_links_before=4)
 
 
@@ -152,7 +153,7 @@ class FloatingBHand:
         p.removeBody(mount_body_id)
         p.removeBody(robot_id)
 
-    def move(self, agent_cams, target_pos, target_quat, duration=2.0, stop_at_contact=False):
+    def move(self, target_pos, target_quat, duration=2.0, stop_at_contact=False):
         # compute translation
         affine_trans = np.eye(4)
         affine_trans[0:3, 0:3] = self.home_quat.rotation_matrix()
@@ -162,12 +163,12 @@ class FloatingBHand:
         # compute angle
         relative_rot = np.matmul(self.home_quat.rotation_matrix().transpose(), target_quat.rotation_matrix())
         angle = np.arctan2(relative_rot[2, 1], relative_rot[1, 1])
-        # target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
+        target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
 
-        target_states = [
-            target_pos[0], target_pos[1], target_pos[2], angle, 
-            target_pos[0], target_pos[1], target_pos[2], angle 
-        ]
+        # target_states = [
+        #     target_pos[0], target_pos[1], target_pos[2], angle, 
+        #     target_pos[0], target_pos[1], target_pos[2], angle 
+        # ]
 
         current_pos = []
         for i in self.joint_ids:
@@ -179,9 +180,7 @@ class FloatingBHand:
 
         t = 0
         dt = 0.001
-        interval = 0
         is_in_contact = False
-        commands = []
         while t < duration:
             command = []
 
@@ -207,18 +206,7 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            # images = {'color': []}
-            # if interval % 25 == 0:
-            #     for cam in agent_cams:
-            #         color, depth, seg = cam.get_data() 
-            #         images['color'].append(color)
-            # else:
-            #     images['color'].append(None)
-
-            # commands.append((command, images))
-            interval += 1
-
-        return commands, is_in_contact
+        return is_in_contact
 
     def set_hand_joint_position(self, joint_position, force):
         for i in range(len(self.joint_names)):
@@ -242,7 +230,7 @@ class FloatingBHand:
         #     positionGains=[100 * self.speed] * len(self.indices)
         # )
             
-    def move_fingers(self, agent_cams=None, final_joint_values=[], duration=1, force=2):
+    def move_fingers(self, final_joint_values=[], duration=1, force=2):
         """
         Move fingers while keeping the hand to the same pose
         """
@@ -252,13 +240,9 @@ class FloatingBHand:
         for i in self.indices:
             current_pos.append(p.getJointState(0, i)[0])
 
-        # print("Current joint pos:", current_pos) #@Chris
-
         hand_pos = []
         for i in self.joint_ids:
             hand_pos.append(p.getJointState(0, i)[0])
-
-        # print("Hand mount joint pos:", hand_pos) #@Chris
 
         final = [final_joint_values[0], final_joint_values[0], final_joint_values[1],
                  final_joint_values[2], final_joint_values[3], final_joint_values[1]/3,
@@ -294,18 +278,6 @@ class FloatingBHand:
             self.simulation.step()
             time.sleep(dt)
 
-            # if not agent_cams:
-            #     return commands
-
-            # images = {'color': []}
-            # if interval % 25 == 0:
-            #     for cam in agent_cams:
-            #         color, depth, seg = cam.get_data() 
-            #         images['color'].append(color)
-            # else:
-            #     images['color'].append(None)
-                
-            # commands.append((command, images))
             interval += 1
 
         return commands
@@ -324,11 +296,11 @@ class FloatingBHand:
             positionGains=[100 * self.speed] * len(self.indices)
         )
 
-    def close(self, agent_cams, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=1.0) #0.45 #1.0
+    def close(self, joint_vals=[0.0, 1.8, 1.8, 1.8], duration=2):
+        self.move_fingers(final_joint_values=joint_vals, duration=1.0) #0.45 #1.0
 
-    def open(self, agent_cams, joint_vals=[0.0, 0.6, 0.6, 0.6]):
-        return self.move_fingers(agent_cams=agent_cams, final_joint_values=joint_vals, duration=.1)
+    def open(self, joint_vals=[0.0, 0.6, 0.6, 0.6]):
+        self.move_fingers(final_joint_values=joint_vals, duration=.1)
 
     def configure(self, n_links_before):
         # set friction coefficients for gripper fingers
@@ -365,13 +337,13 @@ class FloatingBHand:
     def move_robot(self, joint_positions):
         p.setJointMotorControlArray(
             self.robot_hand_id,
-            self.joint_ids,
+            self.joint_ids_act,
             p.POSITION_CONTROL,
             targetPositions=joint_positions,
             # forces=[100 * self.force] * len(self.joint_ids),
             # positionGains=[100 * self.speed] * len(self.joint_ids)
-            forces=[50 * self.force] * len(self.joint_ids),
-            positionGains=[50 * self.speed] * len(self.joint_ids)
+            forces=[50 * self.force] * len(self.joint_ids_act),
+            positionGains=[50 * self.speed] * len(self.joint_ids_act)
         )
 
     def calculate_joint_positions(self, action, current_state, current_pos, t):
@@ -428,12 +400,12 @@ class FloatingBHand:
         ]
 
         trajectories = []
-        for i in range(len(self.joint_ids)):
+        for i in range(len(self.joint_ids_act)):
             trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
 
 
         joint_positions = []
-        for i in range(len(self.joint_ids)):
+        for i in range(len(self.joint_ids_act)):
             joint_positions.append(trajectories[i].pos(t))
 
         return joint_positions

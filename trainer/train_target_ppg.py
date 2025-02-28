@@ -15,6 +15,18 @@ from datasets.heightmap_dataset import HeightMapDataset
 
 import utils.logger as logging
 
+# Loss function with focal loss components to handle class imbalance
+def focal_loss(pred, target, alpha=0.25, gamma=2.0):
+    """
+    Focal loss for addressing class imbalance in pixel-wise prediction
+    """
+    bce = F.binary_cross_entropy_with_logits(pred, target, reduction='none')
+    
+    # Apply focal loss formula
+    pt = torch.exp(-bce)  # Probability of being correct
+    focal_weight = alpha * (1 - pt) ** gamma
+    
+    return (focal_weight * bce).mean()
 
 def train_fcn_net(args):
     """
@@ -31,9 +43,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_improved")
+    writer = SummaryWriter(comment="target_ppg_improved_focal")
 
-    save_path = 'save/fcn-improved'
+    save_path = 'save/fcn-improved-focal'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -47,7 +59,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:10000]
             
     # split data to training/validation
     random.seed(0)
@@ -109,14 +121,21 @@ def train_fcn_net(args):
 
             pred, aux = model(x, target, rotations)
 
-            # Calculate losses
-            main_loss = F.binary_cross_entropy_with_logits(pred, y)
-            aux_loss = F.binary_cross_entropy_with_logits(aux, y)
+            # Calculate losses - using focal loss for better handling of imbalanced data
+            main_loss = focal_loss(pred, y)
+            aux_loss = focal_loss(aux, y)
             
-            # Combined loss with weighting
-            alpha = 0.7  # Weight for main loss
-            beta = 0.3   # Weight for auxiliary loss
+            # Adaptive weighting that changes over time
+            # Start with more emphasis on auxiliary loss, gradually shift to main loss
+            progress = min(1.0, epoch / (args.epochs * 0.7))  # Reaches 1.0 at 70% of training
+            alpha = 0.5 + 0.4 * progress  # Grows from 0.5 to 0.9
+            beta = 1.0 - alpha  # Decreases from 0.5 to 0.1
+            
             combined_loss = alpha * main_loss + beta * aux_loss
+            
+            # Add a small regularization term based on attention gamma to prevent extreme values
+            gamma_reg = 0.01 * torch.abs(model.gamma).mean()
+            combined_loss = combined_loss + gamma_reg
             
             # Gradient clipping to prevent explosion
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)

@@ -366,17 +366,14 @@ class Environment:
         pre_grasp_pos = action['pos'].copy()
         pre_grasp_pos[2] += 0.3
 
-        commands, _ = self.bhand.move(self.agent_cams, pre_grasp_pos, action['quat'], duration=0.1) #0.08
-        trajectories.extend(commands)
+        _ = self.bhand.move(pre_grasp_pos, action['quat'], duration=0.1)
 
         # set finger configuration
         theta = action['aperture']
-        commands = self.bhand.move_fingers(self.agent_cams, [0.0, theta, theta, theta], duration=0.1, force=5) #0.06
-        trajectories.extend(commands)
+        self.bhand.move_fingers([0.0, theta, theta, theta], duration=0.1, force=5)
 
         # move to the pre-grasp position
-        commands, is_in_contact = self.bhand.move(self.agent_cams, action['pos'], action['quat'], duration=0.5, stop_at_contact=True) #0.1
-        trajectories.extend(commands)
+        is_in_contact = self.bhand.move(action['pos'], action['quat'], duration=0.5, stop_at_contact=True)
         
         # check if during reaching the pre-grasp position, the hand collides with some objects
         if not is_in_contact:
@@ -390,8 +387,7 @@ class Environment:
             grasp_pos = action['pos'] + rot[0:3, 2] * action['push_distance']
 
             # if grasping only (without power push), comment out
-            commands, _ = self.bhand.move(self.agent_cams, grasp_pos, action['quat'], duration=2) #0.25
-            trajectories.extend(commands)
+            self.bhand.move(grasp_pos, action['quat'], duration=2)
 
             # compute the distances of each object from other objects after pushing
             next_obs = self.get_observation()
@@ -405,20 +401,17 @@ class Environment:
 
             
             # close the fingers
-            commands = self.bhand.close(agent_cams=self.agent_cams)
-            trajectories.extend(commands)
+            self.bhand.close()
         else:
             grasp_pos = action['pos']
 
         # move up when the object is picked
         final_pos = grasp_pos.copy()
         final_pos[2] += 0.4
-        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.1) #0.05
-        trajectories.extend(commands)
+        _ = self.bhand.move(final_pos, action['quat'], duration=0.1)
 
         # check grasp stability
-        commands, _ = self.bhand.move(self.agent_cams, final_pos, action['quat'], duration=0.05) #0.5 #@Chris no need to save traj since it was just for checking grasp stability
-        trajectories.extend(commands)
+        _ = self.bhand.move(final_pos, action['quat'], duration=0.05)
 
         stable_grasp, num_contacts = self.bhand.is_grasp_stable()
 
@@ -440,12 +433,10 @@ class Environment:
                     grasp_label = False
 
         # move home
-        commands, _ = self.bhand.move(self.agent_cams, self.bhand.home_position, action['quat'], duration=0.1) #0.07
-        trajectories.extend(commands)
+        _ = self.bhand.move(self.bhand.home_position, action['quat'], duration=0.1)
 
         # open fingers to drop grasped object
-        commands = self.bhand.open(agent_cams=self.agent_cams)
-        trajectories.extend(commands)
+        self.bhand.open()
 
         self.remove_flat_objs()
 

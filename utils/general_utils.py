@@ -291,7 +291,7 @@ def resize_bbox(bbox):
     ]
     return resized_bbox
 
-def postprocess_single(q_maps, padding_width):
+def postprocess(q_maps, padding_width):
     """
     Remove extra padding
     """
@@ -308,27 +308,6 @@ def postprocess_single(q_maps, padding_width):
                             padding_width:int(q_maps.shape[3] - padding_width)]
             
             remove_pad[i][j] = q_map.detach().cpu().numpy()
-
-    return remove_pad
-
-def postprocess_multi(q_maps, padding_width):
-    """
-    Remove extra padding
-    """
-
-    w = int(q_maps.shape[3] - 2 * padding_width)
-    h = int(q_maps.shape[4] - 2 * padding_width)
-
-    remove_pad = np.zeros((q_maps.shape[0], q_maps.shape[1], q_maps.shape[2], w, h))
-
-    for i in range(q_maps.shape[0]):
-        for j in range(q_maps.shape[1]):
-            for k in range(q_maps.shape[2]):
-                # remove extra padding
-                q_map = q_maps[i, j, k, padding_width:int(q_maps.shape[3] - padding_width),
-                            padding_width:int(q_maps.shape[4] - padding_width)]
-                
-                remove_pad[i][j][k] = q_map.detach().cpu().numpy()
 
     return remove_pad
 
