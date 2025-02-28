@@ -43,9 +43,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_improved_focal-")
+    writer = SummaryWriter(comment="target_ppg_improved")
 
-    save_path = 'save/fcn-improved-focal-'
+    save_path = 'save/fcn-improved'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -90,7 +90,7 @@ def train_fcn_net(args):
     # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
-    # criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
@@ -103,19 +103,13 @@ def train_fcn_net(args):
 
             pred = model(x, target, rotations)
 
-            # Calculate losses - using focal loss for better handling of imbalanced data
-            loss = focal_loss(pred, y)
-            # loss = F.binary_cross_entropy_with_logits(pred, y)
-            
             # Compute loss in the whole scene
-            # loss = criterion(pred, y)
-            # loss = torch.sum(loss)
-            # epoch_loss['train'] += loss.detach().cpu().numpy()
-            epoch_loss['train'] += loss.item()
+            loss = criterion(pred, y)
+            loss = torch.sum(loss)
+            epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
-                # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.item()}")
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -133,17 +127,13 @@ def train_fcn_net(args):
                 y = batch[3].to(args.device, dtype=torch.float)
 
                 pred = model(x, target, rotations)
-                # loss = criterion(pred, y)
-                # Calculate validation loss using only main output
-                loss = F.binary_cross_entropy_with_logits(pred, y)
+                loss = criterion(pred, y)
 
-                # loss = torch.sum(loss)
-                # epoch_loss[phase] += loss.detach().cpu().numpy()
-                epoch_loss[phase] += loss.item()
+                loss = torch.sum(loss)
+                epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    # logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.item()}")
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
