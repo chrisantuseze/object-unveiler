@@ -10,16 +10,28 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3,
                      stride=stride, padding=1, bias=False)
 
+class LayerNorm2d(nn.Module):
+    def __init__(self, num_features, eps=1e-5):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(num_features))
+        self.bias = nn.Parameter(torch.zeros(num_features))
+        self.eps = eps
+
+    def forward(self, x):
+        mean = x.mean(dim=1, keepdim=True)
+        var = x.var(dim=1, unbiased=False, keepdim=True)
+        x = (x - mean) / torch.sqrt(var + self.eps)
+        return x * self.weight.view(1, -1, 1, 1) + self.bias.view(1, -1, 1, 1)
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1, downsample=None):
         super(ResidualBlock, self).__init__()
 
         self.conv1 = conv3x3(in_planes, out_planes, stride)
-        self.bn1 = nn.LayerNorm(out_planes)
+        self.bn1 = LayerNorm2d(out_planes)
 
         self.conv2 = conv3x3(out_planes, out_planes)
-        self.bn2 = nn.LayerNorm(out_planes)
+        self.bn2 = LayerNorm2d(out_planes)
 
         self.downsample = downsample
 
@@ -27,7 +39,7 @@ class ResidualBlock(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.xavier_uniform_(m.weight)
-            elif isinstance(m, nn.LayerNorm):
+            elif isinstance(m, LayerNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
@@ -73,7 +85,7 @@ class ResFCN(nn.Module):
         
         # Feature fusion layers
         self.fusion_conv = nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.fusion_bn = nn.LayerNorm(64)
+        self.fusion_bn = LayerNorm2d(64)
         
         # Final prediction layer
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
