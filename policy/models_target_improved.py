@@ -92,9 +92,6 @@ class ResFCN(nn.Module):
         self.rb6 = self.make_layer(128, 64)
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
         
-        # Auxiliary loss to help stabilize training
-        self.aux_conv = nn.Conv2d(256, 1, kernel_size=1)
-        
         # Dropout for regularization
         self.dropout = nn.Dropout2d(0.2)
         
@@ -189,10 +186,6 @@ class ResFCN(nn.Module):
         fused = nn.functional.relu(self.fusion_bn1(self.fusion_conv1(combined)))
         fused = nn.functional.relu(self.fusion_bn2(self.fusion_conv2(fused)))
         
-        # Auxiliary output (for training stability)
-        aux_out = nn.functional.interpolate(fused, scale_factor=4, mode='bilinear', align_corners=True)
-        aux_out = self.aux_conv(aux_out)
-        
         # Final processing
         x = self.rb5(fused)
         x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
@@ -200,10 +193,7 @@ class ResFCN(nn.Module):
         x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
         out = self.final_conv(x)
         
-        # if return_aux:
-        #     return out, aux_out
-        return out, aux_out
-        # return out
+        return out
     
     def forward(self, depth_heightmap, object_depth, specific_rotation=-1, is_volatile=[], return_aux=False):
         # Similar rotation handling code as before, but using the improved prediction function
@@ -245,14 +235,7 @@ class ResFCN(nn.Module):
                 batch_rot_depth[rot_id] = rotate_depth[0]
                 batch_rot_obj[rot_id] = rotate_obj[0]
             
-            # Run improved prediction with both inputs
-            # if return_aux:
-            #     prob, aux_prob = self.predict(batch_rot_depth, batch_rot_obj, return_aux=True)
-            # else:
-            #     prob = self.predict(batch_rot_depth, batch_rot_obj)
-
-            prob, aux_prob = self.predict(batch_rot_depth, batch_rot_obj, return_aux=True)
-            # prob = self.predict(batch_rot_depth, batch_rot_obj)
+            prob = self.predict(batch_rot_depth, batch_rot_obj)
             
             # Undo rotation (same as original)
             affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
@@ -267,16 +250,7 @@ class ResFCN(nn.Module):
             flow_grid_after = F.affine_grid(affine_after, prob.data.size(), align_corners=True)
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
             
-            # if return_aux:
-            #     aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.data.size(), align_corners=True)
-            #     aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
-            #     return out_prob, aux_out_prob
-            
-            # return out_prob
-
-            aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.data.size(), align_corners=True)
-            aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
-            return out_prob, aux_out_prob
+            return out_prob
             
         else:
             # Training mode (similar handling as original but with object image)
@@ -299,13 +273,7 @@ class ResFCN(nn.Module):
             rotate_obj = F.grid_sample(object_depth.requires_grad_(False),
                                      flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
             
-            # Use improved prediction
-            # if return_aux:
-            #     prob, aux_prob = self.predict(rotate_depth, rotate_obj, return_aux=True)
-            # else:
-            #     prob = self.predict(rotate_depth, rotate_obj)
-
-            prob, aux_prob = self.predict(rotate_depth, rotate_obj, return_aux=True)
+            prob = self.predict(rotate_depth, rotate_obj)
             
             # Undo rotations (same as original)
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
@@ -321,24 +289,7 @@ class ResFCN(nn.Module):
 
             out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
             
-            # if return_aux:
-            #     aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.size(), align_corners=True)
-            #     aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
-                
-            #     aux_output_shape = aux_out_prob.shape
-            #     aux_out_prob = aux_out_prob.view(aux_output_shape[0], -1)
-            #     aux_out_prob = torch.softmax(aux_out_prob, dim=1)
-            #     aux_out_prob = aux_out_prob.view(aux_output_shape).to(dtype=torch.float)
-                
-            #     return out_prob, aux_out_prob
-            
-            # return out_prob
-
-            aux_flow_grid_after = F.affine_grid(affine_after, aux_prob.size(), align_corners=True)
-            aux_out_prob = F.grid_sample(aux_prob, aux_flow_grid_after, mode='nearest', align_corners=True)
-
-            
-            return out_prob, aux_out_prob
+            return out_prob
         
  
 class Regressor(nn.Module):

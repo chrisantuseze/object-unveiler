@@ -4,8 +4,8 @@ import argparse
 from trainer.train_target_ppg import train_fcn_net, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
 from trainer.train_transformer import train_xformer, train_regressor
-# from eval_agent_target import eval_agent
-from eval_agent import eval_agent
+from eval_agent_target import eval_agent
+# from eval_agent import eval_agent
 import utils.general_utils as general_utils
 import utils.logger as logging
 

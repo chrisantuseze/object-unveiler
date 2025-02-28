@@ -1,7 +1,7 @@
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-from policy.models_target_improved import ResFCN, Regressor
+from policy.models_target_new import ResFCN, Regressor
 
 import torch
 import torch.optim as optim
@@ -50,9 +50,6 @@ def train_fcn_net(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-
-    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/ppg-ou-dataset2"
-    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -93,21 +90,6 @@ def train_fcn_net(args):
     # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
-    # Learning rate scheduler with warm-up and cosine annealing
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer,
-        max_lr=1e-3,
-        epochs=args.epochs,
-        steps_per_epoch=len(data_loader_train),
-        pct_start=0.1,  # Warm-up period
-        anneal_strategy='cos',
-        div_factor=25.0,
-        final_div_factor=1000.0
-    )
-
-    # Gradient clipping value
-    clip_value = 1.0
-    
     # criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
@@ -119,44 +101,25 @@ def train_fcn_net(args):
             rotations = batch[2]
             y = batch[3].to(args.device, dtype=torch.float)
 
-            pred, aux = model(x, target, rotations)
+            pred = model(x, target, rotations)
 
             # Calculate losses - using focal loss for better handling of imbalanced data
-            main_loss = focal_loss(pred, y)
-            aux_loss = focal_loss(aux, y)
+            # loss = focal_loss(pred, y)
+            loss = F.binary_cross_entropy_with_logits(pred, y)
             
-            # Adaptive weighting that changes over time
-            # Start with more emphasis on auxiliary loss, gradually shift to main loss
-            progress = min(1.0, epoch / (args.epochs * 0.7))  # Reaches 1.0 at 70% of training
-            alpha = 0.7 + 0.25 * progress  # Grows from 0.5 to 0.9
-            beta = 1.0 - alpha  # Decreases from 0.5 to 0.1
-            
-            combined_loss = alpha * main_loss + beta * aux_loss
-            
-            # Add a small regularization term based on attention gamma to prevent extreme values
-            # gamma_reg = 0.01 * torch.abs(model.gamma).mean()
-            # combined_loss = combined_loss + gamma_reg
-            
-            # Gradient clipping to prevent explosion
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
-
             # Compute loss in the whole scene
             # loss = criterion(pred, y)
             # loss = torch.sum(loss)
             # epoch_loss['train'] += loss.detach().cpu().numpy()
-            epoch_loss['train'] += combined_loss.item()
+            epoch_loss['train'] += loss.item()
 
             if step % args.step == 0:
                 # logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {combined_loss.item()}")
+                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.item()}")
 
             optimizer.zero_grad()
-            # loss.backward()
-            combined_loss.backward()
+            loss.backward()
             optimizer.step()
-
-            # Update learning rate
-            scheduler.step()
 
             debug_params(model)
 
@@ -169,7 +132,7 @@ def train_fcn_net(args):
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
-                pred, aux = model(x, target, rotations)
+                pred = model(x, target, rotations)
                 # loss = criterion(pred, y)
                 # Calculate validation loss using only main output
                 loss = F.binary_cross_entropy_with_logits(pred, y)
@@ -181,13 +144,6 @@ def train_fcn_net(args):
                 if step % args.step == 0:
                     # logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.item()}")
-
-        # Additional learning rate scheduling based on validation performance
-        if epoch > 0 and epoch % 20 == 0:
-            # Reduce LR on plateau for additional stability
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = param_group['lr'] * 0.8
-                print(f"Reduced learning rate to {param_group['lr']}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
