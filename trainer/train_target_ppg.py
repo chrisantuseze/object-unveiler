@@ -15,19 +15,6 @@ from datasets.heightmap_dataset import HeightMapDataset
 
 import utils.logger as logging
 
-# Loss function with focal loss components to handle class imbalance
-def focal_loss(pred, target, alpha=0.25, gamma=2.0):
-    """
-    Focal loss for addressing class imbalance in pixel-wise prediction
-    """
-    bce = F.binary_cross_entropy_with_logits(pred, target, reduction='none')
-    
-    # Apply focal loss formula
-    pt = torch.exp(-bce)  # Probability of being correct
-    focal_weight = alpha * (1 - pt) ** gamma
-    
-    return (focal_weight * bce).mean()
-
 def train_fcn_net(args):
     """
     Trains a Fully Convolutional Network (FCN) policy model for target grasping using the provided arguments.
@@ -56,7 +43,7 @@ def train_fcn_net(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:20000]
+    # transition_dirs = transition_dirs[:20000]
             
     # split data to training/validation
     random.seed(0)

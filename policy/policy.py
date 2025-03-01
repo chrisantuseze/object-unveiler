@@ -3,7 +3,7 @@ import pickle
 # from policy.models_attn2 import Regressor, ResFCN
 # from policy.unveiler_policy import Regressor, ResFCN
 from policy.obstacle_encoder import SpatialTransformerPredictor
-from policy.models_target_improved import Regressor, ResFCN
+from policy.models_target_new import Regressor, ResFCN
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -542,7 +542,7 @@ class Policy:
         target = general_utils.preprocess_target(target_mask, state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        out_prob, _ = self.fcn(x, target, is_volatile=True)
+        out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
