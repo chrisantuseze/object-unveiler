@@ -38,10 +38,11 @@ def collect_episodic_dataset(args, params):
     segmenter = ObjectSegmenter()
 
     for i in range(args.n_samples):
-        try:
-            run_episode(i, policy, segmenter, env, memory, rng)
-        except Exception as e:
-            print(e)
+        run_episode(i, policy, segmenter, env, memory, rng)
+        # try:
+        #     run_episode(i, policy, segmenter, env, memory, rng)
+        # except Exception as e:
+        #     print(e)
 
 def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -105,10 +106,10 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         if grasp_info['stable']:    
             resized_new_masks = extracted_object_masks = resized_bboxes = []
-            for mask in processed_masks:
+            for idx, mask in enumerate(processed_masks):
                 resized_new_masks.append(general_utils.resize_mask(mask))
                 extracted_object_masks.append(general_utils.extract_target_crop(mask, state))
-                resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
+                resized_bboxes.append(general_utils.resize_bbox(bboxes[idx]))
                 
             resized_target_mask = general_utils.resize_mask(target_mask)
             extracted_target = general_utils.extract_target_crop(resized_target_mask, state)
@@ -132,15 +133,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 'action': action, 
                 'label': grasp_info['stable'],
                 'bboxes': resized_bboxes,
+                'target_id': target_id,
                 'objects_to_remove': objects_to_remove
             }
-
-            # fig, ax = plt.subplots(1, 4)
-            # ax[0].imshow(state)
-            # ax[1].imshow(obs['color'][1])
-            # ax[2].imshow(extracted_obstacle)
-            # ax[3].imshow(extracted_target)
-            # plt.show()
 
             episode_data_list.append(transition)
 
