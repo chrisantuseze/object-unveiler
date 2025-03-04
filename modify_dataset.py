@@ -147,13 +147,13 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/ppg-dataset-act672-2"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-old2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/ppg-dataset-act672"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-old"
 
 
     episode_dirs = os.listdir(dataset_dir)
@@ -172,8 +172,8 @@ if __name__ == "__main__":
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
-        modify_episode_act(episode_dir, i)
-        # modify_episode(segmenter, episode_dir)
+        # modify_episode_act(episode_dir, i)
+        modify_episode(segmenter, episode_dir)
 
     logging.info(f"Dataset modified and saved in {new_dir}")
     
