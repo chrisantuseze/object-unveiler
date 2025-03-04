@@ -73,7 +73,7 @@ def train_sre(args):
     model = SpatialEncoder(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
     
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=-1)
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()

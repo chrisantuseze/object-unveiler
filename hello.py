@@ -55,13 +55,12 @@ def main():
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    for id in transition_dirs:
-        print("id", id)
+    for episode in transition_dirs:
+        scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
 
-        scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, id)
-        print(len(c_object_masks))
-
-        for obj in c_object_masks:
-            print(type(obj), np.array(obj).shape)
+        if len(c_object_masks) == 0:
+            print(f"Deleting {episode}...")
+            episode_path = os.path.join(dataset_dir, episode)
+            os.remove(episode_path)  # Delete the file
 
 # main()

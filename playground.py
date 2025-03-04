@@ -18,6 +18,7 @@ for filename in os.listdir(folder_path):
     # Make sure it's a file (not a folder)
     if os.path.isfile(file_path):
         file_name, file_ext = os.path.splitext(filename)
+        print(f"Duplicating {filename}")
         
         # Create N copies
         for i in range(1, N + 1):
