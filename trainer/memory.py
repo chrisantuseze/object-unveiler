@@ -70,21 +70,33 @@ class ReplayBuffer:
 
         return data_list
     
-    def load_episode_target_ppg(self, episode):
+    def load_episode_sre(self, episode):
         try:
             episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
         except Exception as e:
             logging.info(e, "- Failed episode:", episode)
 
-        data_list = []        
-        for data in episode_data:
-            heightmap = data['state']
-            c_obstacle_mask = data['c_obstacle_mask']
-            action = data['action']
+        data = episode_data[0]
+        c_target_mask = data['c_target_mask']
+        c_object_masks = data['c_object_masks']
+        scene_mask = data['scene_mask']
+        objects_to_remove = data['objects_to_remove']
+        bboxes = data['bboxes']
 
-            data_list.append((heightmap, c_obstacle_mask, action))
+        return scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes
+    
+    def load_episode_decoder(self, episode):
+        try:
+            episode_data = pickle.load(open(os.path.join(self.save_dir, episode), 'rb'))
+        except Exception as e:
+            logging.info(e, "- Failed episode:", episode)
 
-        return data_list
+        data = episode_data[0]
+        heightmap = data['state']
+        c_obstacle_mask = data['c_obstacle_mask']
+        action = data['action']
+
+        return heightmap, c_obstacle_mask, action
     
     def store_episode(self, transition):
         folder_name = os.path.join(self.save_dir, 'episode_' + str(self.count).zfill(5))

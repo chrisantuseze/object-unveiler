@@ -1,9 +1,8 @@
 import os
 import pickle
-# from policy.models_attn2 import Regressor, ResFCN
-# from policy.unveiler_policy import Regressor, ResFCN
-from policy.obstacle_encoder import SpatialTransformerPredictor
-from policy.models_target_new import Regressor, ResFCN
+from policy.models_attn2 import Regressor, ResFCN
+from policy.sre_model import SpatialEncoder
+from policy.models_target_new import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim
@@ -47,10 +46,8 @@ class Policy:
         self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN(args).to(self.device)
-        self.fcn_optimizer = optim.Adam(self.fcn.parameters(), lr=params['agent']['fcn']['learning_rate'])
-        self.fcn_criterion = nn.BCELoss(reduction='None')
-
-        self.xformer = SpatialTransformerPredictor(args).to(self.device)
+        self.ae_model = ActionDecoder(args).to(self.device)
+        self.sre_model = SpatialEncoder(args).to(self.device)
 
         self.segmenter = ObjectSegmenter()
 
@@ -63,7 +60,7 @@ class Policy:
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
-        demo_save_dir = 'save/ppg-dataset'
+        demo_save_dir = 'save/pc-ou-dataset'
         self.replay_buffer = ReplayBuffer(demo_save_dir)
 
     def seed(self, seed):
@@ -567,12 +564,12 @@ class Policy:
 
         return action
     
-    def exploit_xformer(self, state, color_image, target_mask):
+    def exploit_unveiler(self, state, color_image, target_mask):
         processed_pred_mask, processed_target, processed_obj_masks,\
         raw_pred_mask, raw_target_mask, raw_obj_masks,\
               objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
         
-        logits = self.xformer(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
+        logits = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         print("preds", top_indices.item())
         
@@ -584,7 +581,7 @@ class Policy:
         target = general_utils.preprocess_target(processed_masks[top_indices.item()], state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(x, target, is_volatile=True)
+        out_prob = self.ae_model(x, target, is_volatile=True)
         out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
@@ -632,65 +629,6 @@ class Policy:
 
         return heightmap, rot_id, label
     
-    # This is redundant
-    def learn(self, transition): 
-        """
-        This is not useful since we use the heightmap_dataset and aperture_dataset to present our collected demonstrations in a form that can be
-        fed into a pytorch dataloader which is used in training the modules.
-        """
-        
-        # check if grasp is stable and successful
-        if not transition['label']: 
-            return
-        
-        self.replay_buffer.store(transition) # I am not sure this is important
-
-        # sample from replay buffer
-        state, action = self.replay_buffer.sample()
-
-        # update resFCN
-        heightmap, rot_id, label = self.get_fcn_labels(state, action)
-       
-        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-        label = torch.FloatTensor(label).unsqueeze(0).to(self.device)
-        rotations = np.array([rot_id])
-        q_maps = self.fcn(x, specific_rotation=rotations)
-
-        # compute loss in the whole scene
-        loss = self.fcn_criterion(q_maps, label)
-        loss = torch.sum(loss)
-        logging.info('fcn_loss:', loss.detach().cpu().numpy())
-        self.info['fcn_loss'].append(loss.detach().cpu().numpy())
-
-        self.fcn_optimizer.zero_grad()
-        loss.backward()
-        self.fcn_optimizer.step()
-
-        # update regression network
-        aperture_img = general_utils.preprocess_aperture_image(state, p1=np.array([action[0], action[1]]), crop_size=self.crop_size)
-        x = torch.FloatTensor(aperture_img, theta=action[2]).unsqueeze(0).to(self.device)
-        
-        # normalize aperture to range 0-1
-        normalized_aperture = general_utils.min_max_scale(action[3],
-                                                  range=[self.aperture_limits[0], self.aperture_limits[1]],
-                                                  target_range=[0, 1])
-        gt_aperture = torch.FloatTensor(np.array([normalized_aperture])).unsqueeze(0).to(self.device)
-        pred_aperture = self.reg(x)
-
-        logging.info('APERTURES')
-        logging.info(gt_aperture, pred_aperture)
-
-        # compute loss
-        loss = self.reg_criterion(pred_aperture, gt_aperture)
-        logging.info('reg_loss:', loss.detach().cpu().numpy())
-        self.info['reg_loss'].append(loss.detach().cpu().numpy())
-
-        self.reg_optimizer.zero_grad()
-        loss.backward()
-        self.reg_optimizer.step()
-
-        self.learn_step_counter += 1
-
     def action3d(self, action):
         """
         convert from pixels to 3d coordinates
@@ -705,27 +643,18 @@ class Policy:
                 'aperture': action[3],
                 'push_distance': self.push_distance}
     
-    def save(self, epoch):
-        folder_name = os.path.join(self.params['log_dir'], 'model_' + str(epoch))
-        os.mkdir(folder_name)
-        torch.save(self.fcn.state_dict(), os.path.join(folder_name, 'fcn.pt'))
-        torch.save(self.reg.state_dict(), os.path.join(folder_name, 'reg.pt'))
+    def load(self, ae_model, reg_model, sre_model):
+        # self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
+        # self.fcn.eval()
 
-        log_data = {'params': self.params.copy()}
-        pickle.dump(log_data, open(os.path.join(folder_name, 'log_data'), 'wb'))
-
-        self.info['learn_step_counter'] = self.learn_step_counter
-        pickle.dump(self.info, open(os.path.join(folder_name, 'info'), 'wb'))
-
-    def load(self, fcn_model, reg_model, unveiler_model):
-        self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
-        self.fcn.eval()
+        self.ae_model.load_state_dict(torch.load(ae_model, map_location=self.device))
+        self.ae_model.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
         self.reg.eval()
 
-        self.xformer.load_state_dict(torch.load(unveiler_model, map_location=self.device))
-        self.xformer.eval()
+        self.sre_model.load_state_dict(torch.load(sre_model, map_location=self.device))
+        self.sre_model.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

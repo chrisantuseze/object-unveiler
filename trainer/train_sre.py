@@ -1,23 +1,21 @@
 import os
 import random
-# from policy.models_target import ResFCN, Regressor
-from policy.models_target_new import ResFCN, Regressor
+from policy.sre_model import SpatialEncoder
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils import data
-import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
-from datasets.aperture_dataset import ApertureDataset
 
-from datasets.heightmap_dataset import HeightMapDataset
+from datasets.sre_dataset import SREDataset
 
 import utils.logger as logging
 
-def train_fcn_net(args):
+
+def train_sre(args):
     """
-    Trains a Fully Convolutional Network (FCN) policy model for target grasping using the provided arguments.
+    Trains a Transformer Encoder policy model for obstacle prediction using the provided arguments.
     Args:
         args: An object containing the following attributes:
             - dataset_dir (str): Directory containing the dataset.
@@ -30,12 +28,13 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="fcn")
+    writer = SummaryWriter(comment="sre")
 
-    save_path = 'save/fcn'
+    save_path = 'save/sre'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
+
 
     transition_dirs = os.listdir(args.dataset_dir)
     
@@ -44,12 +43,10 @@ def train_fcn_net(args):
             transition_dirs.remove(file_)
 
     # transition_dirs = transition_dirs[:20000]
-            
+    
     # split data to training/validation
     random.seed(0)
     random.shuffle(transition_dirs)
-
-    print(f'\nData from: {args.dataset_dir}; size: {len(transition_dirs)}\n')
 
     split_index = int(args.split_ratio * len(transition_dirs))
     train_ids = transition_dirs[:split_index]
@@ -62,10 +59,10 @@ def train_fcn_net(args):
     data_length = (len(val_ids)//args.batch_size) * args.batch_size
     val_ids = val_ids[:data_length]
     
-    train_dataset = HeightMapDataset(args, train_ids)
+    train_dataset = SREDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True, shuffle=True)
 
-    val_dataset = HeightMapDataset(args, val_ids)
+    val_dataset = SREDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
@@ -73,29 +70,31 @@ def train_fcn_net(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ResFCN(args).to(args.device)
-    # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95))
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
-
-    criterion = nn.BCELoss(reduction='none')
+    model = SpatialEncoder(args).to(args.device)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    
+    criterion = nn.CrossEntropyLoss()
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
-            x = batch[0].to(args.device)
-            target = batch[1].to(args.device)
-            rotations = batch[2]
-            y = batch[3].to(args.device, dtype=torch.float)
+            target = batch[0].to(args.device)
+            object_masks = batch[1].to(args.device)
 
-            pred = model(x, target, rotations)
+            bbox = batch[2].to(args.device)
+            objects_to_remove = batch[3].to(args.device)
+            raw_scene_mask = batch[4].to(args.device)
+            raw_target = batch[5].to(args.device)
+            raw_objects = batch[6].to(args.device)
+            
+            pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
             # Compute loss in the whole scene
-            loss = criterion(pred, y)
-            loss = torch.sum(loss)
-            epoch_loss['train'] += loss.detach().cpu().numpy()
+            loss = criterion(pred, objects_to_remove)
+            # loss = torch.sum(loss)
 
             if step % args.step == 0:
+                # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
@@ -105,21 +104,28 @@ def train_fcn_net(args):
             debug_params(model)
 
         model.eval()
-        # epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['val']:
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                x = batch[0].to(args.device)
-                target = batch[1].to(args.device)
-                rotations = batch[2]
-                y = batch[3].to(args.device, dtype=torch.float)
+                target = batch[0].to(args.device)
+                object_masks = batch[1].to(args.device)
 
-                pred = model(x, target, rotations)
-                loss = criterion(pred, y)
+                bbox = batch[2].to(args.device)
+                objects_to_remove = batch[3].to(args.device)
 
-                loss = torch.sum(loss)
+                raw_scene_mask = batch[4].to(args.device)
+                raw_target = batch[5].to(args.device)
+                raw_objects = batch[6].to(args.device)
+                
+                pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
+
+                loss = criterion(pred, objects_to_remove)
+
+                # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
+                    # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
@@ -130,46 +136,10 @@ def train_fcn_net(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
+            torch.save(model.state_dict(), os.path.join(save_path, f'sre_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model.pt'))
+    torch.save(model.state_dict(), os.path.join(save_path, f'sre_model.pt'))
     writer.close()
-
-
-def train_regressor(args):
-    save_path = 'save/reg'
-
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
-
-    # transition_dirs = next(os.walk(args.dataset_dir))[1]
-    transition_dirs = os.listdir(args.dataset_dir)
-
-    # split data to training/validation
-    random.seed(0)
-    random.shuffle(transition_dirs)
-    
-    split_index = int(args.split_ratio * len(transition_dirs))
-    train_ids = transition_dirs[:split_index]
-    val_ids = transition_dirs[split_index:]
-
-    train_dataset = ApertureDataset(args, train_ids)
-    val_dataset = ApertureDataset(args, val_ids)
-
-    # note: the batch size is 4
-    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
-
-    data_loaders = {'train': data_loader_train, 'val': data_loader_val}
-    logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
-
-    model = Regressor().to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    criterion = nn.SmoothL1Loss()
-
-    logging.info(model)
-
-
 
 def debug_params(model):
     for name, param in model.named_parameters():

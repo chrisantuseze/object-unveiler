@@ -5,26 +5,20 @@ conda activate unveiler
 
 - Aperture is the distance between the two opposing fingers of the hand. So basically, how open is the hand?
 
-<!-- python3 main.py --mode 'eval' --fcn_model 'downloads/fcn_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
+<!-- python3 main.py --mode 'eval' --ae_model 'downloads/ae_model.pt' --reg_model 'downloads/reg_model.pt' --n_scenes 5 -->
 python3 main.py \
 --mode 'eval' \
 --reg_model 'downloads/reg_model.pt' \
---fcn_model 'save/unveiler/unveiler_model.pt' \
+--ae_model 'save/ae/ae_model.pt' \
+--sre_model 'save/sre/sre_model.pt' \
 --n_scenes 50 \
 --chunk_size 10 \
 --temporal_agg
 
-python3 main.py \
---mode 'eval' \
---reg_model 'downloads/reg_model.pt' \
---fcn_model 'save/fcn/fcn_model.pt' \
---n_scenes 50 \
---chunk_size 10 \
---temporal_agg
 
 python3 main.py \
 --dataset_dir 'save/ou-dataset' \
---mode 'fcn' \
+--mode 'ae' \
 --epochs 100 \
 --batch_size 2 \
 --lr 0.001

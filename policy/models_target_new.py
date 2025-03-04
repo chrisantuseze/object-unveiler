@@ -61,9 +61,9 @@ class ResidualBlock(nn.Module):
 
         return out
 
-class ResFCN(nn.Module):
+class ActionDecoder(nn.Module):
     def __init__(self, args):
-        super(ResFCN, self).__init__()
+        super(ActionDecoder, self).__init__()
         self.nr_rotations = 16
         self.device = args.device
         

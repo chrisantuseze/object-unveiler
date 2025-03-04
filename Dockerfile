@@ -41,4 +41,4 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY . .
 
 # Run the application.
-CMD python3 main.py --mode 'fcn' --dataset_dir 'save/ppg-dataset' --epochs 50
+CMD python3 main.py --mode 'ae' --dataset_dir 'save/pc-ou-dataset' --epochs 50

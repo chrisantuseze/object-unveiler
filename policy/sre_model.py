@@ -5,9 +5,9 @@ import torch.nn.functional as F
 import math
 import torchvision
 
-class SpatialTransformerPredictor(nn.Module):
+class SpatialEncoder(nn.Module):
     def __init__(self, args, hidden_dim=1024, num_layers=6, nhead=8, dropout=0.1):
-        super(SpatialTransformerPredictor, self).__init__()
+        super(SpatialEncoder, self).__init__()
         self.args = args
         self.hidden_dim = hidden_dim
         

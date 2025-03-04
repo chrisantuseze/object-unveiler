@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import torch
 import argparse
-from trainer.train_target_ppg import train_fcn_net, train_regressor
+from trainer.train_ae import train_ae, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
-from trainer.train_transformer import train_xformer, train_regressor
+from trainer.train_sre import train_sre
 from eval_agent_target import eval_agent
 # from eval_agent import eval_agent
 import utils.general_utils as general_utils
@@ -14,17 +14,18 @@ import utils.logger as logging
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--mode', default='fcn', type=str, help='')
+    parser.add_argument('--mode', default='ae', type=str, help='')
     
     # args for eval_agent
-    parser.add_argument('--fcn_model', default='', type=str, help='')
+    parser.add_argument('--ae_model', default='save/ae/ae_model.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre/sre_model.pt', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
     parser.add_argument('--seed', default=16, type=int, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')
     parser.add_argument('--object_set', default='seen', type=str, help='')
 
     # args for trainer
-    parser.add_argument('--dataset_dir', default='save/ppg-dataset', type=str, help='')
+    parser.add_argument('--dataset_dir', default='save/pc-ou-dataset', type=str, help='')
     parser.add_argument('--epochs', default=100, type=int, help='')
     parser.add_argument('--lr', default=0.0001, type=float, help='')
     parser.add_argument('--batch_size', default=1, type=int, help='')
@@ -57,11 +58,11 @@ if __name__ == "__main__":
     if args.mode == 'unveiler':
         train_unveiler(args)
     
-    elif args.mode == 'xformer':
-        train_xformer(args)
+    elif args.mode == 'sre':
+        train_sre(args)
 
-    elif args.mode == 'fcn':
-        train_fcn_net(args)
+    elif args.mode == 'ae':
+        train_ae(args)
         
     elif args.mode == 'reg':
         train_regressor(args)

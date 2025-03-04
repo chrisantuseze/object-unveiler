@@ -11,9 +11,9 @@ import utils.general_utils as general_utils
 from utils.constants import *
 
 
-class TransformerDataset(data.Dataset):
+class SREDataset(data.Dataset):
     def __init__(self, args, dir_ids):
-        super(TransformerDataset, self).__init__()
+        super(SREDataset, self).__init__()
         self.args = args
         self.dataset_dir = args.dataset_dir
         self.dir_ids = dir_ids
@@ -22,8 +22,7 @@ class TransformerDataset(data.Dataset):
 
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
-        episode_data = self.memory.load_episode_attn(self.dir_ids[id])
-        heightmap, scene_mask, c_target_mask, c_obstacle_mask, c_object_masks, objects_to_remove, bboxes, target_id, _ = episode_data[0]
+        scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
         processed_target_mask = general_utils.preprocess_target(c_target_mask)
@@ -33,8 +32,6 @@ class TransformerDataset(data.Dataset):
             processed_obj_mask = general_utils.preprocess_target(obj_mask)
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
-
-        target_bbox = bboxes[target_id]
 
         # pad object masks
         padded_processed_obj_masks, padded_obj_masks, padded_bbox, padded_objects_to_remove = self.pad(_processed_obj_masks, c_object_masks, bboxes, objects_to_remove)

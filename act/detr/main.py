@@ -65,10 +65,11 @@ def get_args_parser():
     parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
 
-    parser.add_argument('--mode', default='fcn', type=str, help='')
+    parser.add_argument('--mode', default='ae', type=str, help='')
     
     # args for eval_agent
-    parser.add_argument('--fcn_model', default='', type=str, help='')
+    parser.add_argument('--ae_model', default='save/ae/ae_model.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre/sre_model.pt', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')
 
