@@ -8,8 +8,8 @@ import os
 import shutil
 
 # Set your folder path and number of copies
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"  # Change this to your actual folder
-N = 3  # Change this to the number of times you want to duplicate each file
+folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2"  # Change this to your actual folder
+N = 9  # Change this to the number of times you want to duplicate each file
 
 # Loop through all files in the folder
 for filename in os.listdir(folder_path):
@@ -25,3 +25,10 @@ for filename in os.listdir(folder_path):
             shutil.copy(file_path, new_file)
 
 print("Files duplicated successfully!")
+
+# 1. merge files
+# 2. duplicate files
+# 3. rename files
+# 4. zip folder
+# 5. unzip folder
+# 6. start training
