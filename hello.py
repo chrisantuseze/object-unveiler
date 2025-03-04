@@ -11,7 +11,7 @@ dir = ""
 
 # folder_path = "save/pc-ou-dataset-new/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
+folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2/"
 id = 0
 
 
@@ -21,7 +21,7 @@ for i, filename in enumerate(os.listdir(folder_path)):
     old_name = os.path.join(folder_path, filename)
     
     arr = filename.split("_")
-    new_filename = arr[0] + "_" + str(id).zfill(6)
+    new_filename = arr[0] + "_" + str(id).zfill(5)
 
     # Rename the file
     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
