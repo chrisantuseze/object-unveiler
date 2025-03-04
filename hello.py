@@ -9,10 +9,10 @@ import numpy as np
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-# folder_path = "save/pc-ou-dataset2/"
+# folder_path = "save/pc-ou-dataset-new/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2/"
-id = 0
+folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-new/"
+id = 2330
 
 
 folder_path = dir + folder_path
