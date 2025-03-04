@@ -30,9 +30,9 @@ def train_fcn_net(args):
         None
     """
 
-    writer = SummaryWriter(comment="target_ppg_improved-ln")
+    writer = SummaryWriter(comment="fcn")
 
-    save_path = 'save/fcn-improved-ln'
+    save_path = 'save/fcn'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
