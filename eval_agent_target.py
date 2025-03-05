@@ -317,7 +317,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model="save/unveiler-xformer-encoder/unveiler_model_61.pt")
+    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
     segmenter = ObjectSegmenter()
 

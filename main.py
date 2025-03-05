@@ -4,8 +4,8 @@ import argparse
 from trainer.train_ae import train_ae, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
 from trainer.train_sre import train_sre
-from eval_agent_target import eval_agent
-# from eval_agent import eval_agent
+# from eval_agent_target import eval_agent
+from eval_agent import eval_agent
 import utils.logger as logging
 
 # logging.init()

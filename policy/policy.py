@@ -536,10 +536,10 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        target = general_utils.preprocess_target(target_mask, state)
+        target = general_utils.preprocess_target(target_mask, state, disp=True)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        out_prob = self.fcn(x, target, is_volatile=True)
+        out_prob = self.ae_model(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
@@ -571,18 +571,30 @@ class Policy:
         
         logits = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-        print("preds", top_indices.item())
+        obstacle_id = top_indices.item()
+        print("preds", obstacle_id)
         
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
         # target = general_utils.preprocess_target(target_mask, state)
-        target = general_utils.preprocess_target(processed_masks[top_indices.item()], state)
-        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+        if obstacle_id < len(processed_masks):
+            obstacle_mask = processed_masks[obstacle_id]
+            obstacle = general_utils.preprocess_target(obstacle_mask, state)
+            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+        else:
+            obstacle_mask = target_mask
+            obstacle = processed_target
 
-        out_prob = self.ae_model(x, target, is_volatile=True)
-        out_prob = general_utils.postprocess_single(out_prob, self.padding_width)
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        ax[2].imshow(obstacle_mask)
+        plt.show()
+
+        out_prob = self.ae_model(x, obstacle, is_volatile=True)
+        out_prob = general_utils.postprocess(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
         p1 = np.array([best_action[3], best_action[2]])

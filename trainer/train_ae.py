@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
@@ -78,6 +79,7 @@ def train_ae(args):
 
     criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
+    best_ckpt_info = None
     for epoch in range(args.epochs):
         model.train()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -127,11 +129,19 @@ def train_ae(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if lowest_loss > epoch_loss['val']:
-            lowest_loss = epoch_loss['val']
+        if epoch % 25 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'ae_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path, f'ae_model.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            best_ckpt_info = (epoch, lowest_loss, deepcopy(model.state_dict()))
+
+    # save best checkpoint
+    best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info
+    torch.save(best_state_dict, os.path.join(save_path, f'ae_model_best.pt'))
+    print(f'Best ckpt, val loss {lowest_val_loss:.6f} @ epoch{best_epoch}')
+
+    torch.save(model.state_dict(), os.path.join(save_path, f'ae_model_last.pt'))
     writer.close()
 
 

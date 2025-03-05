@@ -381,15 +381,16 @@ def preprocess_aperture_image(state, p1, theta, crop_size, plot=False):
     
     return three_channel_img
 
-def preprocess_target(target, state=None):
+def preprocess_target(target, state=None, disp=False):
     if state is not None:
         resized_target = resize_mask(target)
         full_crop = extract_target_crop(resized_target, state)
 
-        fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(state)
-        ax[1].imshow(full_crop)
-        plt.show()
+        if disp:
+            fig, ax = plt.subplots(1, 2)
+            ax[0].imshow(state)
+            ax[1].imshow(full_crop)
+            plt.show()
 
         return preprocess_image(full_crop)[0]
 

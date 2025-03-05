@@ -81,7 +81,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_attn(state, obs['color'][1], target_mask)
+        action = policy.exploit_unveiler(state, obs['color'][1], target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -117,11 +117,20 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         if count > 1:
             logging.info("Robot is in an infinite loop")
-            break
+            res = input("Do you still want to continue? (y/n) ")
+            if res.lower() == "n":
+                break
 
         target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
-            if grasp_info['stable']:
+            res = input("Do you think the target is available? (y/n) ")
+            if res.lower() == "y":
+                target_id = int(input("What is the index? "))
+                target_mask = new_masks[target_id]
+                continue
+
+            res = input("Do you think the grasp was successful? (y/n) ")
+            if grasp_info['stable'] or res.lower() == "y":
                 logging.info("Target has been grasped!")
                 success_count += 1
 
@@ -357,7 +366,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    # policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model="save/unveiler-xformer-encoder/unveiler_model_61.pt")
+    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
     segmenter = ObjectSegmenter()
 
@@ -375,7 +384,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_act(
+        episode_data, success_count, grasping_action_count = run_episode_multi(
             args, policy, env, segmenter, rng, episode_seed, 
             success_count=success_count, grp_count=grasping_action_count
         )

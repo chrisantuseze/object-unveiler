@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import random
 from policy.sre_model import SpatialEncoder
@@ -42,7 +43,7 @@ def train_sre(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:20000]
+    # transition_dirs = transition_dirs[:20000]
     
     # split data to training/validation
     random.seed(0)
@@ -71,10 +72,11 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
     
     criterion = nn.CrossEntropyLoss(ignore_index=-1)
     lowest_loss = float('inf')
+    best_ckpt_info = None
     for epoch in range(args.epochs):
         model.train()
         epoch_loss = {'train': 0.0, 'val': 0.0}
@@ -136,11 +138,19 @@ def train_sre(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if lowest_loss > epoch_loss['val']:
-            lowest_loss = epoch_loss['val']
+        if epoch % 25 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'sre_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path, f'sre_model.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            best_ckpt_info = (epoch, lowest_loss, deepcopy(model.state_dict()))
+
+    # save best checkpoint
+    best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info
+    torch.save(best_state_dict, os.path.join(save_path, f'sre_model_best.pt'))
+    print(f'Best ckpt, val loss {lowest_val_loss:.6f} @ epoch{best_epoch}')
+
+    torch.save(model.state_dict(), os.path.join(save_path, f'sre_model_last.pt'))
     writer.close()
 
 def debug_params(model):
