@@ -77,6 +77,7 @@ def train_sre(args):
     lowest_loss = float('inf')
     for epoch in range(args.epochs):
         model.train()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
             target = batch[0].to(args.device)
             object_masks = batch[1].to(args.device)
@@ -92,6 +93,7 @@ def train_sre(args):
             # Compute loss in the whole scene
             loss = criterion(pred, objects_to_remove)
             # loss = torch.sum(loss)
+            epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
                 # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
@@ -104,8 +106,8 @@ def train_sre(args):
             debug_params(model)
 
         model.eval()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['train', 'val']:
+        # epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['val']:
             for step, batch in enumerate(data_loaders[phase]):
                 target = batch[0].to(args.device)
                 object_masks = batch[1].to(args.device)
