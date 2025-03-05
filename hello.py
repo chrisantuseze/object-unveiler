@@ -9,9 +9,9 @@ import numpy as np
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-# folder_path = "save/pc-ou-dataset-new/"
+folder_path = "save/pc-ou-dataset2/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2/"
+# folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2/"
 id = 0
 
 
@@ -49,7 +49,7 @@ def load_episode(dataset_dir, episode):
     return None
 
 def main():
-    dataset_dir = "save/pc-ou-dataset-new"
+    dataset_dir = "save/pc-ou-dataset"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):

@@ -6,7 +6,6 @@ from trainer.train_unveiler import train_unveiler, train_regressor
 from trainer.train_sre import train_sre
 from eval_agent_target import eval_agent
 # from eval_agent import eval_agent
-import utils.general_utils as general_utils
 import utils.logger as logging
 
 # logging.init()
@@ -47,8 +46,6 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    general_utils.create_dirs()
-
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # args.device = torch.device("cpu")
     print(f"You are using {args.device}")

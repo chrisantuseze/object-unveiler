@@ -42,7 +42,7 @@ def train_sre(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    # transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:20000]
     
     # split data to training/validation
     random.seed(0)
