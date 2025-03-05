@@ -64,11 +64,6 @@ class ObjectSegmenter:
                 cv2.imwrite(os.path.join(dir, name), img)
 
                 bboxes.append(prediction["boxes"][idx].tolist())
-        # if plot:
-        #     cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
-
-        # logging.info("Mask R-CNN: %d objects detected" % len(processed_masks), prediction["scores"].cpu())
-        
         if bbox:
             return processed_masks, pred_mask, raw_masks, bboxes
         

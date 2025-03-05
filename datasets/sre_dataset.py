@@ -34,22 +34,20 @@ class SREDataset(data.Dataset):
         _processed_obj_masks = np.array(_processed_obj_masks)
 
         # pad object masks
-        padded_processed_obj_masks, padded_obj_masks, padded_bbox, padded_objects_to_remove = self.pad(_processed_obj_masks, c_object_masks, bboxes, objects_to_remove)
+        padded_processed_obj_masks, padded_obj_masks, padded_bbox = self.pad(_processed_obj_masks, c_object_masks, bboxes)
 
         raw_scene_mask, raw_target_mask = np.array(scene_mask), np.array(c_target_mask)
+        objects_to_remove = np.array(objects_to_remove[0])
 
-        # print(processed_target_mask.shape, processed_obj_masks.shape, bbox.shape, padded_objects_to_remove.shape, raw_scene_mask.shape, raw_target_mask.shape, obj_masks.shape)
-
-        return processed_target_mask, padded_processed_obj_masks, padded_bbox, padded_objects_to_remove, raw_scene_mask, raw_target_mask, padded_obj_masks
+        return processed_target_mask, padded_processed_obj_masks, padded_bbox, objects_to_remove, raw_scene_mask, raw_target_mask, padded_obj_masks
 
     def __len__(self):
         return len(self.dir_ids)
     
-    def pad(self, _processed_obj_masks, object_masks, bboxes, objects_to_remove):
+    def pad(self, _processed_obj_masks, object_masks, bboxes):
         N, C, H, W = _processed_obj_masks.shape
         object_masks = np.array(object_masks)
         bboxes = np.array(bboxes)
-        objects_to_remove = np.array(objects_to_remove)
 
         if N < self.args.num_patches:
             processed_obj_masks = np.zeros((self.args.num_patches, C, H, W), dtype=_processed_obj_masks.dtype)
@@ -61,16 +59,9 @@ class SREDataset(data.Dataset):
 
             num_zeros = self.args.num_patches - bboxes.shape[0]
             bbox = np.pad(bboxes, pad_width=((0, num_zeros), (0, 0)), mode='constant')
-
-            padded_objects_to_remove = np.pad(objects_to_remove, (0, self.args.num_patches - len(objects_to_remove)), 'constant', constant_values=-1) 
-
         else:
             processed_obj_masks = _processed_obj_masks[:self.args.num_patches]
             obj_masks = object_masks[:self.args.num_patches]
             bbox = bboxes[:self.args.num_patches]
-            padded_objects_to_remove = objects_to_remove[:self.args.num_patches]
 
-        objects_to_remove = padded_objects_to_remove[0]
-        padded_objects_to_remove = np.array(objects_to_remove if objects_to_remove < self.args.num_patches else 0)
-
-        return processed_obj_masks, obj_masks, bbox, padded_objects_to_remove
+        return processed_obj_masks, obj_masks, bbox

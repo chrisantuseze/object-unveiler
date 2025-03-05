@@ -5,11 +5,10 @@ import shutil
 import numpy as np
 
 
-# # dir = "/Users/chrisantuseze/Research/robot-learning/datasets/"
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "save/pc-ou-dataset2/"
+folder_path = "save/pc-ou-dataset/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset2/"
 id = 0
@@ -55,12 +54,35 @@ def main():
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
+    count = 0
     for episode in transition_dirs:
         scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
 
-        if len(c_object_masks) == 0:
-            print(f"Deleting {episode}...")
-            episode_path = os.path.join(dataset_dir, episode)
-            os.remove(episode_path)  # Delete the file
+        # if len(c_object_masks) == 0:
+        #     print(f"Deleting {episode}...")
+        #     episode_path = os.path.join(dataset_dir, episode)
+        #     os.remove(episode_path)  # Delete the file
+
+        # if len(objects_to_remove) == 1 and objects_to_remove[0] == -1:
+        #     print(f"Deleting {episode}...", objects_to_remove[0])
+        #     count += 1
+        #     episode_path = os.path.join(dataset_dir, episode)
+        #     os.remove(episode_path)  # Delete the file
+
+        # if 10 in objects_to_remove:
+        #     print(f"Deleting {episode}...", objects_to_remove)
+        #     episode_path = os.path.join(dataset_dir, episode)
+        #     os.remove(episode_path)  # Delete the file
+        #     count += 1
+
+        for obj_mask in c_object_masks:
+            if isinstance(obj_mask, list):
+                print(f"Deleting {episode}...")
+                count += 1
+                episode_path = os.path.join(dataset_dir, episode)
+                os.remove(episode_path)  # Delete the file
+                break
+
+    print("Total count:", count)
 
 # main()

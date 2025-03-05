@@ -57,7 +57,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     'final_clutter_score': 0.0,
                 }
     
-    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_DIR)
+    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
     cv2.imwrite(os.path.join(TEST_DIR, "color0.png"), obs['color'][0])
@@ -104,14 +104,14 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         print(grasp_info)
         print('---------')
 
-        # general_utils.delete_episodes_misc(TEST_DIR)
+        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
         if policy.is_terminal(next_obs):
             break
 
         obs = copy.deepcopy(next_obs)
 
-        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_DIR)
+        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
         if len(new_masks) == n_prev_masks:
             count += 1
 
@@ -125,6 +125,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         if target_id == -1:
             res = input("Do you think the target is available? (y/n) ")
             if res.lower() == "y":
+                print(target_id, len(new_masks))
                 target_id = int(input("What is the index? "))
                 target_mask = new_masks[target_id]
                 continue

@@ -8,7 +8,7 @@ import os
 import shutil
 
 # Set your folder path and number of copies
-folder_path = "save/pc-ou-dataset2"  # Change this to your actual folder
+folder_path = "save/pc-ou-dataset"  # Change this to your actual folder
 N = 9  # Change this to the number of times you want to duplicate each file
 
 # Loop through all files in the folder

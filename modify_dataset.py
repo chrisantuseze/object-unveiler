@@ -41,11 +41,6 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 extracted_object_masks.append(general_utils.extract_target_crop(mask, heightmap))
                 resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
 
-            # get optimal nodes
-            target_id = grasping.get_target_id(data['target_mask'], object_masks)
-            objects_to_remove = grasping.find_obstacles_to_remove(target_id, object_masks)
-            # print(target_id, objects_to_remove[0])
-
             transition = {
                 'color_obs': data['color_obs'],
                 'state': data['state'],
@@ -60,8 +55,8 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 'action': data['action'], 
                 'label': data['label'],
                 'bboxes': resized_bboxes,
-                'target_id': target_id,
-                'objects_to_remove': objects_to_remove,
+                'target_id': data['target_id'],
+                'objects_to_remove': data['objects_to_remove'],
             }
             episode_data_list.append(transition)
 

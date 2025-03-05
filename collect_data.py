@@ -19,7 +19,7 @@ from utils.constants import *
 from env.env_components import ActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset"
+    save_dir = "save/pc-ou-dataset-fresh"
     # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
@@ -104,7 +104,12 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print(grasp_info)
         print('---------')
 
-        if grasp_info['stable']:    
+        if grasp_info['stable']:
+            if len(processed_masks) == 0 or target_id == -1:
+                print(">>>>>>>>>>> No objects masks or target id is negative >>>>>>>>>>>>>")
+                print('------------------------------------------')
+                break
+
             resized_new_masks = extracted_object_masks = resized_bboxes = []
             for idx, mask in enumerate(processed_masks):
                 resized_new_masks.append(general_utils.resize_mask(mask))

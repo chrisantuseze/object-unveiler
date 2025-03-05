@@ -18,7 +18,7 @@ import utils.logger as logging
 
 def find_obstacles_to_remove(target_index, segmentation_masks):
     if len(segmentation_masks) <= 3:
-        return [target_index]
+        return [target_index if target_index >= 0 else 0]
     
     distances_to_edge = get_distances_to_edge(segmentation_masks)
 
