@@ -72,13 +72,12 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     n_prev_masks = count = 0
     avg_clutter_score = 0.0
 
-    max_steps = 5
+    max_steps = 6
     while episode_data['attempts'] < max_steps:
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
-        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
         state = policy.state_representation(obs)
         action = policy.exploit_unveiler(state, obs['color'][1], target_mask)
@@ -360,6 +359,8 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     print(f"Plot saved to {filename}")
 
 def eval_agent(args):
+    general_utils.recreate_test()
+
     print("Running eval...")
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)

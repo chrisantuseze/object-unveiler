@@ -29,9 +29,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre")
+    writer = SummaryWriter(comment="sre-update")
 
-    save_path = 'save/sre'
+    save_path = 'save/sre-update'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -72,7 +72,7 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)#, weight_decay=1e-3)
     
     criterion = nn.CrossEntropyLoss()
     lowest_loss = float('inf')

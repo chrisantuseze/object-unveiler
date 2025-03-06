@@ -64,6 +64,8 @@ class ObjectSegmenter:
                 cv2.imwrite(os.path.join(dir, name), img)
 
                 bboxes.append(prediction["boxes"][idx].tolist())
+
+        cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
         if bbox:
             return processed_masks, pred_mask, raw_masks, bboxes
         

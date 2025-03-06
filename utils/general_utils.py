@@ -255,7 +255,7 @@ def create_dirs():
     recreate_test()
     recreate_train()
 
-    demo_path = 'save/ppg-dataset'
+    demo_path = 'save/pc-ou-dataset'
     if not os.path.exists(demo_path):
         os.makedirs(demo_path)
 

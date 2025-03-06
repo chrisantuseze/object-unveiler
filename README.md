@@ -9,8 +9,8 @@ conda activate unveiler
 python3 main.py \
 --mode 'eval' \
 --reg_model 'downloads/reg_model.pt' \
---ae_model 'save/ae/ae_model.pt' \
---sre_model 'save/sre/sre_model.pt' \
+--ae_model 'save/ae/ae_model_best.pt' \
+--sre_model 'save/sre/sre_model_best.pt' \
 --n_scenes 50 \
 --chunk_size 10 \
 --temporal_agg
