@@ -211,7 +211,7 @@ def train_unveiler(args):
     random.seed(0)
     random.shuffle(transition_dirs)
 
-    transition_dirs = transition_dirs[:5000]
+    # transition_dirs = transition_dirs[:1000]
 
     print(f'\nData from: {args.dataset_dir}; size: {len(transition_dirs)}\n')
 
@@ -242,11 +242,11 @@ def train_unveiler(args):
 
     criterion = nn.BCELoss(reduction='none')
 
-    global_step = 0 #{'train': 0, 'val': 0}
     lowest_loss = float('inf')
+    best_ckpt_info = None
     for epoch in range(args.epochs):
-        
         model.train()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
             x = batch[0].to(args.device) 
             target_mask = batch[1].to(args.device, dtype=torch.float32)
@@ -254,8 +254,7 @@ def train_unveiler(args):
 
             rotations = batch[3]
             y = batch[4].to(args.device, dtype=torch.float32)
-            obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
-            bboxes = batch[6].to(args.device, dtype=torch.float32)
+            bboxes = batch[5].to(args.device, dtype=torch.float32)
 
             obstacle_pred = model(
                 x, target_mask, object_masks, 
@@ -264,8 +263,9 @@ def train_unveiler(args):
 
             loss = criterion(obstacle_pred, y)
             loss = torch.sum(loss)
+            epoch_loss['train'] += loss.detach().cpu().numpy()
 
-            if step % (args.step * 2) == 0:
+            if step % args.step == 0:
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
@@ -274,14 +274,8 @@ def train_unveiler(args):
 
             debug_params(model)
 
-            # grad_norm = calculate_gradient_norm(model) 
-
-            # writer.add_scalar("norm/train", grad_norm, global_step)
-            # global_step += 1
-
         model.eval()
-        epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['train', 'val']:
+        for phase in ['val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device) 
                 target_mask = batch[1].to(args.device, dtype=torch.float32)
@@ -289,8 +283,7 @@ def train_unveiler(args):
                 
                 rotations = batch[3]
                 y = batch[4].to(args.device, dtype=torch.float32)
-                obstacle_gt = batch[5].to(args.device, dtype=torch.float32)
-                bboxes = batch[6].to(args.device, dtype=torch.float32)
+                bboxes = batch[5].to(args.device, dtype=torch.float32)
 
                 obstacle_pred = model(
                     x, target_mask, object_masks, 
@@ -312,11 +305,19 @@ def train_unveiler(args):
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
-        if lowest_loss > epoch_loss['val']:
-            lowest_loss = epoch_loss['val']
+        if epoch % 25 == 0:
             torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_{epoch}.pt'))
 
-    torch.save(model.state_dict(), os.path.join(save_path,  f'unveiler_model.pt'))
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            best_ckpt_info = (epoch, lowest_loss, copy.deepcopy(model.state_dict()))
+
+    # save best checkpoint
+    best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info
+    torch.save(best_state_dict, os.path.join(save_path, f'unveiler_model_best.pt'))
+    print(f'Best ckpt, val loss {lowest_val_loss:.6f} @ epoch{best_epoch}')
+
+    torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_last.pt'))
     writer.close()
 
 def calculate_gradient_norm(model):

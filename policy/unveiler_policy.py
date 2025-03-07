@@ -244,29 +244,46 @@ class SpatialTransformerLayer(nn.Module):
         
         return x
     
+class LayerNorm2d(nn.Module):
+    def __init__(self, num_features, eps=1e-5):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(num_features))
+        self.bias = nn.Parameter(torch.zeros(num_features))
+        self.eps = eps
+
+    def forward(self, x):
+        mean = x.mean(dim=1, keepdim=True)
+        var = x.var(dim=1, unbiased=False, keepdim=True)
+        x = (x - mean) / torch.sqrt(var + self.eps)
+        return x * self.weight.view(1, -1, 1, 1) + self.bias.view(1, -1, 1, 1)
+
 class ResFCN(nn.Module):
     def __init__(self, args):
         super(ResFCN, self).__init__()
-
         self.args = args
         self.nr_rotations = 16
-        self.final_conv_units = 128
         self.device = args.device
-
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        nn.init.xavier_uniform_(self.conv1.weight)
-
-        self.rb1 = self.make_layer(64, 128)
-        self.rb2 = self.make_layer(128, 256)
-        self.rb3 = self.make_layer(256, 512)
-        self.rb4 = self.make_layer(512, 256)
-        self.rb5 = self.make_layer(256, 128)
-        self.rb6 = self.make_layer(128, 64)
+        
+        # Scene stream - same as original
+        self.scene_conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.scene_rb1 = self.make_layer(64, 128)
+        self.scene_rb2 = self.make_layer(128, 256)
+        self.scene_rb3 = self.make_layer(256, 512)
+        self.scene_rb4 = self.make_layer(512, 256)
+        self.scene_rb5 = self.make_layer(256, 128)
+        self.scene_rb6 = self.make_layer(128, 64)
+        
+        # Feature fusion layers
+        self.fusion_conv = nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.fusion_bn = LayerNorm2d(64)
+        
+        # Final prediction layer
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
         self.obstacle_selector = SpatialTransformerPredictor(self.args)
 
     def make_layer(self, in_channels, out_channels, blocks=1, stride=1):
+        # Same as your original implementation
         downsample = None
         if (stride != 1) or (in_channels != out_channels):
             downsample = nn.Sequential(conv3x3(in_channels, out_channels, stride=stride))
@@ -274,24 +291,46 @@ class ResFCN(nn.Module):
         layers = [ResidualBlock(in_channels, out_channels, stride, downsample)]
         for i in range(1, blocks):
             layers.append(ResidualBlock(out_channels, out_channels))
-
         return nn.Sequential(*layers)
-    
-    def predict(self, depth):
-        x = F.relu(self.conv1(depth))
-        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
-        x = self.rb1(x)
-        x = nn.MaxPool2d(kernel_size=2, stride=2)(x)
-        x = self.rb2(x)
-        x = self.rb3(x)
-        x = self.rb4(x)
-        x = self.rb5(x)
         
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
-        x = self.rb6(x) # half the channel
-       
-        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True) # multiply H and W
-        out = self.final_conv(x)
+    def process_scene(self, x):
+        # Scene processing path
+        x = nn.functional.relu(self.scene_conv1(x))
+        x = nn.functional.max_pool2d(x, kernel_size=2, stride=2)
+        x = self.scene_rb1(x)
+        x = nn.functional.max_pool2d(x, kernel_size=2, stride=2)
+        x = self.scene_rb2(x)
+        x = self.scene_rb3(x)
+        x = self.scene_rb4(x)
+        x = self.scene_rb5(x)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        x = self.scene_rb6(x)
+        x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        return x
+    
+    def predict(self, scene_depth, object_depth):
+        # Process scene and object separately
+        scene_features = self.process_scene(scene_depth)
+        object_features = self.process_scene(object_depth)
+        
+        # Resize object features to match scene features if needed
+        if scene_features.shape[2:] != object_features.shape[2:]:
+            object_features = nn.functional.interpolate(
+                object_features, 
+                size=scene_features.shape[2:], 
+                mode='bilinear', 
+                align_corners=True
+            )
+        
+        # Concatenate features along channel dimension
+        combined_features = torch.cat([scene_features, object_features], dim=1)
+        
+        # Fuse features
+        fused_features = self.fusion_conv(combined_features)
+        fused_features = nn.functional.relu(self.fusion_bn(fused_features))
+        
+        # Generate grasp prediction
+        out = self.final_conv(fused_features)
         return out
     
     def forward(self, depth_heightmap, target_mask, object_masks, bboxes, specific_rotation=-1, is_volatile=[]):
@@ -302,7 +341,7 @@ class ResFCN(nn.Module):
         if is_volatile:
             out_prob = self.get_predictions(depth_heightmap, selected_objects, specific_rotation, is_volatile)
         
-            return None, out_prob
+            return out_prob
         else:
             specific_rotation = specific_rotation[0]
             out_prob = self.get_predictions(depth_heightmap, selected_objects, specific_rotation, is_volatile)
@@ -318,99 +357,104 @@ class ResFCN(nn.Module):
             return out_prob.unsqueeze(1)
         
     def get_predictions(self, depth_heightmap, target_mask, specific_rotation, is_volatile):
+        # Handle both testing (is_volatile) and training modes
         if is_volatile:
-            # rotations x channel x h x w
-            batch_rot_depth = torch.zeros((self.nr_rotations, 1,
-                                           depth_heightmap.shape[3],
-                                           depth_heightmap.shape[3])).to(self.device)
-            
-            batch_rot_target = torch.zeros((self.nr_rotations, 1,
-                                           target_mask.shape[3],
-                                           target_mask.shape[3])).to(self.device)
+            # Similar rotation handling as original, but now with object_depth too
+            batch_rot_depth = torch.zeros((self.nr_rotations, 1, depth_heightmap.shape[3], 
+                                          depth_heightmap.shape[3])).to(self.device)
+            batch_rot_obj = torch.zeros((self.nr_rotations, 1, target_mask.shape[3], 
+                                        target_mask.shape[3])).to(self.device)
             
             for rot_id in range(self.nr_rotations):
-                # Compute sample grid for rotation before neural network
+                # Compute rotation grid
                 theta = np.radians(rot_id * (360 / self.nr_rotations))
                 affine_mat_before = np.array([[np.cos(theta), np.sin(theta), 0.0],
-                                              [-np.sin(theta), np.cos(theta), 0.0]])
+                                            [-np.sin(theta), np.cos(theta), 0.0]])
                 affine_mat_before.shape = (2, 3, 1)
-                affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).float()
+                affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).requires_grad_(False).float().to(self.device)
 
-                flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).to(self.device),
-                    depth_heightmap.size(), align_corners=True)
-                
+                flow_grid_before = F.affine_grid(affine_mat_before, depth_heightmap.size(), align_corners=True)
+
                 # Rotate images clockwise
-                rotate_depth = F.grid_sample(Variable(depth_heightmap, requires_grad=False).to(self.device),
-                    flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+                rotate_depth = F.grid_sample(
+                    depth_heightmap.requires_grad_(False),
+                    flow_grid_before,
+                    mode='nearest',
+                    align_corners=True,
+                    padding_mode="border")
                 
-                rotate_target_mask = F.grid_sample(target_mask, flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-                
+                rotate_obj = F.grid_sample(
+                    target_mask,
+                    flow_grid_before,
+                    mode='nearest',
+                    align_corners=True, 
+                    padding_mode="border")
+
                 batch_rot_depth[rot_id] = rotate_depth[0]
-                batch_rot_target[rot_id] = rotate_target_mask[0]
+                batch_rot_obj[rot_id] = rotate_obj[0]
 
-            # compute rotated feature maps            
-            interm_grasp_depth_feat = self.predict(batch_rot_depth)
-            interm_grasp_target_feat = self.predict(batch_rot_target)
-            interm_grasp_feat = torch.cat((interm_grasp_depth_feat, interm_grasp_target_feat), dim=1)
+            # Compute rotated feature maps
+            prob = self.predict(batch_rot_depth, batch_rot_obj)
 
-            # undo rotation
-            affine_after = torch.zeros((self.nr_rotations, 2, 3))
+            # Undo rotation (same as original)
+            affine_after = torch.zeros((self.nr_rotations, 2, 3), requires_grad=False).to(self.device)
             for rot_id in range(self.nr_rotations):
-                # compute sample grid for rotation before neural network
                 theta = np.radians(rot_id * (360 / self.nr_rotations))
                 affine_mat_after = np.array([[np.cos(-theta), np.sin(-theta), 0.0],
-                                             [-np.sin(-theta), np.cos(-theta), 0.0]])
+                                           [-np.sin(-theta), np.cos(-theta), 0.0]])
                 affine_mat_after.shape = (2, 3, 1)
                 affine_mat_after = torch.from_numpy(affine_mat_after).permute(2, 0, 1).float()
                 affine_after[rot_id] = affine_mat_after
 
-            flow_grid_after = F.affine_grid(Variable(affine_after, requires_grad=False).to(self.device),
-                                            interm_grasp_feat.data.size(), align_corners=True)
-            out_prob = F.grid_sample(interm_grasp_feat, flow_grid_after, mode='nearest', align_corners=True)
-            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
-            
+            flow_grid_after = F.affine_grid(affine_after, prob.data.size(), align_corners=True)
+            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+
             return out_prob
-        
         else:
+            # Training mode (similar handling as original but with object image)
             thetas = np.radians(specific_rotation * (360 / self.nr_rotations))
             affine_before = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
-                # Compute sample grid for rotation before neural network
                 theta = thetas[i]
                 affine_mat_before = np.array([[np.cos(theta), np.sin(theta), 0.0],
-                                              [-np.sin(theta), np.cos(theta), 0.0]])
+                                            [-np.sin(theta), np.cos(theta), 0.0]])
                 affine_mat_before.shape = (2, 3, 1)
                 affine_mat_before = torch.from_numpy(affine_mat_before).permute(2, 0, 1).float()
                 affine_before[i] = affine_mat_before
 
             flow_grid_before = F.affine_grid(affine_before, depth_heightmap.size(), align_corners=True)
 
-            # Rotate image clockwise_
-            rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False), flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
-            rotate_target_mask = F.grid_sample(target_mask, flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            # Rotate both images clockwise
+            rotate_depth = F.grid_sample(depth_heightmap.requires_grad_(False),
+                                       flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
+            
+            rotate_obj = F.grid_sample(target_mask,
+                                     flow_grid_before, mode='nearest', align_corners=True, padding_mode="border")
 
-            # Compute intermediate features
-            depth_feat = self.predict(rotate_depth)
-            target_feat = self.predict(rotate_target_mask)
-            masked_depth_feat = torch.cat((depth_feat, target_feat), dim=1)
+            # Compute features and prediction
+            prob = self.predict(rotate_depth, rotate_obj)
 
-            # Compute sample grid for rotation after branches
+            # Undo rotations (same as original)
             affine_after = torch.zeros((depth_heightmap.shape[0], 2, 3), requires_grad=False).to(self.device)
             for i in range(len(thetas)):
                 theta = thetas[i]
                 affine_mat_after = np.array([[np.cos(-theta), np.sin(-theta), 0.0],
-                                             [-np.sin(-theta), np.cos(-theta), 0.0]])
+                                           [-np.sin(-theta), np.cos(-theta), 0.0]])
                 affine_mat_after.shape = (2, 3, 1)
                 affine_mat_after = torch.from_numpy(affine_mat_after).permute(2, 0, 1).float()
                 affine_after[i] = affine_mat_after
 
-            flow_grid_after = F.affine_grid(affine_after, masked_depth_feat.data.size(), align_corners=True)
+            flow_grid_after = F.affine_grid(affine_after, prob.size(), align_corners=True)
 
-            # Forward pass through branches, undo rotation on output predictions, upsample results
-            out_prob = F.grid_sample(masked_depth_feat, flow_grid_after, mode='nearest', align_corners=True)
+            # Forward pass, undo rotation on output predictions
+            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
 
-            out_prob = torch.mean(out_prob, dim=1, keepdim=True)
-            
+            # Image-wide softmax
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape).to(dtype=torch.float)
+
             return out_prob
         
 def conv3x3(in_planes, out_planes, stride=1):

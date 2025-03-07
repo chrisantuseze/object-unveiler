@@ -116,20 +116,20 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         if count > 1:
             logging.info("Robot is in an infinite loop")
-            res = input("Do you still want to continue? (y/n) ")
+            res = input("\nDo you still want to continue? (y/n) ")
             if res.lower() == "n":
                 break
 
         target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
-            res = input("Do you think the target is available? (y/n) ")
+            res = input("\nDo you think the target is available? (y/n) ")
             if res.lower() == "y":
                 print(target_id, len(new_masks))
-                target_id = int(input("What is the index? "))
+                target_id = int(input("\nWhat is the index? "))
                 target_mask = new_masks[target_id]
                 continue
 
-            res = input("Do you think the grasp was successful? (y/n) ")
+            res = input("\nDo you think the grasp was successful? (y/n) ")
             if grasp_info['stable'] or res.lower() == "y":
                 logging.info("Target has been grasped!")
                 success_count += 1

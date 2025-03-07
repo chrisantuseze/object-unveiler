@@ -419,14 +419,10 @@ class Policy:
         if processed_obj_masks.shape[0] < self.args.num_patches:
             processed_obj_masks = processed_obj_masks.unsqueeze(0)
             padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
-            
             processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
             
             raw_obj_masks = raw_obj_masks.unsqueeze(0)
             raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
-
-            objects_to_remove = objects_to_remove.unsqueeze(0)
-            objects_to_remove = torch.nn.functional.pad(objects_to_remove, (0,padding_needed, 0,0), mode='constant')
 
             bboxes = bboxes.unsqueeze(0)
             bboxes = torch.nn.functional.pad(bboxes, (0,0, 0,padding_needed), mode='constant')
@@ -437,22 +433,16 @@ class Policy:
             raw_obj_masks = raw_obj_masks[:self.args.num_patches]
             raw_obj_masks = raw_obj_masks.unsqueeze(0)
 
-            objects_to_remove = objects_to_remove[:self.args.num_patches]
-            objects_to_remove = objects_to_remove.unsqueeze(0)
-
             bboxes = bboxes[:self.args.num_patches]
             bboxes = bboxes.unsqueeze(0)
 
-        objects_to_remove_id = 0
-        print("ground truth:", objects_to_remove[0])
+        print("ground truth:", objects_to_remove)
 
         raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
         raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
 
-        gt_object = processed_obj_masks[0, objects_to_remove_id].unsqueeze(0)
-
         return processed_pred_mask, processed_target, processed_obj_masks,\
-              raw_pred_mask, raw_target_mask, raw_obj_masks, objects_to_remove, gt_object, bboxes, processed_masks
+              raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks
     
     def get_act_image(self, scene_image, object_mask):
         image_dict = dict()
@@ -566,8 +556,7 @@ class Policy:
     
     def exploit_unveiler(self, state, color_image, target_mask):
         processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_obj_masks,\
-              objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
+        raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
         
         logits = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)

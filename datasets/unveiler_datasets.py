@@ -120,7 +120,7 @@ class UnveilerDataset(data.Dataset):
         # pad object masks
         processed_obj_masks, obj_masks, bbox = self.pad_object_masks_and_nodes(_processed_obj_masks, c_object_masks, bboxes)
 
-        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, obstacle_ids, bbox
+        return processed_heightmap, processed_target_mask, processed_obj_masks, rot_ids, labels, bbox
 
     def __len__(self):
         return len(self.dir_ids)
