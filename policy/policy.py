@@ -1,7 +1,8 @@
 import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
-from policy.sre_model import SpatialEncoder
+# from policy.sre_model import SpatialEncoder
+from policy.obstacle_decoder import SpatialTransformerPredictor
 from policy.models_target_new import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
@@ -47,7 +48,7 @@ class Policy:
 
         self.fcn = ResFCN(args).to(self.device)
         self.ae_model = ActionDecoder(args).to(self.device)
-        self.sre_model = SpatialEncoder(args).to(self.device)
+        self.sre_model = SpatialTransformerPredictor(args).to(self.device)
 
         self.segmenter = ObjectSegmenter()
 
@@ -387,6 +388,59 @@ class Policy:
         
         return action
     
+    def get_unveiler_inputs(self, color_image, target_mask):
+        processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
+
+        processed_target = general_utils.preprocess_sre_mask(target_mask)
+        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
+
+        processed_obj_masks = []
+        raw_obj_masks = []
+        bboxes = []
+        for id, mask in enumerate(processed_masks):
+            raw_obj_masks.append(general_utils.resize_mask(mask))
+
+            processed_mask = general_utils.preprocess_sre_mask(mask)
+            processed_mask = torch.FloatTensor(processed_mask).to(self.device)
+            processed_obj_masks.append(processed_mask)
+
+            bboxes.append(general_utils.resize_bbox(bbox[id]))
+
+        processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
+        raw_obj_masks = torch.FloatTensor(np.array(raw_obj_masks)).to(self.device)
+
+        target_id = grasping.get_target_id(target_mask, processed_masks)
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
+        objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
+
+        bboxes = torch.FloatTensor(bboxes).to(self.device)
+        if processed_obj_masks.shape[0] < self.args.num_patches:
+            processed_obj_masks = processed_obj_masks.unsqueeze(0)
+            padding_needed = max(0, self.args.num_patches - processed_obj_masks.size(1))
+            processed_obj_masks = torch.nn.functional.pad(processed_obj_masks, (0,0, 0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+            
+            raw_obj_masks = raw_obj_masks.unsqueeze(0)
+            raw_obj_masks = torch.nn.functional.pad(raw_obj_masks, (0,0, 0,0, 0,padding_needed, 0,0), mode='constant', value=0)
+
+            bboxes = bboxes.unsqueeze(0)
+            bboxes = torch.nn.functional.pad(bboxes, (0,0, 0,padding_needed), mode='constant')
+        else:
+            processed_obj_masks = processed_obj_masks[:self.args.num_patches]
+            processed_obj_masks = processed_obj_masks.unsqueeze(0)
+
+            raw_obj_masks = raw_obj_masks[:self.args.num_patches]
+            raw_obj_masks = raw_obj_masks.unsqueeze(0)
+
+            bboxes = bboxes[:self.args.num_patches]
+            bboxes = bboxes.unsqueeze(0)
+
+        print("ground truth:", objects_to_remove)
+
+        raw_pred_mask = torch.FloatTensor(pred_mask).unsqueeze(0).to(self.device)
+        raw_target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
+
+        return processed_target, processed_obj_masks, raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks
+    
     def get_inputs(self, state, color_image, target_mask):
         processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
 
@@ -555,8 +609,8 @@ class Policy:
         return action
     
     def exploit_unveiler(self, state, color_image, target_mask):
-        processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
+        processed_target, processed_obj_masks,\
+        raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(color_image, target_mask)
         
         logits = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
@@ -574,7 +628,8 @@ class Policy:
             obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
         else:
             obstacle_mask = target_mask
-            obstacle = processed_target
+            obstacle = general_utils.preprocess_target(obstacle_mask, state)
+            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
 
         fig, ax = plt.subplots(1, 3)
         ax[0].imshow(color_image)

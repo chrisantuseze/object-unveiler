@@ -1,7 +1,8 @@
 from copy import deepcopy
 import os
 import random
-from policy.sre_model import SpatialEncoder
+# from policy.sre_model import SpatialEncoder
+from policy.obstacle_decoder import SpatialTransformerPredictor
 
 import torch
 import torch.optim as optim
@@ -29,9 +30,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre-update150")
+    writer = SummaryWriter(comment="sre")
 
-    save_path = 'save/sre-update150'
+    save_path = 'save/sre'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -71,7 +72,7 @@ def train_sre(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = SpatialEncoder(args).to(args.device)
+    model = SpatialTransformerPredictor(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)#, weight_decay=1e-3)
     
     criterion = nn.CrossEntropyLoss()
@@ -144,6 +145,7 @@ def train_sre(args):
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
             best_ckpt_info = (epoch, lowest_loss, deepcopy(model.state_dict()))
+            torch.save(model.state_dict(), os.path.join(save_path, f'sre_model_best.pt'))
 
     # save best checkpoint
     best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info

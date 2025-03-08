@@ -311,6 +311,7 @@ def train_unveiler(args):
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
             best_ckpt_info = (epoch, lowest_loss, copy.deepcopy(model.state_dict()))
+            torch.save(model.state_dict(), os.path.join(save_path, f'unveiler_model_best.pt'))
 
     # save best checkpoint
     best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info

@@ -396,6 +396,11 @@ def preprocess_target(target, state=None, disp=False):
 
     return preprocess_image(target)[0]
 
+def preprocess_sre_mask(object):
+    resized_image = resize_mask(object)
+    return preprocess_image(resized_image)[0]
+
+
 def preprocess_image(image):
     """
         Pre-process heightmap (padding and normalization)
