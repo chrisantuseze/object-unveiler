@@ -30,9 +30,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre")
+    writer = SummaryWriter(comment="sre-log")
 
-    save_path = 'save/sre'
+    save_path = 'save/sre-log'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -100,7 +100,7 @@ def train_sre(args):
             epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
-                # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
+                print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1].numpy(), objects_to_remove.numpy())
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
@@ -133,7 +133,7 @@ def train_sre(args):
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    # print("gt/pred = ", objects_to_remove, "/", torch.topk(pred, k=args.num_patches, dim=1)[1])
+                    print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1].numpy(), objects_to_remove.numpy())
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
@@ -157,6 +157,12 @@ def train_sre(args):
 
     torch.save(model.state_dict(), os.path.join(save_path, f'sre_model_last.pt'))
     writer.close()
+
+def print_pred_gt(pred, gt):
+    preds = [list(p)[0] for p in pred]
+    gts = [g for g in gt]
+    print("Pred:", preds)
+    print("Grdt:", gts)
 
 def debug_params(model):
     for name, param in model.named_parameters():
