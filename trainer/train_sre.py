@@ -100,7 +100,7 @@ def train_sre(args):
             epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
-                print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
+                # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
                 logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
@@ -161,11 +161,12 @@ def train_sre(args):
 def print_pred_gt(pred, gt):
     pred = pred.cpu().numpy()
     gt = gt.cpu().numpy()
-    
+
     preds = [list(p)[0] for p in pred]
     gts = [g for g in gt]
     print("Pred:", preds)
     print("Grdt:", gts)
+    print()
 
 def debug_params(model):
     for name, param in model.named_parameters():
