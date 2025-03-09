@@ -113,9 +113,9 @@ class SpatialEncoder(nn.Module):
                     valid_mask[i, j] = True
                     
                     # Compute spatial features between object i and the target
-                    obj_mask = object_masks[i, j]
-                    target_overlap = torch.sum(obj_mask * target_mask[i]).item()
-                    target_iou = self.calculate_iou(bboxes[i, j], target_mask[j])
+                    obj_mask = object_masks[i][j].unsqueeze(0)  # Shape: (1, H, W)
+                    target_overlap = torch.sum(obj_mask * target_mask.unsqueeze(1)).item()  # Overlap between object and target
+                    target_iou = self.calculate_iou(bboxes[i][j], target_mask[i])  # IoU between object and target
                     
                     # Edge features
                     edge_feat = torch.tensor([target_overlap, target_iou], 

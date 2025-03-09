@@ -612,7 +612,7 @@ class Policy:
         processed_target, processed_obj_masks,\
         raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(color_image, target_mask)
         
-        logits = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
+        logits, _ = self.sre_model(processed_target, processed_obj_masks, bboxes, raw_pred_mask, raw_target_mask, raw_obj_masks)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         obstacle_id = top_indices.item()
         print("preds", obstacle_id)
