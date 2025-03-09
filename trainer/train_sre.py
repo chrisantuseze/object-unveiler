@@ -1,8 +1,8 @@
 from copy import deepcopy
 import os
 import random
-# from policy.sre_model import SpatialEncoder
-from policy.obstacle_decoder import SpatialTransformerPredictor
+from policy.sre_model import SpatialEncoder, compute_loss
+# from policy.obstacle_decoder import SpatialTransformerPredictor
 
 import torch
 import torch.optim as optim
@@ -72,7 +72,7 @@ def train_sre(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = SpatialTransformerPredictor(args).to(args.device)
+    model = SpatialEncoder(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)#, weight_decay=1e-3)
     
     criterion = nn.CrossEntropyLoss()
@@ -91,10 +91,11 @@ def train_sre(args):
             raw_target = batch[5].to(args.device)
             raw_objects = batch[6].to(args.device)
             
-            pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
+            pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
             # Compute loss in the whole scene
-            loss = criterion(pred, objects_to_remove)
+            loss = compute_loss(pred, objects_to_remove, valid_mask) 
+            # loss = criterion(pred, objects_to_remove)
             # loss = torch.sum(loss)
             epoch_loss['train'] += loss.detach().cpu().numpy()
 
@@ -122,9 +123,11 @@ def train_sre(args):
                 raw_target = batch[5].to(args.device)
                 raw_objects = batch[6].to(args.device)
                 
-                pred = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
+                pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
-                loss = criterion(pred, objects_to_remove)
+                # Compute loss in the whole scene
+                loss = compute_loss(pred, objects_to_remove, valid_mask) 
+                # loss = criterion(pred, objects_to_remove)
 
                 # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()

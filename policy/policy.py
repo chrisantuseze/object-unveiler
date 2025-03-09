@@ -1,8 +1,8 @@
 import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
-# from policy.sre_model import SpatialEncoder
-from policy.obstacle_decoder import SpatialTransformerPredictor
+from policy.sre_model import SpatialEncoder
+# from policy.obstacle_decoder import SpatialTransformerPredictor
 from policy.models_target_new import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
@@ -48,7 +48,7 @@ class Policy:
 
         self.fcn = ResFCN(args).to(self.device)
         self.ae_model = ActionDecoder(args).to(self.device)
-        self.sre_model = SpatialTransformerPredictor(args).to(self.device)
+        self.sre_model = SpatialEncoder(args).to(self.device)
 
         self.segmenter = ObjectSegmenter()
 
