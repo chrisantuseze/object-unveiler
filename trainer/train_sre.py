@@ -134,7 +134,7 @@ def train_sre(args):
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
-                    print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
+                    # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
