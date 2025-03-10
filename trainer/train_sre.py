@@ -96,6 +96,8 @@ def train_sre(args):
             # Compute loss in the whole scene
             # loss = compute_loss(pred, objects_to_remove, valid_mask) 
             loss = criterion(pred, objects_to_remove)
+
+            print(pred.shape, objects_to_remove.shape)
             
             # loss = torch.sum(loss)
             epoch_loss['train'] += loss.detach().cpu().numpy()
