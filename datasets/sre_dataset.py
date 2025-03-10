@@ -39,7 +39,7 @@ class SREDataset(data.Dataset):
         padded_processed_obj_masks, padded_obj_masks, padded_bbox = self.pad(_processed_obj_masks, object_masks, bboxes)
 
         raw_scene_mask, raw_target_mask = np.array(scene_mask), np.array(target_mask)
-        objects_to_remove = np.array(objects_to_remove[0])
+        objects_to_remove = np.array(objects_to_remove[0] if objects_to_remove[0] < self.args.num_patches else 0)
 
         return processed_target_mask, padded_processed_obj_masks, padded_bbox, objects_to_remove, raw_scene_mask, raw_target_mask, padded_obj_masks
 
