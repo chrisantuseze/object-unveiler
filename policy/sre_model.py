@@ -218,26 +218,28 @@ def compute_loss(logits, targets, valid_mask):
         targets: Ground truth labels [B]
         valid_mask: Binary mask indicating real objects [B, N]
     """
-    # For standard cross-entropy, we need to ensure targets are within valid range
-    batch_size = logits.size(0)
-    losses = []
+    # # For standard cross-entropy, we need to ensure targets are within valid range
+    # batch_size = logits.size(0)
+    # losses = []
     
-    for i in range(batch_size):
-        valid_indices = torch.where(valid_mask[i])[0]
-        num_valid = valid_indices.size(0)
+    # for i in range(batch_size):
+    #     valid_indices = torch.where(valid_mask[i])[0]
+    #     num_valid = valid_indices.size(0)
         
-        if num_valid > 0 and targets[i] < num_valid:
-            # If target is within valid range, compute normal cross-entropy
-            valid_logits = logits[i, valid_indices].unsqueeze(0)
-            valid_target = torch.tensor([torch.where(valid_indices == targets[i])[0][0]], 
-                                       device=logits.device)
-            losses.append(F.cross_entropy(valid_logits, valid_target))
-        else:
-            # Skip samples with invalid targets
-            continue
+    #     if num_valid > 0 and targets[i] < num_valid:
+    #         # If target is within valid range, compute normal cross-entropy
+    #         valid_logits = logits[i, valid_indices].unsqueeze(0)
+    #         valid_target = torch.tensor([torch.where(valid_indices == targets[i])[0][0]], 
+    #                                    device=logits.device)
+    #         losses.append(F.cross_entropy(valid_logits, valid_target))
+    #     else:
+    #         # Skip samples with invalid targets
+    #         continue
     
-    # Return mean loss
-    if losses:
-        return torch.stack(losses).mean()
-    else:
-        return torch.tensor(0.0, device=logits.device, requires_grad=True)
+    # # Return mean loss
+    # if losses:
+    #     return torch.stack(losses).mean()
+    # else:
+    #     return torch.tensor(0.0, device=logits.device, requires_grad=True)
+
+    return F.cross_entropy(logits, targets)
