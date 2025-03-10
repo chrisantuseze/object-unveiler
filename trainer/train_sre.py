@@ -37,7 +37,7 @@ def train_sre(args):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
+    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -94,8 +94,9 @@ def train_sre(args):
             pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
             # Compute loss in the whole scene
-            loss = compute_loss(pred, objects_to_remove, valid_mask) 
-            # loss = criterion(pred, objects_to_remove)
+            # loss = compute_loss(pred, objects_to_remove, valid_mask) 
+            loss = criterion(pred, objects_to_remove)
+            
             # loss = torch.sum(loss)
             epoch_loss['train'] += loss.detach().cpu().numpy()
 
@@ -126,8 +127,8 @@ def train_sre(args):
                 pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
 
                 # Compute loss in the whole scene
-                loss = compute_loss(pred, objects_to_remove, valid_mask) 
-                # loss = criterion(pred, objects_to_remove)
+                # loss = compute_loss(pred, objects_to_remove, valid_mask) 
+                loss = criterion(pred, objects_to_remove)
 
                 # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
