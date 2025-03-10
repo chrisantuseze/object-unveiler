@@ -26,7 +26,7 @@ class SREDataset(data.Dataset):
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
         # processed_target_mask = general_utils.preprocess_sre_mask(target_mask)
-        processed_target_mask = general_utils.preprocess_image(target_mask)
+        processed_target_mask = general_utils.preprocess_image(target_mask)[0]
 
         _processed_obj_masks = []
         for obj_mask in object_masks:
