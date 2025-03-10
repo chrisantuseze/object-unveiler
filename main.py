@@ -47,7 +47,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # args.device = torch.device("cpu")
+    args.device = torch.device("cpu")
     print(f"You are using {args.device}")
 
     logging.info("The selected mode is:", args.mode, "and batch size is:", args.batch_size)
