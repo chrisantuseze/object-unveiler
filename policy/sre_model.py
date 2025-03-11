@@ -142,7 +142,7 @@ class SpatialEncoder(nn.Module):
         spatial_embedding = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
 
         # padding_mask is True for valid objects, False for padding
-        attention_mask = None #~padding_mask  # For transformer, mask is True for positions to be ignored
+        attention_mask = ~padding_mask  # For transformer, mask is True for positions to be ignored
         
         # Project features for attention
         query = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
@@ -158,7 +158,7 @@ class SpatialEncoder(nn.Module):
         logits = self.output_projection(combined_features.reshape(B, -1)) # Shape: [B, N]
 
         # Mask out padded positions with large negative values
-        # logits = logits.masked_fill(attention_mask, -1e9)
+        logits = logits.masked_fill(attention_mask, -1e9)
 
         return logits, padding_mask
 

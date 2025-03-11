@@ -25,13 +25,13 @@ class SREDataset(data.Dataset):
         scene_mask, target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
-        # processed_target_mask = general_utils.preprocess_sre_mask(target_mask)
-        processed_target_mask = general_utils.preprocess_image(target_mask)[0]
+        processed_target_mask = general_utils.preprocess_sre_mask(target_mask)
+        # processed_target_mask = general_utils.preprocess_image(target_mask)[0]
 
         _processed_obj_masks = []
         for obj_mask in object_masks:
-            # processed_obj_mask = general_utils.preprocess_sre_mask(obj_mask)
-            processed_obj_mask = general_utils.preprocess_image(obj_mask)[0]
+            processed_obj_mask = general_utils.preprocess_sre_mask(obj_mask)
+            # processed_obj_mask = general_utils.preprocess_image(obj_mask)[0]
             _processed_obj_masks.append(processed_obj_mask)
         _processed_obj_masks = np.array(_processed_obj_masks)
 
