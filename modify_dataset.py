@@ -46,7 +46,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 'state': data['state'],
                 'depth_heightmap': data['depth_heightmap'],
                 'target_mask': data['target_mask'], 
-                'c_target_mask': data['c_target_mask'], 
+                'c_target_mask':  data['c_target_mask'], #data['c_target_mask'], 
                 'obstacle_mask': data['obstacle_mask'],
                 'c_obstacle_mask': data['c_obstacle_mask'],
                 'scene_mask': data['scene_mask'],

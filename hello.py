@@ -48,7 +48,7 @@ def load_episode(dataset_dir, episode):
     return None
 
 def main():
-    dataset_dir = "save/pc-ou-dataset2-51k"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2" #"save/pc-ou-dataset2-51k"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
