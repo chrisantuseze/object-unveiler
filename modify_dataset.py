@@ -46,7 +46,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 'state': data['state'],
                 'depth_heightmap': data['depth_heightmap'],
                 'target_mask': data['target_mask'], 
-                'c_target_mask':  data['c_target_mask'], #data['c_target_mask'], 
+                'c_target_mask':  data['c_target_mask'], 
                 'obstacle_mask': data['obstacle_mask'],
                 'c_obstacle_mask': data['c_obstacle_mask'],
                 'scene_mask': data['scene_mask'],
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     memory = ReplayBuffer(new_dir)
 
     # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-new"
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
 
 
     episode_dirs = os.listdir(dataset_dir)
