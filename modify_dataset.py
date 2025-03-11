@@ -62,7 +62,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
             resized_target_mask = general_utils.resize_mask(data['target_mask'])
             extracted_target = general_utils.extract_target_crop(resized_target_mask, data['state'])
 
-            resized_obstacle_mask = general_utils.resize_mask(data['c_obstacle_mask'])
+            resized_obstacle_mask = general_utils.resize_mask(data['obstacle_mask'])
             extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, data['state'])
 
             target_id = grasping.get_target_id(data['target_mask'], object_masks)
