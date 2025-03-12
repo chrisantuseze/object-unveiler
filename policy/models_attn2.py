@@ -279,6 +279,8 @@ class ObstacleSelector(nn.Module):
         padding_mask_expanded = padding_masks.expand_as(attn_scores)
         attn_scores = attn_scores.masked_fill_(padding_mask_expanded, float(-1e-6))
 
+        print("attn_scores.shape", attn_scores.shape)
+
         _, top_indices = torch.topk(attn_scores, k=self.args.sequence_length, dim=1)
         print("preds", top_indices.item())
         
