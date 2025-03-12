@@ -130,7 +130,7 @@ class SpatialEncoder(nn.Module):
         all_edge_features = torch.stack(all_edge_features).to(self.args.device)
         return all_edge_features, valid_mask
         
-    def forward(self, target_mask, object_masks, bboxes, raw_scene_mask=None, raw_target_mask=None, raw_object_masks=None):
+    def forward(self, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         # Extract visual features

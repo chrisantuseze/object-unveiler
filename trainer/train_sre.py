@@ -1,8 +1,8 @@
 from copy import deepcopy
 import os
 import random
-from policy.sre_model import SpatialEncoder, compute_loss
-# from policy.obstacle_decoder import SpatialTransformerPredictor
+# from policy.sre_model import SpatialEncoder, compute_loss
+from policy.obstacle_decoder import SpatialEncoder, compute_loss
 
 import torch
 import torch.optim as optim
@@ -30,14 +30,13 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre-no-edges")
+    writer = SummaryWriter(comment="sre-od")
 
-    save_path = 'save/sre-no-edges'
+    save_path = 'save/sre-od'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    # args.dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
     transition_dirs = os.listdir(args.dataset_dir)
     
     for file_ in transition_dirs:
@@ -87,11 +86,8 @@ def train_sre(args):
 
             bbox = batch[2].to(args.device)
             objects_to_remove = batch[3].to(args.device)
-            raw_scene_mask = batch[4].to(args.device)
-            raw_target = batch[5].to(args.device)
-            raw_objects = batch[6].to(args.device)
             
-            pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
+            pred, valid_mask = model(target, object_masks, bbox)
 
             # Compute loss in the whole scene
             loss = compute_loss(pred, objects_to_remove, valid_mask) 
@@ -120,11 +116,7 @@ def train_sre(args):
                 bbox = batch[2].to(args.device)
                 objects_to_remove = batch[3].to(args.device)
 
-                raw_scene_mask = batch[4].to(args.device)
-                raw_target = batch[5].to(args.device)
-                raw_objects = batch[6].to(args.device)
-                
-                pred, valid_mask = model(target, object_masks, bbox, raw_scene_mask, raw_target, raw_objects)
+                pred, valid_mask = model(target, object_masks, bbox)
 
                 # Compute loss in the whole scene
                 loss = compute_loss(pred, objects_to_remove, valid_mask) 
