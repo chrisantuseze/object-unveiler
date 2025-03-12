@@ -3,7 +3,7 @@ import torch
 import argparse
 from trainer.train_ae import train_ae, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
-from trainer.train_sre import train_sre
+from trainer.train_sre_finetune import train_sre
 # from eval_agent_target import eval_agent
 from eval_agent import eval_agent
 import utils.logger as logging
@@ -16,8 +16,8 @@ def parse_args():
     parser.add_argument('--mode', default='ae', type=str, help='')
     
     # args for eval_agent
-    parser.add_argument('--ae_model', default='save/ae/ae_model.pt', type=str, help='')
-    parser.add_argument('--sre_model', default='save/sre/sre_model.pt', type=str, help='')
+    parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
     parser.add_argument('--seed', default=16, type=int, help='')
     parser.add_argument('--n_scenes', default=100, type=int, help='')

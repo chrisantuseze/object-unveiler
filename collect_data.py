@@ -19,7 +19,7 @@ from utils.constants import *
 from env.env_components import ActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset-fresh"
+    save_dir = "save/pc-ou-dataset-3obs"
     # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
@@ -28,6 +28,10 @@ def collect_episodic_dataset(args, params):
     # create the environment for the agent
     env = Environment(params)
     env.singulation_condition = args.singulation_condition
+
+    # ###############################################################################
+    # env.nr_objects = [2,4]
+    # ###############################################################################
 
     policy = Policy(args, params)
     policy.seed(args.seed)
@@ -39,10 +43,6 @@ def collect_episodic_dataset(args, params):
 
     for i in range(args.n_samples):
         run_episode(i, policy, segmenter, env, memory, rng)
-        # try:
-        #     run_episode(i, policy, segmenter, env, memory, rng)
-        # except Exception as e:
-        #     print(e)
 
 def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -73,6 +73,11 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     # then use its id. Don't maintain the old target id because the scene has been resegmented
     while node_id != target_id:
         objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
+
+        # if target_id in objects_to_remove:
+        #     objects_to_remove.remove(target_id)
+        # objects_to_remove = [target_id] + objects_to_remove
+        
         print("\nobjects_to_remove:", objects_to_remove)
 
         node_id = objects_to_remove[0]
