@@ -30,61 +30,69 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
         for data in episode_data:
             heightmap = data['state']
 
-            object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
+            update_obj_mask = False
+            for obj_mask in data['object_masks']:
+                if isinstance(obj_mask, list):
+                    update_obj_mask = True
+                    break
 
-            extracted_object_masks = []
-            resized_object_masks = []
-            resized_bboxes = []
-            for id, mask in enumerate(object_masks):
-                mask = general_utils.resize_mask(mask)
-                resized_object_masks.append(mask)
-                extracted_object_masks.append(general_utils.extract_target_crop(mask, heightmap))
-                resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
-
-            # transition = {
-            #     'color_obs': data['color_obs'],
-            #     'state': data['state'],
-            #     'depth_heightmap': data['depth_heightmap'],
-            #     'target_mask': data['target_mask'], 
-            #     'c_target_mask':  data['c_target_mask'], 
-            #     'obstacle_mask': data['obstacle_mask'],
-            #     'c_obstacle_mask': data['c_obstacle_mask'],
-            #     'scene_mask': data['scene_mask'],
-            #     'object_masks': object_masks,
-            #     'c_object_masks': extracted_object_masks,
-            #     'action': data['action'], 
-            #     'label': data['label'],
-            #     'bboxes': resized_bboxes,
-            #     'target_id': data['target_id'],
-            #     'objects_to_remove': data['objects_to_remove'],
-            # }
-
-            resized_target_mask = general_utils.resize_mask(data['target_mask'])
-            extracted_target = general_utils.extract_target_crop(resized_target_mask, data['state'])
-
-            resized_obstacle_mask = general_utils.resize_mask(data['obstacle_mask'])
-            extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, data['state'])
-
-            target_id = grasping.get_target_id(data['target_mask'], object_masks)
-            objects_to_remove = grasping.find_obstacles_to_remove(target_id, object_masks)
+            if update_obj_mask:
+                object_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(data['color_obs'], bbox=True)
+                extracted_object_masks, resized_object_masks, resized_bboxes  = [], [], []
+                for id, mask in enumerate(object_masks):
+                    mask = general_utils.resize_mask(mask)
+                    resized_object_masks.append(mask)
+                    extracted_object_masks.append(general_utils.extract_target_crop(mask, heightmap))
+                    resized_bboxes.append(general_utils.resize_bbox(bboxes[id]))
+            else:
+                extracted_object_masks = data['c_object_masks']
+                resized_object_masks = data['object_masks']
+                resized_bboxes = data['bboxes']
 
             transition = {
                 'color_obs': data['color_obs'],
                 'state': data['state'],
                 'depth_heightmap': data['depth_heightmap'],
                 'target_mask': data['target_mask'], 
-                'c_target_mask':  extracted_target, 
+                'c_target_mask':  data['c_target_mask'], 
                 'obstacle_mask': data['obstacle_mask'],
-                'c_obstacle_mask': extracted_obstacle,
+                'c_obstacle_mask': data['c_obstacle_mask'],
                 'scene_mask': data['scene_mask'],
-                'object_masks': object_masks,
+                'object_masks': resized_object_masks,
                 'c_object_masks': extracted_object_masks,
                 'action': data['action'], 
                 'label': data['label'],
                 'bboxes': resized_bboxes,
-                'target_id': target_id,
-                'objects_to_remove': objects_to_remove,
+                'target_id': data['target_id'],
+                'objects_to_remove': data['objects_to_remove'],
             }
+
+            # resized_target_mask = general_utils.resize_mask(data['target_mask'])
+            # extracted_target = general_utils.extract_target_crop(resized_target_mask, data['state'])
+
+            # resized_obstacle_mask = general_utils.resize_mask(data['obstacle_mask'])
+            # extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, data['state'])
+
+            # target_id = grasping.get_target_id(data['target_mask'], object_masks)
+            # objects_to_remove = grasping.find_obstacles_to_remove(target_id, object_masks)
+
+            # transition = {
+            #     'color_obs': data['color_obs'],
+            #     'state': data['state'],
+            #     'depth_heightmap': data['depth_heightmap'],
+            #     'target_mask': data['target_mask'], 
+            #     'c_target_mask':  extracted_target, 
+            #     'obstacle_mask': data['obstacle_mask'],
+            #     'c_obstacle_mask': extracted_obstacle,
+            #     'scene_mask': data['scene_mask'],
+            #     'object_masks': object_masks,
+            #     'c_object_masks': extracted_object_masks,
+            #     'action': data['action'], 
+            #     'label': data['label'],
+            #     'bboxes': resized_bboxes,
+            #     'target_id': target_id,
+            #     'objects_to_remove': objects_to_remove,
+            # }
             episode_data_list.append(transition)
 
         memory.store_episode(episode_data_list)

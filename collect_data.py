@@ -115,7 +115,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
                 print('------------------------------------------')
                 break
 
-            resized_new_masks = extracted_object_masks = resized_bboxes = []
+            resized_new_masks, extracted_object_masks, resized_bboxes = [], [], []
             for idx, mask in enumerate(processed_masks):
                 resized_new_masks.append(general_utils.resize_mask(mask))
                 extracted_object_masks.append(general_utils.extract_target_crop(mask, state))
