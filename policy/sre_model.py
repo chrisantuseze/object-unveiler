@@ -6,7 +6,7 @@ import math
 import torchvision
 
 class SpatialEncoder(nn.Module):
-    def __init__(self, args, hidden_dim=1024, num_layers=6, nhead=8, dropout=0.1):
+    def __init__(self, args, hidden_dim=1024, num_layers=8, nhead=8, dropout=0.2): #def __init__(self, args, hidden_dim=1024, num_layers=6, nhead=8, dropout=0.1):
         super(SpatialEncoder, self).__init__()
         self.args = args
         self.hidden_dim = hidden_dim
@@ -15,12 +15,12 @@ class SpatialEncoder(nn.Module):
         self.resnet = torchvision.models.resnet18(pretrained=True)
         self.resnet.fc = nn.Linear(512, hidden_dim)
 
-        # self.object_rel_fc = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
-        #     nn.LayerNorm(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
-        # )
+        self.object_rel_fc = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
+        )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -139,7 +139,7 @@ class SpatialEncoder(nn.Module):
         object_feats = self.resnet(object_masks_flat).view(B, N, -1)
 
         objects_rel, padding_mask = self.compute_edge_features(bboxes, object_masks, target_mask)
-        # spatial_embedding = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
+        spatial_embedding = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
 
         # padding_mask is True for valid objects, False for padding
         attention_mask = ~padding_mask  # For transformer, mask is True for positions to be ignored
@@ -148,7 +148,7 @@ class SpatialEncoder(nn.Module):
         query = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
         key = self.W_o(object_feats.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
 
-        spatial_embedding = query
+        # spatial_embedding = query
 
         # Process through transformer layers
         x = key
