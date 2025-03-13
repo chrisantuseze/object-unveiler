@@ -19,7 +19,7 @@ from utils.constants import *
 from env.env_components import ActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset-3obs"
+    save_dir = "save/pc-ou-dataset"
     # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
