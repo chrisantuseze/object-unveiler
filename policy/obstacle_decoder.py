@@ -17,7 +17,10 @@ class SpatialEncoder(nn.Module):
         
         # Target embedding
         self.target_embedding = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
@@ -25,7 +28,10 @@ class SpatialEncoder(nn.Module):
         
         # Object embedding
         self.object_embedding = nn.Sequential(
-            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim),
+            nn.Linear(self.args.num_patches * hidden_dim, hidden_dim*2),
+            nn.LayerNorm(hidden_dim*2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*2, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
