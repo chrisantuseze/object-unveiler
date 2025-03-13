@@ -114,7 +114,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         if len(new_masks) == n_prev_masks:
             count += 1
 
-        if count > 1:
+        if count > 2:
             logging.info("Robot is in an infinite loop")
             
             res = input("\nDo you still want to continue? (y/n) ")
