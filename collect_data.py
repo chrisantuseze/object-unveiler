@@ -74,9 +74,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
     while node_id != target_id:
         objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
 
-        # if target_id in objects_to_remove:
-        #     objects_to_remove.remove(target_id)
-        # objects_to_remove = [target_id] + objects_to_remove
+        if len(objects_to_remove) < 4 and target_id in objects_to_remove:
+            objects_to_remove.remove(target_id)
+            objects_to_remove = [target_id] + objects_to_remove
         
         print("\nobjects_to_remove:", objects_to_remove)
 
@@ -129,8 +129,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
             resized_obstacle_mask = general_utils.resize_mask(processed_masks[node_id])
             extracted_obstacle = general_utils.extract_target_crop(resized_obstacle_mask, state)
             transition = {
-                'color_obs': next_obs['color'][1], 
-                'depth_obs': next_obs['depth'][1], 
+                'color_obs': obs['color'][1],
+                'next_color_obs': next_obs['color'][1],
+                'depth_obs': obs['depth'][1], 
                 'state': state, 
                 'depth_heightmap': depth_heightmap,
                 'target_mask': resized_target_mask, 

@@ -388,13 +388,13 @@ class Policy:
     def get_unveiler_inputs(self, color_image, target_mask):
         processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
 
-        processed_target = general_utils.preprocess_sre_mask(target_mask)
+        processed_target = general_utils.preprocess_image(target_mask)[0]
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
 
         processed_obj_masks = []
         bboxes = []
         for id, mask in enumerate(processed_masks):
-            processed_mask = general_utils.preprocess_sre_mask(mask)
+            processed_mask = general_utils.preprocess_image(mask)[0]
             processed_mask = torch.FloatTensor(processed_mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
