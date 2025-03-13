@@ -2,7 +2,6 @@ import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
-# from policy.obstacle_decoder import SpatialEncoder
 from policy.models_target_new import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
@@ -15,8 +14,6 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage import transform
-
-from einops import rearrange
 
 import pybullet as p
 from trainer.memory import ReplayBuffer

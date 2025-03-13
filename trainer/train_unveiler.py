@@ -1,8 +1,7 @@
 import os
 import random
 import copy
-# from policy.models_attn2 import Regressor, ResFCN
-from policy.models_attn2 import ResFCN
+from policy.models_attn2 import Regressor, ResFCN
 
 import torch
 import torch.optim as optim
