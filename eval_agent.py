@@ -116,8 +116,19 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         if count > 1:
             logging.info("Robot is in an infinite loop")
+            
             res = input("\nDo you still want to continue? (y/n) ")
             if res.lower() == "n":
+                res = input("\nDo you think the grasp was successful? (y/n) ")
+                if grasp_info['stable'] or res.lower() == "y":
+                    logging.info("Target has been grasped!")
+                    success_count += 1
+
+                    episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+                    episode_data['avg_clutter_score'] = avg_clutter_score
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
                 break
 
         target_id, target_mask = grasping.find_target(new_masks, target_mask)

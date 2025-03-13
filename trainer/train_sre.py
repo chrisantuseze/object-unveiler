@@ -1,8 +1,7 @@
 from copy import deepcopy
 import os
 import random
-# from policy.sre_model import SpatialEncoder, compute_loss
-from policy.obstacle_decoder import SpatialEncoder, compute_loss
+from policy.sre_model import SpatialEncoder, compute_loss
 
 import torch
 import torch.optim as optim
@@ -30,9 +29,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre-od")
+    writer = SummaryWriter(comment="sre")
 
-    save_path = 'save/sre-od'
+    save_path = 'save/sre'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -61,10 +60,10 @@ def train_sre(args):
     val_ids = val_ids[:data_length]
     
     train_dataset = SREDataset(args, train_ids)
-    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True, shuffle=True)
+    data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)
 
     val_dataset = SREDataset(args, val_ids)
-    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
 
@@ -72,7 +71,7 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)#, weight_decay=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
     criterion = nn.CrossEntropyLoss()
     lowest_loss = float('inf')
