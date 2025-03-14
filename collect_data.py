@@ -81,9 +81,9 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print("\nobjects_to_remove:", objects_to_remove)
 
         node_id = objects_to_remove[0]
-        cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
-        cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
-        cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
+        # cv2.imwrite(os.path.join(TRAIN_DIR, "target_obstacle.png"), processed_masks[node_id])
+        # cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
+        # cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
@@ -158,7 +158,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
 
         obs = copy.deepcopy(next_obs) # this needs to come after the grasping check. what we save is the obs before the grasping
 
-        general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
+        # general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
         processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR, bbox=True)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
