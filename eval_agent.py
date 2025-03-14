@@ -230,12 +230,12 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         grp_count += 1
         logging.info("Grasping count -", grp_count)
 
-        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
-        print("\nobjects_to_remove:", objects_to_remove)
+        # objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
+        # print("\nobjects_to_remove:", objects_to_remove)
 
-        obstacle_id = objects_to_remove[0]
-        object_mask = processed_masks[obstacle_id]
-        cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), object_mask)
+        # obstacle_id = objects_to_remove[0]
+        # object_mask = processed_masks[obstacle_id]
+        # cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), object_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
@@ -307,19 +307,39 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         if len(new_masks) == n_prev_masks:
             count += 1
 
-        if count > 1:
+        if count > 2:
             logging.info("Robot is in an infinite loop")
-            break
+            
+            res = input("\nDo you still want to continue? (y/n) ")
+            if res.lower() == "n":
+                res = input("\nDo you think the grasp was successful? (y/n) ")
+                if grasp_info['stable'] or res.lower() == "y":
+                    logging.info("Target has been grasped!")
+                    success_count += 1
+
+                    episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+                    episode_data['avg_clutter_score'] = avg_clutter_score
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+                break
 
         target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
-            if grasp_info['stable']:
+            res = input("\nDo you think the target is available? (y/n) ")
+            if res.lower() == "y":
+                print(target_id, len(new_masks))
+                target_id = int(input("\nWhat is the index? "))
+                target_mask = new_masks[target_id]
+                continue
+
+            res = input("\nDo you think the grasp was successful? (y/n) ")
+            if grasp_info['stable'] or res.lower() == "y":
                 logging.info("Target has been grasped!")
                 success_count += 1
 
                 episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
                 episode_data['avg_clutter_score'] = avg_clutter_score
-
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -397,7 +417,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_multi(
+        episode_data, success_count, grasping_action_count = run_episode_act(
             args, policy, env, segmenter, rng, episode_seed, 
             success_count=success_count, grp_count=grasping_action_count
         )
