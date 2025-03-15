@@ -231,7 +231,12 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
-        actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+        try:
+            actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+        except Exception as e:
+            print("Error occurred - ", e)
+            break
+
         print("AdaptiveActionState.EXPECTED_STEPS", AdaptiveActionState.EXPECTED_STEPS, len(actions))
 
         end_of_episode = False
@@ -281,7 +286,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         #     break
         
         # if grasp_info['stable'] or save == 1:
-        
+
         # if old_objects_count != new_objects_count and obstacle_id == -1:
 
         if grasp_info['stable']:

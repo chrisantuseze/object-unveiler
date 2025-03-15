@@ -344,9 +344,6 @@ class Policy:
         valid_pxls = np.argwhere(valid_pxl_map == 255)
         valid_ids = np.arange(0, valid_pxls.shape[0])
 
-        if len(valid_ids) < 1:
-            valid_ids = np.zeros((4,))
-        
         objects_mask = np.zeros(state.shape)
         objects_mask[state > self.z] = 255
         _, thresh = cv2.threshold(objects_mask.astype(np.uint8), 127, 255, 0)
