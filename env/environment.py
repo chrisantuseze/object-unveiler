@@ -12,7 +12,7 @@ from utils.orientation import Affine3, Quaternion, rot_z
 import utils.pybullet_utils as p_utils
 import utils.general_utils as general_utils
 import env.env_components as env_components
-from env.env_components import ActionState
+from env.env_components import ActionState, AdaptiveActionState
 import env.cameras as cameras
 import utils.logger as logging
 
@@ -72,8 +72,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        # p.connect(p.DIRECT)
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
+        # p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
@@ -93,7 +93,8 @@ class Environment:
         self.simulation = Simulation(self.objects)
         self.singulation_condition = False
 
-        self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+        # self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+        self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
         self.state_start_time = time.time()
         self.elapsed_time = self.interval = 0
         self.trajectories = []
@@ -188,7 +189,225 @@ class Environment:
 
         return hand_current_pos, finger_current_pos
     
+    def calculate_position_error(self, current_positions, target_positions):
+        """Calculate the euclidean distance between current and target positions"""
+        # If dealing with joint positions
+        if isinstance(current_positions, list) and isinstance(target_positions, list):
+            return np.sqrt(np.sum([(current_positions[i] - target_positions[i])**2 
+                                for i in range(len(current_positions))]))
+        
+        # If dealing with 3D cartesian positions
+        return np.linalg.norm(np.array(current_positions) - np.array(target_positions))
+    
     def step_act(self, action, eval=True):
+        dt = 0.001
+        
+        if self.current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
+            state_id, min_duration, threshold = AdaptiveActionState.MOVE_ABOVE_PREGRASP
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            # Move with position error check
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+            
+            # Check if position reached or minimum time elapsed
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5  # At least 50% of min time
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.SET_FINGER_CONFIG
+                self.elapsed_time = 0
+        
+        elif self.current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+            state_id, min_duration, threshold = AdaptiveActionState.SET_FINGER_CONFIG
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+                self.target_finger_pos = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=min_duration, force=5)
+
+            joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time, force=5)
+            self.bhand.move_robot(self.hand_current_pos)
+            self.elapsed_time += dt
+            
+            finger_error = self.calculate_position_error(joint_positions, self.target_finger_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and finger_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.MOVE_TO_PREGRASP
+                self.elapsed_time = 0
+        
+        elif self.current_state == AdaptiveActionState.MOVE_TO_PREGRASP:
+            state_id, min_duration, threshold = AdaptiveActionState.MOVE_TO_PREGRASP
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+
+            self.is_in_contact = self.bhand.check_in_contact()
+            if self.is_in_contact:
+                print("Collision occurred!")
+                self.current_state = AdaptiveActionState.MOVE_UP
+                self.elapsed_time = 0
+                return self.get_observation(), {'collision': self.is_in_contact, 'stable': None, 'num_contacts': None, 'eoe': False}
+
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.POWER_PUSH
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.POWER_PUSH:
+            state_id, min_duration, threshold = AdaptiveActionState.POWER_PUSH
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.CLOSE_FINGERS
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.CLOSE_FINGERS:
+            state_id, min_duration, threshold = AdaptiveActionState.CLOSE_FINGERS
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+                self.target_finger_pos = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(self.hand_current_pos)
+            self.elapsed_time += dt
+            
+            finger_error = self.calculate_position_error(joint_positions, self.target_finger_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and finger_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.MOVE_UP
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.MOVE_UP:
+            state_id, min_duration, threshold = AdaptiveActionState.MOVE_UP
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.GRASP_STABILITY
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.GRASP_STABILITY:
+            state_id, min_duration, threshold = AdaptiveActionState.GRASP_STABILITY
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.MOVE_HOME
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.MOVE_HOME:
+            state_id, min_duration, threshold = AdaptiveActionState.MOVE_HOME
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, _ = self.get_hand_finger_pose()
+                self.target_pos = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_joint_positions(action, self.current_state, self.hand_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(joint_positions)
+            self.elapsed_time += dt
+
+            pos_error = self.calculate_position_error(joint_positions, self.target_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and pos_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.OPEN_FINGERS
+                self.elapsed_time = 0
+
+        elif self.current_state == AdaptiveActionState.OPEN_FINGERS:
+            state_id, min_duration, threshold = AdaptiveActionState.OPEN_FINGERS
+            
+            if self.elapsed_time == 0:
+                self.hand_current_pos, self.finger_current_pos = self.get_hand_finger_pose()
+                self.target_finger_pos = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=min_duration)
+
+            joint_positions = self.bhand.calculate_finger_positions(action, self.current_state, self.finger_current_pos, t=self.elapsed_time)
+            self.bhand.move_robot(self.hand_current_pos)
+            self.elapsed_time += dt
+            
+            finger_error = self.calculate_position_error(joint_positions, self.target_finger_pos)
+            min_time_reached = self.elapsed_time >= min_duration * 0.5
+            
+            if (min_time_reached and finger_error < threshold) or self.elapsed_time >= min_duration:
+                self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
+                self.elapsed_time = 0
+
+                images = {'color': []}
+                for cam in self.agent_cams:
+                    color, depth, seg = cam.get_data() 
+                    images['color'].append(color)
+                obs = self.get_observation()
+                obs['traj_data'] = [(joint_positions, images)]
+
+                stable_grasp, num_contacts = self.bhand.is_grasp_stable()
+
+                return obs, {'collision': self.is_in_contact, 'stable': stable_grasp, 'num_contacts': num_contacts, 'eoe': True} # eoe = end of episode
+            
+
+        # Step the simulation
+        self.bhand.simulation.step()
+        time.sleep(dt)
+        
+        # Return observation and info
+        obs = self.get_observation()
+        
+        # Add trajectory data if needed
+        images = {'color': []}
+        if not eval and self.interval % 20 == 0:
+            for cam in self.agent_cams:
+                color, depth, seg = cam.get_data() 
+                images['color'].append(general_utils.resize_image(color))
+        else:
+            images['color'].append(None)
+        
+        obs['traj_data'] = [(joint_positions, images)]
+        self.interval += 1
+        
+        return obs,  {'collision': None, 'stable': None, 'num_contacts': None, 'eoe': False}
+            
+    
+    def step_act_old(self, action, eval=True):
         # print("Executing action...", self.current_state)
         dt = 0.001
         

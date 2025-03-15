@@ -13,7 +13,8 @@ python3 main.py \
 --sre_model 'save/sre/sre_model_best.pt' \
 --n_scenes 50 \
 --chunk_size 10 \
---temporal_agg
+--temporal_agg \
+--seed 17
 
 
 python3 main.py \

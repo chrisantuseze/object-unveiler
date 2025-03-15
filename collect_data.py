@@ -16,11 +16,11 @@ from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 import policy.grasping as grasping
 from utils.constants import *
-from env.env_components import ActionState
+from env.env_components import ActionState, AdaptiveActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset"
-    # save_dir = 'save/act-dataset'
+    # save_dir = "save/pc-ou-dataset"
+    save_dir = 'save/act-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -42,7 +42,7 @@ def collect_episodic_dataset(args, params):
     segmenter = ObjectSegmenter()
 
     for i in range(args.n_samples):
-        run_episode(i, policy, segmenter, env, memory, rng)
+        run_episode_act(i, policy, segmenter, env, memory, rng)
 
 def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -224,15 +224,15 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("\nobjects_to_remove:", objects_to_remove)
 
         obstacle_id = objects_to_remove[0]
-        object_mask = processed_masks[obstacle_id]
+        object_mask = processed_masks[obstacle_id] if len(processed_masks) > obstacle_id else target_mask
         cv2.imwrite(os.path.join(TRAIN_DIR, "obstacle_mask.png"), object_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
-        actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
-        print("ActionState.NUM_STEPS", ActionState.NUM_STEPS, len(actions))
+        actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+        print("AdaptiveActionState.EXPECTED_STEPS", AdaptiveActionState.EXPECTED_STEPS, len(actions))
 
         end_of_episode = False
         t = 0
@@ -259,59 +259,48 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         
         print("len(traj_data)", len(traj_data))
 
-        # if not grasp_info['stable']:
-        #     print("A failure has been recorded. Episode cancelled.")
-        #     break
-
-        if len(traj_data) < ActionState.NUM_STEPS:
-            steps += 1
-            continue
+        # if len(traj_data) < AdaptiveActionState.EXPECTED_STEPS:
+        #     steps += 1
+        #     continue
 
         print(grasp_info)
         print('---------')
 
-        general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
+        # general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
 
-        old_objects_count = len(processed_masks)
-        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
-        obstacle_id, object_mask = grasping.find_target(processed_masks, object_mask)
-        new_objects_count = len(processed_masks)
+        # old_objects_count = len(processed_masks)
+        # processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
+        # obstacle_id, object_mask = grasping.find_target(processed_masks, object_mask)
+        # new_objects_count = len(processed_masks)
 
         # save = int(input("Do you want to save this episode? (0/1): "))
         # save = 0
 
-        if len(traj_data) >= ActionState.NUM_STEPS and (obstacle_id != -1 or old_objects_count == new_objects_count):
-            print("Scene rearranged. Episode cancelled.")
-            break
+        # if len(traj_data) >= AdaptiveActionState.EXPECTED_STEPS and (obstacle_id != -1 or old_objects_count == new_objects_count):
+        #     print("Scene rearranged. Episode cancelled.")
+        #     break
         
         # if grasp_info['stable'] or save == 1:
-        if old_objects_count != new_objects_count and obstacle_id == -1:
-            new_id, object_mask = grasping.get_grasped_object(processed_masks, action)
-            print("new_id", new_id)
+        
+        # if old_objects_count != new_objects_count and obstacle_id == -1:
 
-            if new_id == -1:
-                print("Grasped object not found.")
+        if grasp_info['stable']:
+            if len(processed_masks) == 0 or target_id == -1:
+                print(">>>>>>>>>>> No objects masks or target id is negative >>>>>>>>>>>>>")
+                print('------------------------------------------')
                 break
-            
-            new_masks = []
-            for mask in processed_masks:
-                new_masks.append(general_utils.resize_mask(mask))
-                
-            resized_target_mask = general_utils.resize_mask(target_mask) # Doesn't matter if the target mask has changed a bit after resegmentation. We don't need it anyway
-            resized_obstacle_mask = general_utils.resize_mask(object_mask)
-
+        
             transition = {
                 'color_obs': obs['color'][1], 
                 'depth_obs': obs['depth'][1], 
                 'state': state, 
                 'depth_heightmap': depth_heightmap,
-                'target_mask': resized_target_mask, 
-                'c_target_mask': general_utils.extract_target_crop(resized_target_mask, state), 
-                'obstacle_mask': resized_obstacle_mask,
-                'c_obstacle_mask': general_utils.extract_target_crop(resized_obstacle_mask, state), 
-                'cc_obstacle_mask': general_utils.extract_target_crop2(object_mask, obs['color'][1]),
-                'scene_mask': general_utils.resize_mask(pred_mask),
-                'object_masks': new_masks,
+                'target_mask': target_mask, 
+                'c_target_mask': general_utils.extract_target_crop2(target_mask, obs['color'][1]), 
+                'obstacle_mask': object_mask,
+                'c_obstacle_mask': general_utils.extract_target_crop2(object_mask, obs['color'][1]),
+                'scene_mask': pred_mask,
+                'object_masks': processed_masks,
                 'action': action, 
                 'label': grasp_info['stable'],
                 'traj_data': traj_data,
@@ -323,8 +312,15 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             print('------------------------------------------')
             break
 
-        if obstacle_id == -1:
-            print("Object is no longer available in the scene.")
+        # if obstacle_id == -1:
+        #     print("Object is no longer available in the scene.")
+        #     break
+
+        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR, bbox=True)
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+
+        if target_id == -1:
+            print("Target is no longer available in the scene.")
             break
 
         steps += 1

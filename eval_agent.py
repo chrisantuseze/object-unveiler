@@ -19,9 +19,9 @@ import policy.grasping as grasping
 
 import utils.logger as logging
 from skimage import transform
-from env.env_components import ActionState
+from env.env_components import ActionState, AdaptiveActionState
 
-def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, grp_count=0):
+def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, episode=0):
     """
     Runs a single episode of the multi-step grasping task using the object-unveiler policy in a cluttered environment.
     Args:
@@ -74,9 +74,6 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
     max_steps = 6
     while episode_data['attempts'] < max_steps:
-        grp_count += 1
-        logging.info("Grasping count -", grp_count)
-
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
@@ -145,8 +142,13 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                 logging.info("Target has been grasped!")
                 success_count += 1
 
-                episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+                final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                episode_data['final_clutter_score'] = final_clutter_score
                 episode_data['avg_clutter_score'] = avg_clutter_score
+
+                with open('unveiler_results.txt', 'a') as file:
+                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {final_clutter_score}, avg_clutter_score: {avg_clutter_score}\n")
+
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -160,9 +162,9 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
-    return episode_data, success_count, grp_count
+    return episode_data, success_count
 
-def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, grp_count=0):
+def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, episode=0):
     """
     Runs a single episode of obstacle and target grasping using ACT with heuristics.
     Args:
@@ -189,7 +191,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         query_frequency = 1
         num_queries = args.chunk_size
 
-    max_timesteps = ActionState.NUM_STEPS + 1
+    max_timesteps = AdaptiveActionState.NUM_STEPS + 1
 
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
@@ -227,8 +229,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
     max_steps = 5
     while episode_data['attempts'] < max_steps:
-        grp_count += 1
-        logging.info("Grasping count -", grp_count)
 
         # objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
         # print("\nobjects_to_remove:", objects_to_remove)
@@ -338,8 +338,14 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 logging.info("Target has been grasped!")
                 success_count += 1
 
-                episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
+
+                final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                episode_data['final_clutter_score'] = final_clutter_score
                 episode_data['avg_clutter_score'] = avg_clutter_score
+
+                with open('act_results.txt', 'a') as file:
+                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {final_clutter_score}, avg_clutter_score: {avg_clutter_score}\n")
+
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -353,7 +359,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
-    return episode_data, success_count, grp_count
+    return episode_data, success_count
 
 def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_positions_plot.png'):
     """
@@ -399,7 +405,7 @@ def eval_agent(args):
     env = Environment(params)
 
     policy = Policy(args, params)
-    # policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
+    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
     segmenter = ObjectSegmenter()
 
@@ -411,15 +417,14 @@ def eval_agent(args):
     avg_clutter_score, final_clutter_score = 0.0, 0.0
 
     success_count = 0
-    grasping_action_count = 0
 
     for i in range(args.n_scenes):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count, grasping_action_count = run_episode_act(
+        episode_data, success_count = run_episode_act(
             args, policy, env, segmenter, rng, episode_seed, 
-            success_count=success_count, grp_count=grasping_action_count
+            success_count=success_count, episode=i
         )
         eval_data.append(episode_data)
 

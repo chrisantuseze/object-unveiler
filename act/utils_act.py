@@ -13,7 +13,7 @@ import utils.general_utils as general_utils
 import matplotlib.pyplot as plt
 import cv2
 
-from env.env_components import ActionState
+from env.env_components import ActionState, AdaptiveActionState
 
 e = IPython.embed
 
@@ -158,9 +158,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         actions = np.array(actions)
         action_len = actions.shape[0]
-        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))
+        padded_action = np.zeros((AdaptiveActionState.NUM_STEPS, actions.shape[1]))
         padded_action[:action_len] = actions
-        is_pad = np.zeros(ActionState.NUM_STEPS)
+        is_pad = np.zeros(AdaptiveActionState.NUM_STEPS)
         is_pad[action_len:] = 1
 
         image_dict = dict()

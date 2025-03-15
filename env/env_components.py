@@ -350,34 +350,23 @@ class FloatingBHand:
         duration = current_state[1]
         if len(action) == 8:   # this is eval
             return action
-
-            # # Add interpolation even for eval
-            # target_states = action
-            # trajectories = []
-            # for i in range(len(self.joint_ids)):
-            #     trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
-            
-            # joint_positions = []
-            # for i in range(len(self.joint_ids)):
-            #     joint_positions.append(trajectories[i].pos(t))
-            # return joint_positions
         
         target_pos = action['pos']
         target_quat = action['quat']
 
-        if current_state == ActionState.MOVE_ABOVE_PREGRASP:
+        if current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
             target_pos = target_pos.copy()
             target_pos[2] += 0.3
 
-        if current_state == ActionState.POWER_PUSH:
+        if current_state == AdaptiveActionState.POWER_PUSH:
             rot = target_quat.rotation_matrix()
             target_pos = target_pos + rot[0:3, 2] * action['push_distance']
 
-        if current_state in [ActionState.MOVE_UP, ActionState.GRASP_STABILITY]:
+        if current_state in [AdaptiveActionState.MOVE_UP, AdaptiveActionState.GRASP_STABILITY]:
             target_pos = target_pos.copy()
             target_pos[2] += 0.4
 
-        if current_state == ActionState.MOVE_HOME:
+        if current_state == AdaptiveActionState.MOVE_HOME:
             target_pos = self.home_position
             target_quat = self.home_quat
 
@@ -427,21 +416,21 @@ class FloatingBHand:
             #     joint_positions.append(trajectories[i].pos(t))
             # return joint_positions
         
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        if current_state == ActionState.CLOSE_FINGERS:
+        if current_state == AdaptiveActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 
-        if current_state == ActionState.OPEN_FINGERS:
+        if current_state == AdaptiveActionState.OPEN_FINGERS:
             joint_vals = [0.0, 0.6, 0.6, 0.6]
             
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
@@ -498,15 +487,77 @@ class FloatingBHand:
         return significant_contacts >= min_contacts
 
 class ActionState:
-    MOVE_ABOVE_PREGRASP = (0, 0.1)#0.08
-    SET_FINGER_CONFIG = (1, 0.1)#0.06
-    MOVE_TO_PREGRASP = (2, 0.5)#0.1
-    POWER_PUSH = (3, 2.0)#0.25
-    CLOSE_FINGERS = (4, 1.0)#0.45
-    MOVE_UP = (5, 0.1)#0.06
-    GRASP_STABILITY = (5, 0.05)#0.5
-    MOVE_HOME = (6, 0.1)#0.07
-    OPEN_FINGERS = (7, 0.1)#0.1)
+    MOVE_ABOVE_PREGRASP = (0, 0.1)
+    SET_FINGER_CONFIG = (1, 0.1)
+    MOVE_TO_PREGRASP = (2, 0.5)
+    POWER_PUSH = (3, 2.0)
+    CLOSE_FINGERS = (4, 1.0)
+    MOVE_UP = (5, 0.1)
+    GRASP_STABILITY = (5, 0.05)
+    MOVE_HOME = (6, 0.1)
+    OPEN_FINGERS = (7, 0.1)
 
     NUM_STEPS = int(sum([steps[1] for steps in 
                      [MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, MOVE_HOME, OPEN_FINGERS]])/0.001)
+    
+class AdaptiveActionState:
+    # Define states with (id, min_duration, convergence_threshold)
+    MOVE_ABOVE_PREGRASP = (0, 0.05, 0.01)  # id, min_duration, position_threshold
+    SET_FINGER_CONFIG = (1, 0.05, 0.005)   # id, min_duration, finger_threshold
+    MOVE_TO_PREGRASP = (2, 0.1, 0.01)
+    POWER_PUSH = (3, 0.2, 0.01)
+    CLOSE_FINGERS = (4, 0.1, 0.005)
+    MOVE_UP = (5, 0.05, 0.01)
+    GRASP_STABILITY = (6, 0.05, 0.005)
+    MOVE_HOME = (7, 0.05, 0.01)
+    OPEN_FINGERS = (8, 0.05, 0.005)
+
+
+    # Maximum durations for each state (for calculating worst-case NUM_STEPS)
+    MAX_DURATIONS = {
+        0: 0.1,    # MOVE_ABOVE_PREGRASP 
+        1: 0.1,    # SET_FINGER_CONFIG
+        2: 0.5,    # MOVE_TO_PREGRASP
+        3: 2.0,    # POWER_PUSH
+        4: 1.0,    # CLOSE_FINGERS
+        5: 0.1,    # MOVE_UP
+        6: 0.05,   # GRASP_STABILITY
+        7: 0.1,    # MOVE_HOME
+        8: 0.1     # OPEN_FINGERS
+    }
+    
+    # Compute minimum, expected, and maximum steps
+    DT = 0.001
+    
+    # Minimum possible steps (all convergence thresholds met immediately after min_duration * 0.5)
+    MIN_STEPS = int(sum([s[1] * 0.5 for s in [
+        MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, 
+        POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, 
+        MOVE_HOME, OPEN_FINGERS
+    ]]) / DT)
+    
+    # Expected steps (average case - assuming convergence at 75% of the way between min and max)
+    # For each state: min_duration + (max_duration - min_duration) * 0.75
+    # EXPECTED_STEPS = int(sum([
+    #     (s[1] + (MAX_DURATIONS[s[0]] - s[1]) * 0.75) 
+    #     for s in [
+    #         MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, 
+    #         POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, 
+    #         MOVE_HOME, OPEN_FINGERS
+    #     ]
+    # ]) / DT)
+
+    EXPECTED_STEPS = 0
+    for s in [
+            MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, 
+            POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, 
+            MOVE_HOME, OPEN_FINGERS
+        ]:
+        EXPECTED_STEPS += (s[1] + (MAX_DURATIONS[s[0]] - s[1]) * 0.75) 
+    EXPECTED_STEPS = int(EXPECTED_STEPS/DT)
+    
+    # Maximum possible steps (worst case - all states run to their maximum duration)
+    MAX_STEPS = int(sum(MAX_DURATIONS.values()) / DT)
+    
+    # For backwards compatibility and planning, use the EXPECTED_STEPS as NUM_STEPS
+    NUM_STEPS = EXPECTED_STEPS
