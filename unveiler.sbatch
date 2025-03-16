@@ -35,4 +35,4 @@ apptainer run --nv apptainerfile.sif python3 collect_data.py \
 --singulation_condition \
 --n_samples 30000 \
 --chunk_size 10 \
---seed 3
+--seed 33
