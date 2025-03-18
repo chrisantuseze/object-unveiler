@@ -11,7 +11,7 @@ export APPTAINER_BIND=$PWD
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset2' --mode 'unveiler' --epochs 100 --batch_size 8 --lr 1e-5 #For Unveiler 8/1e-5
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset' --mode 'sre' --epochs 100 --batch_size 32 --lr 1e-4 #For SRE
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset' --mode 'ae' --epochs 100 --batch_size 4 --lr 1e-5 #For AE
-# apptainer run --nv apptainerfile.sif python3 playground.py
+apptainer run --nv apptainerfile.sif python3 playground.py
 
 
 # 16
@@ -30,9 +30,3 @@ export APPTAINER_BIND=$PWD
 # --lr 1e-4 \
 # --num_patches 10 \
 # --seed 0
-
-apptainer run --nv apptainerfile.sif python3 collect_data.py \
---singulation_condition \
---n_samples 30000 \
---chunk_size 10 \
---seed 33
