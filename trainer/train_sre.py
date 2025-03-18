@@ -29,9 +29,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre-4-4")
+    writer = SummaryWriter(comment="sre")
 
-    save_path = 'save/sre-4-4'
+    save_path = 'save/sre'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)

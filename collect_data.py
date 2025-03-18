@@ -29,10 +29,6 @@ def collect_episodic_dataset(args, params):
     env = Environment(params)
     env.singulation_condition = args.singulation_condition
 
-    # ###############################################################################
-    # env.nr_objects = [2,4]
-    # ###############################################################################
-
     policy = Policy(args, params)
     policy.seed(args.seed)
 

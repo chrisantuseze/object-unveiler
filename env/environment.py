@@ -46,8 +46,8 @@ class Environment:
 
         # self.nr_objects = [11, 15] #[5, 8]
         # self.nr_objects = [4, 6]
-        # self.nr_objects = [6, 9]
-        self.nr_objects = [2, 9]
+        self.nr_objects = [6, 9]
+        # self.nr_objects = [2, 9]
         # self.nr_objects = [9, 12]
 
 
