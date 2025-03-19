@@ -71,7 +71,7 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)#, weight_decay=1e-5)
     
     criterion = nn.CrossEntropyLoss()
     lowest_loss = float('inf')
