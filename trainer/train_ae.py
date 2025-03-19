@@ -77,7 +77,7 @@ def train_ae(args):
     model = ActionDecoder(args).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
-    criterion = nn.BCELoss(reduction='none')
+    criterion = nn.BCELoss(reduction='mean')
     lowest_loss = float('inf')
     best_ckpt_info = None
     for epoch in range(args.epochs):
@@ -93,7 +93,7 @@ def train_ae(args):
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
-            loss = torch.sum(loss)
+            # loss = torch.sum(loss)
             epoch_loss['train'] += loss.detach().cpu().numpy()
 
             if step % args.step == 0:
@@ -117,7 +117,7 @@ def train_ae(args):
                 pred = model(x, target, rotations)
                 loss = criterion(pred, y)
 
-                loss = torch.sum(loss)
+                # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
