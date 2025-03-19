@@ -28,10 +28,10 @@ class ResidualBlock(nn.Module):
         super(ResidualBlock, self).__init__()
 
         self.conv1 = conv3x3(in_planes, out_planes, stride)
-        self.bn1 = LayerNorm2d(out_planes)
+        self.bn1 = nn.BatchNorm2d(out_planes)
 
         self.conv2 = conv3x3(out_planes, out_planes)
-        self.bn2 = LayerNorm2d(out_planes)
+        self.bn2 = nn.BatchNorm2d(out_planes)
 
         self.downsample = downsample
 
@@ -39,7 +39,7 @@ class ResidualBlock(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.xavier_uniform_(m.weight)
-            elif isinstance(m, LayerNorm2d):
+            elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
@@ -85,7 +85,7 @@ class ActionDecoder(nn.Module):
         
         # Feature fusion layers
         self.fusion_conv = nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.fusion_bn = LayerNorm2d(64)
+        self.fusion_bn = nn.BatchNorm2d(64)
         
         # Final prediction layer
         self.final_conv = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
