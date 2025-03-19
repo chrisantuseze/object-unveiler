@@ -49,6 +49,7 @@ class ResidualBlock(nn.Module):
         out = self.conv1(x)
         out = F.relu(self.bn1(out))
         # out = F.relu(out)
+        out = F.dropout(out, p=0.2)
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -58,6 +59,7 @@ class ResidualBlock(nn.Module):
 
         out += identity
         out = F.relu(out)
+        out = F.dropout(out, p=0.2)
 
         return out
 
