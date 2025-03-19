@@ -77,6 +77,8 @@ def train_ae(args):
     model = ActionDecoder(args).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
+
     criterion = nn.BCELoss(reduction='mean')
     lowest_loss = float('inf')
     best_ckpt_info = None
@@ -122,6 +124,8 @@ def train_ae(args):
 
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+
+        scheduler.step(epoch_loss['val'])
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
