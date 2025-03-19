@@ -22,7 +22,7 @@ class SREDataset(data.Dataset):
 
     # single - input, multi - output for models_attn with processed inputs
     def __getitem__(self, id):
-        scene_mask, target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
+        target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
         # commented out heightmap since we already extracted the crop in real-ou-dataset2
         processed_target_mask = general_utils.preprocess_image(target_mask)[0]
@@ -36,7 +36,6 @@ class SREDataset(data.Dataset):
         # pad object masks
         padded_processed_obj_masks, padded_obj_masks, padded_bbox = self.pad(_processed_obj_masks, object_masks, bboxes)
 
-        # raw_scene_mask, raw_target_mask = np.array(scene_mask), np.array(target_mask)
         objects_to_remove = np.array(objects_to_remove[0] if objects_to_remove[0] < self.args.num_patches else 0)
 
         return processed_target_mask, padded_processed_obj_masks, padded_bbox, objects_to_remove
