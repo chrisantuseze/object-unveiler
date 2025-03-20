@@ -61,8 +61,8 @@ class ResidualBlock(nn.Module):
             identity = self.downsample(identity)
 
         out += identity
+        out = F.dropout(out, p=0.1)
         out = F.relu(out)
-        # out = F.dropout(out, p=0.1)
 
         return out
 

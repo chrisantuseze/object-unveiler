@@ -77,7 +77,7 @@ def train_ae(args):
     model = ActionDecoder(args).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.05)
 
     criterion = nn.BCELoss(reduction='mean')
     lowest_loss = float('inf')
@@ -96,10 +96,6 @@ def train_ae(args):
             # Compute loss in the whole scene
             loss = criterion(pred, y)
             # loss = torch.sum(loss)
-            # epoch_loss['train'] += loss.detach().cpu().numpy()
-
-            # if step % args.step == 0:
-            #     logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()

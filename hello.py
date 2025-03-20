@@ -4,6 +4,8 @@ import shutil
 
 import numpy as np
 
+from trainer.memory import ReplayBuffer
+
 
 dir = ""
 # Specify the path to the folder containing the files you want to rename
@@ -58,7 +60,8 @@ def main():
     # episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
     # data = episode_data[0]
 
-    # print(data.keys())
+    new_dir = "save/pc-ou-dataset1"
+    memory = ReplayBuffer(new_dir)
 
     count = 0
     for episode in transition_dirs:
@@ -70,12 +73,14 @@ def main():
         try:
             with open(os.path.join(dataset_dir, episode), 'rb') as f:
                 episode_data = pickle.load(f)
+                memory.store_episode(episode_data)
                 # first_bytes = f.read(100)
 
             # print(first_bytes)
 
         except Exception as e:
             print(f"Error loading {episode}: {e}")
+            count += 1
 
     #     # if len(c_object_masks) == 0:
     #     #     print(f"Deleting {episode}...")
