@@ -44,7 +44,7 @@ def train_ae(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    # transition_dirs = transition_dirs[:20000]
+    transition_dirs = transition_dirs[:3000]
             
     # split data to training/validation
     random.seed(0)
@@ -94,10 +94,10 @@ def train_ae(args):
             # Compute loss in the whole scene
             loss = criterion(pred, y)
             # loss = torch.sum(loss)
-            epoch_loss['train'] += loss.detach().cpu().numpy()
+            # epoch_loss['train'] += loss.detach().cpu().numpy()
 
-            if step % args.step == 0:
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            # if step % args.step == 0:
+            #     logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -106,8 +106,8 @@ def train_ae(args):
             debug_params(model)
 
         model.eval()
-        # epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['val']:
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 x = batch[0].to(args.device)
                 target = batch[1].to(args.device)
@@ -122,10 +122,6 @@ def train_ae(args):
 
                 if step % args.step == 0:
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
-
-        # for name, param in model.named_parameters():
-        #     if param.grad is not None:
-        #         writer.add_histogram(f"gradients/{name}", param.grad, epoch)
 
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
