@@ -48,8 +48,8 @@ def load_episode(dataset_dir, episode):
     return None
 
 def main():
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
-    # dataset_dir = "save/pc-ou-dataset"
+    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
+    dataset_dir = "save/pc-ou-dataset"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
@@ -62,10 +62,20 @@ def main():
 
     count = 0
     for episode in transition_dirs:
+        # try:
+        #     scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
+        # except:
+        #     count += 1
+
         try:
-            scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
-        except:
-            count += 1
+            with open(os.path.join(dataset_dir, episode), 'rb') as f:
+                episode_data = pickle.load(f)
+                # first_bytes = f.read(100)
+
+            # print(first_bytes)
+
+        except Exception as e:
+            print(f"Error loading {episode}: {e}")
 
     #     # if len(c_object_masks) == 0:
     #     #     print(f"Deleting {episode}...")
