@@ -409,11 +409,9 @@ def preprocess_image(image):
 
     # normalize heightmap
     image_mean = np.mean(image, axis=(0, 1))
-    image_std = (np.std(image, axis=(0, 1)) + 1e-3)
+    image_std = np.std(image, axis=(0, 1)) + 1e-3
     if image_mean > 1 and image_std > 10:
         image_mean, image_std = image_mean/1e2, image_std/1e2
-
-    print(image_mean, image_std)
 
     # image_mean = 0.01
     # image_std = 0.03
@@ -421,6 +419,9 @@ def preprocess_image(image):
 
     # add extra channel
     padded_image = np.expand_dims(padded_image, axis=0)
+
+    if not np.any(padded_image):
+        print(image_mean, image_std)
 
     return padded_image, padding_width
 
