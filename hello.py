@@ -10,23 +10,23 @@ dir = ""
 
 # folder_path = "save/pc-ou-dataset/"
 # folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
-id = 5497
+# folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
+# id = 5497
 
 
-folder_path = dir + folder_path
-# Loop through the files in the folder
-for i, filename in enumerate(os.listdir(folder_path)):
-    old_name = os.path.join(folder_path, filename)
+# folder_path = dir + folder_path
+# # Loop through the files in the folder
+# for i, filename in enumerate(os.listdir(folder_path)):
+#     old_name = os.path.join(folder_path, filename)
     
-    arr = filename.split("_")
-    new_filename = arr[0] + "_" + str(id).zfill(5)
+#     arr = filename.split("_")
+#     new_filename = arr[0] + "_" + str(id).zfill(5)
 
-    # Rename the file
-    os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
-    id += 1
+#     # Rename the file
+#     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
+#     id += 1
 
-print(id)
+# print(id)
 
 def load_episode(dataset_dir, episode):
     # Ensure there's a valid image. If there's none, search through the timesteps
@@ -48,20 +48,24 @@ def load_episode(dataset_dir, episode):
     return None
 
 def main():
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2" #"save/pc-ou-dataset2-51k"
+    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
+    # dataset_dir = "save/pc-ou-dataset"
     transition_dirs = os.listdir(dataset_dir)
     for file_ in transition_dirs:
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
-    data = episode_data[0]
+    # episode_data = pickle.load(open(os.path.join(dataset_dir, transition_dirs[0]), 'rb'))
+    # data = episode_data[0]
 
-    print(data.keys())
+    # print(data.keys())
 
-    # count = 0
-    # for episode in transition_dirs:
-    #     scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
+    count = 0
+    for episode in transition_dirs:
+        try:
+            scene_mask, c_target_mask, c_object_masks, objects_to_remove, bboxes = load_episode(dataset_dir, episode)
+        except:
+            count += 1
 
     #     # if len(c_object_masks) == 0:
     #     #     print(f"Deleting {episode}...")
@@ -88,6 +92,6 @@ def main():
     #             os.remove(episode_path)  # Delete the file
     #             break
 
-    # print("Total count:", count)
+    print("Total count:", count)
 
-# main()
+main()
