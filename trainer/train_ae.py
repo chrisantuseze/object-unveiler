@@ -31,9 +31,9 @@ def train_ae(args):
         None
     """
 
-    writer = SummaryWriter(comment="ae")
+    writer = SummaryWriter(comment="ae-")
 
-    save_path = 'save/ae'
+    save_path = 'save/ae-'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
