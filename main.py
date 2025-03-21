@@ -4,7 +4,7 @@ import argparse
 from trainer.train_ae import train_ae, train_regressor
 from trainer.train_unveiler import train_unveiler, train_regressor
 from trainer.train_sre import train_sre
-# from trainer.train_sre_finetune import train_sre
+from trainer.train import train_fcn_net
 # from eval_agent_target import eval_agent
 from eval_agent import eval_agent
 import utils.logger as logging
@@ -48,7 +48,6 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # args.device = torch.device("cpu")
     print(f"You are using {args.device}")
 
     logging.info("The selected mode is:", args.mode, "and batch size is:", args.batch_size)
@@ -61,6 +60,9 @@ if __name__ == "__main__":
 
     elif args.mode == 'ae':
         train_ae(args)
+
+    elif args.mode == 'fcn':
+        train_fcn_net(args)
         
     elif args.mode == 'reg':
         train_regressor(args)

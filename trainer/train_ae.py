@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from datasets.aperture_dataset import ApertureDataset
 
-from datasets.heightmap_dataset import HeightMapDataset
+from datasets.ae_dataset import AEDataset
 
 import utils.logger as logging
 
@@ -64,10 +64,10 @@ def train_ae(args):
     data_length = (len(val_ids)//args.batch_size) * args.batch_size
     val_ids = val_ids[:data_length]
     
-    train_dataset = HeightMapDataset(args, train_ids)
+    train_dataset = AEDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True, shuffle=True)
 
-    val_dataset = HeightMapDataset(args, val_ids)
+    val_dataset = AEDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=1, pin_memory=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
@@ -77,7 +77,7 @@ def train_ae(args):
 
     # model = ActionDecoder(args).to(args.device)
     model = ResFCN().to(args.device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 

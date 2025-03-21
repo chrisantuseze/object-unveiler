@@ -9,7 +9,7 @@ from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
 from datasets.aperture_dataset import ApertureDataset
-from datasets.heightmap_dataset import HeightMapDataset
+from datasets.heightmap_dataset import HeightmapDataset
 
 import utils.general_utils as general_utils
 import utils.logger as logging
@@ -110,7 +110,7 @@ def train_fcn_net(args):
     data_length = (len(train_ids)//args.batch_size) * args.batch_size
     train_ids = train_ids[:data_length]
     
-    train_dataset = HeightMapDataset(args, train_ids)
+    train_dataset = HeightmapDataset(args, train_ids)
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, shuffle=True)
 
     args.step = int(len(train_ids)/(4*args.batch_size))
@@ -118,7 +118,7 @@ def train_fcn_net(args):
     # data_length = (len(val_ids)//args.batch_size) * args.batch_size
     # val_ids = val_ids[:int(data_length)]
 
-    val_dataset = HeightMapDataset(args, val_ids)
+    val_dataset = HeightmapDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=2, num_workers=4, pin_memory=True)
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
