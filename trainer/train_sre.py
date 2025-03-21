@@ -111,7 +111,7 @@ def train_sre(args):
                 is_valid = batch[3].to(args.device)
                 objects_to_remove = batch[4].to(args.device)
                 
-                pred = model(target, object_masks, bbox)
+                pred, valid_mask = model(target, object_masks, bbox)
 
                 # Compute loss in the whole scene
                 loss = compute_loss(pred, objects_to_remove, valid_mask) 
