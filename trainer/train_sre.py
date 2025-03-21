@@ -73,7 +73,7 @@ def train_sre(args):
     model = SpatialEncoder(args).to(args.device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.05)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.05)
     
     lowest_loss = float('inf')
     best_ckpt_info = None
@@ -85,21 +85,14 @@ def train_sre(args):
             object_masks = batch[1].to(args.device)
 
             bbox = batch[2].to(args.device)
-            objects_to_remove = batch[3].to(args.device)
+            is_valid = batch[3].to(args.device)
+            objects_to_remove = batch[4].to(args.device)
             
             pred, valid_mask = model(target, object_masks, bbox)
 
             # Compute loss in the whole scene
-            loss = compute_loss(pred, objects_to_remove, valid_mask) 
-            # loss = criterion(pred, objects_to_remove)
+            loss = compute_loss(pred, objects_to_remove, valid_mask)
             
-            # loss = torch.sum(loss)
-            # epoch_loss['train'] += loss.detach().cpu().numpy()
-
-            # if step % args.step == 0:
-            #     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-            #     logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -115,13 +108,13 @@ def train_sre(args):
                 object_masks = batch[1].to(args.device)
 
                 bbox = batch[2].to(args.device)
-                objects_to_remove = batch[3].to(args.device)
-
-                pred, valid_mask = model(target, object_masks, bbox)
+                is_valid = batch[3].to(args.device)
+                objects_to_remove = batch[4].to(args.device)
+                
+                pred = model(target, object_masks, bbox)
 
                 # Compute loss in the whole scene
                 loss = compute_loss(pred, objects_to_remove, valid_mask) 
-                # loss = criterion(pred, objects_to_remove)
 
                 # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
@@ -131,10 +124,10 @@ def train_sre(args):
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         scheduler.step()
-        
+
         logging.info('Epoch {}: training loss = {:.6f} '
-              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
-                                                  epoch_loss['val'] / len(data_loaders['val'])))
+              ', validation loss = {:.6f}, lr = {}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+                                                  epoch_loss['val'] / len(data_loaders['val']), scheduler.get_last_lr()))
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 

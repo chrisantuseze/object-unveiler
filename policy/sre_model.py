@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import torchvision
+import torchvision.transforms as transforms
 
 class SpatialEncoder(nn.Module):
     def __init__(self, args, hidden_dim=1024, num_layers=6, nhead=8, dropout=0.2):
@@ -60,6 +61,8 @@ class SpatialEncoder(nn.Module):
             SpatialTransformerLayer(hidden_dim//2, nhead, dropout)
             for _ in range(num_layers)
         ])
+
+        self.normalize = transforms.Normalize(mean=(0.5,), std=(0.5,))
     
     def calculate_iou(self, box, target_mask):
         """
@@ -132,6 +135,9 @@ class SpatialEncoder(nn.Module):
         
     def forward(self, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
+        
+        target_mask = self.normalize(target_mask)
+        object_masks = self.normalize(object_masks)
         
         # Extract visual features
         target_feat = self.resnet(target_mask.repeat(1, 3, 1, 1)).view(B, 1, -1)
