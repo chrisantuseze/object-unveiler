@@ -44,7 +44,7 @@ def train_ae(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    # transition_dirs = transition_dirs[:3000]
+    transition_dirs = transition_dirs[:4000]
             
     # split data to training/validation
     random.seed(0)
