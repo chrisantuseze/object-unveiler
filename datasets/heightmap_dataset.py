@@ -25,7 +25,7 @@ class HeightmapDataset(data.Dataset):
         # heightmap = cv2.imread(os.path.join(self.dataset_dir, self.dir_ids[idx], 'heightmap.exr'), -1)
         # action = pickle.load(open(os.path.join(self.dataset_dir, self.dir_ids[idx], 'action'), 'rb'))
 
-        heightmap, _, action = self.memory.load(self.dir_ids[idx])
+        heightmap, _, action = self.memory.load(self.dir_ids, idx)
 
         diagonal_length = float(heightmap.shape[0]) * np.sqrt(2)
         diagonal_length = np.ceil(diagonal_length / 16) * 16
