@@ -2,7 +2,8 @@ from copy import deepcopy
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-from policy.models_target_new import ActionDecoder, Regressor
+# from policy.models_target_new import ActionDecoder, Regressor
+from policy.models_original import ResFCN, Regressor
 
 import torch
 import torch.optim as optim
@@ -74,7 +75,8 @@ def train_ae(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    model = ActionDecoder(args).to(args.device)
+    # model = ActionDecoder(args).to(args.device)
+    model = ResFCN().to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
@@ -91,7 +93,8 @@ def train_ae(args):
             rotations = batch[2]
             y = batch[3].to(args.device, dtype=torch.float)
 
-            pred = model(x, target, rotations)
+            # pred = model(x, target, rotations)
+            pred = model(x, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -112,7 +115,8 @@ def train_ae(args):
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
-                pred = model(x, target, rotations)
+                # pred = model(x, target, rotations)
+                pred = model(x, rotations)
                 loss = criterion(pred, y)
 
                 # loss = torch.sum(loss)
