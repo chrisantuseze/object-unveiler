@@ -35,8 +35,8 @@ def train_fcn_net(args):
     # train_ids = train_ids[::4]
     # val_ids = val_ids[::4]
 
-    train_dataset = HeightmapDataset(args.dataset_dir, train_ids)
-    val_dataset = HeightmapDataset(args.dataset_dir, val_ids)
+    train_dataset = HeightmapDataset(args, train_ids)
+    val_dataset = HeightmapDataset(args, val_ids)
 
     data_loader_train = data.DataLoader(train_dataset,
                                         batch_size=args.batch_size,
@@ -105,8 +105,8 @@ def train_regressor(args):
     train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
     val_ids = transition_dirs[int(args.split_ratio * len(transition_dirs)):]
 
-    train_dataset = ApertureDataset(args.dataset_dir, train_ids)
-    val_dataset = ApertureDataset(args.dataset_dir, val_ids)
+    train_dataset = ApertureDataset(args, train_ids)
+    val_dataset = ApertureDataset(args, val_ids)
 
     data_loader_train = data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
