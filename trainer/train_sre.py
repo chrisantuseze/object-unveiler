@@ -42,7 +42,7 @@ def train_sre(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:3000]
+    # transition_dirs = transition_dirs[:3000]
     
     # split data to training/validation
     random.seed(0)
@@ -71,9 +71,10 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.05)
     
-    criterion = nn.CrossEntropyLoss()
     lowest_loss = float('inf')
     best_ckpt_info = None
     for epoch in range(args.epochs):
@@ -93,11 +94,11 @@ def train_sre(args):
             # loss = criterion(pred, objects_to_remove)
             
             # loss = torch.sum(loss)
-            epoch_loss['train'] += loss.detach().cpu().numpy()
+            # epoch_loss['train'] += loss.detach().cpu().numpy()
 
-            if step % args.step == 0:
-                # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
+            # if step % args.step == 0:
+            #     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
+            #     logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
 
             optimizer.zero_grad()
             loss.backward()
@@ -106,8 +107,9 @@ def train_sre(args):
             debug_params(model)
 
         model.eval()
-        # epoch_loss = {'train': 0.0, 'val': 0.0}
-        for phase in ['val']:
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        # for phase in ['val']:
+        for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
                 target = batch[0].to(args.device)
                 object_masks = batch[1].to(args.device)
@@ -128,6 +130,8 @@ def train_sre(args):
                     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
+        scheduler.step()
+        
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
