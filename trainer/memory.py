@@ -107,32 +107,23 @@ class ReplayBuffer:
 
     def store(self, transition):
         folder_name = os.path.join(self.save_dir, 'transition_' + str(self.count).zfill(5))
-
         if os.path.exists(folder_name):
             # Try to remove the tree; if it fails, throw an error using try...except.
             try:
                 shutil.rmtree(folder_name)
             except OSError as e:
                 pass
-
         os.mkdir(folder_name)
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
-        cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
-
-        # cv2.imwrite(os.path.join(folder_name, 'depth_heightmap.png'), transition['depth_heightmap'])
-        # cv2.imwrite(os.path.join(folder_name, 'color_heightmap.png'), transition['color_heightmap'])
-        cv2.imwrite(os.path.join(folder_name, 'extracted_target.png'), transition['extracted_target'])
-
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
 
-        # Save everything that obs contains
-        for i in range(len(transition['obs']['color'])):
-            cv2.imwrite(os.path.join(folder_name, 'color_' + str(i) + '.png'), transition['obs']['color'][i])
-            cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
-            cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
-
-        pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
+        # # Save everything that obs contains
+        # for i in range(len(transition['obs']['color'])):
+        #     cv2.imwrite(os.path.join(folder_name, 'color_' + str(i) + '.png'), transition['obs']['color'][i])
+        #     cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
+        #     cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
+        # pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 
         self.buffer_ids.append(self.count)
         if self.count < self.buffer_size:
@@ -148,7 +139,7 @@ class ReplayBuffer:
             logging.info(e)
             idx += 1
 
-        return heightmap, target_mask, action
+        return heightmap, action
 
     def sample(self, given_batch_size=0): # authors did not use given_batch_size
         batch_size = self.count if self.count < given_batch_size else given_batch_size

@@ -3,6 +3,7 @@ import pickle
 import shutil
 
 import numpy as np
+import cv2
 
 from trainer.memory import ReplayBuffer
 
@@ -48,6 +49,40 @@ def load_episode(dataset_dir, episode):
         print(f"{e} - Failed episode: {episode}")
 
     return None
+
+def main1():
+    dataset_dir = "save/ppg-dataset"
+    transition_dirs = os.listdir(dataset_dir)
+    
+    for file_ in transition_dirs:
+        if not file_.startswith("transition"):
+            transition_dirs.remove(file_)
+
+    print(len(transition_dirs))
+
+    mem = ReplayBuffer(save_dir="save/ppg-dataset-clean")
+
+    count = 0
+    for transition in transition_dirs:
+        path = os.path.join(dataset_dir, transition)
+        if os.listdir(path):
+            try:
+                state = cv2.imread(os.path.join(path, 'heightmap.exr'), -1)
+                action = pickle.load(open(os.path.join(path, 'action'), 'rb'))
+
+                trans = {'state': state, 'action': action}
+
+                mem.store(trans)
+            except Exception as e:
+                print(e)
+            continue
+
+        count += 1
+        
+
+    print(count)
+
+    
 
 def main():
     # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2"
@@ -109,4 +144,4 @@ def main():
 
     print("Total count:", count)
 
-main()
+main1()
