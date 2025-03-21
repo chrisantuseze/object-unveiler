@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 class SpatialEncoder(nn.Module):
-    def __init__(self, args, hidden_dim=1024, num_layers=6, nhead=8, dropout=0.2):
+    def __init__(self, args, hidden_dim=1024, num_layers=4, nhead=8, dropout=0.1):
         super(SpatialEncoder, self).__init__()
         self.args = args
         self.hidden_dim = hidden_dim

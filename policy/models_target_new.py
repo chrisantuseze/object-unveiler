@@ -32,7 +32,7 @@ class ResidualBlock(nn.Module):
         self.bn1 = nn.GroupNorm(num_groups=1, num_channels=out_planes)
 
         self.conv2 = conv3x3(out_planes, out_planes)
-        self.bn2 = nn.BatchNorm2d(out_planes)
+        # self.bn2 = nn.BatchNorm2d(out_planes)
 
         self.bn2 = nn.GroupNorm(num_groups=1, num_channels=out_planes)  # Similar to LayerNorm
 
@@ -50,7 +50,7 @@ class ResidualBlock(nn.Module):
         identity = x
 
         out = self.conv1(x)
-        out = F.dropout(out, p=0.1)
+        out = F.dropout(out, p=0.2)
         out = F.relu(self.bn1(out))
         # out = F.relu(out)
 
@@ -61,7 +61,7 @@ class ResidualBlock(nn.Module):
             identity = self.downsample(identity)
 
         out += identity
-        out = F.dropout(out, p=0.1)
+        out = F.dropout(out, p=0.2)
         out = F.relu(out)
 
         return out

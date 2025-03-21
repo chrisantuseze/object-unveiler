@@ -75,9 +75,9 @@ def train_ae(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = ActionDecoder(args).to(args.device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
 
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.05)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 
     criterion = nn.BCELoss(reduction='mean')
     lowest_loss = float('inf')
