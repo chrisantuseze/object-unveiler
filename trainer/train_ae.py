@@ -81,7 +81,7 @@ def train_ae(args):
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 
-    criterion = nn.BCELoss(reduction='mean')
+    criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
     best_ckpt_info = None
     for epoch in range(args.epochs):
@@ -98,7 +98,7 @@ def train_ae(args):
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
-            # loss = torch.sum(loss)
+            loss = torch.sum(loss)
 
             optimizer.zero_grad()
             loss.backward()
@@ -119,7 +119,7 @@ def train_ae(args):
                 pred = model(x, rotations)
                 loss = criterion(pred, y)
 
-                # loss = torch.sum(loss)
+                loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
                 if step % args.step == 0:
