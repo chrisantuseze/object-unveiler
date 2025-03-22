@@ -66,9 +66,11 @@ class SREDataset(data.Dataset):
         target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
         target_mask = target_mask.astype(np.float32)
-        target_mask = np.expand_dims(target_mask, axis=0)
-
         object_masks = np.array(object_masks).astype(np.float32)
+
+        # self.show_images(object_masks, target_mask)
+
+        target_mask = np.expand_dims(target_mask, axis=0)
         _processed_obj_masks = np.expand_dims(object_masks, axis=1)
 
         # pad object masks
@@ -81,6 +83,21 @@ class SREDataset(data.Dataset):
     def __len__(self):
         return len(self.dir_ids)
     
+
+    def show_images(self, obj_masks, target_mask):
+        print(obj_masks.shape)
+        fig, ax = plt.subplots(obj_masks.shape[0] + 1)
+
+        ax[0].imshow(target_mask)
+
+        k = 1
+        for j in range(obj_masks.shape[0]):
+            obj_mask = obj_masks[j]
+            ax[k].imshow(obj_mask)
+            k += 1
+
+        plt.show()
+
     def pad(self, object_masks, bboxes):
         N, C, H, W = object_masks.shape
         object_masks = np.array(object_masks)

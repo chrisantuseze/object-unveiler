@@ -2,7 +2,7 @@ import os
 import pickle
 from policy.models_attn2 import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
-from policy.models_target_new import Regressor, ActionDecoder
+from policy.ae_model import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
 import torch.optim as optim

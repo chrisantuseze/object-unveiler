@@ -42,7 +42,7 @@ def train_sre(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:4000]
+    # transition_dirs = transition_dirs[:4000]
     
     # split data to training/validation
     random.seed(0)
@@ -71,7 +71,7 @@ def train_sre(args):
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
     model = SpatialEncoder(args).to(args.device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
     
@@ -121,7 +121,7 @@ def train_sre(args):
 
                 if step % args.step == 0:
                     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
+                    pass
 
         scheduler.step()
 

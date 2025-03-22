@@ -93,8 +93,7 @@ def train_ae(args):
             rotations = batch[2]
             y = batch[3].to(args.device, dtype=torch.float)
 
-            # pred = model(x, target, rotations)
-            pred = model(x, rotations)
+            pred = model(x, target, rotations)
 
             # Compute loss in the whole scene
             loss = criterion(pred, y)
@@ -115,15 +114,11 @@ def train_ae(args):
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
-                # pred = model(x, target, rotations)
-                pred = model(x, rotations)
+                pred = model(x, target, rotations)
                 loss = criterion(pred, y)
 
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
-
-                if step % args.step == 0:
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         scheduler.step()
 
