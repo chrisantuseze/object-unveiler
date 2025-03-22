@@ -2,8 +2,7 @@ from copy import deepcopy
 import os
 import random
 # from policy.models_target import ResFCN, Regressor
-# from policy.models_target_new import ActionDecoder, Regressor
-from policy.models_original import ResFCN, Regressor
+from policy.ae_model import ActionDecoder, Regressor
 
 import torch
 import torch.optim as optim
@@ -45,7 +44,7 @@ def train_ae(args):
         if not file_.startswith("episode"):
             transition_dirs.remove(file_)
 
-    transition_dirs = transition_dirs[:4000]
+    # transition_dirs = transition_dirs[:4000]
             
     # split data to training/validation
     random.seed(0)
@@ -75,8 +74,7 @@ def train_ae(args):
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
 
-    # model = ActionDecoder(args).to(args.device)
-    model = ResFCN().to(args.device)
+    model = ActionDecoder(args).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
@@ -133,7 +131,7 @@ def train_ae(args):
 
         if lowest_loss > epoch_loss['val']:
             lowest_loss = epoch_loss['val']
-            best_ckpt_info = (epoch, lowest_loss, deepcopy(model.state_dict()))
+            best_ckpt_info = (epoch, lowest_loss/len(data_loaders['val']), deepcopy(model.state_dict()))
             torch.save(model.state_dict(), os.path.join(save_path, f'ae_model_best.pt'))
 
     # save best checkpoint
