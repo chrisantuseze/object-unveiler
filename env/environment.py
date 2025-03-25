@@ -45,9 +45,10 @@ class Environment:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         # self.nr_objects = [11, 15] #[5, 8]
+        # self.nr_objects = [2, 4]
         # self.nr_objects = [4, 6]
-        self.nr_objects = [4, 8]
-        # self.nr_objects = [6, 9]
+        # self.nr_objects = [4, 8]
+        self.nr_objects = [6, 9]
         # self.nr_objects = [2, 9]
         # self.nr_objects = [9, 12]
 
@@ -135,7 +136,7 @@ class Environment:
         self.remove_flat_objs()
 
         # pack objects closer to the middle
-        self.centralize_objs(force_magnitude=2)
+        self.centralize_objs(force_magnitude=1)#2)
 
         # remove flat objects
         self.remove_flat_objs()
@@ -803,7 +804,7 @@ class Environment:
             for obj in self.objects:
                 pos, quat = p.getBasePositionAndOrientation(obj.body_id)
 
-               # ignore objects that have fallen off the table
+                # ignore objects that have fallen off the table
                 if pos[2] < 0:
                     continue 
 

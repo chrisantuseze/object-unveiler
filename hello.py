@@ -3,33 +3,28 @@ import pickle
 import shutil
 
 import numpy as np
-import cv2
-
-from trainer.memory import ReplayBuffer
-
 
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-# folder_path = "save/pc-ou-dataset/"
-# folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/single-target-grasping/target-ppg-using-9-12-objects/ppg-ou-dataset-9-12"
-# folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
-# id = 5497
+folder_path = "save/pc-ou-dataset/"
+folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
+id = 5497
 
 
-# folder_path = dir + folder_path
-# # Loop through the files in the folder
-# for i, filename in enumerate(os.listdir(folder_path)):
-#     old_name = os.path.join(folder_path, filename)
+folder_path = dir + folder_path
+# Loop through the files in the folder
+for i, filename in enumerate(os.listdir(folder_path)):
+    old_name = os.path.join(folder_path, filename)
     
-#     arr = filename.split("_")
-#     new_filename = arr[0] + "_" + str(id).zfill(5)
+    arr = filename.split("_")
+    new_filename = arr[0] + "_" + str(id).zfill(5)
 
-#     # Rename the file
-#     os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
-#     id += 1
+    # Rename the file
+    os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_filename))
+    id += 1
 
-# print(id)
+print(id)
 
 def load_episode(dataset_dir, episode):
     # Ensure there's a valid image. If there's none, search through the timesteps
@@ -51,6 +46,9 @@ def load_episode(dataset_dir, episode):
     return None
 
 def main1():
+    from trainer.memory import ReplayBuffer
+    import cv2
+
     dataset_dir = "save/ppg-dataset"
     transition_dirs = os.listdir(dataset_dir)
     
@@ -72,7 +70,7 @@ def main1():
 
                 trans = {'state': state, 'action': action}
 
-                mem.store(trans)
+                # mem.store(trans)
             except Exception as e:
                 print(e)
             continue
@@ -144,4 +142,4 @@ def main():
 
     print("Total count:", count)
 
-main1()
+# main1()

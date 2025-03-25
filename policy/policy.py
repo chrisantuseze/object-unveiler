@@ -53,8 +53,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        # self.policy, self.stats = self.make_act_policy()
-        self.policy, self.stats = None, None
+        self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -595,16 +595,15 @@ class Policy:
     def exploit_unveiler(self, state, color_image, target_mask):
         processed_target, processed_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(color_image, target_mask)
         
-        if len(processed_masks) > 3:
-            logits, _ = self.sre_model(processed_target, processed_obj_masks, bboxes)
-            _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-            obstacle_id = top_indices.item()
-            print("preds", obstacle_id)
+        logits, _ = self.sre_model(processed_target, processed_obj_masks, bboxes)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        obstacle_id = top_indices.item()
+        print("preds", obstacle_id)
 
-            if obstacle_id < len(processed_masks):
-                obstacle_mask = processed_masks[obstacle_id]
-                obstacle = general_utils.preprocess_target(obstacle_mask, state)
-                obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+        if obstacle_id < len(processed_masks):
+            obstacle_mask = processed_masks[obstacle_id]
+            obstacle = general_utils.preprocess_target(obstacle_mask, state)
+            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
 
         else:
             obstacle_mask = target_mask

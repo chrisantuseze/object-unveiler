@@ -15,7 +15,7 @@ class ReplayBuffer:
     def __init__(self, save_dir, buffer_size=100000) -> None:
         self.buffer_size = buffer_size
         self.random = Random()
-        self.count = 645
+        self.count = 0
         self.save_dir = save_dir
         self.buffer_ids = []
 
