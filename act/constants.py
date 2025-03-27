@@ -7,7 +7,8 @@ SIM_TASK_CONFIGS = {
         'dataset_dir': DATA_DIR + '/act-dataset',
         'num_episodes': 50,
         'episode_len': 1170, #from env
-        'camera_names': ['target', 'scene_image']
+        # 'camera_names': ['target', 'scene_image']
+        'camera_names': ['target']
     },
 }
 

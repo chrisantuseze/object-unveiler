@@ -170,9 +170,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
             elif cam_name == 'target':
                 image_dict[cam_name] = object_mask.astype(np.float32)
 
-            # if cam_name == 'target':
-            #     image_dict["target"] = object_mask.astype(np.float32)
-
         # new axis for different cameras
         all_cam_images = []
         for cam_name in self.camera_names:
