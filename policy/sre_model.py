@@ -166,7 +166,7 @@ class SpatialEncoder(nn.Module):
         logits = self.output_projection(combined_features.reshape(B, -1)) # Shape: [B, N]
 
         # Mask out padded positions with large negative values
-        logits = logits.masked_fill(attention_mask, float('-inf'))
+        logits = logits.masked_fill(attention_mask, -1e9)
 
         return logits, valid_mask
 
