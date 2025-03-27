@@ -333,7 +333,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         memory.store_episode(episode_data_list)
         print("Saved the only successful grasp")
         
-        with open('episode_info.txt', 'a') as file:
+        with open('act_episode_info.txt', 'a') as file:
             file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
     else:
         print("Episode was not successful.")

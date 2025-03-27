@@ -258,7 +258,10 @@ class Environment:
                 print("Collision occurred!")
                 self.current_state = AdaptiveActionState.MOVE_UP
                 self.elapsed_time = 0
-                return self.get_observation(), {'collision': self.is_in_contact, 'stable': None, 'num_contacts': None, 'eoe': False}
+
+                obs = self.get_observation()
+                obs['traj_data'] = [(joint_positions, {'color': []})]
+                return obs, {'collision': self.is_in_contact, 'stable': None, 'num_contacts': None, 'eoe': False}
 
             pos_error = self.calculate_position_error(joint_positions, self.target_pos)
             min_time_reached = self.elapsed_time >= min_duration * 0.5

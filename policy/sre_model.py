@@ -144,11 +144,11 @@ class SpatialEncoder(nn.Module):
         object_masks_flat = object_masks.repeat(1, 1, 3, 1, 1).view(-1, 3, H, W)
         object_feats = self.resnet(object_masks_flat).view(B, N, -1)
 
-        objects_rel, padding_mask = self.compute_edge_features(bboxes, object_masks, target_mask)
+        objects_rel, valid_mask = self.compute_edge_features(bboxes, object_masks, target_mask)
         spatial_embedding = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
 
-        # padding_mask is True for valid objects, False for padding
-        attention_mask = ~padding_mask  # For transformer, mask is True for positions to be ignored
+        # valid_mask is True for valid objects, False for padding
+        attention_mask = ~valid_mask  # For transformer, mask is True for positions to be ignored
         
         # Project features for attention
         query = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
@@ -166,9 +166,9 @@ class SpatialEncoder(nn.Module):
         logits = self.output_projection(combined_features.reshape(B, -1)) # Shape: [B, N]
 
         # Mask out padded positions with large negative values
-        logits = logits.masked_fill(attention_mask, -1e9)
+        logits = logits.masked_fill(attention_mask, float('-inf'))
 
-        return logits, padding_mask
+        return logits, valid_mask
 
 class SpatialTransformerLayer(nn.Module):
     def __init__(self, hidden_dim, nhead, dropout=0.1):
@@ -226,26 +226,29 @@ def compute_loss(logits, targets, valid_mask):
         targets: Ground truth labels [B]
         valid_mask: Binary mask indicating real objects [B, N]
     """
-    # For standard cross-entropy, we need to ensure targets are within valid range
-    batch_size = logits.size(0)
-    losses = []
+    # # For standard cross-entropy, we need to ensure targets are within valid range
+    # batch_size = logits.size(0)
+    # losses = []
     
-    for i in range(batch_size):
-        valid_indices = torch.where(valid_mask[i])[0]
-        num_valid = valid_indices.size(0)
+    # for i in range(batch_size):
+    #     valid_indices = torch.where(valid_mask[i])[0]
+    #     num_valid = valid_indices.size(0)
         
-        if num_valid > 0 and targets[i] < num_valid:
-            # If target is within valid range, compute normal cross-entropy
-            valid_logits = logits[i, valid_indices].unsqueeze(0)
-            valid_target = torch.tensor([torch.where(valid_indices == targets[i])[0][0]], 
-                                       device=logits.device)
-            losses.append(F.cross_entropy(valid_logits, valid_target))
-        else:
-            # Skip samples with invalid targets
-            continue
+    #     if num_valid > 0 and targets[i] < num_valid:
+    #         # If target is within valid range, compute normal cross-entropy
+    #         valid_logits = logits[i, valid_indices].unsqueeze(0)
+    #         valid_target = torch.tensor([torch.where(valid_indices == targets[i])[0][0]], 
+    #                                    device=logits.device)
+    #         losses.append(F.cross_entropy(valid_logits, valid_target))
+    #     else:
+    #         # Skip samples with invalid targets
+    #         continue
     
-    # Return mean loss
-    if losses:
-        return torch.stack(losses).mean()
-    else:
-        return torch.tensor(0.0, device=logits.device, requires_grad=True)
+    # # Return mean loss
+    # if losses:
+    #     return torch.stack(losses).mean()
+    # else:
+    #     return torch.tensor(0.0, device=logits.device, requires_grad=True)
+    # Standard cross-entropy loss
+    # The previous masking ensures padded positions don't influence the loss
+    return F.cross_entropy(logits, targets)
