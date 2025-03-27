@@ -77,7 +77,7 @@ def train_ae(args):
     model = ActionDecoder(args).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.05)
 
     criterion = nn.BCELoss(reduction='none')
     lowest_loss = float('inf')
