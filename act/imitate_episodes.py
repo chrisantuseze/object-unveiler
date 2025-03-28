@@ -6,7 +6,7 @@ import argparse
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
-from einops import rearrange
+# from einops import rearrange
 
 from act.constants import DT
 from act.constants import PUPPET_GRIPPER_JOINT_OPEN
@@ -150,6 +150,8 @@ def make_optimizer(policy_class, policy):
 
 
 def get_image(ts, camera_names):
+    from einops import rearrange
+    
     curr_images = []
     for cam_name in camera_names:
         curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
