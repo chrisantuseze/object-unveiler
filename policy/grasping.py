@@ -286,7 +286,7 @@ def compute_singulation(before_masks, after_masks):
     bbox_area_after = bounding_box_area(after_masks)
 
     # Clutter metrics
-    clutter_reduction = avg_dist_after - avg_dist_before
+    clutter_reduction = (avg_dist_after - avg_dist_before) / avg_dist_before if avg_dist_before > 0 else 0
     density_reduction = (bbox_area_before - bbox_area_after) / bbox_area_before if bbox_area_before > 0 else 0
 
     # return {

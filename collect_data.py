@@ -19,8 +19,8 @@ from utils.constants import *
 from env.env_components import ActionState, AdaptiveActionState
 
 def collect_episodic_dataset(args, params):
-    # save_dir = "save/pc-ou-dataset"
-    save_dir = 'save/act-dataset'
+    save_dir = "save/pc-ou-dataset"
+    # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -39,7 +39,7 @@ def collect_episodic_dataset(args, params):
 
     for i in range(args.n_samples):
         try:
-            run_episode_act(i, policy, segmenter, env, memory, rng)
+            run_episode(i, policy, segmenter, env, memory, rng)
         except Exception as e:
             print(e)
 

@@ -12,7 +12,7 @@ python3 main.py \
 --ae_model 'save/ae/ae_model_best.pt' \
 --sre_model 'save/sre/sre_model_best.pt' \
 --n_scenes 50 \
---chunk_size 10 \
+--chunk_size 5 \
 --temporal_agg \
 --seed 17
 
@@ -27,7 +27,7 @@ python3 main.py \
 python3 collect_data.py \
 --singulation_condition \
 --n_samples 30000 \
---chunk_size 10 \
+--chunk_size 5 \
 --seed 1
 
 python3 main_act.py \

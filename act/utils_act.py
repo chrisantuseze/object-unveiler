@@ -281,8 +281,11 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
     print(f"Total number of episodes: {len(transition_dirs)}")
 
     split_index = int(config['split_ratio'] * len(transition_dirs))
-    train_ids = transition_dirs[:split_index]
-    val_ids = transition_dirs[split_index:]
+    # train_ids = transition_dirs[:split_index]
+    # val_ids = transition_dirs[split_index:]
+
+    train_ids = transition_dirs
+    val_ids = transition_dirs
 
     # this ensures that the split is done properly without causing input mismatch error
     data_length = (len(train_ids)//config['batch_size']) * config['batch_size']

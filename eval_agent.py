@@ -197,6 +197,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
+    episode_seed = 710190855
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -219,7 +220,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = initial_masks[4], 4
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
