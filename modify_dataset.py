@@ -20,17 +20,22 @@ import policy.grasping as grasping
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 index = 0
+count_no_change = 0
 
 def modify_episode(segmenter: ObjectSegmenter, episode_dir):
     global index
+    global count_no_change
     try:
         episode_data = pickle.load(open(os.path.join(dataset_dir, episode_dir), 'rb'))
 
         episode_data_list = []
+
+        is_no_change = False
         for data in episode_data:
             objects_to_remove = grasping.find_obstacles_to_remove(data['target_id'], data['object_masks'])
             if objects_to_remove == data['objects_to_remove']:
                 print("No change in objects to remove for episode:", episode_dir)
+                is_no_change = True
 
             transition = {
                 'color_obs': data['color_obs'],
@@ -54,6 +59,9 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
         logging.info(f"{index} - Episode with dir {episode_dir} updated...")
 
         index += 1
+
+        if is_no_change:
+            count_no_change += 1
         
     except Exception as e:
         logging.info(e, "- Failed episode:", episode_dir)
@@ -161,5 +169,5 @@ if __name__ == "__main__":
         # modify_episode_act(episode_dir, i)
         modify_episode(segmenter, episode_dir)
 
-    logging.info(f"Dataset modified and saved in {new_dir}")
+    logging.info(f"Dataset modified and saved in {new_dir}. Total episodes with no change: {count_no_change}.")
     
