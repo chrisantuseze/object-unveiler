@@ -3,10 +3,10 @@ import random
 import numpy as np
 import torch
 import os
-import h5py
+# import h5py
 from torch.utils.data import TensorDataset, DataLoader
 
-import IPython
+# import IPython
 
 from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
@@ -15,7 +15,7 @@ import cv2
 
 from env.env_components import ActionState, AdaptiveActionState
 
-e = IPython.embed
+# e = IPython.embed
 
 class EpisodicDataset(torch.utils.data.Dataset):
     def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats):
@@ -199,6 +199,8 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
     
     
 def get_norm_stats(dataset_dir, num_episodes):
+    import h5py
+
     all_qpos_data = []
     all_action_data = []
     for episode_idx in range(num_episodes):

@@ -9,8 +9,8 @@ import torchvision.transforms as transforms
 # )
 
 import act.detr.main as main
-import IPython
-e = IPython.embed
+# import IPython
+# e = IPython.embed
 
 class ACTPolicy(nn.Module):
     def __init__(self, args_override):

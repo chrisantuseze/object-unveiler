@@ -10,8 +10,8 @@ from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
 from scripted_policy import PickAndTransferPolicy, InsertionPolicy
 
-import IPython
-e = IPython.embed
+# import IPython
+# e = IPython.embed
 
 
 def main(args):

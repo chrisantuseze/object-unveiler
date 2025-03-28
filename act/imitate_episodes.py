@@ -20,8 +20,8 @@ from act.sim_env import BOX_POSE
 
 from torch.utils.tensorboard import SummaryWriter
 
-import IPython
-e = IPython.embed
+# import IPython
+# e = IPython.embed
 
 def main(args):
     set_seed(1)
@@ -151,7 +151,7 @@ def make_optimizer(policy_class, policy):
 
 def get_image(ts, camera_names):
     from einops import rearrange
-    
+
     curr_images = []
     for cam_name in camera_names:
         curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')

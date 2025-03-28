@@ -7,8 +7,8 @@ import argparse
 import matplotlib.pyplot as plt
 from act.constants import DT
 
-import IPython
-e = IPython.embed
+# import IPython
+# e = IPython.embed
 
 JOINT_NAMES = ["waist", "shoulder", "elbow", "forearm_roll", "wrist_angle", "wrist_rotate"]
 STATE_NAMES = JOINT_NAMES + ["gripper"]
