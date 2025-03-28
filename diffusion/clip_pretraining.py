@@ -100,7 +100,7 @@ def modified_resnet18(features_per_group=16) -> nn.Module:
     resnet18 = replace_bn_with_gn(resnet18, features_per_group=features_per_group)
     return resnet18    
 
-import h5py
+# import h5py
 import os
 import cv2
 from torchvision.transforms import Normalize

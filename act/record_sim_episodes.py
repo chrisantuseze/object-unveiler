@@ -3,7 +3,7 @@ import os
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-import h5py
+# import h5py
 
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, SIM_TASK_CONFIGS
 from ee_sim_env import make_ee_sim_env
