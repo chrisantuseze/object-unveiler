@@ -9,9 +9,9 @@ from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN
 from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 
 from utils_act import sample_box_pose, sample_insertion_pose
-from dm_control import mujoco
-from dm_control.rl import control
-from dm_control.suite import base
+# from dm_control import mujoco
+# from dm_control.rl import control
+# from dm_control.suite import base
 
 # import IPython
 # e = IPython.embed
