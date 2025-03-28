@@ -16,7 +16,7 @@ from act.utils_act import compute_dict_mean, set_seed, detach_dict # helper func
 from act.policy import ACTPolicy, CNNMLPPolicy
 from act.visualize_episodes import save_videos
 
-from act.sim_env import BOX_POSE
+# from act.sim_env import BOX_POSE
 
 from torch.utils.tensorboard import SummaryWriter
 
