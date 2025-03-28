@@ -34,7 +34,6 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
         for data in episode_data:
             objects_to_remove = grasping.find_obstacles_to_remove(data['target_id'], data['object_masks'])
             if objects_to_remove == data['objects_to_remove']:
-                print("No change in objects to remove for episode:", episode_dir)
                 is_no_change = True
 
             transition = {
