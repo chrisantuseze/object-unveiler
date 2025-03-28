@@ -65,7 +65,7 @@ def train_sre(args):
     val_dataset = SREDataset(args, val_ids)
     data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True)
 
-    args.step = int(len(train_ids)/(4*args.batch_size))
+    args.step = int(len(train_ids)/(2*args.batch_size))
 
     data_loaders = {'train': data_loader_train, 'val': data_loader_val}
     logging.info('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
@@ -121,7 +121,7 @@ def train_sre(args):
 
                 if step % args.step == 0:
                     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-                    pass
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {epoch_loss[phase]/len(epoch_loss[phase])}")
 
         scheduler.step()
 
