@@ -42,8 +42,8 @@ def find_obstacles_to_remove(target_index, segmentation_masks):
     
     sorted_indices = sorted(range(len(combined_distances)), key=lambda k: combined_distances[k])
 
-    if sorted_indices[0] == target_index:
-        sorted_indices = sorted_indices[1:]
+    # if sorted_indices[0] == target_index:
+    #     sorted_indices = sorted_indices[1:]
     
     return sorted_indices
 

@@ -28,6 +28,10 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
 
         episode_data_list = []
         for data in episode_data:
+            objects_to_remove = grasping.find_obstacles_to_remove(data['target_id'], data['object_masks'])
+            if objects_to_remove == data['objects_to_remove']:
+                print("No change in objects to remove for episode:", episode_dir)
+
             transition = {
                 'color_obs': data['color_obs'],
                 'state': data['state'],
@@ -41,7 +45,7 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 'label': data['label'],
                 'bboxes': data['bboxes'],
                 'target_id': data['target_id'],
-                'objects_to_remove': data['objects_to_remove'],
+                'objects_to_remove': objects_to_remove,
             }
 
             episode_data_list.append(transition)
@@ -143,7 +147,7 @@ if __name__ == "__main__":
         #     episode_dirs.remove(file_)
 
 
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop-sre"
     # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2-"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
