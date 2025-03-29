@@ -197,7 +197,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
-    episode_seed = 710190855
+    episode_seed = 878115723
     env.seed(episode_seed)
     obs = env.reset()
 
