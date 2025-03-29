@@ -121,7 +121,7 @@ def train_sre(args):
 
                 if step % args.step == 0:
                     # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {epoch_loss[phase]/len(epoch_loss[phase])}")
+                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {epoch_loss[phase]/(step + 1)}")
 
         scheduler.step()
 
