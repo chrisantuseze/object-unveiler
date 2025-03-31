@@ -97,9 +97,6 @@ def train_ae(args):
             loss = criterion(pred, y)
             loss = torch.sum(loss)
 
-            if step % args.step == 0:
-                logging.info(f"train step [{step}/{len(data_loader_train)}]\t Loss: {loss.detach().cpu().numpy()}")
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
