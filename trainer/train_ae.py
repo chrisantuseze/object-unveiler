@@ -120,8 +120,8 @@ def train_ae(args):
                     logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
 
         logging.info('Epoch {}: training loss = {:.6f} '
-              ', validation loss = {:.6f}, lr = {}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
-                                                  epoch_loss['val'] / len(data_loaders['val']), scheduler.get_last_lr()))
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+                                                  epoch_loss['val'] / len(data_loaders['val'])))
         writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
         writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
 
