@@ -429,6 +429,7 @@ if __name__ == "__main__":
         params = yaml.safe_load(stream)
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"You are using {args.device}")
 
     # Writing to a file
     with open('episode_info.txt', 'w') as file:
