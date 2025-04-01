@@ -18,7 +18,7 @@ venv/
 *.log
 *.txt
 
-scripts/
+# scripts/
 # models/
 #assets/
 logs/
