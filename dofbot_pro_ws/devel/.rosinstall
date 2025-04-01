@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/jetson/dofbot_pro_ws/devel/setup.sh
