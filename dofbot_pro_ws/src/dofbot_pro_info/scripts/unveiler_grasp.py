@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
+import yaml
 import rospy
+import cv2
+import time
+import copy
 import numpy as np
 from dofbot_pro_info.msg import ArmJoint
-import time
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
-# import your_policy_module  # Import your policy module
+import utils.logger as logging
+from env.environment import Environment
+from mask_rg.object_segmenter import ObjectSegmenter
+from policy.policy import Policy
 
 class PolicyRobotController:
     def __init__(self):
@@ -30,6 +37,8 @@ class PolicyRobotController:
         
         # Move to home position at startup
         self.move_arm_to_position(self.home_position)
+
+        self.TEST_DIR = "dofbot_pro_ws/src/dofbot_pro_info/scripts"
         
         print("Policy Robot Controller initialized")
     
@@ -213,47 +222,67 @@ class PolicyRobotController:
         }
         return obs
     
-    def run(self):
-        """Main control loop"""
-        rate = rospy.Rate(1)  # 1 Hz, adjust as needed
-        
-        # while not rospy.is_shutdown(): # This should be while target is not grasped
-        #     try:
-        #         # Get state and target info
-        #         state = None  # Initialize your state
-        #         target_mask = None  # Initialize your target mask
-                
-        #         # Execute grasp based on policy
-        #         self.grasp_object(state, target_mask)
-                
-        #         rate.sleep()
-                
-        #     except KeyboardInterrupt:
-        #         print("Shutting down")
-        #         break
-        #     except Exception as e:
-        #         rospy.logerr(f"Error in main loop: {str(e)}")
+    def eval_agent(self, args):
+        print("Running eval...")
+        with open('yaml/bhand.yml', 'r') as stream:
+            params = yaml.safe_load(stream)
 
-        try:
-            # Get state and target info
-            state = None  # Initialize your state
-            target_mask = None  # Initialize your target mask
-            
-            # Execute grasp based on policy
-            self.grasp_object(state, target_mask)
-            
-            rate.sleep()
-            
-        except KeyboardInterrupt:
-            print("Shutting down")
-        except Exception as e:
-            rospy.logerr(f"Error in main loop: {str(e)}")
+        env = Environment(params)
+
+        policy = Policy(args, params)
+        policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
+
+        segmenter = ObjectSegmenter()
+
+        rng = np.random.RandomState()
+        rng.seed(args.seed)
+
+        for i in range(args.n_scenes):
+            episode_seed = rng.randint(0, pow(2, 32) - 1)
+            logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
+
+            self.run(policy, env, segmenter, rng)
 
         rospy.is_shutdown()
+    
+    def run(self, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng):
+        """Main control loop"""
+        rate = rospy.Rate(1)  # 1 Hz, adjust as needed
+
+        processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=self.TEST_DIR)
+        cv2.imwrite(os.path.join(self.TEST_DIR, "initial_scene.png"), pred_mask)
+        cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'][0])
+        cv2.imwrite(os.path.join(self.TEST_DIR, "color1.png"), obs['color'][1])
+
+        target_mask, target_id = None, 1
+
+        max_steps = 6
+        attempts = 0
+        n_prev_masks, count = 0, 0
+        while attempts < max_steps:
+            state = policy.state_representation(obs)
+            action = policy.exploit_unveiler(state, obs['color'][1], target_mask)
+        
+            try:
+                # Get state and target info
+                state = None  # Initialize your state
+                target_mask = None  # Initialize your target mask
+                
+                # Execute grasp based on policy
+                self.grasp_object(state, target_mask)
+
+                processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=self.TEST_DIR)
+                
+                rate.sleep()
+                
+            except KeyboardInterrupt:
+                print("Shutting down")
+            except Exception as e:
+                rospy.logerr(f"Error in main loop: {str(e)}")
 
 if __name__ == '__main__':
     try:
         controller = PolicyRobotController()
-        controller.run()
+        controller.eval_agent()
     except rospy.ROSInterruptException as e:
         rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")

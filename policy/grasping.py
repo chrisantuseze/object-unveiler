@@ -240,7 +240,7 @@ def find_central_object(segmentation_masks):
     print("Central object id is:", central_object_index)
     return central_object_index
 
-def compute_singulation(before_masks, after_masks):
+def compute_singulation_old(before_masks, after_masks):
     """
     Measures the degree of clutter reduction after an object is removed.
 
@@ -294,3 +294,47 @@ def compute_singulation(before_masks, after_masks):
     #     "density_reduction": density_reduction,  # Positive means reduced density
     # }
     return clutter_reduction
+
+def compute_singulation(masks_before, masks_after):
+    # Convert masks to numpy arrays
+    masks_before = np.array(masks_before)
+    masks_after = np.array(masks_after)
+
+    # Calculate total occupied area before and after
+    occupied_before = np.any(masks_before > 0, axis=0).sum()
+    occupied_after = np.any(masks_after > 0, axis=0).sum()
+    
+    # Calculate object overlap/contact before and after
+    # For each pair of objects, count pixels where they touch
+    contact_before = calculate_contact(masks_before)
+    contact_after = calculate_contact(masks_after)
+    
+    # Calculate metrics
+    area_reduction = (occupied_before - occupied_after) / occupied_before
+    contact_reduction = (contact_before - contact_after) / contact_before
+    
+    # return {
+    #     "area_reduction": area_reduction,
+    #     "contact_reduction": contact_reduction,
+    #     "clutter_score": 0.5 * area_reduction + 0.5 * contact_reduction
+    # }
+
+    clutter_score = 0.5 * area_reduction + 0.5 * contact_reduction
+    return clutter_score
+
+def calculate_contact(masks):
+    """Calculate total contact between objects using dilated masks"""
+    n_objects = masks.shape[0]
+    total_contact = 0
+    
+    for i in range(n_objects):
+        for j in range(i+1, n_objects):
+            # Dilate both masks slightly
+            mask_i_dilated = cv2.dilate(masks[i], np.ones((3,3), np.uint8))
+            mask_j = masks[j]
+            
+            # Count intersection pixels (contact area)
+            contact_area = np.logical_and(mask_i_dilated, mask_j).sum()
+            total_contact += contact_area
+            
+    return total_contact

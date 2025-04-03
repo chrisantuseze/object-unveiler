@@ -70,7 +70,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     
     i = 0
     n_prev_masks = count = 0
-    avg_clutter_score = 0.0
+    total_clutter_score = 0.0
 
     max_steps = 6
     while episode_data['attempts'] < max_steps:
@@ -121,8 +121,13 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     logging.info("Target has been grasped!")
                     success_count += 1
 
-                    episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
-                    episode_data['avg_clutter_score'] = avg_clutter_score
+                    final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                    episode_data['final_clutter_score'] = final_clutter_score
+                    episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
+
+                    with open('unveiler_results.txt', 'a') as file:
+                        file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}\n")
+
                 else:
                     logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -144,10 +149,10 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
                 episode_data['final_clutter_score'] = final_clutter_score
-                episode_data['avg_clutter_score'] = avg_clutter_score
+                episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
 
                 with open('unveiler_results.txt', 'a') as file:
-                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {final_clutter_score}, avg_clutter_score: {avg_clutter_score}\n")
+                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}\n")
 
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
@@ -156,7 +161,8 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             break
 
         ############# Calculating scores ##########
-        avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+        total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+        print("Total Clutter Score:", total_clutter_score)
 
         processed_masks = copy.deepcopy(new_masks)
         n_prev_masks = len(processed_masks)
@@ -404,7 +410,7 @@ def eval_agent(args):
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
 
-    env = Environment(params)
+    env = Environment(params, objects_set="unseen")
 
     policy = Policy(args, params)
     policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
@@ -424,16 +430,16 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode_act(
+        episode_data, success_count = run_episode_multi(
             args, policy, env, segmenter, rng, episode_seed, 
-            success_count=success_count, episode=i
+            success_count=success_count, episode=i+1
         )
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
         sr_n += episode_data['sr-n']
         attempts += episode_data['attempts']
-        avg_clutter_score += (episode_data['avg_clutter_score']/attempts)
+        avg_clutter_score += (episode_data['total_clutter_score']/attempts)
         final_clutter_score += episode_data['final_clutter_score']
 
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])

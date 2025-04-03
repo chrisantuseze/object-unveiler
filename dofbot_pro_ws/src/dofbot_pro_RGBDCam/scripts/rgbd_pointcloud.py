@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import rospy
-import cv2 as cv
+import cv2
 import numpy as np
 import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
@@ -31,7 +31,7 @@ class RGBD_PointCloud:
         """ Callback to receive the RGB image. """
         try:
             self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-            cv.imwrite("saved_rgb_image.png", self.rgb_image)
+            cv2.imwrite("saved_rgb_image.png", self.rgb_image)
         except Exception as e:
             rospy.logerr(f"RGB conversion error: {e}")
 
@@ -41,12 +41,12 @@ class RGBD_PointCloud:
             # Convert ROS depth image to OpenCV format
             self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
             self.depth_image = self.depth_image.astype(np.float32) / 1000.0  # Convert to meters
-            cv.imwrite("saved_depth_image.png", self.depth_image)
+            cv2.imwrite("saved_depth_image.png", self.depth_image)
 
             if self.rgb_image is not None and self.intrinsics is not None:
                 self.generate_point_cloud()
                 state = self.get_fused_heightmap()
-                cv.imwrite("state.png", state)
+                cv2.imwrite("state.png", state)
         
         except Exception as e:
             rospy.logerr(f"Depth conversion error: {e}")
@@ -114,7 +114,7 @@ class RGBD_PointCloud:
         # ax[1].imshow(seg_grid)
         # plt.show()
 
-        return cv.flip(height_grid, 1)
+        return cv2.flip(height_grid, 1)
 
 if __name__ == '__main__':
     rgbd_pc = RGBD_PointCloud()
