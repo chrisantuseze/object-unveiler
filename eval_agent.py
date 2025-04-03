@@ -162,7 +162,6 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         ############# Calculating scores ##########
         total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
-        print("Total Clutter Score:", total_clutter_score)
 
         processed_masks = copy.deepcopy(new_masks)
         n_prev_masks = len(processed_masks)
