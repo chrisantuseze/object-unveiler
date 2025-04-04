@@ -21,25 +21,7 @@ import utils.logger as logging
 from skimage import transform
 from env.env_components import ActionState, AdaptiveActionState
 
-def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, episode=0):
-    """
-    Runs a single episode of the multi-step grasping task using the object-unveiler policy in a cluttered environment.
-    Args:
-        args: Additional arguments for the episode.
-        policy (Policy): The policy object that defines the agent's behavior.
-        env (Environment): The environment in which the agent operates.
-        segmenter (ObjectSegmenter): The object segmenter used to process observations.
-        rng: Random number generator for reproducibility.
-        episode_seed: Seed for the episode to ensure reproducibility.
-        success_count (int): Counter for successful grasps.
-        max_steps (int, optional): Maximum number of steps in the episode. Defaults to 15.
-        grp_count (int, optional): Counter for the number of grasp attempts. Defaults to 0.
-    Returns:
-        tuple: A tuple containing:
-            - episode_data (dict): Data collected during the episode, including success rates, failures, attempts, collisions, objects removed, clutter score, and singulation score.
-            - success_count (int): Updated counter for successful grasps.
-            - grp_count (int): Updated counter for the number of grasp attempts.
-    """
+def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -53,11 +35,12 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     'collisions': 0,
                     'objects_removed': 0,
                     'objects_in_scene': len(obs['full_state']),
-                    'avg_clutter_score': 0.0,
+                    'total_clutter_score': 0.0,
                     'final_clutter_score': 0.0,
+                    'successful': False,
                 }
     
-    initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+    initial_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
     processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
     cv2.imwrite(os.path.join(TEST_DIR, "color0.png"), obs['color'][0])
@@ -77,7 +60,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_unveiler(state, obs['color'][1], target_mask)
+        action = policy.exploit_unveiler(state, obs['color'][1], target_mask, processed_masks, bboxes)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -102,12 +85,9 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
-        if policy.is_terminal(next_obs):
-            break
-
         obs = copy.deepcopy(next_obs)
 
-        new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
+        new_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
         if len(new_masks) == n_prev_masks:
             count += 1
 
@@ -119,15 +99,11 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                 res = input("\nDo you think the grasp was successful? (y/n) ")
                 if grasp_info['stable'] or res.lower() == "y":
                     logging.info("Target has been grasped!")
-                    success_count += 1
 
                     final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
                     episode_data['final_clutter_score'] = final_clutter_score
                     episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
-
-                    with open('unveiler_results.txt', 'a') as file:
-                        file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}\n")
-
+                    episode_data['successful'] = True
                 else:
                     logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -145,19 +121,18 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             res = input("\nDo you think the grasp was successful? (y/n) ")
             if grasp_info['stable'] or res.lower() == "y":
                 logging.info("Target has been grasped!")
-                success_count += 1
 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
                 episode_data['final_clutter_score'] = final_clutter_score
                 episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
-
-                with open('unveiler_results.txt', 'a') as file:
-                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}\n")
-
+                episode_data['successful'] = True
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
             print('------------------------------------------')
+            break
+
+        if policy.is_terminal(next_obs):
             break
 
         ############# Calculating scores ##########
@@ -167,7 +142,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
-    return episode_data, success_count
+    return episode_data
 
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, episode=0):
     """
@@ -422,6 +397,7 @@ def eval_agent(args):
     eval_data = []
     sr_n, sr_1, attempts, objects_removed = 0, 0, 0, 0
     avg_clutter_score, final_clutter_score = 0.0, 0.0
+    planning_steps = 0
 
     success_count = 0
 
@@ -429,30 +405,31 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data, success_count = run_episode_multi(
-            args, policy, env, segmenter, rng, episode_seed, 
-            success_count=success_count, episode=i+1
-        )
+        episode_data = run_episode_multi(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
         sr_n += episode_data['sr-n']
         attempts += episode_data['attempts']
-        avg_clutter_score += (episode_data['total_clutter_score']/attempts)
-        final_clutter_score += episode_data['final_clutter_score']
+
+        if episode_data['successful']:
+            success_count += 1
+            with open('unveiler_results.txt', 'a') as file:
+                    file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}\n")
+
+            final_clutter_score += episode_data['final_clutter_score']
+            avg_clutter_score += (episode_data['total_clutter_score']/episode_data['attempts'])
+            planning_steps += episode_data['attempts']
+
 
         objects_removed += (episode_data['objects_removed'] + 1)/float(episode_data['objects_in_scene'])
 
         logging.info(f">>>>>>>>> {success_count}/{i+1} >>>>>>>>>>>>>")
 
         if i % 5 == 0:
-            # logging.info('Episode: {}, SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(i, sr_1 / (i+1),
-            #                                                                    sr_n / attempts,
-            #                                                                    objects_removed / len(eval_data)))
-            logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}'.format(i, avg_clutter_score, final_clutter_score))
+            logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    # logging.info('SR-1:{}, SR-N: {}, Scene Clearance: {}'.format(sr_1 / args.n_scenes,
-    #                                                       sr_n / attempts,
-    #                                                       objects_removed / len(eval_data)))
-    logging.info('Avg Clutter Score:{}, Avg Singulation Score: {}'.format(avg_clutter_score / attempts, final_clutter_score / attempts))
+    with open('unveiler_results.txt', 'a') as file:
+                    file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
+
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

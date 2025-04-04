@@ -7,9 +7,9 @@ import numpy as np
 dir = ""
 # Specify the path to the folder containing the files you want to rename
 
-folder_path = "save/pc-ou-dataset/"
+# folder_path = "save/pc-ou-dataset/"
 folder_path = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset/"
-id = 5497
+id = 53224
 
 
 folder_path = dir + folder_path

@@ -385,9 +385,7 @@ class Policy:
         
         return action
     
-    def get_unveiler_inputs(self, color_image, target_mask):
-        processed_masks, pred_mask, raw_masks, bbox = self.segmenter.from_maskrcnn(color_image, bbox=True)
-
+    def get_unveiler_inputs(self, target_mask, processed_masks, bbox):
         processed_target = general_utils.preprocess_image(target_mask)[0]
         processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
 
@@ -535,8 +533,8 @@ class Policy:
 
         return action
     
-    def exploit_unveiler(self, state, color_image, target_mask):
-        processed_target, processed_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(color_image, target_mask)
+    def exploit_unveiler(self, state, color_image, target_mask, processed_masks, bbox):
+        processed_target, processed_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, _ = self.sre_model(processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)

@@ -49,7 +49,8 @@ def modify_episode(segmenter: ObjectSegmenter, episode_dir):
                 'label': data['label'],
                 'bboxes': data['bboxes'],
                 'target_id': data['target_id'],
-                'objects_to_remove': objects_to_remove,
+                'objects_to_remove': data['objects_to_remove'],
+                'objects_to_remove_new': objects_to_remove,
             }
 
             episode_data_list.append(transition)
