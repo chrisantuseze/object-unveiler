@@ -141,7 +141,6 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
-    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset"
 
     episode_dirs = os.listdir(dataset_dir)
     print("Total length:", len(episode_dirs))
@@ -155,8 +154,7 @@ if __name__ == "__main__":
         #     episode_dirs.remove(file_)
 
 
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop-sre"
-    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/using-pointcloud/old-episodic-grasping/pc-ou-dataset2-"
+    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
