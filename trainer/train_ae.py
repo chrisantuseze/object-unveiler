@@ -116,9 +116,6 @@ def train_ae(args):
                 loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
-                if step % args.step == 0:
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {loss.detach().cpu().numpy()}")
-
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))

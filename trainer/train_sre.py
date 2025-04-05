@@ -117,10 +117,6 @@ def train_sre(args):
                 # loss = torch.sum(loss)
                 epoch_loss[phase] += loss.detach().cpu().numpy()
 
-                if step % args.step == 0:
-                    # print_pred_gt(torch.topk(pred, k=args.sequence_length, dim=1)[1], objects_to_remove)
-                    logging.info(f"{phase} step [{step}/{len(data_loaders[phase])}]\t Loss: {epoch_loss[phase]/(step + 1)}")
-
         logging.info('Epoch {}: training loss = {:.6f} '
               ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
                                                   epoch_loss['val'] / len(data_loaders['val'])))
