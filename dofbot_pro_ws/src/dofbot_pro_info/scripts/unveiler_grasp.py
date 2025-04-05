@@ -65,6 +65,7 @@ class PolicyRobotController:
     def rgb_callback(self, msg):
         """ Callback to receive the RGB image. """
         if not self.get_rgb_image:
+            rospy.loginfo("Waiting for depth image...")
             return
         
         try:
@@ -77,6 +78,7 @@ class PolicyRobotController:
     def depth_callback(self, msg):
         """ Callback to receive the depth image and compute the point cloud. """
         if not self.get_point_cloud:
+            rospy.loginfo("Waiting for RGB image...")
             return 
         
         try:
@@ -168,13 +170,8 @@ class PolicyRobotController:
             action: The predicted action from the policy
         """
         try:
-            # pos = [action[0], action[1], action[2]]
-            # aperture = action[3]
-
-            pos = [0.08, 0.07, 0.08]
-            # pos = [-0.26, -0.10, 0.08]
-
-            aperture = 0.9601622467210791
+            pos = [action[0], action[1], action[2]]
+            aperture = action[3]
 
             # Convert to joint angles
             joint_angles = self.get_joint_angles_from_pose(pos)
@@ -184,7 +181,7 @@ class PolicyRobotController:
                 return
             
             # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
+            joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
             # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
             # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
 
@@ -362,6 +359,9 @@ class PolicyRobotController:
     def run(self, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
+        
+        self.get_point_cloud = True
+        self.get_rgb_image = True
 
         obs = self.get_observation()
 
@@ -373,7 +373,6 @@ class PolicyRobotController:
 
         max_steps = 6
         attempts = 0
-        n_prev_masks, count = 0, 0
         while attempts < max_steps:
             state = policy.state_representation(obs)
             action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
