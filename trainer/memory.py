@@ -79,7 +79,7 @@ class ReplayBuffer:
         data = episode_data[0]
         target_mask = data['target_mask']
         object_masks = data['object_masks']
-        objects_to_remove = data['objects_to_remove']
+        objects_to_remove = data['objects_to_remove_new']
         bboxes = data['bboxes']
 
         return target_mask, object_masks, objects_to_remove, bboxes

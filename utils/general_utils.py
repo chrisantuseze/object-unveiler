@@ -198,7 +198,7 @@ def sample_distribution(prob, rng, n_samples=1):
     rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
     return np.int32(rand_ind_coords.squeeze())
 
-def get_target_mask(processed_masks, obs, rng):
+def get_target_mask(processed_masks, image, rng):
     id = 0
     if len(processed_masks) > 1:
         rand_id = rng.randint(0, len(processed_masks) - 1)
@@ -212,7 +212,7 @@ def get_target_mask(processed_masks, obs, rng):
     elif len(processed_masks) == 1:
         target_mask = processed_masks[id]
     else:
-        target_mask = obs['color'][id]
+        target_mask = image
 
     return target_mask, id
 

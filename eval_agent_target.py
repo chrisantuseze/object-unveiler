@@ -65,7 +65,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'][1], rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
@@ -189,7 +189,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'][1], rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0

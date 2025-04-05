@@ -47,7 +47,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     cv2.imwrite(os.path.join(TEST_DIR, "color1.png"), obs['color'][1])
 
     # get a randomly picked target mask from the segmented image
-    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'][1], rng)
     print("Target ID:", target_id)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
@@ -113,7 +113,6 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         if target_id == -1:
             res = input("\nDo you think the target is available? (y/n) ")
             if res.lower() == "y":
-                print(target_id, len(new_masks))
                 target_id = int(input("\nWhat is the index? "))
                 target_mask = new_masks[target_id]
                 continue
