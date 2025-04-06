@@ -44,9 +44,11 @@ class Environment:
         self.pxl_size = params['env']['pixel_size']
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
+        self.nr_objects = [1, 4]
+
         # self.nr_objects = [3, 6]
         # self.nr_objects = [6, 9]
-        self.nr_objects = [9, 12]
+        # self.nr_objects = [9, 12]
 
 
         # Setup cameras.
@@ -91,8 +93,8 @@ class Environment:
         self.simulation = Simulation(self.objects)
         self.singulation_condition = False
 
-        # self.current_state = ActionState.MOVE_ABOVE_PREGRASP
-        self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
+        self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+        # self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
         self.state_start_time = time.time()
         self.elapsed_time = self.interval = 0
         self.trajectories = []

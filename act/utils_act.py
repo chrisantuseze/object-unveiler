@@ -139,6 +139,7 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, id):
+        print(len(self.dir_ids), id)
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, scene_image, object_mask, actions = episode_data
         qpos = np.array(qpos)
@@ -158,9 +159,9 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         actions = np.array(actions)
         action_len = actions.shape[0]
-        padded_action = np.zeros((AdaptiveActionState.NUM_STEPS, actions.shape[1]))
+        padded_action = np.zeros((ActionState.NUM_STEPS, actions.shape[1]))
         padded_action[:action_len] = actions
-        is_pad = np.zeros(AdaptiveActionState.NUM_STEPS)
+        is_pad = np.zeros(ActionState.NUM_STEPS)
         is_pad[action_len:] = 1
 
         image_dict = dict()

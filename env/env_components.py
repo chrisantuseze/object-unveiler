@@ -354,19 +354,23 @@ class FloatingBHand:
         target_pos = action['pos']
         target_quat = action['quat']
 
-        if current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
+        # if current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
+        if current_state == ActionState.MOVE_ABOVE_PREGRASP:
             target_pos = target_pos.copy()
             target_pos[2] += 0.3
 
-        if current_state == AdaptiveActionState.POWER_PUSH:
+        # if current_state == AdaptiveActionState.POWER_PUSH:
+        if current_state == ActionState.POWER_PUSH:
             rot = target_quat.rotation_matrix()
             target_pos = target_pos + rot[0:3, 2] * action['push_distance']
 
-        if current_state in [AdaptiveActionState.MOVE_UP, AdaptiveActionState.GRASP_STABILITY]:
+        # if current_state in [AdaptiveActionState.MOVE_UP, AdaptiveActionState.GRASP_STABILITY]:
+        if current_state in [ActionState.MOVE_UP, ActionState.GRASP_STABILITY]:
             target_pos = target_pos.copy()
             target_pos[2] += 0.4
 
-        if current_state == AdaptiveActionState.MOVE_HOME:
+        # if current_state == AdaptiveActionState.MOVE_HOME:
+        if current_state == ActionState.MOVE_HOME:
             target_pos = self.home_position
             target_quat = self.home_quat
 
@@ -416,21 +420,26 @@ class FloatingBHand:
             #     joint_positions.append(trajectories[i].pos(t))
             # return joint_positions
         
-        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        if current_state == AdaptiveActionState.CLOSE_FINGERS:
+        # if current_state == AdaptiveActionState.CLOSE_FINGERS:
+        if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 
-        if current_state == AdaptiveActionState.OPEN_FINGERS:
+        # if current_state == AdaptiveActionState.OPEN_FINGERS:
+        if current_state == ActionState.OPEN_FINGERS:
             joint_vals = [0.0, 0.6, 0.6, 0.6]
             
-        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 

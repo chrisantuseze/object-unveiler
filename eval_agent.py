@@ -143,7 +143,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     logging.info('--------')
     return episode_data
 
-def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15, episode=0):
+def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     """
     Runs a single episode of obstacle and target grasping using ACT with heuristics.
     Args:
@@ -170,13 +170,13 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         query_frequency = 1
         num_queries = args.chunk_size
 
-    max_timesteps = AdaptiveActionState.NUM_STEPS + 1
+    max_timesteps = ActionState.NUM_STEPS + 1 #AdaptiveActionState.NUM_STEPS + 1
 
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
-    episode_seed = 878115723
+    # episode_seed = 1791095845
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -192,6 +192,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                     'objects_in_scene': len(obs['full_state']),
                     'avg_clutter_score': 0.0,
                     'final_clutter_score': 0.0,
+                    'successful': False,
                 }
     
     initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
@@ -200,23 +201,16 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
     # get a randomly picked target mask from the segmented image
     # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
-    target_mask, target_id = initial_masks[4], 4
+    target_mask, target_id = initial_masks[0], 0
 
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
     n_prev_masks = count = 0
-    avg_clutter_score = 0.0
+    total_clutter_score = 0.0
 
     max_steps = 5
     while episode_data['attempts'] < max_steps:
-
-        # objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
-        # print("\nobjects_to_remove:", objects_to_remove)
-
-        # obstacle_id = objects_to_remove[0]
-        # object_mask = processed_masks[obstacle_id]
-        # cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), object_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
@@ -229,6 +223,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         ax[1].imshow(c_target_mask)
         plt.show()
 
+        traj_data, obs_actions, heightmap, _ = get_obs(0)
+
         end_of_episode = False
         t = 0
         preds = gt = []
@@ -236,6 +232,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         while not end_of_episode:
             if t % query_frequency == 0:
                 actions = policy.exploit_act(state, c_target_mask, obs)
+                obs_action = obs_actions[t]
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -257,7 +254,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print(t, ",", env.current_state)
 
             env_action3d = policy.action3d(action)
-            obs, grasp_info = env.step_act(env_action3d, eval=True)
+            obs, grasp_info = env.step_act_old(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -281,9 +278,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
-        if policy.is_terminal(obs):
-            break
-
         new_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
         if len(new_masks) == n_prev_masks:
             count += 1
@@ -296,10 +290,11 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 res = input("\nDo you think the grasp was successful? (y/n) ")
                 if grasp_info['stable'] or res.lower() == "y":
                     logging.info("Target has been grasped!")
-                    success_count += 1
-
-                    episode_data['final_clutter_score'] = grasping.compute_singulation(initial_masks, new_masks)
-                    episode_data['avg_clutter_score'] = avg_clutter_score
+                    
+                    final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                    episode_data['final_clutter_score'] = final_clutter_score
+                    episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
+                    episode_data['successful'] = True
                 else:
                     logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
@@ -317,20 +312,19 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             res = input("\nDo you think the grasp was successful? (y/n) ")
             if grasp_info['stable'] or res.lower() == "y":
                 logging.info("Target has been grasped!")
-                success_count += 1
-
-
+                
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
                 episode_data['final_clutter_score'] = final_clutter_score
-                episode_data['avg_clutter_score'] = avg_clutter_score
-
-                with open('act_results.txt', 'a') as file:
-                    file.write(f"Success rate (success/total): {success_count}/{episode}, final_clutter_score: {final_clutter_score}, avg_clutter_score: {avg_clutter_score}\n")
+                episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
+                episode_data['successful'] = True
 
             else:
                 logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
             print('------------------------------------------')
+            break
+
+        if policy.is_terminal(obs):
             break
 
         ############# Calculating scores ##########
@@ -340,7 +334,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
-    return episode_data, success_count
+    return episode_data
 
 def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_positions_plot.png'):
     """
@@ -376,6 +370,27 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     
     print(f"Plot saved to {filename}")
 
+def get_obs(idx):
+    dataset_dir = "save/act-dataset"
+    transition_dirs = os.listdir(dataset_dir)
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    episode = transition_dirs[idx]
+    try:
+        episode_data = pickle.load(open(os.path.join(dataset_dir, episode), 'rb'))
+    except Exception as e:
+        print(e, "- Failed episode:", episode)
+
+    data = episode_data[-1]
+    heightmap = data['state']
+    c_target_mask = None #general_utils.extract_target_crop(data['target_mask'], heightmap)
+    actions = data['actions']
+    trajectory_data = data['traj_data']
+
+    return trajectory_data, actions, heightmap, c_target_mask
+
 def eval_agent(args):
     general_utils.recreate_test()
 
@@ -404,7 +419,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_multi(args, policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_act(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

@@ -19,8 +19,8 @@ from utils.constants import *
 from env.env_components import ActionState, AdaptiveActionState
 
 def collect_episodic_dataset(args, params):
-    save_dir = "save/pc-ou-dataset"
-    # save_dir = 'save/act-dataset'
+    # save_dir = "save/pc-ou-dataset"
+    save_dir = 'save/act-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -38,10 +38,11 @@ def collect_episodic_dataset(args, params):
     segmenter = ObjectSegmenter()
 
     for i in range(args.n_samples):
-        try:
-            run_episode(i, policy, segmenter, env, memory, rng)
-        except Exception as e:
-            print(e)
+        # try:
+        #     run_episode_act(i, policy, segmenter, env, memory, rng)
+        # except Exception as e:
+        #     print(e)
+        run_episode_act(i, policy, segmenter, env, memory, rng)
 
 def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -190,7 +191,7 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         print("Episode was not successful.")
 
 def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
-    episode_seed = rng.randint(0, pow(2, 32) - 1)
+    episode_seed = 1791095845 #rng.randint(0, pow(2, 32) - 1)
     env.seed(episode_seed)
     obs = env.reset()
     print('Episode: {}, seed: {}'.format(i, episode_seed))
@@ -231,12 +232,13 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         state, depth_heightmap = policy.get_state_representation(obs)
         try:
-            actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+            # actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+            actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
         except Exception as e:
             print("Error occurred - ", e)
             break
 
-        print("AdaptiveActionState.EXPECTED_STEPS", AdaptiveActionState.EXPECTED_STEPS, len(actions))
+        print("AdaptiveActionState.EXPECTED_STEPS", ActionState.NUM_STEPS, len(actions))
 
         end_of_episode = False
         t = 0
@@ -254,7 +256,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 print(action, t, env.current_state)
 
             env_action3d = policy.action3d(action)
-            obs, grasp_info = env.step_act(env_action3d, eval=False)
+            obs, grasp_info = env.step_act_old(env_action3d, eval=False)
 
             traj_data.extend(obs['traj_data'])
 
@@ -262,10 +264,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             end_of_episode = grasp_info['eoe']
         
         print("len(traj_data)", len(traj_data))
-
-        # if len(traj_data) < AdaptiveActionState.EXPECTED_STEPS:
-        #     steps += 1
-        #     continue
 
         print(grasp_info)
         print('---------')
@@ -284,11 +282,12 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         #     print("Scene rearranged. Episode cancelled.")
         #     break
         
-        # if grasp_info['stable'] or save == 1:
+        save = int(input("Do you want to save this episode? (0/1): "))
+        if grasp_info['stable'] or save == 1:
 
         # if old_objects_count != new_objects_count and obstacle_id == -1:
 
-        if grasp_info['stable']:
+        # if grasp_info['stable']:
             if len(processed_masks) == 0 or target_id == -1:
                 print(">>>>>>>>>>> No objects masks or target id is negative >>>>>>>>>>>>>")
                 print('------------------------------------------')
@@ -334,7 +333,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("Saved the only successful grasp")
         
         with open('act_episode_info.txt', 'a') as file:
-            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, {env.rng.seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
     else:
         print("Episode was not successful.")
 
