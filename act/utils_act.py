@@ -139,7 +139,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, id):
-        print(len(self.dir_ids), id)
         episode_data = self.load_episode(self.dir_ids[id])
         images, qpos, scene_image, object_mask, actions = episode_data
         qpos = np.array(qpos)

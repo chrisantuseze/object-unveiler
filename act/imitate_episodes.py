@@ -373,10 +373,13 @@ def train_bc(train_dataloader, val_dataloader, config):
             policy.eval()
             epoch_dicts = []
             for batch_idx, data in enumerate(val_dataloader):
-                forward_dict = forward_pass(data, policy)
+                forward_dict, pred = forward_pass(data, policy)
                 epoch_dicts.append(forward_dict)
 
                 epoch_loss['val'] += forward_dict['loss'].detach().cpu().numpy()
+
+                if epoch % 100 == 0:
+                    print(f"Gt {data[2]}, Pred {pred}, Loss {forward_dict['loss']}")
 
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)
@@ -395,7 +398,7 @@ def train_bc(train_dataloader, val_dataloader, config):
         policy.train()
         optimizer.zero_grad()
         for batch_idx, data in enumerate(train_dataloader):
-            forward_dict = forward_pass(data, policy)
+            forward_dict, _ = forward_pass(data, policy)
             # backward
             loss = forward_dict['loss']
             loss.backward()

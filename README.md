@@ -12,7 +12,7 @@ python3 main.py \
 --ae_model 'save/ae/ae_model_best.pt' \
 --sre_model 'save/sre/sre_model_best.pt' \
 --n_scenes 50 \
---chunk_size 10 \
+--chunk_size 5 \
 --temporal_agg \
 --seed 17
 
@@ -35,7 +35,7 @@ python3 main_act.py \
 --ckpt_dir act/ckpt \
 --policy_class ACT \
 --kl_weight 10 \
---chunk_size 10 \
+--chunk_size 5 \
 --hidden_dim 512 \
 --batch_size 16 \
 --dim_feedforward 3200 \

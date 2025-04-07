@@ -227,7 +227,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
         end_of_episode = False
         t = 0
-        preds = gt = []
+        preds, gt = [], []
         state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
@@ -250,6 +250,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(raw_action)
             preds.append(action)
 
+            gt.append(obs_action)
+
             if t % 10 == 0:
                 print(t, ",", env.current_state)
 
@@ -258,6 +260,8 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             t += 1
             end_of_episode = grasp_info['eoe']
+
+        plot_joint_positions_over_time(np.array(gt), np.array(preds))
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:
@@ -347,7 +351,8 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     time_steps = ground_truth.shape[0]
     joint_count = ground_truth.shape[1]
     
-    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
+    # fig, axes = plt.subplots(4, 2, figsize=(15, 20))
+    fig, axes = plt.subplots(1, 4, figsize=(15, 20))
     fig.suptitle('Comparison of Ground Truth and Predicted Joint Positions Over Time', fontsize=16)
     
     for joint in range(joint_count):
