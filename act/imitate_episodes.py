@@ -378,7 +378,7 @@ def train_bc(train_dataloader, val_dataloader, config):
 
                 epoch_loss['val'] += forward_dict['loss'].detach().cpu().numpy()
 
-                if epoch % 100 == 0:
+                if epoch % 1000 == 0:
                     print(f"Gt {data[2]}, Pred {pred}, Loss {forward_dict['loss']}")
 
             epoch_summary = compute_dict_mean(epoch_dicts)
