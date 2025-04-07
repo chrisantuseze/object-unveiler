@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import torch
 import yaml
 from policy import grasping
 import rospy
@@ -8,6 +9,8 @@ import cv2
 import time
 import copy
 import numpy as np
+import argparse
+
 import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
@@ -16,7 +19,6 @@ from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from utils import general_utils
 import utils.logger as logging
-from env.environment import Environment
 from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
@@ -64,35 +66,32 @@ class PolicyRobotController:
 
     def rgb_callback(self, msg):
         """ Callback to receive the RGB image. """
-        if not self.get_rgb_image:
-            rospy.loginfo("Waiting for depth image...")
-            return
-        
         try:
+            print("Getting color image")
             self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-            self.get_rgb_image = False
+            self.rgb_image = cv2.flip(self.rgb_image, -1)
+
             cv2.imwrite("saved_rgb_image.png", self.rgb_image)
         except Exception as e:
             rospy.logerr(f"RGB conversion error: {e}")
 
     def depth_callback(self, msg):
         """ Callback to receive the depth image and compute the point cloud. """
-        if not self.get_point_cloud:
-            rospy.loginfo("Waiting for RGB image...")
-            return 
-        
         try:
+            print("Getting depth image")
             # Convert ROS depth image to OpenCV format
             self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
-            self.depth_image = self.depth_image.astype(np.float32) / 1000.0  # Convert to meters
-            cv2.imwrite("saved_depth_image.png", self.depth_image)
+            self.depth_image = cv2.flip(self.depth_image, -1)
+
+            # Normalize depth to 0–255 and convert to 8-bit
+            depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
+            depth_vis = depth_vis.astype(np.uint8)
+            cv2.imwrite("saved_depth_image.png", depth_vis)
 
             if self.rgb_image is not None and self.intrinsics is not None:
                 self.generate_point_cloud()
-                self.state = self.get_fused_heightmap()
-                cv2.imwrite("state.png", self.state)
-
-            self.get_point_cloud = False
+                state = self.get_fused_heightmap()
+                cv2.imwrite("state.png", state)
         
         except Exception as e:
             rospy.logerr(f"Depth conversion error: {e}")
@@ -324,21 +323,22 @@ class PolicyRobotController:
             Observation dictionary
         """
 
-        if self.rgb_image and self.state:
-            obs = {
-                'color': self.rgb_image,
-                'depth': self.depth_image
-            }
-            return obs
-        
-        return None
-    
+        self.get_point_cloud = True
+        self.get_rgb_image = True
+
+        while self.rgb_image is None or self.depth_image is None:
+            print("Waiting to get images...")
+
+        obs = {
+            'color': self.rgb_image,
+            'depth': self.depth_image
+        }
+        return obs
+            
     def eval_agent(self, args):
         print("Running eval...")
         with open('yaml/bhand.yml', 'r') as stream:
             params = yaml.safe_load(stream)
-
-        env = Environment(params)
 
         policy = Policy(args, params)
         policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
@@ -352,16 +352,13 @@ class PolicyRobotController:
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-            self.run(policy, env, segmenter, rng)
+            self.run(policy, segmenter, rng)
 
         rospy.is_shutdown()
     
-    def run(self, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng):
+    def run(self, policy: Policy, segmenter: ObjectSegmenter, rng):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
-        
-        self.get_point_cloud = True
-        self.get_rgb_image = True
 
         obs = self.get_observation()
 
@@ -398,9 +395,42 @@ class PolicyRobotController:
             except Exception as e:
                 rospy.logerr(f"Error in main loop: {str(e)}")
 
+def parse_args():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('--mode', default='ae', type=str, help='')
+    
+    # args for eval_agent
+    parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
+    parser.add_argument('--reg_model', default='downloads/reg_model.pt', type=str, help='')
+    parser.add_argument('--seed', default=16, type=int, help='')
+    parser.add_argument('--n_scenes', default=100, type=int, help='')
+    parser.add_argument('--object_set', default='seen', type=str, help='')
+
+    # args for trainer
+    parser.add_argument('--dataset_dir', default='save/pc-ou-dataset', type=str, help='')
+    parser.add_argument('--epochs', default=100, type=int, help='')
+    parser.add_argument('--lr', default=0.0001, type=float, help='')
+    parser.add_argument('--batch_size', default=1, type=int, help='')
+    parser.add_argument('--split_ratio', default=0.9, type=float, help='')
+    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')
+    parser.add_argument('--weight_decay', type=float, default=1e-3, help='Weight decay for optimizer')
+
+    parser.add_argument('--sequence_length', default=1, type=int, help='')
+    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
+    parser.add_argument('--step', default=500, type=int, help='')
+
+    return parser.parse_args()
+
 if __name__ == '__main__':
     try:
+        args = parse_args()
+        args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(f"You are using {args.device}")
+
         controller = PolicyRobotController()
-        controller.eval_agent()
+        controller.eval_agent(args)
     except rospy.ROSInterruptException as e:
         rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")

@@ -19,8 +19,8 @@ class Depth_To_Color:
 		
 		# Save the image as a new file
 		cv.imwrite("saved_image.png", depth_to_color_image)
-		cv.imshow(self.window_name, depth_to_color_image)
-		cv.waitKey(1)
+		# cv.imshow(self.window_name, depth_to_color_image)
+		# cv.waitKey(1)
 
 	def topic_color(self, msg):
 		try:

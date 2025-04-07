@@ -31,6 +31,8 @@ class RGBD_PointCloud:
         """ Callback to receive the RGB image. """
         try:
             self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
+            self.rgb_image = cv2.flip(self.rgb_image, -1) #cv2.rotate(self.rgb_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
             cv2.imwrite("saved_rgb_image.png", self.rgb_image)
         except Exception as e:
             rospy.logerr(f"RGB conversion error: {e}")
@@ -40,8 +42,12 @@ class RGBD_PointCloud:
         try:
             # Convert ROS depth image to OpenCV format
             self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
-            self.depth_image = self.depth_image.astype(np.float32) / 1000.0  # Convert to meters
-            cv2.imwrite("saved_depth_image.png", self.depth_image)
+            self.depth_image = cv2.flip(self.depth_image, -1)
+
+            # Normalize depth to 0–255 and convert to 8-bit
+            depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
+            depth_vis = depth_vis.astype(np.uint8)
+            cv2.imwrite("saved_depth_image.png", depth_vis)
 
             if self.rgb_image is not None and self.intrinsics is not None:
                 self.generate_point_cloud()
