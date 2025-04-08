@@ -388,7 +388,7 @@ class PolicyRobotController:
         policy = Policy(args, params)
         policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
-        segmenter = ObjectSegmenter()
+        segmenter = ObjectSegmenter(args)
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
@@ -413,7 +413,7 @@ class PolicyRobotController:
         
         print("Got initial observation. And now getting segmentations...")
 
-        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True)#, dim=(480, 640))
+        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(480, 640))
         cv2.imwrite(os.path.join(self.TEST_DIR, "initial_scene.png"), pred_mask)
         cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
 
@@ -501,7 +501,7 @@ def parse_args():
 if __name__ == '__main__':
     try:
         args = parse_args()
-        args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print(f"You are using {args.device}")
 
         controller = PolicyRobotController()
