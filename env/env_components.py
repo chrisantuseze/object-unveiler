@@ -354,23 +354,23 @@ class FloatingBHand:
         target_pos = action['pos']
         target_quat = action['quat']
 
-        # if current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
-        if current_state == ActionState.MOVE_ABOVE_PREGRASP:
+        if current_state == AdaptiveActionState.MOVE_ABOVE_PREGRASP:
+        # if current_state == ActionState.MOVE_ABOVE_PREGRASP:
             target_pos = target_pos.copy()
             target_pos[2] += 0.3
 
-        # if current_state == AdaptiveActionState.POWER_PUSH:
-        if current_state == ActionState.POWER_PUSH:
+        if current_state == AdaptiveActionState.POWER_PUSH:
+        # if current_state == ActionState.POWER_PUSH:
             rot = target_quat.rotation_matrix()
             target_pos = target_pos + rot[0:3, 2] * action['push_distance']
 
-        # if current_state in [AdaptiveActionState.MOVE_UP, AdaptiveActionState.GRASP_STABILITY]:
-        if current_state in [ActionState.MOVE_UP, ActionState.GRASP_STABILITY]:
+        if current_state in [AdaptiveActionState.MOVE_UP, AdaptiveActionState.GRASP_STABILITY]:
+        # if current_state in [ActionState.MOVE_UP, ActionState.GRASP_STABILITY]:
             target_pos = target_pos.copy()
             target_pos[2] += 0.4
 
-        # if current_state == AdaptiveActionState.MOVE_HOME:
-        if current_state == ActionState.MOVE_HOME:
+        if current_state == AdaptiveActionState.MOVE_HOME:
+        # if current_state == ActionState.MOVE_HOME:
             target_pos = self.home_position
             target_quat = self.home_quat
 
@@ -409,37 +409,26 @@ class FloatingBHand:
             self.set_hand_joint_position(action, force)
             return action
 
-            # # Add interpolation even for eval
-            # target_states = action
-            # trajectories = []
-            # for i in range(len(self.joint_ids)):
-            #     trajectories.append(Trajectory([0, duration], [current_pos[i], target_states[i]]))
-            
-            # joint_positions = []
-            # for i in range(len(self.joint_ids)):
-            #     joint_positions.append(trajectories[i].pos(t))
-            # return joint_positions
-        
-        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        # if current_state == AdaptiveActionState.CLOSE_FINGERS:
-        if current_state == ActionState.CLOSE_FINGERS:
+        if current_state == AdaptiveActionState.CLOSE_FINGERS:
+        # if current_state == ActionState.CLOSE_FINGERS:
             joint_vals = [0.0, 1.8, 1.8, 1.8]
 
-        # if current_state == AdaptiveActionState.OPEN_FINGERS:
-        if current_state == ActionState.OPEN_FINGERS:
+        if current_state == AdaptiveActionState.OPEN_FINGERS:
+        # if current_state == ActionState.OPEN_FINGERS:
             joint_vals = [0.0, 0.6, 0.6, 0.6]
             
-        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
-        # if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
-        if current_state == ActionState.SET_FINGER_CONFIG:
+        if current_state == AdaptiveActionState.SET_FINGER_CONFIG:
+        # if current_state == ActionState.SET_FINGER_CONFIG:
             theta = action['aperture']
             joint_vals = [0.0, theta, theta, theta]
 
@@ -547,15 +536,6 @@ class AdaptiveActionState:
     
     # Expected steps (average case - assuming convergence at 75% of the way between min and max)
     # For each state: min_duration + (max_duration - min_duration) * 0.75
-    # EXPECTED_STEPS = int(sum([
-    #     (s[1] + (MAX_DURATIONS[s[0]] - s[1]) * 0.75) 
-    #     for s in [
-    #         MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, 
-    #         POWER_PUSH, CLOSE_FINGERS, MOVE_UP, GRASP_STABILITY, 
-    #         MOVE_HOME, OPEN_FINGERS
-    #     ]
-    # ]) / DT)
-
     EXPECTED_STEPS = 0
     for s in [
             MOVE_ABOVE_PREGRASP, SET_FINGER_CONFIG, MOVE_TO_PREGRASP, 

@@ -93,8 +93,8 @@ class Environment:
         self.simulation = Simulation(self.objects)
         self.singulation_condition = False
 
-        self.current_state = ActionState.MOVE_ABOVE_PREGRASP
-        # self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
+        # self.current_state = ActionState.MOVE_ABOVE_PREGRASP
+        self.current_state = AdaptiveActionState.MOVE_ABOVE_PREGRASP
         self.state_start_time = time.time()
         self.elapsed_time = self.interval = 0
         self.trajectories = []

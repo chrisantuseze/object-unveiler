@@ -232,13 +232,13 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
 
         state, depth_heightmap = policy.get_state_representation(obs)
         try:
-            # actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
-            actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
+            actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
+            # actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
         except Exception as e:
             print("Error occurred - ", e)
             break
 
-        print("AdaptiveActionState.EXPECTED_STEPS", ActionState.NUM_STEPS, len(actions))
+        print("AdaptiveActionState.EXPECTED_STEPS", AdaptiveActionState.NUM_STEPS, len(actions))
 
         end_of_episode = False
         t = 0
@@ -256,7 +256,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
                 print(action, t, env.current_state)
 
             env_action3d = policy.action3d(action)
-            obs, grasp_info = env.step_act_old(env_action3d, eval=False)
+            obs, grasp_info = env.step_act(env_action3d, eval=False)
 
             traj_data.extend(obs['traj_data'])
 
@@ -268,24 +268,8 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print(grasp_info)
         print('---------')
 
-        # general_utils.delete_episodes_misc(TRAIN_EPISODES_DIR)
-
-        # old_objects_count = len(processed_masks)
-        # processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][id], dir=TRAIN_EPISODES_DIR)
-        # obstacle_id, object_mask = grasping.find_target(processed_masks, object_mask)
-        # new_objects_count = len(processed_masks)
-
-        # save = int(input("Do you want to save this episode? (0/1): "))
-        # save = 0
-
-        # if len(traj_data) >= AdaptiveActionState.EXPECTED_STEPS and (obstacle_id != -1 or old_objects_count == new_objects_count):
-        #     print("Scene rearranged. Episode cancelled.")
-        #     break
-        
         save = int(input("Do you want to save this episode? (0/1): "))
         if grasp_info['stable'] or save == 1:
-
-        # if old_objects_count != new_objects_count and obstacle_id == -1:
 
         # if grasp_info['stable']:
             if len(processed_masks) == 0 or target_id == -1:
@@ -315,10 +299,6 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
             print('------------------------------------------')
             break
 
-        # if obstacle_id == -1:
-        #     print("Object is no longer available in the scene.")
-        #     break
-
         processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TRAIN_EPISODES_DIR, bbox=True)
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
@@ -333,7 +313,7 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("Saved the only successful grasp")
         
         with open('act_episode_info.txt', 'a') as file:
-            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, {env.rng.seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
+            file.write(f"The scene_nr_objs: {env.scene_nr_objs}, Session seed: {env.session_seed}, Target id: {target_id}, Obstacle id: {obstacle_id}\n")
     else:
         print("Episode was not successful.")
 

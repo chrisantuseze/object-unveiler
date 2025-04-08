@@ -356,7 +356,8 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     fig.suptitle('Comparison of Ground Truth and Predicted Joint Positions Over Time', fontsize=16)
     
     for joint in range(joint_count):
-        ax = axes[joint // 2, joint % 2]
+        # ax = axes[joint // 2, joint % 2]
+        ax = axes
         
         ax.plot(range(time_steps), ground_truth[:, joint], label='Ground Truth', color='blue')
         ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
