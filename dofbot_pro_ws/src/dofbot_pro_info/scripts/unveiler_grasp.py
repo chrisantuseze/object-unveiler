@@ -32,11 +32,6 @@ class PolicyRobotController:
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
         self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
 
-        # Subscribers
-        self.rgb_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.rgb_callback)
-        self.depth_sub = rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
-        self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
-
         # Image Storage
         self.bridge = CvBridge()
         self.rgb_image = None
@@ -44,57 +39,114 @@ class PolicyRobotController:
         self.point_cloud = None
         self.state = None
         self.intrinsics = None  # Camera intrinsics
-
-        self.get_point_cloud = False
-        self.get_rgb_image = False
+        
+        # Image acquisition locks and flags
+        self.rgb_lock = False
+        self.depth_lock = False
+        self.camera_info_received = False
+        
+        # Subscribers - initialized but not active yet
+        self.rgb_sub = None
+        self.depth_sub = None
+        self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
         
         # Robot arm parameters
         self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 30.0]  # Default home position
-        # self.home_position = [90.0, 70.0, 0.0, 0.0, 90.0, 30.0]  # Default home position
         self.gripper_angle = 30.0
         
-        # Wait for publisher to connect
+        # Wait for publisher to connect and camera info to be received
         rospy.sleep(1)
         
         # Move to home position at startup
         self.move_arm_to_position(self.home_position)
         print("Policy Robot Controller initialized")
+        
+        # Wait for camera info to be received
+        start_time = time.time()
+        while not self.camera_info_received and time.time() - start_time < 10:
+            rospy.sleep(0.1)
+        
+        if not self.camera_info_received:
+            rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
         self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
+        self.camera_info_received = True
+        # We can keep this subscription active all the time as the camera parameters don't change
 
     def rgb_callback(self, msg):
         """ Callback to receive the RGB image. """
-        try:
-            print("Getting color image")
-            self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-            self.rgb_image = cv2.flip(self.rgb_image, -1)
-
-            cv2.imwrite("saved_rgb_image.png", self.rgb_image)
-        except Exception as e:
-            rospy.logerr(f"RGB conversion error: {e}")
+        if self.rgb_lock:
+            try:
+                self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
+                self.rgb_image = cv2.flip(self.rgb_image, -1)
+                cv2.imwrite("saved_rgb_image.png", self.rgb_image)
+                self.rgb_lock = False  # Release the lock
+            except Exception as e:
+                rospy.logerr(f"RGB conversion error: {e}")
+                self.rgb_lock = False  # Make sure to release the lock even if there's an error
 
     def depth_callback(self, msg):
-        """ Callback to receive the depth image and compute the point cloud. """
-        try:
-            print("Getting depth image")
-            # Convert ROS depth image to OpenCV format
-            self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
-            self.depth_image = cv2.flip(self.depth_image, -1)
+        """ Callback to receive the depth image. """
+        if self.depth_lock:
+            try:
+                # Convert ROS depth image to OpenCV format
+                self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
+                self.depth_image = cv2.flip(self.depth_image, -1)
 
-            # Normalize depth to 0–255 and convert to 8-bit
-            depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
-            depth_vis = depth_vis.astype(np.uint8)
-            cv2.imwrite("saved_depth_image.png", depth_vis)
+                # Normalize depth to 0–255 and convert to 8-bit for visualization
+                depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
+                depth_vis = depth_vis.astype(np.uint8)
+                cv2.imwrite("saved_depth_image.png", depth_vis)
+                
+                self.depth_lock = False  # Release the lock
+                
+                # Generate point cloud if both RGB and depth are available
+                if self.rgb_image is not None and self.intrinsics is not None:
+                    self.generate_point_cloud()
+                    state = self.get_fused_heightmap()
+                    cv2.imwrite("state.png", state)
+            except Exception as e:
+                rospy.logerr(f"Depth conversion error: {e}")
+                self.depth_lock = False  # Make sure to release the lock even if there's an error
 
-            if self.rgb_image is not None and self.intrinsics is not None:
-                self.generate_point_cloud()
-                state = self.get_fused_heightmap()
-                cv2.imwrite("state.png", state)
+    def get_latest_image(self, timeout=5.0):
+        """
+        Get the latest RGB and depth images on demand
         
-        except Exception as e:
-            rospy.logerr(f"Depth conversion error: {e}")
+        Args:
+            timeout: Maximum time to wait for images (seconds)
+            
+        Returns:
+            True if both images were successfully acquired, False otherwise
+        """
+        # Reset image data
+        self.rgb_image = None
+        self.depth_image = None
+        
+        # Set locks to acquire new images
+        self.rgb_lock = True
+        self.depth_lock = True
+        
+        # Create subscribers if they don't exist
+        if self.rgb_sub is None:
+            self.rgb_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.rgb_callback)
+        
+        if self.depth_sub is None:
+            self.depth_sub = rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
+        
+        # Wait for both images to be received
+        start_time = time.time()
+        while (self.rgb_lock or self.depth_lock) and time.time() - start_time < timeout:
+            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
+        
+        # Check if both images were received
+        if self.rgb_image is None or self.depth_image is None:
+            rospy.logwarn(f"Failed to get images within timeout ({timeout}s)")
+            return False
+        
+        return True
 
     def generate_point_cloud(self):
         """ Generates and saves a point cloud using depth and RGB data. """
@@ -123,8 +175,6 @@ class PolicyRobotController:
         pcd.colors = o3d.utility.Vector3dVector(colors)
 
         # Save the point cloud
-        # o3d.io.write_point_cloud("pointcloud.ply", pcd)
-        # rospy.loginfo("Point cloud saved as pointcloud.ply")
         self.point_cloud = pcd
 
     def get_fused_heightmap(self):
@@ -154,11 +204,6 @@ class PolicyRobotController:
                     height_grid[idx_y][idx_x] = z
                     seg_grid[idx_y][idx_x] = seg_class[i, 0]
 
-        # fig, ax = plt.subplots(1, 2)
-        # ax[0].imshow(height_grid)
-        # ax[1].imshow(seg_grid)
-        # plt.show()
-
         return cv2.flip(height_grid, 1)
     
     def grasp_object(self, action):
@@ -186,12 +231,11 @@ class PolicyRobotController:
 
             # Execute the grasp sequence
             self.step(joint_angles, aperture)
-            self.get_point_cloud = True
-            self.get_rgb_image = True
                         
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
 
+        # Get new observation after grasp
         return self.get_observation()
     
     def compute_pre_grasp_joints(self, grasp_joints):
@@ -304,7 +348,6 @@ class PolicyRobotController:
         """Control the gripper (servo 6) based on aperture"""
         # Map aperture from your policy's range to the robot's range (assumed 30-180)
         # Adjust this mapping based on your specific aperture range
-        # gripper_angle = np.interp(aperture, [0, 1], [30, 180])
         gripper_angle = np.interp(aperture, [0, 1], [30, 140])
         self.gripper_angle = gripper_angle
         
@@ -322,17 +365,19 @@ class PolicyRobotController:
         Returns:
             Observation dictionary
         """
-
-        self.get_point_cloud = True
-        self.get_rgb_image = True
-
-        while self.rgb_image is None or self.depth_image is None:
-            print("Waiting to get images...")
-
+        # Get the latest images on demand
+        success = self.get_latest_image(timeout=5.0)
+        
+        if not success:
+            rospy.logerr("Failed to get observation")
+            return None
+        
+        # Create observation dictionary
         obs = {
-            'color': self.rgb_image,
-            'depth': self.depth_image
+            'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
+            'depth': self.depth_image.copy()
         }
+        
         return obs
             
     def eval_agent(self, args):
@@ -343,7 +388,7 @@ class PolicyRobotController:
         policy = Policy(args, params)
         policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
-        segmenter = ObjectSegmenter(args)
+        segmenter = ObjectSegmenter()
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
@@ -360,23 +405,37 @@ class PolicyRobotController:
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
 
+        # Get initial observation
         obs = self.get_observation()
+        if obs is None:
+            rospy.logerr("Failed to get initial observation")
+            return
+        
+        print("Got initial observation. And now getting segmentations...")
 
-        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True)
+        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True)#, dim=(480, 640))
         cv2.imwrite(os.path.join(self.TEST_DIR, "initial_scene.png"), pred_mask)
         cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
 
         target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'], rng)
+        print("Target ID:", target_id)
 
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
             state = policy.state_representation(obs)
+            print("Gotten the state")
+
             action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
+            print("Gotten the action")
         
             try:
                 # Execute grasp based on policy
                 obs = self.grasp_object(action)
+                if obs is None:
+                    rospy.logerr("Failed to get observation after grasp")
+                    attempts += 1
+                    continue
 
                 processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True)
                 target_id, target_mask = grasping.find_target(processed_masks, target_mask)
@@ -386,14 +445,25 @@ class PolicyRobotController:
                     if res.lower() == "y":
                         target_id = int(input("\nWhat is the index? "))
                         target_mask = processed_masks[target_id]
-                        continue
                 
+                attempts += 1
                 rate.sleep()
                 
             except KeyboardInterrupt:
                 print("Shutting down")
+                break
             except Exception as e:
                 rospy.logerr(f"Error in main loop: {str(e)}")
+                attempts += 1
+
+    def cleanup(self):
+        """Clean up subscribers to prevent issues on shutdown"""
+        if self.rgb_sub is not None:
+            self.rgb_sub.unregister()
+        if self.depth_sub is not None:
+            self.depth_sub.unregister()
+        if self.camera_info_sub is not None:
+            self.camera_info_sub.unregister()
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -422,6 +492,10 @@ def parse_args():
     parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
     parser.add_argument('--step', default=500, type=int, help='')
 
+    # args for act
+    parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
+    parser.add_argument('--temporal_agg', action='store_true')
+
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -431,6 +505,11 @@ if __name__ == '__main__':
         print(f"You are using {args.device}")
 
         controller = PolicyRobotController()
-        controller.eval_agent(args)
+        try:
+            controller.eval_agent(args)
+        except Exception as e:
+            rospy.logerr(f"Error in eval_agent: {str(e)}")
+        finally:
+            controller.cleanup()
     except rospy.ROSInterruptException as e:
         rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
