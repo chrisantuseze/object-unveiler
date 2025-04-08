@@ -35,7 +35,7 @@ def collect_episodic_dataset(args, params):
     rng = np.random.RandomState()
     rng.seed(args.seed)
 
-    segmenter = ObjectSegmenter()
+    segmenter = ObjectSegmenter(args)
 
     for i in range(args.n_samples):
         # try:
@@ -333,7 +333,7 @@ def collect_random_target_dataset(args, params):
     rng = np.random.RandomState()
     rng.seed(args.seed)
 
-    segmenter = ObjectSegmenter()
+    segmenter = ObjectSegmenter(args)
 
     for i in range(args.n_samples):
         episode_seed = rng.randint(0, pow(2, 32) - 1)

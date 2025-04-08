@@ -409,7 +409,7 @@ def eval_agent(args):
     policy = Policy(args, params)
     policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
-    segmenter = ObjectSegmenter()
+    segmenter = ObjectSegmenter(args)
 
     rng = np.random.RandomState()
     rng.seed(args.seed)

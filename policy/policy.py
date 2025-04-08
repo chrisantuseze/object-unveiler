@@ -47,7 +47,7 @@ class Policy:
         self.ae_model = ActionDecoder(args).to(self.device)
         self.sre_model = SpatialEncoder(args).to(self.device)
 
-        self.segmenter = ObjectSegmenter()
+        self.segmenter = ObjectSegmenter(args)
 
         self.reg = Regressor().to(self.device)
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
