@@ -33,7 +33,7 @@ class ObjectSegmenter:
             self.threshold = 0.98
 
     @torch.no_grad()
-    def from_maskrcnn(self, color_image, dir=TRAIN_EPISODES_DIR, bbox=False):
+    def from_maskrcnn(self, color_image, dir=TRAIN_EPISODES_DIR, bbox=False, dim=(IMAGE_HEIGHT, IMAGE_WIDTH)):
         """
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
@@ -45,7 +45,7 @@ class ObjectSegmenter:
         raw_masks = []
         bboxes = []
 
-        pred_mask = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8)
+        pred_mask = np.zeros(dim, dtype=np.uint8)
         prediction = self.prediction[0]
 
         for idx, mask in enumerate(prediction["masks"]):
