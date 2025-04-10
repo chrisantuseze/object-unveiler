@@ -18,31 +18,28 @@ import policy.grasping as grasping
 import utils.logger as logging
 from skimage import transform
 
-def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, success_count, max_steps=15):
+def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     """
-    Run a single episode of obstacle and target grasping with heuristics.
-    This function evaluates the performance of a policy in an environment where the goal is to grasp a target object
-    while potentially removing obstacles in the way. The episode continues until the target is grasped or a terminal
-    state is reached.
+    Runs a single episode for evaluating direct target grasping with heuristics.
     Parameters:
-    policy (Policy): The policy to be evaluated.
-    env (Environment): The environment in which the policy operates.
-    segmenter (ObjectSegmenter): The object segmenter used to process observations.
+    policy (Policy): The policy to be used for decision making.
+    env (Environment): The environment in which the agent operates.
+    segmenter (ObjectSegmenter): The object segmenter used for processing observations.
     rng: Random number generator for reproducibility.
     episode_seed: Seed for the episode to ensure reproducibility.
     max_steps (int, optional): Maximum number of steps in the episode. Default is 15.
     Returns:
-    tuple: A tuple containing:
-        - episode_data (dict): A dictionary with episode statistics including:
-            - 'sr-1': Success rate for the first attempt.
-            - 'sr-n': Success rate for multiple attempts.
-            - 'fails': Number of failed grasps.
-            - 'attempts': Number of grasp attempts.
-            - 'collisions': Number of collisions.
-            - 'objects_removed': Number of objects removed.
-            - 'objects_in_scene': Number of objects in the initial scene.
+    tuple: A tuple containing episode data and updated success count.
+    Episode Data Dictionary:
+    - 'sr-1': Success rate for the first attempt.
+    - 'sr-n': Success rate for multiple attempts.
+    - 'fails': Number of failed grasp attempts.
+    - 'attempts': Total number of grasp attempts.
+    - 'collisions': Number of collisions encountered.
+    - 'objects_removed': Number of objects successfully removed.
+    - 'objects_in_scene': Number of objects present in the initial scene.
     """
-    
+
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -55,7 +52,11 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
                     'attempts': 0,
                     'collisions': 0,
                     'objects_removed': 0,
-                    'objects_in_scene': len(obs['full_state'])}
+                    'objects_in_scene': len(obs['full_state']),
+                    'total_clutter_score': 0.0,
+                    'final_clutter_score': 0.0,
+                    'successful': False,
+                    }
     
     initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     processed_masks = copy.deepcopy(initial_masks)
@@ -68,23 +69,13 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
-    node_id = -1
     n_prev_masks, count = 0, 0
     total_clutter_score = 0.0
-
-    # NOTE: During the next iteration you need to search through the masks and identify the target, 
-    # then use its id. Don't maintain the old target id because the scene has been resegmented
-    while node_id != target_id:
-        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
-        print("\nobjects_to_remove:", objects_to_remove)
-
-        node_id = objects_to_remove[0]
-        obstacle_mask = processed_masks[node_id]
+    while episode_data['attempts'] < max_steps:
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
-        cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_target_ppg(state, obs['color'][1], obstacle_mask)
+        action = policy.exploit_encoder_only(state, obs['color'][1], target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -142,7 +133,7 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
-            if grasp_info['stable'] or res.lower() == "y":
+            if res.lower() == "y":
                 logging.info("Target has been grasped!")
 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
@@ -224,7 +215,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_target_ppg(state, obs['color'][1], target_mask)
+        action = policy.exploit_ppg(state, obs['color'][1], target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -282,7 +273,7 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
-            if grasp_info['stable'] or res.lower() == "y":
+            if res.lower() == "y":
                 logging.info("Target has been grasped!")
 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)

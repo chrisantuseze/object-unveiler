@@ -1,6 +1,6 @@
 import os
 import pickle
-from policy.models_attn2 import Regressor, ResFCN
+from policy.models_target import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
 from policy.ae_model import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
@@ -466,19 +466,20 @@ class Policy:
         
         return action
 
-    def exploit_attn(self, state, color_image, target_mask):
+    def exploit_encoder_only(self, state, color_image, target_mask):
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        processed_pred_mask, processed_target, processed_obj_masks,\
-        raw_pred_mask, raw_target_mask, raw_obj_masks,\
-              objects_to_remove, gt_object, bboxes, processed_masks = self.get_inputs(state, color_image, target_mask)
+        target = general_utils.preprocess_target(target_mask, state)
+        target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        object_logits, out_prob = self.fcn(x, processed_target, processed_obj_masks, 
-            # processed_pred_mask, raw_pred_mask, raw_target_mask, raw_obj_masks, bboxes, 
-            bboxes, is_volatile=True
-        )
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        plt.show()
+
+        out_prob = self.ae_model(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
@@ -503,7 +504,7 @@ class Policy:
 
         return action
     
-    def exploit_target_ppg(self, state, color_image, target_mask):
+    def exploit_ppg(self, state, color_image, target_mask):
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
@@ -516,7 +517,7 @@ class Policy:
         ax[1].imshow(target_mask)
         plt.show()
 
-        out_prob = self.ae_model(x, target, is_volatile=True)
+        out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
 
         best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)

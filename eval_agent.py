@@ -118,7 +118,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
-            if grasp_info['stable'] or res.lower() == "y":
+            if res.lower() == "y":
                 logging.info("Target has been grasped!")
 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)

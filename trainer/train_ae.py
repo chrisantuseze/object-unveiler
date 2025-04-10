@@ -1,7 +1,7 @@
 from copy import deepcopy
 import os
 import random
-# from policy.models_target import ResFCN, Regressor
+from policy.models_target import ResFCN, Regressor
 from policy.ae_model import ActionDecoder, Regressor
 
 import torch
@@ -11,6 +11,7 @@ from torch.utils import data
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from datasets.aperture_dataset import ApertureDataset
+from datasets.heightmap_dataset import HeightmapDataset
 
 from datasets.ae_dataset import AEDataset
 
@@ -138,6 +139,110 @@ def train_ae(args):
     torch.save(model.state_dict(), os.path.join(save_path, f'ae_model_last.pt'))
     writer.close()
 
+def train_fcn_net(args):
+    writer = SummaryWriter(comment="fcn")
+
+    save_path = 'save/fcn'
+
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    transition_dirs = os.listdir(args.dataset_dir)
+    
+    for file_ in transition_dirs:
+        if not file_.startswith("episode"):
+            transition_dirs.remove(file_)
+
+    # Split data to training/validation
+    random.seed(0)
+    random.shuffle(transition_dirs)
+
+    print(f'\nData from: {args.dataset_dir}; size: {len(transition_dirs)}\n')
+
+    train_ids = transition_dirs[:int(args.split_ratio * len(transition_dirs))]
+    val_ids = transition_dirs[int(args.split_ratio * len(transition_dirs)):]
+
+     # this ensures that the split is done properly without causing input mismatch error
+    data_length = (len(train_ids)//args.batch_size) * args.batch_size
+    train_ids = train_ids[:data_length]
+
+    data_length = (len(val_ids)//args.batch_size) * args.batch_size
+    val_ids = val_ids[:data_length]
+
+    train_dataset = HeightmapDataset(args, train_ids)
+    val_dataset = HeightmapDataset(args, val_ids)
+
+    data_loader_train = data.DataLoader(train_dataset,
+                                        batch_size=args.batch_size,
+                                        shuffle=True)
+    data_loader_val = data.DataLoader(val_dataset, batch_size=args.batch_size)
+    data_loaders = {'train': data_loader_train, 'val': data_loader_val}
+    print('{} training data, {} validation data'.format(len(train_ids), len(val_ids)))
+
+    model = ResFCN(args).to(args.device)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # criterion = nn.SmoothL1Loss(reduction='none')
+    criterion = nn.BCELoss(reduction='none')
+
+    lowest_loss = float('inf')
+    best_ckpt_info = None
+
+    for epoch in range(args.epochs):
+        model.train()
+        for batch in data_loader_train:
+            x = batch[0].to(args.device)
+            target = batch[1].to(args.device)
+            rotations = batch[2]
+            y = batch[3].to(args.device, dtype=torch.float)
+
+            pred = model(x, target, rotations)
+
+            # Compute loss in the whole scene
+            loss = criterion(pred, y)
+            loss = torch.sum(loss)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            debug_params(model)
+
+        model.eval()
+        epoch_loss = {'train': 0.0, 'val': 0.0}
+        for phase in ['train', 'val']:
+            for batch in data_loaders[phase]:
+                x = batch[0].to(args.device)
+                target = batch[1].to(args.device)
+                rotations = batch[2]
+                y = batch[3].to(args.device, dtype=torch.float)
+
+                pred = model(x, specific_rotation=rotations)
+
+                loss = criterion(pred, y)
+                loss = torch.sum(loss)
+                epoch_loss[phase] += loss.detach().cpu().numpy()
+
+        logging.info('Epoch {}: training loss = {:.6f} '
+              ', validation loss = {:.6f}'.format(epoch, epoch_loss['train'] / len(data_loaders['train']),
+                                                  epoch_loss['val'] / len(data_loaders['val'])))
+        writer.add_scalar("log/train", epoch_loss['train'] / len(data_loaders['train']), epoch)
+        writer.add_scalar("log/val", epoch_loss['val'] / len(data_loaders['val']), epoch)
+
+        if epoch % 25 == 0:
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_{epoch}.pt'))
+
+        if lowest_loss > epoch_loss['val']:
+            lowest_loss = epoch_loss['val']
+            best_ckpt_info = (epoch, lowest_loss/len(data_loaders['val']), deepcopy(model.state_dict()))
+            torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_best.pt'))
+
+    # save best checkpoint
+    best_epoch, lowest_val_loss, best_state_dict = best_ckpt_info
+    torch.save(best_state_dict, os.path.join(save_path, f'fcn_model_best.pt'))
+    print(f'Best ckpt, val loss {lowest_val_loss:.6f} @ epoch{best_epoch}')
+
+    torch.save(model.state_dict(), os.path.join(save_path, f'fcn_model_last.pt'))
+    writer.close()
 
 def train_regressor(args):
     save_path = 'save/reg'
