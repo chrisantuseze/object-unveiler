@@ -158,7 +158,7 @@ def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: Object
     logging.info('--------')
     return episode_data
 
-def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
+def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     """
     Runs a single episode for evaluating direct target grasping with heuristics.
     Parameters:
@@ -373,7 +373,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_target(policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_encoder_only(policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
