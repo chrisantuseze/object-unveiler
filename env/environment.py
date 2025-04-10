@@ -44,11 +44,11 @@ class Environment:
         self.pxl_size = params['env']['pixel_size']
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
-        self.nr_objects = [1, 4]
+        # self.nr_objects = [1, 4]
 
         # self.nr_objects = [3, 6]
         # self.nr_objects = [6, 9]
-        # self.nr_objects = [9, 12]
+        self.nr_objects = [9, 12]
 
 
         # Setup cameras.

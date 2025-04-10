@@ -87,7 +87,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
 
         obs = copy.deepcopy(next_obs)
 
-        new_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
+        new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
         if len(new_masks) == n_prev_masks:
             count += 1
 
@@ -138,6 +138,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
         processed_masks = copy.deepcopy(new_masks)
+        bboxes = copy.deepcopy(new_bboxes)
         n_prev_masks = len(processed_masks)
 
     logging.info('--------')
@@ -425,7 +426,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_act(args, policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_multi(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']

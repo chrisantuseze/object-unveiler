@@ -147,6 +147,9 @@ class Policy:
         state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
         return state
     
+    def get_dmap(self, color, depth, intrinsics):
+        return general_utils.get_heightmap__(color, depth, intrinsics, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
+    
     def get_state_representation(self, obs):
         state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
         color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)

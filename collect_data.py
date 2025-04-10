@@ -231,6 +231,27 @@ def run_episode_act(i, policy: Policy, segmenter: ObjectSegmenter, env: Environm
         print("target id:", target_id)
 
         state, depth_heightmap = policy.get_state_representation(obs)
+        # np.save('state.npy', state)
+
+        color = np.load('color.npy')
+        depth = np.load('depth.npy')
+        intrinsics = np.load('intrinsics.npy')
+
+        cmap, dmap = policy.get_dmap(color, depth, intrinsics)
+
+        fig, ax = plt.subplots(2, 4)
+        ax[0][0].imshow(state)
+        ax[0][1].imshow(depth_heightmap)
+        ax[0][2].imshow(obs['depth'][0])
+        ax[0][3].imshow(obs['color'][0])
+
+        ax[1][0].imshow(dmap)
+        ax[1][1].imshow(cmap)
+        ax[1][2].imshow(depth)
+        ax[1][3].imshow(color)
+
+        plt.show()
+
         try:
             actions = policy.generate_trajectory(state, object_mask, num_steps=AdaptiveActionState.EXPECTED_STEPS + 1)
             # actions = policy.generate_trajectory(state, object_mask, num_steps=ActionState.NUM_STEPS + 1)
