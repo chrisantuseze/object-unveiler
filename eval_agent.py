@@ -52,7 +52,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
-    n_prev_masks = count = 0
+    n_prev_masks, count = 0, 0
     total_clutter_score = 0.0
 
     max_steps = 6

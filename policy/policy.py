@@ -503,13 +503,18 @@ class Policy:
 
         return action
     
-    def exploit(self, state, target_mask):
+    def exploit_target_ppg(self, state, color_image, target_mask):
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        target = general_utils.preprocess_target(target_mask, state, disp=True)
+        target = general_utils.preprocess_target(target_mask, state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
+
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        plt.show()
 
         out_prob = self.ae_model(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
