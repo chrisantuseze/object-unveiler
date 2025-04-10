@@ -80,7 +80,6 @@ def run_episode_obstacle(policy: Policy, env: Environment, segmenter: ObjectSegm
 
         node_id = objects_to_remove[0]
         obstacle_mask = processed_masks[node_id]
-        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "obstacle_mask.png"), obstacle_mask)
 
@@ -202,7 +201,11 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
                     'attempts': 0,
                     'collisions': 0,
                     'objects_removed': 0,
-                    'objects_in_scene': len(obs['full_state'])}
+                    'objects_in_scene': len(obs['full_state']),
+                    'total_clutter_score': 0.0,
+                    'final_clutter_score': 0.0,
+                    'successful': False,
+                    }
     
     initial_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR)
     processed_masks = copy.deepcopy(initial_masks)
@@ -218,7 +221,6 @@ def run_episode_target(policy: Policy, env: Environment, segmenter: ObjectSegmen
     n_prev_masks, count = 0, 0
     total_clutter_score = 0.0
     while episode_data['attempts'] < max_steps:
-        cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
