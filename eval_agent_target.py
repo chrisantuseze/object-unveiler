@@ -354,7 +354,7 @@ def eval_agent(args):
     with open('yaml/bhand.yml', 'r') as stream:
         params = yaml.safe_load(stream)
 
-    env = Environment(params)
+    env = Environment(params, objects_set="unseen")
 
     policy = Policy(args, params)
     policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
