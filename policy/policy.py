@@ -40,7 +40,7 @@ class Policy:
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
         self.crop_size = 32
-        self.push_distance = 0.12 #0.15 # distance of the floating hand from the object to be grasped
+        self.push_distance = 0.10 #0.15 # distance of the floating hand from the object to be grasped
         self.z = 0.08 # distance of the floating hand from the table (vertical distance)
 
         self.fcn = ResFCN(args).to(self.device)
@@ -552,13 +552,10 @@ class Policy:
 
         if obstacle_id < len(processed_masks):
             obstacle_mask = processed_masks[obstacle_id]
-            obstacle = general_utils.preprocess_target(obstacle_mask, state)
-            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
-
         else:
             obstacle_mask = target_mask
-            obstacle = general_utils.preprocess_target(obstacle_mask, state)
-            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+        obstacle = general_utils.preprocess_target(obstacle_mask, state)
+        obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
         
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)

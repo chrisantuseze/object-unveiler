@@ -17,6 +17,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from dofbot_pro_info.msg import ArmJoint
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
 from utils import general_utils
 import utils.logger as logging
 from mask_rg.object_segmenter import ObjectSegmenter
@@ -26,7 +27,9 @@ class PolicyRobotController:
     def __init__(self):
         # Initialize the ROS node
         rospy.init_node('policy_robot_controller')
-        self.TEST_DIR = "dofbot_pro_ws/src/dofbot_pro_info/scripts"
+        self.TEST_DIR = "dofbot_pro_ws/src/dofbot_pro_info/scripts/images"
+        if not os.path.exists(self.TEST_DIR):
+            os.makedirs(self.TEST_DIR)
         
         # Publisher to control the robot arm
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
@@ -51,7 +54,7 @@ class PolicyRobotController:
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
         
         # Robot arm parameters
-        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 30.0]  # Default home position
+        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
         
         # Wait for publisher to connect and camera info to be received
@@ -69,6 +72,8 @@ class PolicyRobotController:
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
+        self.hmap_generator = HeightmapGenerator()
+
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
         self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
@@ -81,7 +86,8 @@ class PolicyRobotController:
             try:
                 self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
                 self.rgb_image = cv2.flip(self.rgb_image, -1)
-                cv2.imwrite("saved_rgb_image.png", self.rgb_image)
+                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
+                
                 self.rgb_lock = False  # Release the lock
             except Exception as e:
                 rospy.logerr(f"RGB conversion error: {e}")
@@ -98,15 +104,9 @@ class PolicyRobotController:
                 # Normalize depth to 0–255 and convert to 8-bit for visualization
                 depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
                 depth_vis = depth_vis.astype(np.uint8)
-                cv2.imwrite("saved_depth_image.png", depth_vis)
+                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_depth_image.png"), depth_vis)
                 
                 self.depth_lock = False  # Release the lock
-                
-                # Generate point cloud if both RGB and depth are available
-                if self.rgb_image is not None and self.intrinsics is not None:
-                    self.generate_point_cloud()
-                    state = self.get_fused_heightmap()
-                    cv2.imwrite("state.png", state)
             except Exception as e:
                 rospy.logerr(f"Depth conversion error: {e}")
                 self.depth_lock = False  # Make sure to release the lock even if there's an error
@@ -148,9 +148,9 @@ class PolicyRobotController:
         
         return True
 
-    def generate_point_cloud(self):
+    def generate_point_cloud(self, color_img, depth_img):
         """ Generates and saves a point cloud using depth and RGB data. """
-        height, width = self.depth_image.shape
+        height, width = depth_img.shape
         fx, fy = self.intrinsics[0, 0], self.intrinsics[1, 1]  # Focal lengths
         cx, cy = self.intrinsics[0, 2], self.intrinsics[1, 2]  # Optical center
 
@@ -159,14 +159,14 @@ class PolicyRobotController:
 
         for v in range(height):
             for u in range(width):
-                Z = self.depth_image[v, u]
+                Z = depth_img[v, u]
                 if Z > 0:  # Ignore zero-depth points
                     X = (u - cx) * Z / fx
                     Y = (v - cy) * Z / fy
                     points.append((X, Y, Z))
 
                     # Get RGB color from the RGB image
-                    color = self.rgb_image[v, u] / 255.0  # Normalize to [0, 1]
+                    color = color_img[v, u] / 255.0  # Normalize to [0, 1]
                     colors.append((color[2], color[1], color[0]))  # Convert BGR to RGB
 
         # Convert to Open3D point cloud
@@ -176,13 +176,16 @@ class PolicyRobotController:
 
         # Save the point cloud
         self.point_cloud = pcd
+        return pcd
 
-    def get_fused_heightmap(self):
+    def get_fused_heightmap(self, obs):
+        pcd = self.generate_point_cloud(obs['color'], obs['depth'])
+
         bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
         pixel_size = 0.005
 
-        xyz = np.asarray(self.point_cloud.points)
-        seg_class = np.asarray(self.point_cloud.colors)
+        xyz = np.asarray(pcd.points)
+        seg_class = np.asarray(pcd.colors)
 
         # Compute heightmap size
         heightmap_size = np.round(((bounds[1][1] - bounds[1][0]) / pixel_size,
@@ -416,6 +419,7 @@ class PolicyRobotController:
         processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(480, 640))
         cv2.imwrite(os.path.join(self.TEST_DIR, "initial_scene.png"), pred_mask)
         cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
+        cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
 
         target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'], rng)
         print("Target ID:", target_id)
@@ -423,7 +427,13 @@ class PolicyRobotController:
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            state = policy.state_representation(obs)
+            # state = policy.state_representation(obs)
+            np.save(os.path.join(self.TEST_DIR, 'color.npy'), obs['color'])
+            np.save(os.path.join(self.TEST_DIR, 'depth.npy'), obs['depth'])
+            np.save(os.path.join(self.TEST_DIR, 'intrinsics.npy'), self.intrinsics)
+            
+            state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
+            np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
             print("Gotten the state")
 
             action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
@@ -499,17 +509,25 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == '__main__':
-    try:
-        args = parse_args()
-        args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print(f"You are using {args.device}")
+    # try:
+    #     args = parse_args()
+    #     args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #     print(f"You are using {args.device}")
 
-        controller = PolicyRobotController()
-        try:
-            controller.eval_agent(args)
-        except Exception as e:
-            rospy.logerr(f"Error in eval_agent: {str(e)}")
-        finally:
-            controller.cleanup()
-    except rospy.ROSInterruptException as e:
-        rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
+    #     controller = PolicyRobotController()
+    #     try:
+    #         controller.eval_agent(args)
+    #     except Exception as e:
+    #         rospy.logerr(f"Error in eval_agent: {str(e)}")
+    #     finally:
+    #         controller.cleanup()
+    # except rospy.ROSInterruptException as e:
+    #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
+
+    args = parse_args()
+    args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"You are using {args.device}")
+
+    controller = PolicyRobotController()
+    controller.eval_agent(args)
+    controller.cleanup()

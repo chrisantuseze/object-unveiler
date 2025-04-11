@@ -116,6 +116,13 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             if res.lower() == "y":
                 target_id = int(input("\nWhat is the index? "))
                 target_mask = new_masks[target_id]
+
+                ############# Calculating scores ##########
+                total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+
+                processed_masks = copy.deepcopy(new_masks)
+                bboxes = copy.deepcopy(new_bboxes)
+                n_prev_masks = len(processed_masks)
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
