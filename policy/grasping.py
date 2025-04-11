@@ -243,7 +243,7 @@ def get_most_peripheral_object(segmentation_masks):
     min_dist = min(distances_to_edge)
     return distances_to_edge, distances_to_edge.index(min_dist)
 
-def compute_singulation_old(before_masks, after_masks):
+def compute_singulation(before_masks, after_masks):
     """
     Measures the degree of clutter reduction after an object is removed.
 
@@ -285,12 +285,12 @@ def compute_singulation_old(before_masks, after_masks):
     avg_dist_after = avg_pairwise_distance(after_centroids)
 
     # Compute bounding box area
-    bbox_area_before = bounding_box_area(before_masks)
-    bbox_area_after = bounding_box_area(after_masks)
+    # bbox_area_before = bounding_box_area(before_masks)
+    # bbox_area_after = bounding_box_area(after_masks)
 
     # Clutter metrics
     clutter_reduction = (avg_dist_after - avg_dist_before) / avg_dist_before if avg_dist_before > 0 else 0
-    density_reduction = (bbox_area_before - bbox_area_after) / bbox_area_before if bbox_area_before > 0 else 0
+    # density_reduction = (bbox_area_before - bbox_area_after) / bbox_area_before if bbox_area_before > 0 else 0
 
     # return {
     #     "clutter_reduction": clutter_reduction,  # Positive means better singulation
@@ -298,7 +298,7 @@ def compute_singulation_old(before_masks, after_masks):
     # }
     return clutter_reduction
 
-def compute_singulation(masks_before, masks_after):
+def compute_singulation_(masks_before, masks_after):
     # Convert masks to numpy arrays
     masks_before = np.array(masks_before)
     masks_after = np.array(masks_after)

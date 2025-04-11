@@ -179,13 +179,13 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         query_frequency = 1
         num_queries = args.chunk_size
 
-    max_timesteps = ActionState.NUM_STEPS + 1 #AdaptiveActionState.NUM_STEPS + 1
+    max_timesteps = AdaptiveActionState.NUM_STEPS + 1
 
     if temporal_agg:
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
-    # episode_seed = 1791095845
+    episode_seed = 1791095845
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -266,7 +266,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print(t, ",", env.current_state)
 
             env_action3d = policy.action3d(action)
-            obs, grasp_info = env.step_act_old(env_action3d, eval=True)
+            obs, grasp_info = env.step_act(env_action3d, eval=True)
 
             t += 1
             end_of_episode = grasp_info['eoe']
@@ -321,6 +321,12 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 print(target_id, len(new_masks))
                 target_id = int(input("\nWhat is the index? "))
                 target_mask = new_masks[target_id]
+
+                ############# Calculating scores ##########
+                avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+
+                processed_masks = copy.deepcopy(new_masks)
+                n_prev_masks = len(processed_masks)
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
@@ -367,7 +373,7 @@ def plot_joint_positions_over_time(ground_truth, predicted, filename='joint_posi
     
     for joint in range(joint_count):
         # ax = axes[joint // 2, joint % 2]
-        ax = axes
+        ax = axes[joint]
         
         ax.plot(range(time_steps), ground_truth[:, joint], label='Ground Truth', color='blue')
         ax.plot(range(time_steps), predicted[:, joint], label='Predicted', color='red', linestyle='--')
@@ -435,7 +441,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_multi(args, policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_act(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
