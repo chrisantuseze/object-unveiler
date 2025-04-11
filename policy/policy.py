@@ -424,7 +424,7 @@ class Policy:
 
         print("ground truth:", objects_to_remove)
 
-        return processed_target, processed_obj_masks, bboxes, processed_masks
+        return processed_target, processed_obj_masks, bboxes
     
     def get_act_image(self, scene_image, object_mask):
         image_dict = dict()
@@ -543,7 +543,7 @@ class Policy:
         return action
     
     def exploit_unveiler(self, state, color_image, target_mask, processed_masks, bbox):
-        processed_target, processed_obj_masks, bboxes, processed_masks = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
+        processed_target, processed_obj_masks, bboxes = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, _ = self.sre_model(processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)

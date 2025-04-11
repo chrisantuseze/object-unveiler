@@ -46,7 +46,7 @@ class Environment:
 
         # self.nr_objects = [1, 4]
 
-        # self.nr_objects = [3, 6]
+        # self.nr_objects = [2, 6]
         self.nr_objects = [6, 9]
         # self.nr_objects = [9, 12]
         # self.nr_objects = [12, 15]
@@ -696,11 +696,9 @@ class Environment:
         
         nr_objs = self.rng.randint(low=self.nr_objects[0], high=self.nr_objects[1])
 
-        # nr_objs = 6
-
         obj_paths = self.rng.choice(self.obj_files, nr_objs)
 
-        self.scene_nr_objs= nr_objs
+        self.scene_nr_objs = nr_objs
 
         for i in range(len(obj_paths)):
             obj = env_components.Objects()

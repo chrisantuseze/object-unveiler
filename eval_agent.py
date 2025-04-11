@@ -37,6 +37,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                     'objects_in_scene': len(obs['full_state']),
                     'total_clutter_score': 0.0,
                     'final_clutter_score': 0.0,
+                    'num_objects': env.scene_nr_objs,
                     'successful': False,
                 }
     
@@ -193,6 +194,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                     'objects_in_scene': len(obs['full_state']),
                     'avg_clutter_score': 0.0,
                     'final_clutter_score': 0.0,
+                    'num_objects': env.scene_nr_objs,
                     'successful': False,
                 }
     
@@ -436,7 +438,7 @@ def eval_agent(args):
         if episode_data['successful']:
             success_count += 1
             with open('unveiler_results.txt', 'a') as file:
-                    file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}\n")
+                    file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
             avg_clutter_score += (episode_data['total_clutter_score']/episode_data['attempts'])
