@@ -216,7 +216,7 @@ def train_fcn_net(args):
                 rotations = batch[2]
                 y = batch[3].to(args.device, dtype=torch.float)
 
-                pred = model(x, specific_rotation=rotations)
+                pred = model(x, target, specific_rotation=rotations)
 
                 loss = criterion(pred, y)
                 loss = torch.sum(loss)
