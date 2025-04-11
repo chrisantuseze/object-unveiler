@@ -98,7 +98,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             res = input("\nDo you still want to continue? (y/n) ")
             if res.lower() == "n":
                 res = input("\nDo you think the grasp was successful? (y/n) ")
-                if grasp_info['stable'] or res.lower() == "y":
+                if res.lower() == "y":
                     logging.info("Target has been grasped!")
 
                     final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
@@ -302,7 +302,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             res = input("\nDo you still want to continue? (y/n) ")
             if res.lower() == "n":
                 res = input("\nDo you think the grasp was successful? (y/n) ")
-                if grasp_info['stable'] or res.lower() == "y":
+                if res.lower() == "y":
                     logging.info("Target has been grasped!")
                     
                     final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
@@ -330,7 +330,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 continue
 
             res = input("\nDo you think the grasp was successful? (y/n) ")
-            if grasp_info['stable'] or res.lower() == "y":
+            if res.lower() == "y":
                 logging.info("Target has been grasped!")
                 
                 final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
