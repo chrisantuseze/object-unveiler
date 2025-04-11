@@ -201,12 +201,15 @@ def sample_distribution(prob, rng, n_samples=1):
 def get_target_mask(processed_masks, image, rng):
     id = 0
     if len(processed_masks) > 1:
-        rand_id = rng.randint(0, len(processed_masks) - 1)
+        # rand_id = rng.randint(0, len(processed_masks) - 1)
         # id = grasping.find_topmost_right_object(processed_masks)
-        mid_id = grasping.find_central_object(processed_masks)
+        # mid_id = grasping.find_central_object(processed_masks)
+
+        min_index = grasping.get_most_peripheral_object(processed_masks)
 
         # Randomly decide between mid_id and the generated number
-        id = rng.choice([mid_id, rand_id])
+        # id = rng.choice([mid_id, rand_id])
+        id = min_index
 
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:

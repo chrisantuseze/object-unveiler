@@ -20,10 +20,7 @@ def find_obstacles_to_remove(target_index, segmentation_masks):
     if len(segmentation_masks) <= 3:
         return [target_index if target_index >= 0 else 0]
     
-    distances_to_edge = get_distances_to_edge(segmentation_masks)
-
-    min_dist = min(distances_to_edge)
-    min_index = distances_to_edge.index(min_dist)
+    min_index = get_most_peripheral_object(segmentation_masks)
     if min_index == target_index:
         return [target_index]
     
@@ -239,6 +236,12 @@ def find_central_object(segmentation_masks):
 
     print("Central object id is:", central_object_index)
     return central_object_index
+
+def get_most_peripheral_object(segmentation_masks):
+    distances_to_edge = get_distances_to_edge(segmentation_masks)
+
+    min_dist = min(distances_to_edge)
+    return distances_to_edge.index(min_dist)
 
 def compute_singulation_old(before_masks, after_masks):
     """

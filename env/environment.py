@@ -49,6 +49,7 @@ class Environment:
         # self.nr_objects = [3, 6]
         self.nr_objects = [6, 9]
         # self.nr_objects = [9, 12]
+        # self.nr_objects = [12, 15]
 
 
         # Setup cameras.
@@ -134,7 +135,7 @@ class Environment:
         self.remove_flat_objs()
 
         # pack objects closer to the middle
-        self.centralize_objs(force_magnitude=1)#2)
+        self.centralize_objs(force_magnitude=2)
 
         # remove flat objects
         self.remove_flat_objs()
