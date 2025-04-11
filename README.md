@@ -14,7 +14,7 @@ python3 main.py \
 --n_scenes 30 \
 --chunk_size 5 \
 --temporal_agg \
---seed 17
+--seed 1
 
 
 python3 main.py \
