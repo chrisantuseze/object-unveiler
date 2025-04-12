@@ -49,7 +49,6 @@ class Environment:
         # self.nr_objects = [2, 6]
         # self.nr_objects = [6, 9]
         self.nr_objects = [9, 12]
-        # self.nr_objects = [12, 15]
 
 
         # Setup cameras.
