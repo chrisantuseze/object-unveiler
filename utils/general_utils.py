@@ -208,7 +208,7 @@ def get_target_mask(processed_masks, image, rng):
 
         # Randomly decide between mid_id and the generated number
         # id = rng.choice([mid_id, rand_id])
-        id = min_index
+        id = mid_id
 
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:
