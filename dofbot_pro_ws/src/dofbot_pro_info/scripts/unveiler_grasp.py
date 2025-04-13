@@ -434,7 +434,8 @@ class PolicyRobotController:
             np.save(os.path.join(self.TEST_DIR, 'depth.npy'), obs['depth'])
             np.save(os.path.join(self.TEST_DIR, 'intrinsics.npy'), self.intrinsics)
             
-            state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
+            # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
+            state = policy.get_dmap(obs['color'], obs['depth'], self.intrinsics)
             np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
             print("Gotten the state")
 
