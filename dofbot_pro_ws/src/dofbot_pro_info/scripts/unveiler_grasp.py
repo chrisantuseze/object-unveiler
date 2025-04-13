@@ -393,7 +393,7 @@ class PolicyRobotController:
 
         args_ = copy.deepcopy(args)
         args_.device = torch.device("cpu")
-        segmenter = ObjectSegmenter(args)
+        segmenter = ObjectSegmenter(args_)
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
