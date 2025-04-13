@@ -53,8 +53,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        self.policy, self.stats = self.make_act_policy()
-        # self.policy, self.stats = None, None
+        # self.policy, self.stats = self.make_act_policy()
+        self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -575,17 +575,17 @@ class Policy:
         theta = best_action[0] * 2 * np.pi/self.rotations
 
         # find optimal aperture
-        # aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
-        # x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
-        # aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
        
-        # # undo normalization
-        # # aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
-        # #                                target_range=[self.aperture_limits[0], 
-        # #                                              self.aperture_limits[1]])
+        # undo normalization
+        # aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+        #                                target_range=[self.aperture_limits[0], 
+        #                                              self.aperture_limits[1]])
 
-         # sample aperture uniformly
-        aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
+        # sample aperture uniformly
+        # aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
 
         action = np.zeros((4,))
         action[0] = p1[0]
