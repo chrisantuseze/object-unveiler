@@ -585,7 +585,7 @@ class Policy:
         # #                                              self.aperture_limits[1]])
 
          # sample aperture uniformly
-        aperture = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
+        aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
 
         action = np.zeros((4,))
         action[0] = p1[0]
