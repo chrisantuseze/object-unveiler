@@ -436,7 +436,7 @@ class PolicyRobotController:
             np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
             print("Gotten the state")
 
-            action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
+            action = policy.exploit_real_robot(state, target_mask)
             print("Gotten the action")
         
             try:

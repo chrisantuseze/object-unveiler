@@ -580,12 +580,38 @@ class Policy:
         aperture = self.reg(x).detach().cpu().numpy()[0, 0]
        
         # undo normalization
-        # aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
-        #                                target_range=[self.aperture_limits[0], 
-        #                                              self.aperture_limits[1]])
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
 
         # sample aperture uniformly
         # aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
+
+    def exploit_real_robot(self, state, target_mask):
+        target_mask = general_utils.preprocess_target(target_mask, state)
+        target_mask = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
+        
+        # find optimal position and orientation
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        out_prob = self.ae_model(x, target_mask, is_volatile=True)
+        out_prob = general_utils.postprocess(out_prob, self.padding_width)
+
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
+
+        # sample aperture uniformly
+        aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
 
         action = np.zeros((4,))
         action[0] = p1[0]
