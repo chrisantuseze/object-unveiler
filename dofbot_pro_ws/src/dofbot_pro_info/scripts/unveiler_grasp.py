@@ -391,6 +391,8 @@ class PolicyRobotController:
         policy = Policy(args, params)
         policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
+        args_ = copy.deepcopy(args)
+        args_.device = torch.device("cpu")
         segmenter = ObjectSegmenter(args)
 
         rng = np.random.RandomState()
@@ -525,7 +527,8 @@ if __name__ == '__main__':
     #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
 
     args = parse_args()
-    args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # args.device = torch.device("cpu")
     print(f"You are using {args.device}")
 
     controller = PolicyRobotController()
