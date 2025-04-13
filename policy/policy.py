@@ -575,14 +575,17 @@ class Policy:
         theta = best_action[0] * 2 * np.pi/self.rotations
 
         # find optimal aperture
-        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
-        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
-        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        # aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        # x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        # aperture = self.reg(x).detach().cpu().numpy()[0, 0]
        
-        # undo normalization
-        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
-                                       target_range=[self.aperture_limits[0], 
-                                                     self.aperture_limits[1]])
+        # # undo normalization
+        # # aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+        # #                                target_range=[self.aperture_limits[0], 
+        # #                                              self.aperture_limits[1]])
+
+         # sample aperture uniformly
+        aperture = self.rng.uniform(self.aperture_limits[0], self.aperture_limits[1])
 
         action = np.zeros((4,))
         action[0] = p1[0]
