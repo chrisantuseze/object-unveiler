@@ -440,7 +440,7 @@ class PolicyRobotController:
             print("Gotten the state")
 
             action = policy.exploit_real_robot(state, target_mask)
-            print("Gotten the action")
+            print("Gotten the action:", action)
         
             try:
                 # Execute grasp based on policy
