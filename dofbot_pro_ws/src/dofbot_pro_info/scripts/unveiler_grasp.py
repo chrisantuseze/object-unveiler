@@ -368,13 +368,16 @@ class PolicyRobotController:
         Returns:
             Observation dictionary
         """
+        print("Acquiring latest images")
         # Get the latest images on demand
         success = self.get_latest_image(timeout=5.0)
         
         if not success:
+            print("Failed to get images")
             rospy.logerr("Failed to get observation")
             return None
         
+        print("Latest images acquired")
         # Create observation dictionary
         obs = {
             'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
@@ -419,39 +422,59 @@ class PolicyRobotController:
         print("Got initial observation. And now getting segmentations...")
 
         processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(480, 640))
-        cv2.imwrite(os.path.join(self.TEST_DIR, "initial_scene.png"), pred_mask)
+        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), pred_mask)
         cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
         cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
 
+        print("len(processed_masks):", len(processed_masks))
         target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'], rng)
         print("Target ID:", target_id)
+        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
 
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
             # state = policy.state_representation(obs)
-            np.save(os.path.join(self.TEST_DIR, 'color.npy'), obs['color'])
-            np.save(os.path.join(self.TEST_DIR, 'depth.npy'), obs['depth'])
-            np.save(os.path.join(self.TEST_DIR, 'intrinsics.npy'), self.intrinsics)
+            # np.save(os.path.join(self.TEST_DIR, 'color.npy'), obs['color'])
+            # np.save(os.path.join(self.TEST_DIR, 'depth.npy'), obs['depth'])
+            # np.save(os.path.join(self.TEST_DIR, 'intrinsics.npy'), self.intrinsics)
             
             # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
             state = policy.get_dmap(obs['color'], obs['depth'], self.intrinsics)
-            np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
+            # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
             print("Gotten the state")
+
+            torch.cuda.empty_cache()
 
             # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
             action = policy.exploit_real_robot(state, target_mask)
             print("Gotten the action:", action)
+
+            torch.cuda.empty_cache()
         
             try:
+                general_utils.delete_episodes_misc(self.TEST_DIR)
+
                 # Execute grasp based on policy
-                obs = self.grasp_object(action)
+                next_obs = self.grasp_object(action)
                 if obs is None:
                     rospy.logerr("Failed to get observation after grasp")
                     attempts += 1
                     continue
 
-                processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True)
+                obs = copy.deepcopy(next_obs)
+
+                print("Getting fresh segmentations...")
+                color_image = obs['color']
+                cv2.imwrite(os.path.join(self.TEST_DIR, "maskrcnn_image.png"), color_image)
+
+                rospy.sleep(0.5)
+
+                processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
+                cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
+                cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
+
+                print("len(processed_masks):", len(processed_masks))
                 target_id, target_mask = grasping.find_target(processed_masks, target_mask)
 
                 if target_id == -1:
@@ -459,6 +482,9 @@ class PolicyRobotController:
                     if res.lower() == "y":
                         target_id = int(input("\nWhat is the index? "))
                         target_mask = processed_masks[target_id]
+                    else:
+                        print("Target not available. Exiting.")
+                        break
                 
                 attempts += 1
                 rate.sleep()

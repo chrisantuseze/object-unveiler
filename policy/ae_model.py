@@ -259,6 +259,85 @@ class ActionDecoder(nn.Module):
             out_prob = out_prob.view(output_shape).to(dtype=torch.float)
 
             return out_prob
+
+    def forward_rr(self, depth_heightmap, object_depth, specific_rotation=-1, is_volatile=False):
+        import gc
+
+        if is_volatile:
+            rotated_outputs = []
+
+            with torch.no_grad():
+                for rot_id in range(self.nr_rotations):
+                    theta = np.radians(rot_id * (360 / self.nr_rotations))
+                    affine_mat = np.array([[np.cos(theta), np.sin(theta), 0.0],
+                                        [-np.sin(theta), np.cos(theta), 0.0]])
+                    affine_mat = torch.from_numpy(affine_mat).unsqueeze(0).to(self.device).to(dtype=torch.half)
+                    flow_grid = F.affine_grid(affine_mat, depth_heightmap.size(), align_corners=True).half()
+
+                    rotated_scene = F.grid_sample(
+                        depth_heightmap, flow_grid,
+                        mode='nearest', align_corners=True, padding_mode="border"
+                    )
+                    rotated_object = F.grid_sample(
+                        object_depth, flow_grid,
+                        mode='nearest', align_corners=True, padding_mode="border"
+                    )
+
+                    pred = self.predict(rotated_scene, rotated_object).detach()
+                    rotated_outputs.append(pred)
+
+                    # Force cleanup
+                    gc.collect()
+                    torch.cuda.empty_cache()
+
+            # Stack all 16 rotation predictions
+            prob = torch.cat(rotated_outputs, dim=0)
+
+            # Undo rotations
+            affine_after = []
+            for rot_id in range(self.nr_rotations):
+                theta = np.radians(-rot_id * (360 / self.nr_rotations))
+                mat = np.array([[np.cos(theta), np.sin(theta), 0.0],
+                                [-np.sin(theta), np.cos(theta), 0.0]])
+                affine_after.append(mat)
+            affine_after = torch.from_numpy(np.stack(affine_after)).to(self.device).to(dtype=torch.half)
+            flow_grid_after = F.affine_grid(affine_after, prob.size(), align_corners=True).half()
+
+            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+            return out_prob
+
+        else:
+            # Training mode
+            theta = np.radians(specific_rotation * (360 / self.nr_rotations))
+            affine_mat = np.array([[np.cos(theta), np.sin(theta), 0.0],
+                                [-np.sin(theta), np.cos(theta), 0.0]])
+            affine_mat = torch.from_numpy(affine_mat).unsqueeze(0).to(self.device).to(dtype=torch.half)
+            flow_grid_before = F.affine_grid(affine_mat, depth_heightmap.size(), align_corners=True).half()
+
+            rotate_depth = F.grid_sample(depth_heightmap, flow_grid_before, mode='nearest',
+                                        align_corners=True, padding_mode="border")
+            rotate_obj = F.grid_sample(object_depth, flow_grid_before, mode='nearest',
+                                    align_corners=True, padding_mode="border")
+
+            prob = self.predict(rotate_depth, rotate_obj)
+
+            # Undo rotation
+            theta = -theta
+            affine_mat_inv = np.array([[np.cos(theta), np.sin(theta), 0.0],
+                                    [-np.sin(theta), np.cos(theta), 0.0]])
+            affine_mat_inv = torch.from_numpy(affine_mat_inv).unsqueeze(0).to(self.device).to(dtype=torch.half)
+            flow_grid_after = F.affine_grid(affine_mat_inv, prob.size(), align_corners=True).half()
+
+            out_prob = F.grid_sample(prob, flow_grid_after, mode='nearest', align_corners=True)
+
+            # Softmax across spatial dimensions
+            output_shape = out_prob.shape
+            out_prob = out_prob.view(output_shape[0], -1)
+            out_prob = torch.softmax(out_prob, dim=1)
+            out_prob = out_prob.view(output_shape)
+
+            return out_prob
+
         
 class Regressor(nn.Module):
     def __init__(self):

@@ -13,3 +13,6 @@ roslaunch orbbec_camera dabai_dcw2.launch
 rosrun dofbot_pro_RGBDCam rgbd_pointcloud.py
 
 rosrun dofbot_pro_RGBDCam Depth2Color.py
+
+
+catkin_make # navigate to the dofbot_pro_ws and run that to rebuild projects
