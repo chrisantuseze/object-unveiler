@@ -26,7 +26,7 @@ class ObjectSegmenter:
 
         self.mask_model = get_model_instance_segmentation(2)
         self.mask_model.load_state_dict(torch.load("downloads/maskrcnn.pth", map_location=self.device))
-        self.mask_model = self.mask_model.to(self.device).half()
+        self.mask_model = self.mask_model.to(self.device)
         self.mask_model.eval()
 
         # TODO, 0.9 can be tuned
@@ -41,7 +41,7 @@ class ObjectSegmenter:
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
-        image = TF.to_tensor(image).half()
+        image = TF.to_tensor(image)
         self.prediction = self.mask_model([image.to(self.device)])
 
         processed_masks = []
