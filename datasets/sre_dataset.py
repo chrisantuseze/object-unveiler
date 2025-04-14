@@ -20,7 +20,6 @@ class SREDataset(data.Dataset):
 
         self.memory = ReplayBuffer(self.dataset_dir)
 
-    # single - input, multi - output for models_attn with processed inputs
     def __getitem__old(self, id):
         target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
@@ -61,8 +60,7 @@ class SREDataset(data.Dataset):
         is_valid = torch.from_numpy(is_valid).bool()
         return padded_obj_masks, bbox, is_valid
 
-    # single - input, multi - output for models_attn with processed inputs
-    def __getitem__(self, id):
+    def __getitem__0(self, id):
         target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
 
         target_mask = target_mask.astype(np.float32)
@@ -79,6 +77,27 @@ class SREDataset(data.Dataset):
         objects_to_remove = np.array(objects_to_remove[0] if objects_to_remove[0] < self.args.num_patches else 0)
 
         return target_mask, padded_obj_masks, padded_bbox, is_valid, objects_to_remove
+    
+    def __getitem__(self, id):
+        target_mask, object_masks, objects_to_remove, bboxes = self.memory.load_episode_sre(self.dir_ids[id])
+
+        target_mask = target_mask.astype(np.float32)
+        object_masks = np.array(object_masks).astype(np.float32)
+
+        target_mask = np.expand_dims(target_mask, axis=0)
+        _processed_obj_masks = np.expand_dims(object_masks, axis=1)
+
+        # pad object masks
+        padded_obj_masks, padded_bbox, is_valid = self.pad(_processed_obj_masks, bboxes)
+
+        # Convert list of removal order to ranking
+        # Example: objects_to_remove = [2, 0, 1] => ranking[2]=0, ranking[0]=1, ranking[1]=2
+        ranking = np.full((self.args.num_patches,), fill_value=self.args.num_patches, dtype=np.int64)
+        for i, obj_idx in enumerate(objects_to_remove):
+            if obj_idx < self.args.num_patches:
+                ranking[obj_idx] = i
+
+        return target_mask, padded_obj_masks, padded_bbox, is_valid, ranking
 
     def __len__(self):
         return len(self.dir_ids)

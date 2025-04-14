@@ -2,7 +2,7 @@
 import torch
 import argparse
 from trainer.train_ae import train_ae, train_fcn_net, train_regressor
-from trainer.train_sre import train_sre
+from trainer.train_sre import train_sre, train_sre_multi
 # from trainer.train import train_fcn_net
 # from eval_agent_target import eval_agent
 from eval_agent import eval_agent
@@ -54,6 +54,9 @@ if __name__ == "__main__":
 
     if args.mode == 'sre':
         train_sre(args)
+
+    elif args.mode == 'sre-multi':
+        train_sre_multi(args)
 
     elif args.mode == 'ae':
         train_ae(args)
