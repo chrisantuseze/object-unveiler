@@ -21,7 +21,7 @@ const float RA2DE = 180.0f / M_PI;
 // 角度转弧度
 const float DE2RA = M_PI / 180.0f;
 
-const char *urdf_file = "/home/jetson/dofbot_pro_ws/src/dofbot_pro_info/urdf/DOFBOT_Pro-V24.urdf";
+const char *urdf_file = "/home/jetson/echris/object-unveiler/dofbot_pro_ws/src/dofbot_pro_info/urdf/DOFBOT_Pro-V24.urdf";
 int a = 0;
 
 
