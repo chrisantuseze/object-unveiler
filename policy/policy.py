@@ -559,12 +559,12 @@ class Policy:
         obstacle_id = top_indices.item()
         print("preds", obstacle_id)
 
-        scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
-        heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
-        plt.imshow(heatmap_img)
-        plt.title("Object Removal Scores")
-        plt.axis("off")
-        plt.show()
+        # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
+        # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
+        # plt.imshow(heatmap_img)
+        # plt.title("Object Removal Scores")
+        # plt.axis("off")
+        # plt.show()
 
 
         if obstacle_id < len(processed_masks):
@@ -578,24 +578,28 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        fig, ax = plt.subplots(2, 2)
+        # fig, ax = plt.subplots(2, 2)
 
-        ax[0][0].imshow(color_image)
-        ax[0][0].set_title("Scene - Color")
-        ax[0][0].axis("off")
+        # ax[0][0].imshow(color_image)
+        # ax[0][0].set_title("Scene - Color")
+        # ax[0][0].axis("off")
 
-        ax[0][1].imshow(scene_mask)
-        ax[0][1].set_title("Scene - Grayscale")
-        ax[0][1].axis("off")
+        # ax[0][1].imshow(scene_mask)
+        # ax[0][1].set_title("Scene - Grayscale")
+        # ax[0][1].axis("off")
 
-        ax[1][0].imshow(target_mask)
-        ax[1][0].set_title("Target")
-        ax[1][0].axis("off")
+        # ax[1][0].imshow(target_mask)
+        # ax[1][0].set_title("Target")
+        # ax[1][0].axis("off")
 
-        ax[1][1].imshow(obstacle_mask)
-        ax[1][1].set_title("Obstacle")
-        ax[1][1].axis("off")
+        # ax[1][1].imshow(obstacle_mask)
+        # ax[1][1].set_title("Obstacle")
+        # ax[1][1].axis("off")
 
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        ax[2].imshow(obstacle_mask)
         plt.show()
 
         out_prob = self.ae_model(x, obstacle, is_volatile=True)
