@@ -637,20 +637,31 @@ def visualize_scores_on_scene(scene_image, bboxes, scores, valid_mask, cmap='coo
     valid_mask: Bool Tensor of shape [N]
     """
     img = scene_image.copy()
-    if len(img.shape) == 2:  # grayscale to RGB
+    if len(img.shape) == 2:  # grayscale
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
-    for i in range(bboxes.shape[0]):
-        
+    for i in range(bboxes.shape[1]):
         if not valid_mask[0, i]:
-            print("Invalid mask, skipping this bbox")
             continue
+
         x1, y1, x2, y2 = map(int, bboxes[0, i].tolist())
         cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
         color = plt.cm.get_cmap(cmap)(scores[0, i].item())[:3]  # RGB
         color = tuple(int(255 * c) for c in color)
+
+        # Draw circle at the object center
         cv2.circle(img, (cx, cy), 8, color, -1)
-        cv2.putText(img, f'{scores[0, i].item():.2f}', (cx + 5, cy - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+        # Put bold score text next to the circle
+        cv2.putText(
+            img,
+            f'{scores[0, i].item():.2f}',
+            (cx + 5, cy - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,                # Font scale
+            color,
+            2,                  # Thickness (for boldness)
+            cv2.LINE_AA
+        )
 
     return img

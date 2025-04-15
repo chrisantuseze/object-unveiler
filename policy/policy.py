@@ -578,12 +578,17 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        plt.title("Scene vs Target vs Obstacle")
-        plt.axis("off")
         fig, ax = plt.subplots(1, 3)
         ax[0].imshow(color_image)
+        ax[0].set_title("Scene")
+
         ax[1].imshow(target_mask)
+        ax[1].set_title("Target")
+
         ax[2].imshow(obstacle_mask)
+        ax[2].set_title("Obstacle")
+
+        plt.axis("off")
         plt.show()
 
         out_prob = self.ae_model(x, obstacle, is_volatile=True)
@@ -682,7 +687,7 @@ class Policy:
         # self.fcn.eval()
 
         self.ae_model.load_state_dict(torch.load(ae_model, map_location=self.device))
-        self.ae_model.half()  # Do this once during model init
+        # self.ae_model.half()  # Do this once during model init
         self.ae_model.eval()
 
         self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
