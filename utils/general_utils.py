@@ -628,3 +628,29 @@ def resize_image(image, target_size=(224, 224)):#(480, 640)):
         raise ValueError("Unexpected image shape. Expected 2D or 3D array.")
         
     return resized
+
+def visualize_scores_on_scene(scene_image, bboxes, scores, valid_mask, cmap='coolwarm'):
+    """
+    scene_image: H x W x 3 (RGB) or H x W (Grayscale)
+    bboxes: Tensor of shape [N, 4]
+    scores: Tensor of shape [N]
+    valid_mask: Bool Tensor of shape [N]
+    """
+    img = scene_image.copy()
+    if len(img.shape) == 2:  # grayscale to RGB
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    for i in range(bboxes.shape[0]):
+        
+        if not valid_mask[0, i]:
+            print("Invalid mask, skipping this bbox")
+            continue
+        x1, y1, x2, y2 = map(int, bboxes[0, i].tolist())
+        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        color = plt.cm.get_cmap(cmap)(scores[0, i].item())[:3]  # RGB
+        color = tuple(int(255 * c) for c in color)
+        cv2.circle(img, (cx, cy), 8, color, -1)
+        cv2.putText(img, f'{scores[0, i].item():.2f}', (cx + 5, cy - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+    return img

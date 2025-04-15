@@ -10,19 +10,6 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3,
                      stride=stride, padding=1, bias=False)
 
-class LayerNorm2d(nn.Module):
-    def __init__(self, num_features, eps=1e-5):
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(num_features))
-        self.bias = nn.Parameter(torch.zeros(num_features))
-        self.eps = eps
-
-    def forward(self, x):
-        mean = x.mean(dim=1, keepdim=True)
-        var = x.var(dim=1, unbiased=False, keepdim=True)
-        x = (x - mean) / torch.sqrt(var + self.eps)
-        return x * self.weight.view(1, -1, 1, 1) + self.bias.view(1, -1, 1, 1)
-
 class ResidualBlock(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1, downsample=None):
         super(ResidualBlock, self).__init__()
