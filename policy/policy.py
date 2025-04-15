@@ -578,15 +578,18 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        fig, ax = plt.subplots(1, 3)
+        fig, ax = plt.subplots(1, 4)
         ax[0].imshow(color_image)
-        ax[0].set_title("Scene")
+        ax[0].set_title("Scene - Color")
 
-        ax[1].imshow(target_mask)
-        ax[1].set_title("Target")
+        ax[1].imshow(scene_mask)
+        ax[1].set_title("Scene - Grayscale")
 
-        ax[2].imshow(obstacle_mask)
-        ax[2].set_title("Obstacle")
+        ax[2].imshow(target_mask)
+        ax[2].set_title("Target")
+
+        ax[3].imshow(obstacle_mask)
+        ax[3].set_title("Obstacle")
 
         plt.axis("off")
         plt.show()

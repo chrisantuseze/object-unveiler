@@ -637,8 +637,10 @@ def visualize_scores_on_scene(scene_image, bboxes, scores, valid_mask, cmap='coo
     valid_mask: Bool Tensor of shape [N]
     """
     img = scene_image.copy()
-    if len(img.shape) == 2:  # grayscale
+    if len(img.shape) == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    cmap_func = plt.cm.get_cmap(cmap)
 
     for i in range(bboxes.shape[1]):
         if not valid_mask[0, i]:
@@ -646,21 +648,22 @@ def visualize_scores_on_scene(scene_image, bboxes, scores, valid_mask, cmap='coo
 
         x1, y1, x2, y2 = map(int, bboxes[0, i].tolist())
         cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-        color = plt.cm.get_cmap(cmap)(scores[0, i].item())[:3]  # RGB
-        color = tuple(int(255 * c) for c in color)
 
-        # Draw circle at the object center
-        cv2.circle(img, (cx, cy), 14, color, -1)
+        # Use red color gradient based on score
+        score_val = scores[0, i].item()
+        color_rgb = cmap_func(score_val)[:3]  # RGB from matplotlib colormap
+        color_bgr = tuple(int(255 * c) for c in color_rgb[::-1])  # convert to BGR for OpenCV
 
-        # Put bold score text next to the circle
+        # Draw score marker and bold score
+        cv2.circle(img, (cx, cy), 14, color_bgr, -1)
         cv2.putText(
             img,
-            f'{scores[0, i].item():.2f}',
-            (cx + 5, cy - 5),
+            f'{score_val:.2f}',
+            (cx + 6, cy - 6),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,                # Font scale
-            color,
-            2,                  # Thickness (for boldness)
+            0.6,
+            color_bgr,
+            2,
             cv2.LINE_AA
         )
 
