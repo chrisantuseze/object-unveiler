@@ -11,6 +11,8 @@ import copy
 import numpy as np
 import argparse
 
+from ultralytics import YOLO
+
 import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
@@ -238,6 +240,8 @@ class PolicyRobotController:
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
 
+        general_utils.delete_episodes_misc(self.TEST_DIR)
+
         # Get new observation after grasp
         return self.get_observation()
     
@@ -387,16 +391,13 @@ class PolicyRobotController:
         return obs
             
     def eval_agent(self, args):
+        self.args = args
         print("Running eval...")
         with open('yaml/bhand.yml', 'r') as stream:
             params = yaml.safe_load(stream)
 
         policy = Policy(args, params)
         policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
-
-        args_ = copy.deepcopy(args)
-        args_.device = torch.device("cpu")
-        segmenter = ObjectSegmenter(args_)
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
@@ -405,11 +406,43 @@ class PolicyRobotController:
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-            self.run(policy, segmenter, rng)
+            # self.run(policy, rng)
+            self.test(args)
 
         rospy.is_shutdown()
+
+    def get_masks(self, image):
+        model = YOLO("yolov8s-seg.pt")  # or yolov8s-seg.pt for better accuracy
+        results = model(image)  # image can be a numpy array
+
+        print(results[0].boxes.xyxy)  # this will print the masks
+
+        r = results[0]
+
+        # r.masks.data is a (num_instances, H, W) tensor with binary masks
+        masks = r.masks.data.cpu().numpy()  # convert to NumPy
+
+        processed_masks = []
+        for i, mask in enumerate(masks):
+            binary_mask = (mask * 255).astype(np.uint8)
+            processed_masks.append(binary_mask)
+            cv2.imwrite(f"mask_{i}.png", binary_mask)
+
+        return processed_masks
+
+    def test(self, args):
+        for i in range(10):
+            args_ = copy.deepcopy(self.args)
+            args_.device = torch.device("cpu")
+            # segmenter = ObjectSegmenter(args_, is_real=True)
+            image = cv2.imread(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "saved_rgb_image.png"))
+            # processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(image, dir=self.TEST_DIR, dim=(480, 640))
+
+            processed_masks = self.get_masks(image)
+            print(f"Iter {i}: {len(processed_masks)} masks")
+
     
-    def run(self, policy: Policy, segmenter: ObjectSegmenter, rng):
+    def run(self, policy: Policy, rng):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
 
@@ -421,7 +454,11 @@ class PolicyRobotController:
         
         print("Got initial observation. And now getting segmentations...")
 
-        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(480, 640))
+        args_ = copy.deepcopy(self.args)
+        args_.device = torch.device("cpu")
+        segmenter = ObjectSegmenter(args_, is_real=True)
+
+        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(240, 320))#(480, 640))
         cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), pred_mask)
         cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
         cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
@@ -446,6 +483,7 @@ class PolicyRobotController:
 
             torch.cuda.empty_cache()
 
+            print("Getting actions...")
             # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
             action = policy.exploit_real_robot(state, target_mask)
             print("Gotten the action:", action)
@@ -453,8 +491,6 @@ class PolicyRobotController:
             torch.cuda.empty_cache()
         
             try:
-                general_utils.delete_episodes_misc(self.TEST_DIR)
-
                 # Execute grasp based on policy
                 next_obs = self.grasp_object(action)
                 if obs is None:
@@ -464,13 +500,14 @@ class PolicyRobotController:
 
                 obs = copy.deepcopy(next_obs)
 
-                print("Getting fresh segmentations...")
                 color_image = obs['color']
                 cv2.imwrite(os.path.join(self.TEST_DIR, "maskrcnn_image.png"), color_image)
 
-                rospy.sleep(0.5)
+                rospy.sleep(0.2)
 
-                processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
+                print("Getting fresh segmentations...")
+                segmenter = ObjectSegmenter(args_, is_real=True)
+                processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(240, 320))
                 cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
                 cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
 

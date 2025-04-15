@@ -1,12 +1,4 @@
 import numpy as np
-import math
-
-IS_REAL = False
-
-if IS_REAL:
-    WORKSPACE_LIMITS = np.asarray([[-0.227, 0.221], [-0.676, -0.228], [0.18, 0.4]])
-else:
-    WORKSPACE_LIMITS = np.asarray([[0.276, 0.724], [-0.224, 0.224], [-0.0001, 0.4]])
 
 IMAGE_SIZE = 224
 
@@ -70,14 +62,6 @@ colors_upper = [
     cyan_upper,
     pink_upper,
 ]
-
-
-if IS_REAL:
-    TARGET_LOWER = real_purple_lower
-    TARGET_UPPER = real_purple_upper
-else:
-    TARGET_LOWER = blue_lower
-    TARGET_UPPER = blue_upper
 
 TRAIN_DIR = "save/misc/train"
 TEST_DIR = "save/misc/test"

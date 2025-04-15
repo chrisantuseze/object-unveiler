@@ -4,6 +4,7 @@ import cv2
 import os
 from torchvision.transforms import functional as TF
 import numpy as np
+import gc
 
 from mask_rg.train_maskrcnn import get_model_instance_segmentation
 from utils.constants import *
@@ -18,7 +19,7 @@ class ObjectSegmenter:
         'masks': []
     }
     """
-    def __init__(self, args=None) -> None:
+    def __init__(self, args=None, is_real=False) -> None:
         if args is None:
             self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         else:
@@ -30,7 +31,7 @@ class ObjectSegmenter:
         self.mask_model.eval()
 
         # TODO, 0.9 can be tuned
-        if IS_REAL:
+        if is_real:
             self.threshold = 0.97
         else:
             self.threshold = 0.98
@@ -41,17 +42,21 @@ class ObjectSegmenter:
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
-        image = TF.to_tensor(image)
-        self.prediction = self.mask_model([image.to(self.device)])
+        # image = cv2.resize(color_image, (320, 240)) 
+        image = TF.to_tensor(image).to(self.device)
+
+
+        prediction = self.mask_model([image])
 
         processed_masks = []
         raw_masks = []
         bboxes = []
 
         pred_mask = np.zeros(dim, dtype=np.uint8)
-        prediction = self.prediction[0]
+        prediction = prediction[0]
 
         for idx, mask in enumerate(prediction["masks"]):
+            print(prediction["scores"][idx])
             if prediction["scores"][idx] > self.threshold:
                 # get mask
                 img = mask[0].mul(255).byte().cpu().numpy()
@@ -68,6 +73,12 @@ class ObjectSegmenter:
 
                 bboxes.append(prediction["boxes"][idx].tolist())
 
+
+        del image
+        del prediction
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
         if bbox:
             return processed_masks, pred_mask, raw_masks, bboxes
