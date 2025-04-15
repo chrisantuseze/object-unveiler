@@ -61,7 +61,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_unveiler(state, obs['color'][1], target_mask, processed_masks, bboxes)
+        action = policy.exploit_unveiler(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)

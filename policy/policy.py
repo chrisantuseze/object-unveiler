@@ -551,7 +551,7 @@ class Policy:
 
         return action
     
-    def exploit_unveiler(self, state, color_image, target_mask, processed_masks, bbox):
+    def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
         processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
@@ -560,7 +560,7 @@ class Policy:
         print("preds", obstacle_id)
 
         scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
-        heatmap_img = general_utils.visualize_scores_on_scene(color_image, bbox, scores, valid_mask)
+        heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
         plt.imshow(heatmap_img)
         plt.title("Object Removal Scores")
         plt.axis("off")

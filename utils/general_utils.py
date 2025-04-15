@@ -650,7 +650,7 @@ def visualize_scores_on_scene(scene_image, bboxes, scores, valid_mask, cmap='coo
         color = tuple(int(255 * c) for c in color)
 
         # Draw circle at the object center
-        cv2.circle(img, (cx, cy), 8, color, -1)
+        cv2.circle(img, (cx, cy), 14, color, -1)
 
         # Put bold score text next to the circle
         cv2.putText(
