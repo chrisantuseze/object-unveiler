@@ -551,21 +551,13 @@ class Policy:
 
         return action
     
-    def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
+    def exploit_unveiler_multi(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
         processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         obstacle_id = top_indices.item()
         print("preds", obstacle_id)
-
-        # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
-        # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
-        # plt.imshow(heatmap_img)
-        # plt.title("Object Removal Scores")
-        # plt.axis("off")
-        # plt.show()
-
 
         if obstacle_id < len(processed_masks):
             obstacle_mask = processed_masks[obstacle_id]
@@ -577,24 +569,6 @@ class Policy:
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-
-        # fig, ax = plt.subplots(2, 2)
-
-        # ax[0][0].imshow(color_image)
-        # ax[0][0].set_title("Scene - Color")
-        # ax[0][0].axis("off")
-
-        # ax[0][1].imshow(scene_mask)
-        # ax[0][1].set_title("Scene - Grayscale")
-        # ax[0][1].axis("off")
-
-        # ax[1][0].imshow(target_mask)
-        # ax[1][0].set_title("Target")
-        # ax[1][0].axis("off")
-
-        # ax[1][1].imshow(obstacle_mask)
-        # ax[1][1].set_title("Obstacle")
-        # ax[1][1].axis("off")
 
         fig, ax = plt.subplots(1, 3)
         ax[0].imshow(color_image)
