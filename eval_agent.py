@@ -61,42 +61,46 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_unveiler(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
+        actions = policy.exploit_unveiler_multi(state, obs['color'][1], target_mask, processed_masks, bboxes)
 
-        env_action3d = policy.action3d(action)
-        next_obs, grasp_info = env.step(env_action3d)
+        for action in actions:
+            env_action3d = policy.action3d(action)
+            next_obs, grasp_info = env.step(env_action3d)
 
-        episode_data['attempts'] += 1
-        if grasp_info['collision']:
-            episode_data['collisions'] += 1
+            episode_data['attempts'] += 1
+            if grasp_info['collision']:
+                episode_data['collisions'] += 1
 
-        if grasp_info['stable'] and i ==0:
-            episode_data['sr-1'] += 1
+            if grasp_info['stable'] and i ==0:
+                episode_data['sr-1'] += 1
 
-        if grasp_info['stable']:
-            episode_data['sr-n'] += 1
-            episode_data['objects_removed'] += 1
+            if grasp_info['stable']:
+                episode_data['sr-n'] += 1
+                episode_data['objects_removed'] += 1
 
-        else:
-            episode_data['fails'] += 1
+            else:
+                episode_data['fails'] += 1
 
-        print(action)
-        print(grasp_info)
-        print('---------')
+            print(action)
+            print(grasp_info)
+            print('---------')
 
-        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
+            general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
 
-        obs = copy.deepcopy(next_obs)
+            obs = copy.deepcopy(next_obs)
 
-        new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
-        if len(new_masks) == n_prev_masks:
-            count += 1
+            new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
+            target_id, target_mask = grasping.find_target(new_masks, target_mask)
+            if target_id == -1:
+                res = input("\nDo you think the target is available? (y/n) ")
+                if res.lower() == "y":
+                    ############# Calculating scores ##########
+                    total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
-        if count > 2:
-            logging.info("Robot is in an infinite loop")
-            
-            res = input("\nDo you still want to continue? (y/n) ")
-            if res.lower() == "n":
+                    processed_masks = copy.deepcopy(new_masks)
+                    bboxes = copy.deepcopy(new_bboxes)
+                    continue
+
                 res = input("\nDo you think the grasp was successful? (y/n) ")
                 if res.lower() == "y":
                     logging.info("Target has been grasped!")
@@ -108,46 +112,24 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
                 else:
                     logging.info("Target could not be grasped. And it is no longer available in the scene.")
 
+                print('------------------------------------------')
                 break
 
-        target_id, target_mask = grasping.find_target(new_masks, target_mask)
-        if target_id == -1:
-            res = input("\nDo you think the target is available? (y/n) ")
-            if res.lower() == "y":
-                target_id = int(input("\nWhat is the index? "))
-                target_mask = new_masks[target_id]
+            ############# Calculating scores ##########
+            total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
-                ############# Calculating scores ##########
-                total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
-
-                processed_masks = copy.deepcopy(new_masks)
-                bboxes = copy.deepcopy(new_bboxes)
-                n_prev_masks = len(processed_masks)
-                continue
-
-            res = input("\nDo you think the grasp was successful? (y/n) ")
-            if res.lower() == "y":
-                logging.info("Target has been grasped!")
-
-                final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
-                episode_data['final_clutter_score'] = final_clutter_score
-                episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
-                episode_data['successful'] = True
-            else:
-                logging.info("Target could not be grasped. And it is no longer available in the scene.")
-
-            print('------------------------------------------')
+        res = input("\nDo you still want to continue? (y/n) ")
+        if res.lower() == "n":
             break
+
+        target_id = int(input("\nWhat is the target index? "))
+        target_mask = new_masks[target_id]
 
         if policy.is_terminal(next_obs):
             break
 
-        ############# Calculating scores ##########
-        total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
-
         processed_masks = copy.deepcopy(new_masks)
         bboxes = copy.deepcopy(new_bboxes)
-        n_prev_masks = len(processed_masks)
 
     logging.info('--------')
     return episode_data
@@ -583,7 +565,7 @@ def eval_agent(args):
 
         if episode_data['successful']:
             success_count += 1
-            with open('unveiler_results.txt', 'a') as file:
+            with open('multi_unveiler_results.txt', 'a') as file:
                     file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
@@ -598,7 +580,7 @@ def eval_agent(args):
         if i % 5 == 0:
             logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    with open('unveiler_results.txt', 'a') as file:
+    with open('multi_unveiler_results.txt', 'a') as file:
                     file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
 
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

@@ -551,13 +551,21 @@ class Policy:
 
         return action
     
-    def exploit_unveiler_multi(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
+    def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
         processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         obstacle_id = top_indices.item()
         print("preds", obstacle_id)
+
+        # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
+        # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
+        # plt.imshow(heatmap_img)
+        # plt.title("Object Removal Scores")
+        # plt.axis("off")
+        # plt.show()
+
 
         if obstacle_id < len(processed_masks):
             obstacle_mask = processed_masks[obstacle_id]
@@ -569,6 +577,24 @@ class Policy:
         # find optimal position and orientation
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        # fig, ax = plt.subplots(2, 2)
+
+        # ax[0][0].imshow(color_image)
+        # ax[0][0].set_title("Scene - Color")
+        # ax[0][0].axis("off")
+
+        # ax[0][1].imshow(scene_mask)
+        # ax[0][1].set_title("Scene - Grayscale")
+        # ax[0][1].axis("off")
+
+        # ax[1][0].imshow(target_mask)
+        # ax[1][0].set_title("Target")
+        # ax[1][0].axis("off")
+
+        # ax[1][1].imshow(obstacle_mask)
+        # ax[1][1].set_title("Obstacle")
+        # ax[1][1].axis("off")
 
         fig, ax = plt.subplots(1, 3)
         ax[0].imshow(color_image)
@@ -603,6 +629,62 @@ class Policy:
         action[3] = aperture
 
         return action
+    
+    def exploit_unveiler_multi(self, state, color_image, target_mask, processed_masks, bbox):
+        processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
+        
+        logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        obstacle_id = top_indices.item()
+        print("preds", obstacle_id)
+
+        actions = []
+        for obstacle_id in logits:
+            if obstacle_id < len(processed_masks):
+                obstacle_mask = processed_masks[obstacle_id]
+            else:
+                obstacle_mask = target_mask
+            obstacle = general_utils.preprocess_target(obstacle_mask, state)
+            obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+            
+            # find optimal position and orientation
+            heightmap, self.padding_width = general_utils.preprocess_image(state)
+            x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+            fig, ax = plt.subplots(1, 3)
+            ax[0].imshow(color_image)
+            ax[1].imshow(target_mask)
+            ax[2].imshow(obstacle_mask)
+            plt.show()
+
+            out_prob = self.ae_model(x, obstacle, is_volatile=True)
+            out_prob = general_utils.postprocess(out_prob, self.padding_width)
+
+            best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+            p1 = np.array([best_action[3], best_action[2]])
+            theta = best_action[0] * 2 * np.pi/self.rotations
+
+            # find optimal aperture
+            aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+            x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+            aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        
+            # undo normalization
+            aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                        target_range=[self.aperture_limits[0], 
+                                                        self.aperture_limits[1]])
+
+            # sample aperture uniformly
+            # aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
+
+            action = np.zeros((4,))
+            action[0] = p1[0]
+            action[1] = p1[1]
+            action[2] = theta
+            action[3] = aperture
+            actions.append(action)
+
+        return actions
 
     def exploit_real_robot(self, state, target_mask):
         target_mask = general_utils.preprocess_target(target_mask, state)
