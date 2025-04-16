@@ -11,7 +11,9 @@ import copy
 import numpy as np
 import argparse
 
-from ultralytics import YOLO
+from FastSAM.fastsam import FastSAM, FastSAMPrompt
+# from fastsam import FastSAM, FastSAMPrompt
+from PIL import Image
 
 import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
@@ -412,21 +414,44 @@ class PolicyRobotController:
         rospy.is_shutdown()
 
     def get_masks(self, image):
-        model = YOLO("yolov8s-seg.pt")  # or yolov8s-seg.pt for better accuracy
-        results = model(image)  # image can be a numpy array
+        # Load model
+        model = FastSAM('FastSAM-s.pt')  # or 'FastSAM-s.pt' for Jetson
 
-        print(results[0].boxes.xyxy)  # this will print the masks
+        # Load image
+        # img_path = 'color1.png'
+        # image = Image.open(img_path).convert('RGB')
 
+        # Run prediction
+        results = model.predict(image, device='cpu', conf=0.25, imgsz=640)
+
+        # results is a list with one item per image
         r = results[0]
 
-        # r.masks.data is a (num_instances, H, W) tensor with binary masks
-        masks = r.masks.data.cpu().numpy()  # convert to NumPy
-
         processed_masks = []
-        for i, mask in enumerate(masks):
+        # Get masks, scores, and boxes
+        if r.masks is not None:
+            print("No masks detected.")
+            return processed_masks
+        
+        masks = r.masks.data.cpu().numpy()          # Shape: [N, H, W]
+        scores = r.boxes.conf.cpu().numpy()         # Confidence scores
+        boxes = r.boxes.xyxy.cpu().numpy().astype(int)  # Bounding boxes
+
+        print(f"Detected {len(masks)} masks")
+
+        # Filter masks by score and optionally area
+        for i, (mask, score, box) in enumerate(zip(masks, scores, boxes)):
+            if score < 0.96:
+                continue
+
+            area = np.sum(mask)
+            if area < 500:
+                continue
+
             binary_mask = (mask * 255).astype(np.uint8)
+            cv2.imwrite(f"mask_{i}_score{score:.2f}.png", binary_mask)
             processed_masks.append(binary_mask)
-            cv2.imwrite(f"mask_{i}.png", binary_mask)
+
 
         return processed_masks
 
