@@ -11,8 +11,7 @@ import copy
 import numpy as np
 import argparse
 
-from FastSAM.fastsam import FastSAM, FastSAMPrompt
-# from fastsam import FastSAM, FastSAMPrompt
+from segmentation.fastsam import FastSAM, FastSAMPrompt
 from PIL import Image
 
 import open3d as o3d  # For point cloud operations
