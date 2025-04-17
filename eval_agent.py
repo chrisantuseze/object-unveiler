@@ -124,6 +124,9 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             ############# Calculating scores ##########
             total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
+        if episode_data['successful']:
+            break
+        
         res = input("\nDo you still want to continue? (y/n) ")
         if res.lower() == "n":
             break
