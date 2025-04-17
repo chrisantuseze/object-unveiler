@@ -56,7 +56,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     n_prev_masks, count = 0, 0
     total_clutter_score = 0.0
 
-    max_steps = 3 #6
+    max_steps = 6*2 #6
     is_target_available = True
     while episode_data['attempts'] < max_steps:
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
@@ -64,7 +64,6 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         state = policy.state_representation(obs)
         actions, objects_to_remove = policy.exploit_unveiler_multi(state, target_mask, target_id, processed_masks, bboxes)
 
-        episode_data['attempts'] += 1
         for i, action in enumerate(actions):
             fig, ax = plt.subplots(1, 3)
             ax[0].imshow(obs['color'][1])
@@ -75,7 +74,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step(env_action3d)
 
-            # episode_data['attempts'] += 1
+            episode_data['attempts'] += 1
             if grasp_info['collision']:
                 episode_data['collisions'] += 1
 
