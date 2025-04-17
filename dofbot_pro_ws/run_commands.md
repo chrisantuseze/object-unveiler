@@ -1,3 +1,4 @@
+cd echris/object-unveiler
 source ~/.bashrc
 source /opt/ros/noetic/setup.bash
 source ~/.bashrc
