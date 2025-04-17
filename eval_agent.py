@@ -57,6 +57,7 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     total_clutter_score = 0.0
 
     max_steps = 6
+    is_target_available = True
     while episode_data['attempts'] < max_steps:
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
@@ -100,13 +101,10 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             if target_id == -1:
                 res = input("\nDo you think the target is available? (y/n) ")
                 if res.lower() == "y":
-                    ############# Calculating scores ##########
-                    total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+                    break
 
-                    processed_masks = copy.deepcopy(new_masks)
-                    bboxes = copy.deepcopy(new_bboxes)
-                    continue
-
+                is_target_available = False
+                
                 res = input("\nDo you think the grasp was successful? (y/n) ")
                 if res.lower() == "y":
                     logging.info("Target has been grasped!")
@@ -124,18 +122,18 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
             ############# Calculating scores ##########
             total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
-        if episode_data['successful']:
+        if not is_target_available:
             break
-        
-        res = input("\nDo you still want to continue? (y/n) ")
-        if res.lower() == "n":
+
+        if policy.is_terminal(next_obs):
+            print("Only one object is left in the scene")
             break
 
         target_id = int(input("\nWhat is the target index? "))
         target_mask = new_masks[target_id]
 
-        if policy.is_terminal(next_obs):
-            break
+        ############# Calculating scores ##########
+        total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
         processed_masks = copy.deepcopy(new_masks)
         bboxes = copy.deepcopy(new_bboxes)
