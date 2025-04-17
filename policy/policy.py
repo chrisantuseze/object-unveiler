@@ -630,32 +630,32 @@ class Policy:
 
         return action
     
-    def exploit_unveiler_multi(self, state, color_image, target_mask, processed_masks, bbox):
+    def exploit_unveiler_multi(self, state, target_mask, target_id, processed_masks, bbox):
         processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
         logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
-        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-        obstacle_id = top_indices.item()
-        print("preds", obstacle_id)
+        # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        # obstacle_id = top_indices.item()
+        # print("preds", obstacle_id)
+        removal_order = torch.argsort(logits, dim=1).cpu().numpy()[0]
+        print("removal order", removal_order)
 
         actions = []
-        for obstacle_id in logits:
+        objects_to_remove = []
+        for obstacle_id in removal_order:
             if obstacle_id < len(processed_masks):
                 obstacle_mask = processed_masks[obstacle_id]
+                objects_to_remove.append(obstacle_id)
             else:
                 obstacle_mask = target_mask
+                objects_to_remove.append(target_id)
+
             obstacle = general_utils.preprocess_target(obstacle_mask, state)
             obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
             
             # find optimal position and orientation
             heightmap, self.padding_width = general_utils.preprocess_image(state)
             x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
-
-            fig, ax = plt.subplots(1, 3)
-            ax[0].imshow(color_image)
-            ax[1].imshow(target_mask)
-            ax[2].imshow(obstacle_mask)
-            plt.show()
 
             out_prob = self.ae_model(x, obstacle, is_volatile=True)
             out_prob = general_utils.postprocess(out_prob, self.padding_width)
@@ -674,9 +674,6 @@ class Policy:
                                         target_range=[self.aperture_limits[0], 
                                                         self.aperture_limits[1]])
 
-            # sample aperture uniformly
-            # aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
-
             action = np.zeros((4,))
             action[0] = p1[0]
             action[1] = p1[1]
@@ -684,7 +681,7 @@ class Policy:
             action[3] = aperture
             actions.append(action)
 
-        return actions
+        return actions, objects_to_remove
 
     def exploit_real_robot(self, state, target_mask):
         target_mask = general_utils.preprocess_target(target_mask, state)

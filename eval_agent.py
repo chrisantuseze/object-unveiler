@@ -61,9 +61,15 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        actions = policy.exploit_unveiler_multi(state, obs['color'][1], target_mask, processed_masks, bboxes)
+        actions, objects_to_remove = policy.exploit_unveiler_multi(state, target_mask, target_id, processed_masks, bboxes)
 
-        for action in actions:
+        for i, action in enumerate(actions):
+            fig, ax = plt.subplots(1, 3)
+            ax[0].imshow(obs['color'][1])
+            ax[1].imshow(target_mask)
+            ax[2].imshow(processed_masks[objects_to_remove[i]])
+            plt.show()
+
             env_action3d = policy.action3d(action)
             next_obs, grasp_info = env.step(env_action3d)
 

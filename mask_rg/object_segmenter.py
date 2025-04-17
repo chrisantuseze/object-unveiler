@@ -56,7 +56,6 @@ class ObjectSegmenter:
         prediction = prediction[0]
 
         for idx, mask in enumerate(prediction["masks"]):
-            print(prediction["scores"][idx])
             if prediction["scores"][idx] > self.threshold:
                 # get mask
                 img = mask[0].mul(255).byte().cpu().numpy()
@@ -73,12 +72,6 @@ class ObjectSegmenter:
 
                 bboxes.append(prediction["boxes"][idx].tolist())
 
-
-        del image
-        del prediction
-        torch.cuda.empty_cache()
-        gc.collect()
-        
         cv2.imwrite(os.path.join(dir, "scene.png"), pred_mask)
         if bbox:
             return processed_masks, pred_mask, raw_masks, bboxes
