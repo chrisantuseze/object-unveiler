@@ -637,7 +637,7 @@ class Policy:
         # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         # obstacle_id = top_indices.item()
         # print("preds", obstacle_id)
-        removal_order = torch.argsort(logits, dim=1).cpu().numpy()[0]
+        removal_order = torch.argsort(logits, dim=1, descending=True).cpu().numpy()[0]
         print("removal order", removal_order)
 
         actions = []
