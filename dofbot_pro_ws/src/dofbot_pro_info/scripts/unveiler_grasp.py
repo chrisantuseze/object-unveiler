@@ -17,7 +17,7 @@ from PIL import Image
 import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
-from dofbot_pro_info.msg import ArmJoint
+from dofbot_pro_info.msg import ArmJoint, SegmentationData, Image_Msg
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
@@ -55,6 +55,12 @@ class PolicyRobotController:
         self.rgb_sub = None
         self.depth_sub = None
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
+
+        self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
+        self.image_pub = rospy.Publisher('/image_data', Image_Msg, queue_size=1)
+
+        self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
+
         
         # Robot arm parameters
         self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
@@ -77,6 +83,30 @@ class PolicyRobotController:
 
         self.hmap_generator = HeightmapGenerator()
 
+    def request_image_segmentation(self, image_data):
+        """
+        Request image segmentation from the segmenter
+        """
+        self.img = self.bridge.imgmsg_to_cv2(image_data, "bgr8")
+        size = self.img.shape
+        
+        image = Image_Msg()
+        image.height = size[0] # 480
+        image.width = size[1] # 640
+        image.channels = size[2] # 3
+        image.data = image_data.data
+
+        print("Requesting image segmentation...")
+        
+        self.image_pub.publish(image)
+
+    def segment_callback(self, msg):
+        print("Received segmentation data")
+        self.pred_mask = self.bridge.imgmsg_to_cv2(msg.pred_mask, desired_encoding='mono8')
+        self.raw_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.raw_masks]
+        self.processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.processed_masks]
+        self.bboxes = list(zip(msg.bbox_x1, msg.bbox_y1, msg.bbox_x2, msg.bbox_y2))
+
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
         self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
@@ -89,6 +119,8 @@ class PolicyRobotController:
             try:
                 self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
                 self.rgb_image = cv2.flip(self.rgb_image, -1)
+
+                self.request_image_segmentation(self.rgb_image)
                 cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
                 
                 self.rgb_lock = False  # Release the lock
@@ -412,57 +444,29 @@ class PolicyRobotController:
 
         rospy.is_shutdown()
 
-    def get_masks(self, image):
-        # Load model
-        model = FastSAM('FastSAM-s.pt')  # or 'FastSAM-s.pt' for Jetson
-
-        # Load image
-        # img_path = 'color1.png'
-        # image = Image.open(img_path).convert('RGB')
-
-        # Run prediction
-        results = model.predict(image, device='cpu', conf=0.25, imgsz=640)
-
-        # results is a list with one item per image
-        r = results[0]
-
-        processed_masks = []
-        # Get masks, scores, and boxes
-        if r.masks is not None:
-            print("No masks detected.")
-            return processed_masks
+    def get_masks(self, timeout=5.0):
+        obs = self.get_observation()
+        if obs is None:
+            rospy.logerr("Failed to get initial observation")
+            return
         
-        masks = r.masks.data.cpu().numpy()          # Shape: [N, H, W]
-        scores = r.boxes.conf.cpu().numpy()         # Confidence scores
-        boxes = r.boxes.xyxy.cpu().numpy().astype(int)  # Bounding boxes
+        print("Got initial observation. And now getting segmentations...")
 
-        print(f"Detected {len(masks)} masks")
+        
+        # Wait for both images to be received
+        start_time = time.time()
+        while self.pred_mask is None and time.time() - start_time < timeout:
+            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
 
-        # Filter masks by score and optionally area
-        for i, (mask, score, box) in enumerate(zip(masks, scores, boxes)):
-            if score < 0.96:
-                continue
-
-            area = np.sum(mask)
-            if area < 500:
-                continue
-
-            binary_mask = (mask * 255).astype(np.uint8)
-            cv2.imwrite(f"mask_{i}_score{score:.2f}.png", binary_mask)
-            processed_masks.append(binary_mask)
-
-
-        return processed_masks
+        return self.processed_masks
 
     def test(self, args):
         for i in range(10):
-            args_ = copy.deepcopy(self.args)
-            args_.device = torch.device("cpu")
-            # segmenter = ObjectSegmenter(args_, is_real=True)
-            image = cv2.imread(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "saved_rgb_image.png"))
-            # processed_masks, pred_mask, raw_masks = segmenter.from_maskrcnn(image, dir=self.TEST_DIR, dim=(480, 640))
-
-            processed_masks = self.get_masks(image)
+            processed_masks = self.get_masks()
+            if processed_masks is None:
+                rospy.logerr("Failed to get masks")
+                return
+            print("Got masks")
             print(f"Iter {i}: {len(processed_masks)} masks")
 
     

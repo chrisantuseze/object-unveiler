@@ -61,6 +61,7 @@ add_message_files(
         ArmJoint.msg
 	Image_Msg.msg
 	Yolov5Detect.msg
+        SegmentationData.msg
 )
 
 # Generate services in the 'srv' folder

@@ -91,6 +91,12 @@ def find_centroid_distance(segmentation_mask):
 
     return min_distances
 
+def get_most_peripheral_object(segmentation_masks):
+    distances_to_edge = get_distances_to_edge(segmentation_masks)
+
+    min_dist = min(distances_to_edge)
+    return distances_to_edge, distances_to_edge.index(min_dist)
+
 def get_object_centroid(mask):
     # Calculate the centroid (center of mass)
     M = cv2.moments(mask)
@@ -236,12 +242,6 @@ def find_central_object(segmentation_masks):
 
     print("Central object id is:", central_object_index)
     return central_object_index
-
-def get_most_peripheral_object(segmentation_masks):
-    distances_to_edge = get_distances_to_edge(segmentation_masks)
-
-    min_dist = min(distances_to_edge)
-    return distances_to_edge, distances_to_edge.index(min_dist)
 
 def compute_singulation(before_masks, after_masks):
     """
