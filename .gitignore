@@ -38,6 +38,9 @@ runs/
 !dofbot_pro_ws/
 !dofbot_pro_ws/**/**/*.*
 
+!robot_policies_ws/
+!robot_policies_ws/**/**/*.*
+
 ################# FOR ACT ############################
 
 act/bin
