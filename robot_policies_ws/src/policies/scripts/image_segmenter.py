@@ -1,10 +1,13 @@
+#!/usr/bin/env python3
+
 #ros
 from mask_rg.object_segmenter import ObjectSegmenter
 import rospy
 import cv2
 import numpy as np
+import os
 
-from dofbot_pro_info.msg import SegmentationData, Image_Msg
+from policies.msg import SegmentationData, Image_Msg
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
@@ -12,6 +15,10 @@ class ImageSegmenter:
     def __init__(self):
         # Initialize the ROS node
         rospy.init_node('segmentation_publisher', anonymous=True)
+
+        self.TEST_DIR = "robot_policies_ws/src/policies/scripts/images"
+        if not os.path.exists(self.TEST_DIR):
+            os.makedirs(self.TEST_DIR)
 
         self.publisher = rospy.Publisher('/segmentation/mask', SegmentationData, queue_size=10)
         self.image_subscriber = rospy.Subscriber("/image_data", Image_Msg, self.image_sub_callback)
@@ -25,9 +32,12 @@ class ImageSegmenter:
         return [self.bridge.cv2_to_imgmsg(m.astype('uint8') * 255, encoding='mono8') for m in masks]
 
     def image_sub_callback(self, image_data):
+        print("Image subscriber callback triggered.")
         image = np.zeros((480, 640, 3), dtype=np.uint8)
         np_image = np.ndarray(shape=(image_data.height, image_data.width, image_data.channels), dtype=np.uint8, buffer=image_data.data)
         image[:,:,0], image[:,:,1], image[:,:,2] = np_image[:,:,2], np_image[:,:,1], np_image[:,:,0] #rgb
+
+        cv2.imwrite(os.path.join(self.TEST_DIR, "received_image.png"), image)
 
         processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir="/", bbox=True, dim=(480, 640))
 

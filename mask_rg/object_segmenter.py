@@ -26,7 +26,15 @@ class ObjectSegmenter:
             self.device = args.device
 
         self.mask_model = get_model_instance_segmentation(2)
-        self.mask_model.load_state_dict(torch.load("downloads/maskrcnn.pth", map_location=self.device))
+
+        project_root = os.path.dirname(os.path.abspath(__file__))  # This points to mask_rg/
+        downloads_path = os.path.join(project_root, "..", "downloads", "maskrcnn.pth")
+        downloads_path = os.path.abspath(downloads_path)
+
+        self.mask_model.load_state_dict(torch.load(downloads_path, map_location=self.device))
+
+
+        # self.mask_model.load_state_dict(torch.load("downloads/maskrcnn.pth", map_location=self.device))
         self.mask_model = self.mask_model.to(self.device)
         self.mask_model.eval()
 
