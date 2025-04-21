@@ -82,7 +82,7 @@ class PolicyRobotController:
 
         self.hmap_generator = HeightmapGenerator()
 
-    def request_image_segmentation(self, image_data, raw_data):
+    def request_image_segmentation(self, raw_data):
         """
         Request image segmentation from the segmenter
         """
