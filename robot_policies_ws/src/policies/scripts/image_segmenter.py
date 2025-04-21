@@ -21,7 +21,7 @@ class ImageSegmenter:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
 
-        self.publisher = rospy.Publisher('/segmentation_data', SegmentationData, queue_size=10)
+        self.segmenter_publisher = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
         self.image_subscriber = rospy.Subscriber("/image_data", Image_Msg, self.image_sub_callback)
         
         self.bridge = CvBridge()
@@ -79,7 +79,7 @@ class ImageSegmenter:
         print("Segmentation done and now sending data to robot...")
 
         # Publish
-        self.publisher.publish(msg)
+        self.segmenter_publisher.publish(msg)
 
 if __name__ == '__main__':
     try:
