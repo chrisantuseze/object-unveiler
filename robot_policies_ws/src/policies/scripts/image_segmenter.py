@@ -21,7 +21,7 @@ class ImageSegmenter:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
 
-        self.publisher = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=10)
+        self.publisher = rospy.Publisher('/segmentation_data', SegmentationData, queue_size=10)
         self.image_subscriber = rospy.Subscriber("/image_data", Image_Msg, self.image_sub_callback)
         
         self.bridge = CvBridge()

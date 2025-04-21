@@ -55,7 +55,7 @@ class PolicyRobotController:
         self.depth_sub = None
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
 
-        self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
+        self.segment_sub = rospy.Subscriber('/segmentation_data', SegmentationData, self.segment_callback)
         self.image_pub = rospy.Publisher('/image_data', Image_Msg, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
