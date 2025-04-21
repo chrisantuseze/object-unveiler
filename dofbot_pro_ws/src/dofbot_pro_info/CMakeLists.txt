@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         moveit_core
         moveit_msgs
         message_generation
+        sensor_msgs
         )
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -84,6 +85,7 @@ generate_messages(
         DEPENDENCIES
 	actionlib_msgs
 	geometry_msgs
+        sensor_msgs
         std_msgs  # Or other packages containing msgs
 )
 
@@ -121,7 +123,7 @@ generate_messages(
 catkin_package(
         #  INCLUDE_DIRS include
         #  LIBRARIES arm_info
-        CATKIN_DEPENDS roscpp rosmsg rospy message_runtime
+        CATKIN_DEPENDS roscpp rosmsg rospy message_runtime sensor_msgs
         #  DEPENDS system_lib
 )
 
