@@ -39,6 +39,9 @@ class ImageSegmenter:
 
         cv2.imwrite(os.path.join(self.TEST_DIR, "received_image.png"), image)
 
+        image = cv2.flip(image, -1)
+        cv2.imwrite(os.path.join(self.TEST_DIR, "flipped_image.png"), image)
+
         processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir="/", bbox=True, dim=(480, 640))
 
         msg = SegmentationData()

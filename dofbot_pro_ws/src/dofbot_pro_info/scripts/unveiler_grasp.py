@@ -82,18 +82,18 @@ class PolicyRobotController:
 
         self.hmap_generator = HeightmapGenerator()
 
-    def request_image_segmentation(self, image_data):
+    def request_image_segmentation(self, image_data, raw_data):
         """
         Request image segmentation from the segmenter
         """
-        self.img = image_data #self.bridge.imgmsg_to_cv2(image_data, "bgr8")
+        self.img = self.bridge.imgmsg_to_cv2(raw_data, "bgr8")
         size = self.img.shape
         
         image = Image_Msg()
         image.height = size[0] # 480
         image.width = size[1] # 640
         image.channels = size[2] # 3
-        image.data = image_data
+        image.data = raw_data.data
 
         print("Requesting image segmentation...")
         
@@ -132,7 +132,7 @@ class PolicyRobotController:
             self.rgb_image = cv2.flip(self.rgb_image, -1)
 
             print("Received RGB image")
-            self.request_image_segmentation(self.rgb_image)
+            self.request_image_segmentation(msg)
             cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
             
             self.rgb_lock = False  # Release the lock
