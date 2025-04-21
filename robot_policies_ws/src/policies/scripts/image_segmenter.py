@@ -42,7 +42,7 @@ class ImageSegmenter:
         image = cv2.flip(image, -1)
         cv2.imwrite(os.path.join(self.TEST_DIR, "flipped_image.png"), image)
 
-        processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir="/", bbox=True, dim=(480, 640))
+        processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
 
         msg = SegmentationData()
         msg.header.stamp = rospy.Time.now()
