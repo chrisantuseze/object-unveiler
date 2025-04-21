@@ -86,7 +86,7 @@ class PolicyRobotController:
         """
         Request image segmentation from the segmenter
         """
-        self.img = self.bridge.imgmsg_to_cv2(image_data, "bgr8")
+        self.img = image_data #self.bridge.imgmsg_to_cv2(image_data, "bgr8")
         size = self.img.shape
         
         image = Image_Msg()
@@ -119,6 +119,7 @@ class PolicyRobotController:
                 self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
                 self.rgb_image = cv2.flip(self.rgb_image, -1)
 
+                print("Received RGB image")
                 self.request_image_segmentation(self.rgb_image)
                 cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
                 
