@@ -8,7 +8,7 @@ import numpy as np
 import os
 import torch
 
-from policies.msg import SegmentationData, Image_Msg
+from policies.msg import SegmentationData
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 

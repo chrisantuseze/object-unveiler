@@ -63,6 +63,7 @@ add_message_files(
 	Image_Msg.msg
 	Yolov5Detect.msg
         SegmentationData.msg
+        ObservationData.msg
 )
 
 # Generate services in the 'srv' folder

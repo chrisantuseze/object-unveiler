@@ -1,0 +1,4 @@
+SegmentationData segmentation_data
+ensor_msgs/Image color_image
+sensor_msgs/Image depth_image
+sensor_msgs/Image target_image

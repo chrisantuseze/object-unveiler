@@ -3,6 +3,7 @@
 import os
 import torch
 import yaml
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_numpy_masks_to_ros_image_list
 from policy import grasping
 import rospy
 import cv2
@@ -13,17 +14,14 @@ import argparse
 
 from PIL import Image
 
-import open3d as o3d  # For point cloud operations
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
-from dofbot_pro_info.msg import ArmJoint, SegmentationData, Image_Msg
+from dofbot_pro_info.msg import ArmJoint, SegmentationData, ObservationData, ActionData
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
 from utils import general_utils
 import utils.logger as logging
-from mask_rg.object_segmenter import ObjectSegmenter
-from policy.policy import Policy
 
 class PolicyRobotController:
     def __init__(self):
@@ -58,7 +56,12 @@ class PolicyRobotController:
         self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
         self.image_pub = rospy.Publisher('/image_data', Image, queue_size=1)
 
+        self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
+        self.observation_pub = rospy.Publisher("/obs_data", ObservationData, queue_size=1)
+
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
+        self.raw_color_image, self.raw_depth_image = None, None
+        self.action = None
 
         
         # Robot arm parameters
@@ -82,28 +85,16 @@ class PolicyRobotController:
 
         self.hmap_generator = HeightmapGenerator()
 
-    def request_image_segmentation(self, raw_data):
-        """
-        Request image segmentation from the segmenter
-        """
-        # self.img = self.bridge.imgmsg_to_cv2(raw_data, "bgr8")
-        # size = self.img.shape
-        
-        # image = Image_Msg()
-        # image.height = size[0] # 480
-        # image.width = size[1] # 640
-        # image.channels = size[2] # 3
-        # image.data = raw_data.data
-        
-        self.image_pub.publish(raw_data)
-        print("Requesting image segmentation...")
-
     def segment_callback(self, msg):
         print("Received segmentation data")
         self.pred_mask = self.bridge.imgmsg_to_cv2(msg.pred_mask, desired_encoding='mono8')
         self.raw_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.raw_masks]
         self.processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.processed_masks]
         self.bboxes = list(zip(msg.bbox_x1, msg.bbox_y1, msg.bbox_x2, msg.bbox_y2))
+
+    def action_sub_callback(self, action_data):
+        self.action = action_data.values
+        print("Received action data", self.action)
 
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
@@ -114,27 +105,18 @@ class PolicyRobotController:
     def rgb_callback(self, msg):
         """ Callback to receive the RGB image. """
         if self.rgb_lock:
-            # try:
-            #     self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-            #     self.rgb_image = cv2.flip(self.rgb_image, -1)
+            try:
+                self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
+                self.rgb_image = cv2.flip(self.rgb_image, -1)
 
-            #     print("Received RGB image")
-            #     self.request_image_segmentation(self.rgb_image)
-            #     cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
-                
-            #     self.rgb_lock = False  # Release the lock
-            # except Exception as e:
-            #     rospy.logerr(f"RGB conversion error: {e}")
-            #     self.rgb_lock = False  # Make sure to release the lock even if there's an error
+                self.image_pub.publish(msg)
+                self.raw_color_image = msg
 
-            self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-            self.rgb_image = cv2.flip(self.rgb_image, -1)
-
-            print("Received RGB image")
-            self.request_image_segmentation(msg)
-            cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
-            
-            self.rgb_lock = False  # Release the lock
+                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
+                self.rgb_lock = False  # Release the lock
+            except Exception as e:
+                rospy.logerr(f"RGB conversion error: {e}")
+                self.rgb_lock = False  # Make sure to release the lock even if there's an error
 
     def depth_callback(self, msg):
         """ Callback to receive the depth image. """
@@ -143,6 +125,8 @@ class PolicyRobotController:
                 # Convert ROS depth image to OpenCV format
                 self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
                 self.depth_image = cv2.flip(self.depth_image, -1)
+
+                self.raw_depth_image = msg
 
                 # Normalize depth to 0–255 and convert to 8-bit for visualization
                 depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
@@ -167,6 +151,9 @@ class PolicyRobotController:
         # Reset image data
         self.rgb_image = None
         self.depth_image = None
+
+        self.raw_color_image = None
+        self.raw_depth_image = None
         
         # Set locks to acquire new images
         self.rgb_lock = True
@@ -190,67 +177,6 @@ class PolicyRobotController:
             return False
         
         return True
-
-    def generate_point_cloud(self, color_img, depth_img):
-        """ Generates and saves a point cloud using depth and RGB data. """
-        height, width = depth_img.shape
-        fx, fy = self.intrinsics[0, 0], self.intrinsics[1, 1]  # Focal lengths
-        cx, cy = self.intrinsics[0, 2], self.intrinsics[1, 2]  # Optical center
-
-        points = []
-        colors = []
-
-        for v in range(height):
-            for u in range(width):
-                Z = depth_img[v, u]
-                if Z > 0:  # Ignore zero-depth points
-                    X = (u - cx) * Z / fx
-                    Y = (v - cy) * Z / fy
-                    points.append((X, Y, Z))
-
-                    # Get RGB color from the RGB image
-                    color = color_img[v, u] / 255.0  # Normalize to [0, 1]
-                    colors.append((color[2], color[1], color[0]))  # Convert BGR to RGB
-
-        # Convert to Open3D point cloud
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points)
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-
-        # Save the point cloud
-        self.point_cloud = pcd
-        return pcd
-
-    def get_fused_heightmap(self, obs):
-        pcd = self.generate_point_cloud(obs['color'], obs['depth'])
-
-        bounds = [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
-        pixel_size = 0.005
-
-        xyz = np.asarray(pcd.points)
-        seg_class = np.asarray(pcd.colors)
-
-        # Compute heightmap size
-        heightmap_size = np.round(((bounds[1][1] - bounds[1][0]) / pixel_size,
-                                (bounds[0][1] - bounds[0][0]) / pixel_size)).astype(int)
-
-        height_grid = np.zeros((heightmap_size[0], heightmap_size[0]), dtype=np.float32)
-        seg_grid = np.zeros((heightmap_size[0], heightmap_size[0]), dtype=np.float32)
-
-        for i in range(xyz.shape[0]):
-            x = xyz[i][0]
-            y = xyz[i][1]
-            z = xyz[i][2]
-
-            idx_x = int(np.floor((x + bounds[0][1]) / pixel_size))
-            idx_y = int(np.floor((y + bounds[1][1]) / pixel_size))
-
-            if 0 < idx_x < heightmap_size[0] - 1 and 0 < idx_y < heightmap_size[1] - 1:
-                if height_grid[idx_y][idx_x] < z:
-                    height_grid[idx_y][idx_x] = z
-                    seg_grid[idx_y][idx_x] = seg_class[i, 0]
-
-        return cv2.flip(height_grid, 1)
     
     def grasp_object(self, action):
         """
@@ -285,32 +211,6 @@ class PolicyRobotController:
 
         # Get new observation after grasp
         return self.get_observation()
-    
-    def compute_pre_grasp_joints(self, grasp_joints):
-        """Compute a pre-grasp position slightly above the grasp position"""
-        pre_grasp = grasp_joints.copy()
-        pre_grasp[2] += 20  # Adjust second joint to raise arm
-        pre_grasp[3] += 10  # Adjust second joint to raise arm
-        return pre_grasp
-    
-    def compute_post_grasp_joints(self, grasp_joints):
-        """Compute a post-grasp position"""
-        post_grasp = grasp_joints.copy()
-        post_grasp[1] += 30  # Adjust second joint to lift
-        post_grasp[2] -= 20  # Adjust second joint to lift
-        return post_grasp
-
-    def convert_sim_to_robot_pose(self, sim_pos):
-        """Convert simulation position/orientation to robot coordinates"""
-        # This is a placeholder - implement based on your coordinate systems
-        # You may need to scale, offset, and/or rotate coordinates
-        
-        # Example conversion (adjust based on your setup):
-        robot_x = 102.90 #sim_pos[0] * 100  # Convert to cm
-        robot_y = 29.40 #sim_pos[1] * 100
-        robot_z = 80 #sim_pos[2] * 100
-        
-        return robot_x, robot_y, robot_z
     
     def get_joint_angles_from_pose(self, pos):
         """Use inverse kinematics to get joint angles for a pose"""
@@ -358,7 +258,7 @@ class PolicyRobotController:
         """
         
         # 1. Move to pre-grasp position
-        pre_grasp_joints = self.compute_pre_grasp_joints(joint_positions)
+        pre_grasp_joints = compute_pre_grasp_joints(joint_positions)
         self.move_arm_to_position(pre_grasp_joints)
         rospy.sleep(3)  # Wait for movement to complete
         
@@ -371,7 +271,7 @@ class PolicyRobotController:
         rospy.sleep(2)
         
         # 5. Lift object
-        post_grasp_joints = self.compute_post_grasp_joints(joint_positions)
+        post_grasp_joints = compute_post_grasp_joints(joint_positions)
         self.move_arm_to_position(post_grasp_joints)
         rospy.sleep(3)
         
@@ -406,7 +306,7 @@ class PolicyRobotController:
         arm_joint.joints = []
         self.pub_arm.publish(arm_joint)
     
-    def get_observation(self):
+    def get_observation(self, timeout=5.0):
         """
         Get observation for policy input
         
@@ -423,6 +323,16 @@ class PolicyRobotController:
             return None
         
         print("Latest images acquired")
+
+        # Wait for both images to be received
+        start_time = time.time()
+        while self.pred_mask is None and time.time() - start_time < timeout:
+            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
+
+        if self.pred_mask is None:
+            rospy.logerr("Failed to get segmentation mask")
+            return None
+
         # Create observation dictionary
         obs = {
             'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
@@ -433,12 +343,6 @@ class PolicyRobotController:
             
     def eval_agent(self, args):
         self.args = args
-        print("Running eval...")
-        with open('yaml/bhand.yml', 'r') as stream:
-            params = yaml.safe_load(stream)
-
-        # policy = Policy(args, params)
-        # policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
@@ -447,26 +351,32 @@ class PolicyRobotController:
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-            # self.run(policy, rng)
-            self.test(args)
+            self.run(rng)
+            # self.test(args)
 
         rospy.is_shutdown()
 
-    def get_masks(self, timeout=5.0):
-        obs = self.get_observation()
-        if obs is None:
-            rospy.logerr("Failed to get initial observation")
-            return
-        
-        print("Got initial observation. And now getting segmentations...")
+    def call_policy_manager(self, target_mask, timeout=5.0):
+        obs_data = ObservationData()
+        obs_data.segmentation_data = SegmentationData()
+        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask, encoding='mono8')
+        obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
+        obs_data.segmentation_data.bboxes = self.bboxes
 
-        
+        obs_data.color_image = self.raw_color_image
+        obs_data.depth_image = self.raw_depth_image
+        obs_data.target_image = target_mask
+
+        print("Publishing observation data to policy manager for segmentation and action data")
+        self.observation_pub.publish(obs_data)
+
+        # Reset segmentation data
+        self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
+
         # Wait for both images to be received
         start_time = time.time()
-        while self.pred_mask is None and time.time() - start_time < timeout:
-            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
-
-        return self.processed_masks
+        while self.action is None and time.time() - start_time < timeout:
+            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
 
     def test(self, args):
         for i in range(10):
@@ -478,7 +388,7 @@ class PolicyRobotController:
             print(f"Iter {i}: {len(processed_masks)} masks")
 
     
-    def run(self, policy: Policy, rng):
+    def run(self, rng):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
 
@@ -488,73 +398,50 @@ class PolicyRobotController:
             rospy.logerr("Failed to get initial observation")
             return
         
-        print("Got initial observation. And now getting segmentations...")
-
-        args_ = copy.deepcopy(self.args)
-        args_.device = torch.device("cpu")
-        segmenter = ObjectSegmenter(args_, is_real=True)
-
-        processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'], dir=self.TEST_DIR, bbox=True, dim=(240, 320))#(480, 640))
-        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), pred_mask)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
-        cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
-
-        print("len(processed_masks):", len(processed_masks))
-        target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'], rng)
+        if self.pred_mask is None:
+            rospy.logerr("Failed to get initial segmentation")
+            return
+        
+        # get a randomly picked target mask from the segmented image
+        target_mask, target_id = general_utils.get_target_mask(self.processed_masks, obs['color'], rng)
         print("Target ID:", target_id)
         cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
 
+        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), self.pred_mask)
+        cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
+        cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
+
+        print("len(processed_masks):", len(self.processed_masks))
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            # state = policy.state_representation(obs)
-            # np.save(os.path.join(self.TEST_DIR, 'color.npy'), obs['color'])
-            # np.save(os.path.join(self.TEST_DIR, 'depth.npy'), obs['depth'])
-            # np.save(os.path.join(self.TEST_DIR, 'intrinsics.npy'), self.intrinsics)
-            
-            # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
-            state = policy.get_dmap(obs['color'], obs['depth'], self.intrinsics)
-            # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
-            print("Gotten the state")
+            self.call_policy_manager(target_mask)
 
-            torch.cuda.empty_cache()
-
-            print("Getting actions...")
-            # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
-            action = policy.exploit_real_robot(state, target_mask)
-            print("Gotten the action:", action)
-
-            torch.cuda.empty_cache()
+            if self.action is None:
+                rospy.logerr("Failed to get action from policy manager")
+                attempts += 1
+                continue
         
             try:
                 # Execute grasp based on policy
-                next_obs = self.grasp_object(action)
-                if obs is None:
+                next_obs = self.grasp_object(self.action)
+                if next_obs is None:
                     rospy.logerr("Failed to get observation after grasp")
                     attempts += 1
                     continue
 
                 obs = copy.deepcopy(next_obs)
-
-                color_image = obs['color']
-                cv2.imwrite(os.path.join(self.TEST_DIR, "maskrcnn_image.png"), color_image)
-
-                rospy.sleep(0.2)
-
-                print("Getting fresh segmentations...")
-                segmenter = ObjectSegmenter(args_, is_real=True)
-                processed_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(240, 320))
                 cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
                 cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
 
-                print("len(processed_masks):", len(processed_masks))
-                target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+                print("len(processed_masks):", len(self.processed_masks))
+                target_id, target_mask = grasping.find_target(self.processed_masks, target_mask)
 
                 if target_id == -1:
                     res = input("\nDo you think the target is available? (y/n) ")
                     if res.lower() == "y":
                         target_id = int(input("\nWhat is the index? "))
-                        target_mask = processed_masks[target_id]
+                        target_mask = self.processed_masks[target_id]
                     else:
                         print("Target not available. Exiting.")
                         break
