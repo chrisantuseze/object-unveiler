@@ -6,6 +6,7 @@ import rospy
 import cv2
 import numpy as np
 import os
+import torch
 
 from policies.msg import SegmentationData, Image_Msg
 from sensor_msgs.msg import Image
@@ -20,7 +21,7 @@ class ImageSegmenter:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
 
-        self.publisher = rospy.Publisher('/segmentation/mask', SegmentationData, queue_size=10)
+        self.publisher = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=10)
         self.image_subscriber = rospy.Subscriber("/image_data", Image_Msg, self.image_sub_callback)
         
         self.bridge = CvBridge()
@@ -28,12 +29,23 @@ class ImageSegmenter:
 
         self.segmenter = ObjectSegmenter(is_real=True)
 
+    # def convert_numpy_masks_to_ros_image_list(self, masks):
+    #     return [self.bridge.cv2_to_imgmsg(m.astype('uint8') * 255, encoding='mono8') for m in masks]
+
     def convert_numpy_masks_to_ros_image_list(self, masks):
-        return [self.bridge.cv2_to_imgmsg(m.astype('uint8') * 255, encoding='mono8') for m in masks]
+        image_msgs = []
+        for m in masks:
+            if isinstance(m, torch.Tensor):
+                m = m.cpu().numpy()
+            m = np.squeeze(m)  # Remove channel dim if present
+            if m.ndim != 2:
+                raise ValueError(f"Expected 2D mask, got shape {m.shape}")
+            image_msgs.append(self.bridge.cv2_to_imgmsg((m.astype('uint8') * 255), encoding='mono8'))
+        return image_msgs
+
 
     def image_sub_callback(self, image_data):
         print("Image subscriber callback triggered.")
-
 
         # Convert the flat data list into a NumPy array
         flat_array = np.frombuffer(image_data.data, dtype=np.uint8)
@@ -44,14 +56,7 @@ class ImageSegmenter:
         # Convert from BGR (ROS standard) to RGB if needed
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # image = np.zeros((480, 640, 3), dtype=np.uint8)
-        # np_image = np.ndarray(shape=(image_data.height, image_data.width, image_data.channels), dtype=np.uint8, buffer=image_data.data)
-        # image[:,:,0], image[:,:,1], image[:,:,2] = np_image[:,:,2], np_image[:,:,1], np_image[:,:,0] #rgb
-
         cv2.imwrite(os.path.join(self.TEST_DIR, "received_image.png"), image)
-
-        image = cv2.flip(image, -1)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "flipped_image.png"), image)
 
         processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
 
@@ -62,7 +67,7 @@ class ImageSegmenter:
         msg.pred_mask = self.bridge.cv2_to_imgmsg(pred_mask.astype('uint8') * 255, encoding='mono8')
 
         # Raw and processed masks
-        msg.raw_masks = self.convert_numpy_masks_to_ros_image_list(raw_masks)
+        msg.raw_masks = self.convert_numpy_masks_to_ros_image_list([mask for mask in raw_masks])
         msg.processed_masks = self.convert_numpy_masks_to_ros_image_list(processed_masks)
 
         # Bounding boxes

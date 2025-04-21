@@ -472,7 +472,7 @@ class PolicyRobotController:
     def test(self, args):
         for i in range(10):
             processed_masks = self.get_masks()
-            if processed_masks is None:
+            if len(processed_masks) == 0:
                 rospy.logerr("Failed to get masks")
                 return
             print("Got masks")
