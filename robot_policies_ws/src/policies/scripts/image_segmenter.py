@@ -33,9 +33,20 @@ class ImageSegmenter:
 
     def image_sub_callback(self, image_data):
         print("Image subscriber callback triggered.")
-        image = np.zeros((480, 640, 3), dtype=np.uint8)
-        np_image = np.ndarray(shape=(image_data.height, image_data.width, image_data.channels), dtype=np.uint8, buffer=image_data.data)
-        image[:,:,0], image[:,:,1], image[:,:,2] = np_image[:,:,2], np_image[:,:,1], np_image[:,:,0] #rgb
+
+
+        # Convert the flat data list into a NumPy array
+        flat_array = np.frombuffer(image_data.data, dtype=np.uint8)
+
+        # Reshape into (height, width, channels)
+        image = flat_array.reshape((image_data.height, image_data.width, image_data.channels))
+
+        # Convert from BGR (ROS standard) to RGB if needed
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # image = np.zeros((480, 640, 3), dtype=np.uint8)
+        # np_image = np.ndarray(shape=(image_data.height, image_data.width, image_data.channels), dtype=np.uint8, buffer=image_data.data)
+        # image[:,:,0], image[:,:,1], image[:,:,2] = np_image[:,:,2], np_image[:,:,1], np_image[:,:,0] #rgb
 
         cv2.imwrite(os.path.join(self.TEST_DIR, "received_image.png"), image)
 
