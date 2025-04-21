@@ -23,3 +23,6 @@ catkin_make # navigate to the dofbot_pro_ws and run that to rebuild projects
 watch -n 1 "free -h && sudo tegrastats"
 
 Ctrl + Z to stop a program from running
+
+
+source devel/setup.bash 
