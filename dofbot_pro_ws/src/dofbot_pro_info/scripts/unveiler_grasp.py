@@ -93,7 +93,7 @@ class PolicyRobotController:
         image.height = size[0] # 480
         image.width = size[1] # 640
         image.channels = size[2] # 3
-        image.data = image_data.data
+        image.data = image_data
 
         print("Requesting image segmentation...")
         
