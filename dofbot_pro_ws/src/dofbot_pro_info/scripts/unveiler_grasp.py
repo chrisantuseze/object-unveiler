@@ -425,7 +425,12 @@ class PolicyRobotController:
     def eval_agent(self, args):
         self.args = args
         print("Running eval...")
-        with open('yaml/bhand.yml', 'r') as stream:
+
+        project_root = os.path.dirname(os.path.abspath(__file__))  # This points to mask_rg/
+        path = os.path.join(project_root, "..", "yaml", "bhand.yml")
+        path = os.path.abspath(path)
+
+        with open(path, 'r') as stream:
             params = yaml.safe_load(stream)
 
         policy = Policy(args, params)
