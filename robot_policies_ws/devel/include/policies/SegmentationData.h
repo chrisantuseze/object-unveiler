@@ -16,9 +16,9 @@
 #include <ros/message_operations.h>
 
 #include <std_msgs/Header.h>
-#include <policies/Image_Msg.h>
-#include <policies/Image_Msg.h>
-#include <policies/Image_Msg.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Image.h>
 
 namespace policies
 {
@@ -54,13 +54,13 @@ struct SegmentationData_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef  ::policies::Image_Msg_<ContainerAllocator>  _pred_mask_type;
+   typedef  ::sensor_msgs::Image_<ContainerAllocator>  _pred_mask_type;
   _pred_mask_type pred_mask;
 
-   typedef std::vector< ::policies::Image_Msg_<ContainerAllocator> , typename std::allocator_traits<ContainerAllocator>::template rebind_alloc< ::policies::Image_Msg_<ContainerAllocator> >> _raw_masks_type;
+   typedef std::vector< ::sensor_msgs::Image_<ContainerAllocator> , typename std::allocator_traits<ContainerAllocator>::template rebind_alloc< ::sensor_msgs::Image_<ContainerAllocator> >> _raw_masks_type;
   _raw_masks_type raw_masks;
 
-   typedef std::vector< ::policies::Image_Msg_<ContainerAllocator> , typename std::allocator_traits<ContainerAllocator>::template rebind_alloc< ::policies::Image_Msg_<ContainerAllocator> >> _processed_masks_type;
+   typedef std::vector< ::sensor_msgs::Image_<ContainerAllocator> , typename std::allocator_traits<ContainerAllocator>::template rebind_alloc< ::sensor_msgs::Image_<ContainerAllocator> >> _processed_masks_type;
   _processed_masks_type processed_masks;
 
    typedef std::vector<int32_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<int32_t>> _bbox_x1_type;
@@ -168,12 +168,12 @@ struct MD5Sum< ::policies::SegmentationData_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "df055109b3a4d4227a16413106365ed9";
+    return "2cd5b3777844fc997fed10fa15cba788";
   }
 
   static const char* value(const ::policies::SegmentationData_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0xdf055109b3a4d422ULL;
-  static const uint64_t static_value2 = 0x7a16413106365ed9ULL;
+  static const uint64_t static_value1 = 0x2cd5b3777844fc99ULL;
+  static const uint64_t static_value2 = 0x7fed10fa15cba788ULL;
 };
 
 template<class ContainerAllocator>
@@ -193,9 +193,9 @@ struct Definition< ::policies::SegmentationData_<ContainerAllocator> >
   static const char* value()
   {
     return "Header header\n"
-"Image_Msg pred_mask\n"
-"Image_Msg[] raw_masks\n"
-"Image_Msg[] processed_masks\n"
+"sensor_msgs/Image pred_mask\n"
+"sensor_msgs/Image[] raw_masks\n"
+"sensor_msgs/Image[] processed_masks\n"
 "int32[] bbox_x1\n"
 "int32[] bbox_y1\n"
 "int32[] bbox_x2\n"
@@ -218,11 +218,34 @@ struct Definition< ::policies::SegmentationData_<ContainerAllocator> >
 "string frame_id\n"
 "\n"
 "================================================================================\n"
-"MSG: policies/Image_Msg\n"
-"int32 height\n"
-"int32 width\n"
-"int32 channels\n"
-"uint8[] data\n"
+"MSG: sensor_msgs/Image\n"
+"# This message contains an uncompressed image\n"
+"# (0, 0) is at top-left corner of image\n"
+"#\n"
+"\n"
+"Header header        # Header timestamp should be acquisition time of image\n"
+"                     # Header frame_id should be optical frame of camera\n"
+"                     # origin of frame should be optical center of camera\n"
+"                     # +x should point to the right in the image\n"
+"                     # +y should point down in the image\n"
+"                     # +z should point into to plane of the image\n"
+"                     # If the frame_id here and the frame_id of the CameraInfo\n"
+"                     # message associated with the image conflict\n"
+"                     # the behavior is undefined\n"
+"\n"
+"uint32 height         # image height, that is, number of rows\n"
+"uint32 width          # image width, that is, number of columns\n"
+"\n"
+"# The legal values for encoding are in file src/image_encodings.cpp\n"
+"# If you want to standardize a new string format, join\n"
+"# ros-users@lists.sourceforge.net and send an email proposing a new encoding.\n"
+"\n"
+"string encoding       # Encoding of pixels -- channel meaning, ordering, size\n"
+"                      # taken from the list of strings in include/sensor_msgs/image_encodings.h\n"
+"\n"
+"uint8 is_bigendian    # is this data bigendian?\n"
+"uint32 step           # Full row length in bytes\n"
+"uint8[] data          # actual matrix data, size is (step * rows)\n"
 ;
   }
 
@@ -272,14 +295,14 @@ struct Printer< ::policies::SegmentationData_<ContainerAllocator> >
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "pred_mask: ";
     s << std::endl;
-    Printer< ::policies::Image_Msg_<ContainerAllocator> >::stream(s, indent + "  ", v.pred_mask);
+    Printer< ::sensor_msgs::Image_<ContainerAllocator> >::stream(s, indent + "  ", v.pred_mask);
     s << indent << "raw_masks[]" << std::endl;
     for (size_t i = 0; i < v.raw_masks.size(); ++i)
     {
       s << indent << "  raw_masks[" << i << "]: ";
       s << std::endl;
       s << indent;
-      Printer< ::policies::Image_Msg_<ContainerAllocator> >::stream(s, indent + "    ", v.raw_masks[i]);
+      Printer< ::sensor_msgs::Image_<ContainerAllocator> >::stream(s, indent + "    ", v.raw_masks[i]);
     }
     s << indent << "processed_masks[]" << std::endl;
     for (size_t i = 0; i < v.processed_masks.size(); ++i)
@@ -287,7 +310,7 @@ struct Printer< ::policies::SegmentationData_<ContainerAllocator> >
       s << indent << "  processed_masks[" << i << "]: ";
       s << std::endl;
       s << indent;
-      Printer< ::policies::Image_Msg_<ContainerAllocator> >::stream(s, indent + "    ", v.processed_masks[i]);
+      Printer< ::sensor_msgs::Image_<ContainerAllocator> >::stream(s, indent + "    ", v.processed_masks[i]);
     }
     s << indent << "bbox_x1[]" << std::endl;
     for (size_t i = 0; i < v.bbox_x1.size(); ++i)

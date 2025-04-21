@@ -56,7 +56,7 @@ class PolicyRobotController:
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
 
         self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
-        self.image_pub = rospy.Publisher('/image_data', Image_Msg, queue_size=1)
+        self.image_pub = rospy.Publisher('/image_data', Image, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
 
@@ -86,18 +86,17 @@ class PolicyRobotController:
         """
         Request image segmentation from the segmenter
         """
-        self.img = self.bridge.imgmsg_to_cv2(raw_data, "bgr8")
-        size = self.img.shape
+        # self.img = self.bridge.imgmsg_to_cv2(raw_data, "bgr8")
+        # size = self.img.shape
         
-        image = Image_Msg()
-        image.height = size[0] # 480
-        image.width = size[1] # 640
-        image.channels = size[2] # 3
-        image.data = raw_data.data
-
+        # image = Image_Msg()
+        # image.height = size[0] # 480
+        # image.width = size[1] # 640
+        # image.channels = size[2] # 3
+        # image.data = raw_data.data
+        
+        self.image_pub.publish(raw_data)
         print("Requesting image segmentation...")
-        
-        self.image_pub.publish(image)
 
     def segment_callback(self, msg):
         print("Received segmentation data")

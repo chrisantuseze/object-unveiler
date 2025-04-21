@@ -21,17 +21,14 @@ class ImageSegmenter:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
 
-        self.segmenter_publisher = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
-        self.image_subscriber = rospy.Subscriber("/image_data", Image_Msg, self.image_sub_callback)
-        
         self.bridge = CvBridge()
         self.rate = rospy.Rate(1)  # 1 Hz
 
         self.segmenter = ObjectSegmenter(is_real=True)
 
-    # def convert_numpy_masks_to_ros_image_list(self, masks):
-    #     return [self.bridge.cv2_to_imgmsg(m.astype('uint8') * 255, encoding='mono8') for m in masks]
-
+        self.segmenter_publisher = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
+        self.image_subscriber = rospy.Subscriber("/image_data", Image, self.image_sub_callback)
+        
     def convert_numpy_masks_to_ros_image_list(self, masks):
         image_msgs = []
         for m in masks:
