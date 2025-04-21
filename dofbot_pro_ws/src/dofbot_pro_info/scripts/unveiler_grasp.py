@@ -115,18 +115,27 @@ class PolicyRobotController:
     def rgb_callback(self, msg):
         """ Callback to receive the RGB image. """
         if self.rgb_lock:
-            try:
-                self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-                self.rgb_image = cv2.flip(self.rgb_image, -1)
+            # try:
+            #     self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
+            #     self.rgb_image = cv2.flip(self.rgb_image, -1)
 
-                print("Received RGB image")
-                self.request_image_segmentation(self.rgb_image)
-                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
+            #     print("Received RGB image")
+            #     self.request_image_segmentation(self.rgb_image)
+            #     cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
                 
-                self.rgb_lock = False  # Release the lock
-            except Exception as e:
-                rospy.logerr(f"RGB conversion error: {e}")
-                self.rgb_lock = False  # Make sure to release the lock even if there's an error
+            #     self.rgb_lock = False  # Release the lock
+            # except Exception as e:
+            #     rospy.logerr(f"RGB conversion error: {e}")
+            #     self.rgb_lock = False  # Make sure to release the lock even if there's an error
+
+            self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
+            self.rgb_image = cv2.flip(self.rgb_image, -1)
+
+            print("Received RGB image")
+            self.request_image_segmentation(self.rgb_image)
+            cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
+            
+            self.rgb_lock = False  # Release the lock
 
     def depth_callback(self, msg):
         """ Callback to receive the depth image. """
