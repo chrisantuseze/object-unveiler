@@ -44,12 +44,9 @@ class ImageSegmenter:
     def image_sub_callback(self, image_data):
         print("Image subscriber callback triggered.")
 
-        # Convert the flat data list into a NumPy array
-        flat_array = np.frombuffer(image_data.data, dtype=np.uint8)
-
-        # Reshape into (height, width, channels)
-        image = flat_array.reshape((image_data.height, image_data.width, image_data.channels))
-
+        # Convert ROS image message to OpenCV image (NumPy array)
+        image = self.bridge.imgmsg_to_cv2(image_data, desired_encoding="bgr8")
+        
         # Convert from BGR (ROS standard) to RGB if needed
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
