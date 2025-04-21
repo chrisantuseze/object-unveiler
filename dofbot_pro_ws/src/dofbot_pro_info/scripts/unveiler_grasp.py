@@ -429,8 +429,8 @@ class PolicyRobotController:
         with open('yaml/bhand.yml', 'r') as stream:
             params = yaml.safe_load(stream)
 
-        policy = Policy(args, params)
-        policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
+        # policy = Policy(args, params)
+        # policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
         rng = np.random.RandomState()
         rng.seed(args.seed)
