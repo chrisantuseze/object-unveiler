@@ -15,7 +15,7 @@ from cv_bridge import CvBridge
 class ImageSegmenter:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('segmentation_publisher', anonymous=True)
+        rospy.init_node('segmentation_policy')#, anonymous=True)
 
         self.TEST_DIR = "robot_policies_ws/src/policies/scripts/images"
         if not os.path.exists(self.TEST_DIR):
