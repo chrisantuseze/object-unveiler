@@ -1,7 +1,7 @@
 Header header
-sensor_msgs/Image pred_mask
-sensor_msgs/Image[] raw_masks
-sensor_msgs/Image[] processed_masks
+Image_Msg pred_mask
+Image_Msg[] raw_masks
+Image_Msg[] processed_masks
 int32[] bbox_x1
 int32[] bbox_y1
 int32[] bbox_x2
