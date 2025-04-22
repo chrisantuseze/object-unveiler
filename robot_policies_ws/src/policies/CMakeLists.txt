@@ -102,6 +102,7 @@ add_message_files(
   ActionData.msg
   ObservationData.msg
   SegmentationData.msg
+  ObservData.msg
 )
 
 generate_messages(

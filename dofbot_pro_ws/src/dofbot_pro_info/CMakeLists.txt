@@ -65,6 +65,7 @@ add_message_files(
         ActionData.msg
         ObservationData.msg
         SegmentationData.msg
+        ObservData.msg
 )
 
 # Generate services in the 'srv' folder
