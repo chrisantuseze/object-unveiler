@@ -560,6 +560,7 @@ if __name__ == '__main__':
     rate = rospy.Rate(1)
     while not rospy.is_shutdown():
         pub.publish(String(data="Hello from robot"))
+        print("Published message")
         rate.sleep()
 
     rospy.spin()

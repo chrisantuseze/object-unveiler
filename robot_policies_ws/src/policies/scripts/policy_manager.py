@@ -213,11 +213,9 @@ if __name__ == '__main__':
     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
 
     rate = rospy.Rate(1)  # 1Hz
-
     while not rospy.is_shutdown():
         pub.publish(String(data="Test message from machine"))
         print("Published message")
         rate.sleep()
 
-    print("Subscriber initialized, waiting for messages...")
     rospy.spin()
