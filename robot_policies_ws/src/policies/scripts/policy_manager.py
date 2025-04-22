@@ -67,7 +67,10 @@ class PolicyManager:
 
         color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
         depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding="16UC1")
-        target_mask = self.bridge.imgmsg_to_cv2(obs_data.target_mask, desired_encoding='mono8')
+
+        target_mask = obs_data.target_mask
+        if target_mask is not None:
+            target_mask = self.bridge.imgmsg_to_cv2(target_mask, desired_encoding='mono8')
 
         # Convert from BGR (ROS standard) to RGB if needed
         color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
