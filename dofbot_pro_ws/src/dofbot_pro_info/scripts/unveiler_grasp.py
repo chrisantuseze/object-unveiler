@@ -389,14 +389,18 @@ class PolicyRobotController:
         target_mask = np.squeeze(target_mask)  # remove singleton dim if any
         if target_mask.ndim == 3:
             target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2GRAY)
-
-        print(target_mask.shape)
         
         target_mask = target_mask.astype('uint8') * 255  # Ensure correct type and scale
         obs_data = self.bridge.cv2_to_imgmsg(target_mask, encoding='mono8')
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
+
+        # Wait for both images to be received
+        start_time = time.time()
+        while self.action is None and time.time() - start_time < timeout:
+            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
+
 
     def test(self, args):
         for i in range(10):
