@@ -374,6 +374,7 @@ class PolicyRobotController:
         # obs_data.depth_image = self.raw_depth_image
         # obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
+        print(target_mask.shape)
         obs_data = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
         self.observation_pub.publish(obs_data)
