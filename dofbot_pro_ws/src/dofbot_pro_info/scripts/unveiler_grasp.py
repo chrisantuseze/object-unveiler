@@ -53,7 +53,8 @@ class PolicyRobotController:
         self.depth_sub = None
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
 
-        self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
+        # self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
+        self.segment_sub = rospy.Subscriber('/segmentation/data', Image, self.segment_callback)
         self.image_pub = rospy.Publisher('/image_data', Image, queue_size=1)
 
         self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
@@ -88,10 +89,10 @@ class PolicyRobotController:
 
     def segment_callback(self, msg):
         print("Received segmentation data")
-        self.pred_mask = self.bridge.imgmsg_to_cv2(msg.pred_mask, desired_encoding='mono8')
-        self.raw_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.raw_masks]
-        self.processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.processed_masks]
-        self.bboxes = list(zip(msg.bbox_x1, msg.bbox_y1, msg.bbox_x2, msg.bbox_y2))
+        # self.pred_mask = self.bridge.imgmsg_to_cv2(msg.pred_mask, desired_encoding='mono8')
+        # self.raw_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.raw_masks]
+        # self.processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.processed_masks]
+        # self.bboxes = list(zip(msg.bbox_x1, msg.bbox_y1, msg.bbox_x2, msg.bbox_y2))
 
     def action_sub_callback(self, action_data):
         self.action = action_data.values

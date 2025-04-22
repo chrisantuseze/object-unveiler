@@ -43,7 +43,8 @@ class PolicyManager:
         self.color_image = None
         self.depth_image = None
 
-        self.segmenter_pub = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
+        # self.segmenter_pub = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
+        self.segmenter_pub = rospy.Publisher('/segmentation/data', Image, queue_size=1)
         self.image_sub = rospy.Subscriber("/image_data", Image, self.image_sub_callback)
 
         self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
@@ -84,6 +85,14 @@ class PolicyManager:
         print("Segmentation done and now sending data to robot...")
 
         # Publish
+
+        pred_mask = np.squeeze(pred_mask)  # remove singleton dim if any
+        if pred_mask.ndim == 3:
+            pred_mask = cv2.cvtColor(pred_mask, cv2.COLOR_BGR2GRAY)
+        
+        pred_mask = pred_mask.astype('uint8') * 255  # Ensure correct type and scale
+        msg = self.bridge.cv2_to_imgmsg(pred_mask, encoding='mono8')
+
         self.segmenter_pub.publish(msg)
 
     def process_observation(self, obs_data):
