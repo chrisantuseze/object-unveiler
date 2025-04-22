@@ -371,8 +371,10 @@ class PolicyRobotController:
         obs_data.depth_image = self.raw_depth_image
         obs_data.target_image = target_mask
 
-        print("Publishing observation data to policy manager for action data")
+        print(type(self.pred_mask), type(self.raw_color_image), type(target_mask))
+
         self.observation_pub.publish(obs_data)
+        print("Publishing observation data to policy manager for action data")
 
         # Reset segmentation data
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
