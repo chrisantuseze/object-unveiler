@@ -100,7 +100,7 @@ class PolicyRobotController:
                 self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
                 self.rgb_image = cv2.flip(self.rgb_image, -1)
 
-                self.image_pub.publish(msg)
+                # self.image_pub.publish(msg)
                 self.raw_color_image = msg
 
                 cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
