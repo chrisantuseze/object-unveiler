@@ -420,9 +420,10 @@ class PolicyRobotController:
             rospy.logerr("Failed to get initial observation")
             return
         
-        while self.pred_mask is None:
+        if self.pred_mask is None:
             print("Waiting for segmentation data...")
-            rospy.sleep(0.5)
+            rospy.sleep(0.1)
+            return
         
         # get a randomly picked target mask from the segmented image
         target_mask, target_id = general_utils.get_target_mask(self.processed_masks, obs['color'], rng)
