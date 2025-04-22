@@ -207,15 +207,15 @@ if __name__ == '__main__':
 #     print("Node name:", rospy.get_name())
 #     print("Node URI:", rospy.get_node_uri())
 
-#     def callback(msg):
-#         print("Received message from Robot:", msg.data)
+    def callback(msg):
+        print("Received message from Robot:", msg.data)
     
-#     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
-#     while pub.get_num_connections() == 0:
-#         rospy.loginfo("Waiting for robot to subscribe...")
-#         rospy.sleep(0.5)
+    pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+    while pub.get_num_connections() == 0:
+        rospy.loginfo("Waiting for robot to subscribe...")
+        rospy.sleep(0.5)
 
-#     sub = rospy.Subscriber('/robot_machine', String, callback)
+    sub = rospy.Subscriber('/robot_machine', String, callback)
 
 #     rate = rospy.Rate(1)  # 1Hz
 #     while not rospy.is_shutdown():
