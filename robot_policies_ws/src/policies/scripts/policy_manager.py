@@ -148,18 +148,18 @@ def callback(msg):
     print("Received message:", msg.data)
 
 if __name__ == '__main__':
-    # try:
-    #     policy_manager = PolicyManager()
-    #     rospy.spin()
-    # except Exception as e:
-    #     rospy.logerr(str(e))
+    try:
+        policy_manager = PolicyManager()
+        rospy.spin()
+    except Exception as e:
+        rospy.logerr(str(e))
 
-    rospy.init_node('test_subscriber')
+    # rospy.init_node('test_subscriber')
 
-    print("ROS_MASTER_URI:", rospy.get_master_uri())
-    print("Node name:", rospy.get_name())
-    print("Node URI:", rospy.get_node_uri())
+    # print("ROS_MASTER_URI:", rospy.get_master())
+    # print("Node name:", rospy.get_name())
+    # print("Node URI:", rospy.get_node_uri())
 
-    sub = rospy.Subscriber('/test_topic', String, callback)
-    print("Subscriber initialized, waiting for messages...")
-    rospy.spin()
+    # sub = rospy.Subscriber('/test_topic', String, callback)
+    # print("Subscriber initialized, waiting for messages...")
+    # rospy.spin()
