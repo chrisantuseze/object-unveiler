@@ -14,7 +14,7 @@ import argparse
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
-from dofbot_pro_info.msg import ArmJoint, SegmentationData, ObservationData, ActionData
+from dofbot_pro_info.msg import ArmJoint, SegmentationData, ObservData, ActionData
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
@@ -62,7 +62,7 @@ class PolicyRobotController:
         self.observation_pub = rospy.Publisher("/action/obs", Image, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
-        self.raw_color_image, self.raw_depth_image = None, None
+        self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
         self.action = None
 
         
@@ -87,15 +87,9 @@ class PolicyRobotController:
 
         self.hmap_generator = HeightmapGenerator()
 
-    def segment_callback(self, msg):
-        print("Received segmentation data")
-        # self.pred_mask = self.bridge.imgmsg_to_cv2(msg.pred_mask, desired_encoding='mono8')
-        # self.raw_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.raw_masks]
-        # self.processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in msg.processed_masks]
-        # self.bboxes = list(zip(msg.bbox_x1, msg.bbox_y1, msg.bbox_x2, msg.bbox_y2))
-
     def action_sub_callback(self, action_data):
         self.action = action_data.values
+        self.target_mask = action_data.target_mask
         print("Received action data", self.action)
 
     def camera_info_callback(self, msg):
@@ -349,57 +343,31 @@ class PolicyRobotController:
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-            self.run(rng)
+            self.run()
             # self.test(args)
 
         rospy.is_shutdown()
 
-    def call_policy_manager(self, target_mask, timeout=5.0):
-        if self.pred_mask is None or self.raw_color_image is None or self.raw_depth_image is None:
-            rospy.logerr("No segmentation mask or images available")
+    def call_policy_manager(self, timeout=5.0):
+        if self.raw_color_image is None or self.raw_depth_image is None:
+            rospy.logerr("No images available")
             return
         
-        obs_data = ObservationData()
-        obs_data.segmentation_data = SegmentationData()
-        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
-        obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
-        
-        obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
-
+        obs_data = ObservData()
         obs_data.color_image = self.raw_color_image
-        obs_data.depth_image = self.raw_depth_image
-        obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
+        obs_data.depth_image = self.raw_depth_image 
+        obs_data.target_mask = self.target_mask
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
 
         # Reset segmentation data
-        self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
+        self.raw_color_image, self.raw_depth_image = None, None
 
         # Wait for both images to be received
         start_time = time.time()
         while self.action is None and time.time() - start_time < timeout:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
-
-    def call_policy_manager_1(self, target_mask, timeout=5.0):
-        target_mask = np.squeeze(target_mask)  # remove singleton dim if any
-        if target_mask.ndim == 3:
-            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2GRAY)
-        
-        target_mask = target_mask.astype('uint8') * 255  # Ensure correct type and scale
-        obs_data = self.bridge.cv2_to_imgmsg(target_mask, encoding='mono8')
-
-        self.observation_pub.publish(obs_data)
-        print("Publishing observation data to policy manager for action data")
-
-        # Wait for both images to be received
-        start_time = time.time()
-        while self.action is None and time.time() - start_time < timeout:
-            rospy.sleep(0.2)  # Short sleep to avoid CPU hogging
-
 
     def test(self, args):
         for i in range(10):
@@ -411,7 +379,7 @@ class PolicyRobotController:
             print(f"Iter {i}: {len(processed_masks)} masks")
 
     
-    def run(self, rng):
+    def run(self):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
 
@@ -421,29 +389,19 @@ class PolicyRobotController:
             rospy.logerr("Failed to get initial observation")
             return
         
-        if self.pred_mask is None:
-            print("Failed to get segmentation data\n")
-            return
-        
-        # get a randomly picked target mask from the segmented image
-        target_mask, target_id = general_utils.get_target_mask(self.processed_masks, obs['color'], rng)
-        print("Target ID:", target_id)
-        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
-
-        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), self.pred_mask)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
-        cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
-
-        print("len(processed_masks):", len(self.processed_masks))
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            self.call_policy_manager_1(target_mask)
+            self.call_policy_manager()
 
             if self.action is None:
                 rospy.logerr("Failed to get action from policy manager")
                 attempts += 1
                 continue
+
+            if self.action[0] == 0 and self.action[1] == 0 and self.action[2] == 0 and self.action[3] == 0:
+                print("Action is zero. Target is not available")
+                break
         
             try:
                 # Execute grasp based on policy
@@ -457,18 +415,6 @@ class PolicyRobotController:
                 obs = copy.deepcopy(next_obs)
                 cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
                 cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
-
-                print("len(processed_masks):", len(self.processed_masks))
-                target_id, target_mask = grasping.find_target(self.processed_masks, target_mask)
-
-                if target_id == -1:
-                    res = input("\nDo you think the target is available? (y/n) ")
-                    if res.lower() == "y":
-                        target_id = int(input("\nWhat is the index? "))
-                        target_mask = self.processed_masks[target_id]
-                    else:
-                        print("Target not available. Exiting.")
-                        break
                 
                 attempts += 1
                 rate.sleep()

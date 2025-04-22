@@ -2,6 +2,7 @@
 
 #ros
 from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import convert_numpy_masks_to_ros_image_list
+from policy import grasping
 import rospy
 import cv2
 import numpy as np
@@ -11,11 +12,12 @@ import yaml
 import argparse
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from policies.msg import SegmentationData, ObservationData, ActionData
+from policies.msg import ObservData, ActionData
 from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
 from std_msgs.msg import String
+from utils import general_utils
 
 class PolicyManager:
     def __init__(self, args):
@@ -32,6 +34,7 @@ class PolicyManager:
 
         self.segmenter = ObjectSegmenter(is_real=True)
         self.rng = np.random.RandomState()
+        self.rng.seed(args.seed)
 
         self.TEST_DIR = "robot_policies_ws/src/policies/scripts/images"
         if not os.path.exists(self.TEST_DIR):
@@ -40,117 +43,57 @@ class PolicyManager:
         self.bridge = CvBridge()
         self.rate = rospy.Rate(1)  # 1 Hz
 
-        self.color_image = None
-        self.depth_image = None
-
-        # self.segmenter_pub = rospy.Publisher('/segmentation/data', SegmentationData, queue_size=1)
-        self.segmenter_pub = rospy.Publisher('/segmentation/data', Image, queue_size=1)
-        self.image_sub = rospy.Subscriber("/image_data", Image, self.image_sub_callback)
-
         self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
-        # self.observation_sub = rospy.Subscriber("/action/obs", ObservationData, self.process_observation)
-        self.observation_sub = rospy.Subscriber("/action/obs", Image, self.process_observation_1)
+        self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
 
         print("Initialized everything")
     
-    def image_sub_callback(self, image_data):
-        print("Image subscriber callback triggered.")
-
-        # Convert ROS image message to OpenCV image (NumPy array)
-        image = self.bridge.imgmsg_to_cv2(image_data, desired_encoding="bgr8")
-        
-        # Convert from BGR (ROS standard) to RGB if needed
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        cv2.imwrite(os.path.join(self.TEST_DIR, "received_image.png"), image)
-
-        processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
-
-        msg = SegmentationData()
-        msg.header.stamp = rospy.Time.now()
-
-        # Predicted mask
-        msg.pred_mask = self.bridge.cv2_to_imgmsg(pred_mask.astype('uint8') * 255, encoding='mono8')
-
-        # Raw and processed masks
-        msg.raw_masks = convert_numpy_masks_to_ros_image_list([mask for mask in raw_masks], self.bridge)
-        msg.processed_masks = convert_numpy_masks_to_ros_image_list(processed_masks, self.bridge)
-
-        # Bounding boxes
-        msg.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in bboxes]
-        msg.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in bboxes]
-        msg.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in bboxes]
-        msg.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in bboxes]
-
-        print("Segmentation done and now sending data to robot...")
-
-        # Publish
-
-        pred_mask = np.squeeze(pred_mask)  # remove singleton dim if any
-        if pred_mask.ndim == 3:
-            pred_mask = cv2.cvtColor(pred_mask, cv2.COLOR_BGR2GRAY)
-        
-        pred_mask = pred_mask.astype('uint8') * 255  # Ensure correct type and scale
-        msg = self.bridge.cv2_to_imgmsg(pred_mask, encoding='mono8')
-
-        self.segmenter_pub.publish(msg)
-
     def process_observation(self, obs_data):
         print("Observation subscriber callback triggered.")
 
-        target_image = self.bridge.imgmsg_to_cv2(obs_data, desired_encoding='mono8')
-        cv2.imwrite(os.path.join(self.TEST_DIR, "target_image.png"), target_image)
-        
-        segm_data = obs_data.segmentation_data
-        pred_mask = self.bridge.imgmsg_to_cv2(segm_data.pred_mask, desired_encoding='mono8')
-        processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in segm_data.processed_masks]
-        bboxes = list(zip(segm_data.bbox_x1, segm_data.bbox_y1, segm_data.bbox_x2, segm_data.bbox_y2))
-
         color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
-        depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding='bgr8')
-        target_image = self.bridge.imgmsg_to_cv2(obs_data.target_image, desired_encoding='bgr8')
+        depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding='mono8')
+        target_mask = self.bridge.imgmsg_to_cv2(obs_data.target_mask, desired_encoding='mono8')
 
         # Convert from BGR (ROS standard) to RGB if needed
         color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
-        target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
+
+        if target_mask is not None:
+            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2RGB)
 
         cv2.imwrite(os.path.join(self.TEST_DIR, "color_image_data.png"), color_image)
         cv2.imwrite(os.path.join(self.TEST_DIR, "depth_image_data.png"), depth_image)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "target_image_data.png"), target_image)
+
+        processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
+
+         # get a randomly picked target mask from the segmented image
+        if target_mask is None:
+            target_mask, target_id = general_utils.get_target_mask(processed_masks, color_image, self.rng)
+            print("Target ID:", target_id)
+        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
+        cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_scene.png"), pred_mask)
+
+        print("len(processed_masks):", len(processed_masks))
 
         # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
         state = self.policy.get_dmap(color_image, depth_image, intrinsics=None)
         # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
         print("Gotten the state")
 
-        print("Getting actions...")
-        # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
-        action = self.policy.exploit_real_robot(state, target_image)
-        print("Gotten the action:", action)
+        target_id, target_mask = grasping.find_target(processed_masks, target_mask)
+        if target_id == -1:
+            print("No target mask found.")
+            action = np.array([0, 0, 0, 0])
+        else:
+            print("Getting actions...")
+            # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
+            action = self.policy.exploit_real_robot(state, target_mask)
+            print("Gotten the action:", action)
 
-        # Publish
         action_data = ActionData()
         action_data.values = action.tolist()
-        self.action_pub.publish(action_data)
-
-        print("Action data published.", action_data.values)
-
-    def process_observation_1(self, obs_data):
-        print("Observation subscriber callback triggered.")
-
-        target_image = self.bridge.imgmsg_to_cv2(obs_data, desired_encoding='mono8')
-        cv2.imwrite(os.path.join(self.TEST_DIR, "target_image.png"), target_image)
-        
-        action = np.zeros((4,))
-        action[0] = 0.232
-        action[1] = 0.233
-        action[2] = 0.234
-        action[3] = 0.235
-
-        # Publish
-        action_data = ActionData()
-        action_data.values = action.tolist()
+        action_data.target_mask = self.bridge.cv2_to_imgmsg(target_mask, encoding="mono8")
         self.action_pub.publish(action_data)
 
         print("Action data published.", action_data.values)
@@ -214,6 +157,8 @@ if __name__ == '__main__':
 #     while pub.get_num_connections() == 0:
 #         rospy.loginfo("Waiting for robot to subscribe...")
 #         rospy.sleep(0.5)
+
+#     sub = rospy.Subscriber('/robot_machine', String, callback)
 
 #     rate = rospy.Rate(1)  # 1Hz
 #     while not rospy.is_shutdown():

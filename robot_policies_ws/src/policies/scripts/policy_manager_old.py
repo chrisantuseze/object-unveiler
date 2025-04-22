@@ -215,8 +215,6 @@ if __name__ == '__main__':
 #         rospy.loginfo("Waiting for robot to subscribe...")
 #         rospy.sleep(0.5)
 
-#     sub = rospy.Subscriber('/robot_machine', String, callback)
-
 #     rate = rospy.Rate(1)  # 1Hz
 #     while not rospy.is_shutdown():
 #         pub.publish(String(data="Test message from machine"))
