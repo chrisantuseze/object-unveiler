@@ -377,12 +377,12 @@ class PolicyRobotController:
         print("Publishing observation data to policy manager for action data")
 
         # Reset segmentation data
-        # self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
+        self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
 
         # Wait for both images to be received
-        # start_time = time.time()
-        # while self.action is None and time.time() - start_time < timeout:
-        #     rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
+        start_time = time.time()
+        while self.action is None and time.time() - start_time < timeout:
+            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
 
     def test(self, args):
         for i in range(10):
