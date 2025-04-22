@@ -145,37 +145,37 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    args = parse_args()
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"You are using {args.device}")
-
-    try:
-        policy_manager = PolicyManager(args)
-        rospy.spin()
-    except Exception as e:
-        rospy.logerr(str(e))
-
 # if __name__ == '__main__':
-#     rospy.init_node('test_subscriber')
+#     args = parse_args()
+#     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#     print(f"You are using {args.device}")
 
-#     print("ROS_MASTER_URI:", rospy.get_master())
-#     print("Node name:", rospy.get_name())
-#     print("Node URI:", rospy.get_node_uri())
+#     try:
+#         policy_manager = PolicyManager(args)
+#         rospy.spin()
+#     except Exception as e:
+#         rospy.logerr(str(e))
 
-#     def callback(msg):
-#         print("Received message from Robot:", msg.data)
+if __name__ == '__main__':
+    rospy.init_node('test_subscriber')
+
+    print("ROS_MASTER_URI:", rospy.get_master())
+    print("Node name:", rospy.get_name())
+    print("Node URI:", rospy.get_node_uri())
+
+    def callback(msg):
+        print("Received message from Robot:", msg.data)
     
-#     sub = rospy.Subscriber('/robot_machine', String, callback)
-#     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
-#     while pub.get_num_connections() == 0:
-#         rospy.loginfo("Waiting for robot to subscribe...")
-#         rospy.sleep(0.5)
+    sub = rospy.Subscriber('/robot_machine', String, callback)
+    pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+    while pub.get_num_connections() == 0:
+        rospy.loginfo("Waiting for robot to subscribe...")
+        rospy.sleep(0.5)
 
-#     rate = rospy.Rate(1)  # 1Hz
-#     while not rospy.is_shutdown():
-#         pub.publish(String(data="Test message from machine"))
-#         print("Published message")
-#         rate.sleep()
+    rate = rospy.Rate(1)  # 1Hz
+    while not rospy.is_shutdown():
+        pub.publish(String(data="Test message from machine"))
+        print("Published message")
+        rate.sleep()
 
-#     rospy.spin()
+    rospy.spin()
