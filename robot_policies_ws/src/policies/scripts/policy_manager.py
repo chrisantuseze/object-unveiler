@@ -83,7 +83,7 @@ class PolicyManager:
         self.segmenter_pub.publish(msg)
 
     def process_observation(self, obs_data):
-        print("observation subscriber callback triggered.")
+        print("Observation subscriber callback triggered.")
         
         segm_data = obs_data.segmentation_data
         pred_mask = self.bridge.imgmsg_to_cv2(segm_data.pred_mask, desired_encoding='mono8')
