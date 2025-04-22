@@ -1,5 +1,5 @@
 source ~/.bashrc
-source devel/setup.bash
+source robot_policies_ws/devel/setup.bash
 
 catkin_make clean
 catkin_make
