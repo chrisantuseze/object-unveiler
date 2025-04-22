@@ -361,7 +361,11 @@ class PolicyRobotController:
         obs_data.segmentation_data = SegmentationData()
         obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask, encoding='mono8')
         obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
-        obs_data.segmentation_data.bboxes = self.bboxes
+        
+        obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
 
         obs_data.color_image = self.raw_color_image
         obs_data.depth_image = self.raw_depth_image
