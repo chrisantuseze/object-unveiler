@@ -42,21 +42,23 @@ class PolicyManager:
         self.bridge = CvBridge()
         self.rate = rospy.Rate(1)  # 1 Hz
 
-        # self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
-        # self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
-
-
-        rospy.Subscriber('/robot_machine', String, self.callback)
-        self.pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+        self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
+        self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
         while self.pub.get_num_connections() == 0:
             rospy.loginfo("Waiting for robot to subscribe...")
             rospy.sleep(0.5)
 
-        rate = rospy.Rate(1)  # 1Hz
-        while not rospy.is_shutdown():
-            self.pub.publish(String(data="Test message from machine"))
-            print("Published message")
-            rate.sleep()
+        # rospy.Subscriber('/robot_machine', String, self.callback)
+        # self.pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+        # while self.pub.get_num_connections() == 0:
+        #     rospy.loginfo("Waiting for robot to subscribe...")
+        #     rospy.sleep(0.5)
+
+        # rate = rospy.Rate(1)  # 1Hz
+        # while not rospy.is_shutdown():
+        #     self.pub.publish(String(data="Test message from machine"))
+        #     print("Published message")
+        #     rate.sleep()
 
         print("Initialized everything")
     
