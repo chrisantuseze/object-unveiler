@@ -56,9 +56,6 @@ class PolicyRobotController:
         # self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
         # self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
 
-        self.pub = rospy.Publisher('/robot_machine', String, queue_size=10)
-        self.sub = None
-
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
         self.action = None
@@ -83,6 +80,8 @@ class PolicyRobotController:
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
+        self.pub = rospy.Publisher('/robot_machine', String, queue_size=10)
+        self.sub = None
         while self.pub.get_num_connections() == 0:
             rospy.loginfo("Waiting for local machine to subscribe...")
             rospy.sleep(0.5)
@@ -484,33 +483,33 @@ def parse_args():
     return parser.parse_args()
 
 
-# if __name__ == '__main__':
-#     args = parse_args()
-#     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#     # args.device = torch.device("cpu")
-#     print(f"You are using {args.device}")
-
-#     controller = PolicyRobotController()
-#     controller.eval_agent(args)
-#     controller.cleanup()
-
 if __name__ == '__main__':
-    rospy.init_node('test_node')
+    args = parse_args()
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # args.device = torch.device("cpu")
+    print(f"You are using {args.device}")
 
-    def callback(msg):
-        print("Received from machine:", msg.data)
+    controller = PolicyRobotController()
+    controller.eval_agent(args)
+    controller.cleanup()
 
-    pub = rospy.Publisher('/robot_machine', String, queue_size=10)
-    while pub.get_num_connections() == 0:
-        rospy.loginfo("Waiting for local machine to subscribe...")
-        rospy.sleep(0.5)
+# if __name__ == '__main__':
+#     rospy.init_node('test_node')
 
-    rospy.Subscriber('/machine_robot', String, callback)
+#     def callback(msg):
+#         print("Received from machine:", msg.data)
 
-    rate = rospy.Rate(1)
-    while not rospy.is_shutdown():
-        pub.publish(String(data="Hello from robot"))
-        print("Published message")
-        rate.sleep()
+#     pub = rospy.Publisher('/robot_machine', String, queue_size=10)
+#     while pub.get_num_connections() == 0:
+#         rospy.loginfo("Waiting for local machine to subscribe...")
+#         rospy.sleep(0.5)
 
-    rospy.spin()
+#     rospy.Subscriber('/machine_robot', String, callback)
+
+#     rate = rospy.Rate(1)
+#     while not rospy.is_shutdown():
+#         pub.publish(String(data="Hello from robot"))
+#         print("Published message")
+#         rate.sleep()
+
+#     rospy.spin()
