@@ -209,11 +209,12 @@ if __name__ == '__main__':
     def callback(msg):
         print("Received message from Robot:", msg.data)
     
-    sub = rospy.Subscriber('/robot_machine', String, callback)
     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
     while pub.get_num_connections() == 0:
         rospy.loginfo("Waiting for robot to subscribe...")
         rospy.sleep(0.5)
+
+    sub = rospy.Subscriber('/robot_machine', String, callback)
 
     rate = rospy.Rate(1)  # 1Hz
     while not rospy.is_shutdown():
