@@ -371,7 +371,7 @@ class PolicyRobotController:
         obs_data.depth_image = self.raw_depth_image
         obs_data.target_image = target_mask
 
-        print("Publishing observation data to policy manager for segmentation and action data")
+        print("Publishing observation data to policy manager for action data")
         self.observation_pub.publish(obs_data)
 
         # Reset segmentation data
@@ -428,6 +428,7 @@ class PolicyRobotController:
         
             try:
                 # Execute grasp based on policy
+                print("Executing grasp with action:", self.action)
                 next_obs = self.grasp_object(self.action)
                 if next_obs is None:
                     rospy.logerr("Failed to get observation after grasp")
