@@ -66,7 +66,7 @@ class PolicyManager:
         print("Observation subscriber callback triggered.")
 
         color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
-        depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding='mono8')
+        depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding="16UC1")
         target_mask = self.bridge.imgmsg_to_cv2(obs_data.target_mask, desired_encoding='mono8')
 
         # Convert from BGR (ROS standard) to RGB if needed
