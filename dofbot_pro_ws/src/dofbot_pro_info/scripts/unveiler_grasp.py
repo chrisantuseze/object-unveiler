@@ -523,44 +523,43 @@ def parse_args():
     return parser.parse_args()
 
 
+# if __name__ == '__main__':
+#     # try:
+#     #     args = parse_args()
+#     #     args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#     #     print(f"You are using {args.device}")
+
+#     #     controller = PolicyRobotController()
+#     #     try:
+#     #         controller.eval_agent(args)
+#     #     except Exception as e:
+#     #         rospy.logerr(f"Error in eval_agent: {str(e)}")
+#     #     finally:
+#     #         controller.cleanup()
+#     # except rospy.ROSInterruptException as e:
+#     #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
+
+#     args = parse_args()
+#     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#     # args.device = torch.device("cpu")
+#     print(f"You are using {args.device}")
+
+#     controller = PolicyRobotController()
+#     controller.eval_agent(args)
+#     controller.cleanup()
+
 if __name__ == '__main__':
-    # try:
-    #     args = parse_args()
-    #     args.device = torch.device("cpu") #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #     print(f"You are using {args.device}")
-
-    #     controller = PolicyRobotController()
-    #     try:
-    #         controller.eval_agent(args)
-    #     except Exception as e:
-    #         rospy.logerr(f"Error in eval_agent: {str(e)}")
-    #     finally:
-    #         controller.cleanup()
-    # except rospy.ROSInterruptException as e:
-    #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
-
-    # args = parse_args()
-    # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # # args.device = torch.device("cpu")
-    # print(f"You are using {args.device}")
-
-    # controller = PolicyRobotController()
-    # controller.eval_agent(args)
-    # controller.cleanup()
-
-    rospy.init_node('test_publisher')
+    rospy.init_node('test_node')
 
     def callback(msg):
-        print("Received message from Machine:", msg.data)
+        print("Received from machine:", msg.data)
 
+    rospy.Subscriber('/machine_robot', String, callback)
     pub = rospy.Publisher('/robot_machine', String, queue_size=10)
-    sub = rospy.Subscriber('/machine_robot', String, callback)
 
-    rate = rospy.Rate(1)  # 1Hz
-
+    rate = rospy.Rate(1)
     while not rospy.is_shutdown():
-        pub.publish(String(data="Test message from robot"))
-        print("Published message")
+        pub.publish(String(data="Hello from robot"))
         rate.sleep()
 
     rospy.spin()

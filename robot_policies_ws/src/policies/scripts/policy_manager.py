@@ -189,9 +189,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def callback(msg):
-    print("Received message from Robot:", msg.data)
-    
 if __name__ == '__main__':
     # args = parse_args()
     # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -209,6 +206,8 @@ if __name__ == '__main__':
     print("Node name:", rospy.get_name())
     print("Node URI:", rospy.get_node_uri())
 
+    def callback(msg):
+        print("Received message from Robot:", msg.data)
     
     sub = rospy.Subscriber('/robot_machine', String, callback)
     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
