@@ -355,8 +355,8 @@ class PolicyRobotController:
         rospy.is_shutdown()
 
     def call_policy_manager(self, target_mask, timeout=5.0):
-        if self.pred_mask is None:
-            rospy.logerr("No segmentation mask available")
+        if self.pred_mask is None or self.raw_color_image is None or self.raw_depth_image is None:
+            rospy.logerr("No segmentation mask or images available")
             return
         
         obs_data = ObservationData()
