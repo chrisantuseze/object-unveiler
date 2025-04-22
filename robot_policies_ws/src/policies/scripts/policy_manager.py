@@ -15,6 +15,8 @@ from policies.msg import SegmentationData, ObservationData, ActionData
 from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
 
+from std_msgs.msg import String
+
 class PolicyManager:
     def __init__(self, args):
         # Initialize the ROS node
@@ -142,9 +144,22 @@ class PolicyManager:
 
         print("Action data published.", action_data.values)
 
+def callback(msg):
+    print("Received message:", msg.data)
+
 if __name__ == '__main__':
-    try:
-        policy_manager = PolicyManager()
-        rospy.spin()
-    except Exception as e:
-        rospy.logerr(str(e))
+    # try:
+    #     policy_manager = PolicyManager()
+    #     rospy.spin()
+    # except Exception as e:
+    #     rospy.logerr(str(e))
+
+    rospy.init_node('test_subscriber')
+
+    print("ROS_MASTER_URI:", rospy.get_master_uri())
+    print("Node name:", rospy.get_name())
+    print("Node URI:", rospy.get_node_uri())
+
+    sub = rospy.Subscriber('/test_topic', String, callback)
+    print("Subscriber initialized, waiting for messages...")
+    rospy.spin()

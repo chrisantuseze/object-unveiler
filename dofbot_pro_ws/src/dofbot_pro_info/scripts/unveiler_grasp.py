@@ -21,6 +21,8 @@ from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGener
 from utils import general_utils
 import utils.logger as logging
 
+from std_msgs.msg import String
+
 class PolicyRobotController:
     def __init__(self):
         # Initialize the ROS node
@@ -420,7 +422,7 @@ class PolicyRobotController:
         
         while self.pred_mask is None:
             print("Waiting for segmentation data...")
-            rospy.sleep(0.1)
+            rospy.sleep(0.5)
         
         # get a randomly picked target mask from the segmented image
         target_mask, target_id = general_utils.get_target_mask(self.processed_masks, obs['color'], rng)
@@ -535,11 +537,20 @@ if __name__ == '__main__':
     # except rospy.ROSInterruptException as e:
     #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
 
-    args = parse_args()
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # args.device = torch.device("cpu")
-    print(f"You are using {args.device}")
+    # args = parse_args()
+    # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # # args.device = torch.device("cpu")
+    # print(f"You are using {args.device}")
 
-    controller = PolicyRobotController()
-    controller.eval_agent(args)
-    controller.cleanup()
+    # controller = PolicyRobotController()
+    # controller.eval_agent(args)
+    # controller.cleanup()
+
+    rospy.init_node('test_publisher')
+    pub = rospy.Publisher('/test_topic', String, queue_size=10)
+    rate = rospy.Rate(1)  # 1Hz
+
+    while not rospy.is_shutdown():
+        pub.publish(String(data="Test message from robot"))
+        print("Published message")
+        rate.sleep()
