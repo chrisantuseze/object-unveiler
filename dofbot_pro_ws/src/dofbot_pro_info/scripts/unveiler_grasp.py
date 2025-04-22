@@ -53,8 +53,11 @@ class PolicyRobotController:
         self.depth_sub = None
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
 
-        self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
-        self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
+        # self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
+        # self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
+
+        self.pub = rospy.Publisher('/robot_machine', String, queue_size=10)
+        self.sub = None
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
@@ -80,7 +83,9 @@ class PolicyRobotController:
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
-        self.hmap_generator = HeightmapGenerator()
+        while self.pub.get_num_connections() == 0:
+            rospy.loginfo("Waiting for local machine to subscribe...")
+            rospy.sleep(0.5)
 
     def action_sub_callback(self, action_data):
         self.action = action_data.values
@@ -388,7 +393,18 @@ class PolicyRobotController:
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            self.call_policy_manager()
+            # self.call_policy_manager()
+
+            if self.sub is None:
+                self.sub = rospy.Subscriber('/machine_robot', String, self.callback)
+
+            rate = rospy.Rate(1)
+            while not rospy.is_shutdown():
+                self.pub.publish(String(data="Hello from robot"))
+                print("Published message")
+                rate.sleep()
+
+
 
             if self.action is None:
                 rospy.logerr("Failed to get action from policy manager")
@@ -430,6 +446,9 @@ class PolicyRobotController:
             self.depth_sub.unregister()
         if self.camera_info_sub is not None:
             self.camera_info_sub.unregister()
+
+    def callback(self, msg):
+        print("Received from machine:", msg.data)
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

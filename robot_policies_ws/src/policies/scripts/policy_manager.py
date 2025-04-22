@@ -42,8 +42,21 @@ class PolicyManager:
         self.bridge = CvBridge()
         self.rate = rospy.Rate(1)  # 1 Hz
 
-        self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
-        self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
+        # self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
+        # self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
+
+
+        rospy.Subscriber('/robot_machine', String, self.callback)
+        self.pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+        while self.pub.get_num_connections() == 0:
+            rospy.loginfo("Waiting for robot to subscribe...")
+            rospy.sleep(0.5)
+
+        rate = rospy.Rate(1)  # 1Hz
+        while not rospy.is_shutdown():
+            self.pub.publish(String(data="Test message from machine"))
+            print("Published message")
+            rate.sleep()
 
         print("Initialized everything")
     
@@ -94,6 +107,9 @@ class PolicyManager:
         self.action_pub.publish(action_data)
 
         print("Action data published.", action_data.values)
+
+    def callback(self, msg):
+        print("Received message from Robot:", msg.data)
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -150,12 +166,11 @@ if __name__ == '__main__':
 #     def callback(msg):
 #         print("Received message from Robot:", msg.data)
     
+#     sub = rospy.Subscriber('/robot_machine', String, callback)
 #     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
 #     while pub.get_num_connections() == 0:
 #         rospy.loginfo("Waiting for robot to subscribe...")
 #         rospy.sleep(0.5)
-
-#     sub = rospy.Subscriber('/robot_machine', String, callback)
 
 #     rate = rospy.Rate(1)  # 1Hz
 #     while not rospy.is_shutdown():
