@@ -359,7 +359,7 @@ class PolicyRobotController:
     def call_policy_manager(self, target_mask, timeout=5.0):
         obs_data = ObservationData()
         obs_data.segmentation_data = SegmentationData()
-        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask, encoding='mono8')
+        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
         obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
         
         obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
@@ -369,7 +369,7 @@ class PolicyRobotController:
 
         obs_data.color_image = self.raw_color_image
         obs_data.depth_image = self.raw_depth_image
-        obs_data.target_image = target_mask
+        obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
         print(type(self.pred_mask), type(self.raw_color_image), type(target_mask))
 
