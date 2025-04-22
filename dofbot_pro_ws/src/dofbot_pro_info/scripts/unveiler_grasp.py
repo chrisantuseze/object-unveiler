@@ -55,7 +55,7 @@ class PolicyRobotController:
 
         self.action_sub = None
         self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-        while self.pub.get_num_connections() == 0:
+        while self.observation_pub.get_num_connections() == 0:
             rospy.loginfo("Waiting for local machine to subscribe...")
             rospy.sleep(0.5)
 
