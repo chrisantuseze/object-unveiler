@@ -523,9 +523,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def callback(msg):
-    print("Received message from Machine:", msg.data)
-
 if __name__ == '__main__':
     # try:
     #     args = parse_args()
@@ -552,6 +549,10 @@ if __name__ == '__main__':
     # controller.cleanup()
 
     rospy.init_node('test_publisher')
+
+    def callback(msg):
+        print("Received message from Machine:", msg.data)
+
     pub = rospy.Publisher('/robot_machine', String, queue_size=10)
     sub = rospy.Subscriber('/machine_robot', String, callback)
 
@@ -561,3 +562,5 @@ if __name__ == '__main__':
         pub.publish(String(data="Test message from robot"))
         print("Published message")
         rate.sleep()
+
+    rospy.spin()
