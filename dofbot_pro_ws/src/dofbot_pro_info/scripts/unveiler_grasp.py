@@ -522,6 +522,10 @@ def parse_args():
 
     return parser.parse_args()
 
+
+def callback(msg):
+    print("Received message from Machine:", msg.data)
+
 if __name__ == '__main__':
     # try:
     #     args = parse_args()
@@ -538,20 +542,22 @@ if __name__ == '__main__':
     # except rospy.ROSInterruptException as e:
     #     rospy.logerr(f"Error in calling PolicyRobotController: {str(e)}")
 
-    args = parse_args()
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # args.device = torch.device("cpu")
-    print(f"You are using {args.device}")
+    # args = parse_args()
+    # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # # args.device = torch.device("cpu")
+    # print(f"You are using {args.device}")
 
-    controller = PolicyRobotController()
-    controller.eval_agent(args)
-    controller.cleanup()
+    # controller = PolicyRobotController()
+    # controller.eval_agent(args)
+    # controller.cleanup()
 
-    # rospy.init_node('test_publisher')
-    # pub = rospy.Publisher('/test_topic', String, queue_size=10)
-    # rate = rospy.Rate(1)  # 1Hz
+    rospy.init_node('test_publisher')
+    pub = rospy.Publisher('/robot_machine', String, queue_size=10)
+    sub = rospy.Subscriber('/machine_robot', String, callback)
 
-    # while not rospy.is_shutdown():
-    #     pub.publish(String(data="Test message from robot"))
-    #     print("Published message")
-    #     rate.sleep()
+    rate = rospy.Rate(1)  # 1Hz
+
+    while not rospy.is_shutdown():
+        pub.publish(String(data="Test message from robot"))
+        print("Published message")
+        rate.sleep()

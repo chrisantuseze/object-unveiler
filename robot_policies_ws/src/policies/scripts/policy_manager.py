@@ -190,25 +190,35 @@ def parse_args():
 
 
 def callback(msg):
-    print("Received message:", msg.data)
-
+    print("Received message from Robot:", msg.data)
+    
 if __name__ == '__main__':
-    args = parse_args()
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"You are using {args.device}")
+    # args = parse_args()
+    # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # print(f"You are using {args.device}")
 
-    try:
-        policy_manager = PolicyManager(args)
-        rospy.spin()
-    except Exception as e:
-        rospy.logerr(str(e))
+    # try:
+    #     policy_manager = PolicyManager(args)
+    #     rospy.spin()
+    # except Exception as e:
+    #     rospy.logerr(str(e))
 
-    # rospy.init_node('test_subscriber')
+    rospy.init_node('test_subscriber')
 
-    # print("ROS_MASTER_URI:", rospy.get_master())
-    # print("Node name:", rospy.get_name())
-    # print("Node URI:", rospy.get_node_uri())
+    print("ROS_MASTER_URI:", rospy.get_master())
+    print("Node name:", rospy.get_name())
+    print("Node URI:", rospy.get_node_uri())
 
-    # sub = rospy.Subscriber('/test_topic', String, callback)
-    # print("Subscriber initialized, waiting for messages...")
-    # rospy.spin()
+    
+    sub = rospy.Subscriber('/robot_machine', String, callback)
+    pub = rospy.Publisher('/machine_robot', String, queue_size=10)
+
+    rate = rospy.Rate(1)  # 1Hz
+
+    while not rospy.is_shutdown():
+        pub.publish(String(data="Test message from machine"))
+        print("Published message")
+        rate.sleep()
+
+    print("Subscriber initialized, waiting for messages...")
+    rospy.spin()
