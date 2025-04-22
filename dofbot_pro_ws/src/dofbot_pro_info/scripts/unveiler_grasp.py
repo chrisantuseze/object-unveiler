@@ -374,8 +374,14 @@ class PolicyRobotController:
         # obs_data.depth_image = self.raw_depth_image
         # obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
+        target_mask = np.squeeze(target_mask)  # remove singleton dim if any
+        if target_mask.ndim == 3:
+            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2GRAY)
+
         print(target_mask.shape)
-        obs_data = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
+        
+        target_mask = target_mask.astype('uint8') * 255  # Ensure correct type and scale
+        obs_data = self.bridge.cv2_to_imgmsg(target_mask, encoding='mono8')
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
