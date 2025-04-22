@@ -14,7 +14,6 @@ from cv_bridge import CvBridge
 from policies.msg import SegmentationData, ObservationData, ActionData
 from mask_rg.object_segmenter import ObjectSegmenter
 from policy.policy import Policy
-from utils import general_utils
 
 class PolicyManager:
     def __init__(self, args):

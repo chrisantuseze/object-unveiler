@@ -12,8 +12,6 @@ import copy
 import numpy as np
 import argparse
 
-from PIL import Image
-
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from dofbot_pro_info.msg import ArmJoint, SegmentationData, ObservationData, ActionData
