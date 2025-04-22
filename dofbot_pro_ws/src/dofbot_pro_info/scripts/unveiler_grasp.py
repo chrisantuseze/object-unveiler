@@ -357,6 +357,10 @@ class PolicyRobotController:
         rospy.is_shutdown()
 
     def call_policy_manager(self, target_mask, timeout=5.0):
+        if self.pred_mask is None:
+            rospy.logerr("No segmentation mask available")
+            return
+        
         obs_data = ObservationData()
         obs_data.segmentation_data = SegmentationData()
         obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
@@ -370,8 +374,6 @@ class PolicyRobotController:
         obs_data.color_image = self.raw_color_image
         obs_data.depth_image = self.raw_depth_image
         obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
-
-        print(type(self.pred_mask), type(self.raw_color_image), type(target_mask))
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
