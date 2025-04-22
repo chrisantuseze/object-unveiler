@@ -46,7 +46,7 @@ class PolicyManager:
 
         self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
         # self.observation_sub = rospy.Subscriber("/action/obs", ObservationData, self.process_observation)
-        self.observation_sub = rospy.Subscriber("/image_data", Image, self.process_observation)
+        self.observation_sub = rospy.Subscriber("/action/obs", Image, self.process_observation)
     
     def image_sub_callback(self, image_data):
         print("Image subscriber callback triggered.")

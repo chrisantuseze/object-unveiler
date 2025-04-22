@@ -56,7 +56,7 @@ class PolicyRobotController:
 
         self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
         # self.observation_pub = rospy.Publisher("/action/obs", ObservationData, queue_size=1)
-        self.observation_pub = rospy.Publisher("/image_data", Image, queue_size=1)
+        self.observation_pub = rospy.Publisher("/action/obs", Image, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image = None, None
