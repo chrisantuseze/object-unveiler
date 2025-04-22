@@ -556,6 +556,9 @@ if __name__ == '__main__':
 
     rospy.Subscriber('/machine_robot', String, callback)
     pub = rospy.Publisher('/robot_machine', String, queue_size=10)
+    while pub.get_num_connections() == 0:
+        rospy.loginfo("Waiting for local machine to subscribe...")
+        rospy.sleep(0.5)
 
     rate = rospy.Rate(1)
     while not rospy.is_shutdown():
