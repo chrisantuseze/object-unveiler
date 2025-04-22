@@ -44,7 +44,7 @@ class PolicyManager:
 
         self.observation_sub = rospy.Subscriber("/action/obs", ObservData, self.process_observation)
         self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
-        while self.pub.get_num_connections() == 0:
+        while self.action_pub.get_num_connections() == 0:
             rospy.loginfo("Waiting for robot to subscribe...")
             rospy.sleep(0.5)
 
