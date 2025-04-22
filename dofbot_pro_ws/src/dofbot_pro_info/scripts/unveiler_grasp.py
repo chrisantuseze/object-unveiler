@@ -328,7 +328,7 @@ class PolicyRobotController:
         # Wait for both images to be received
         start_time = time.time()
         while self.pred_mask is None and time.time() - start_time < timeout:
-            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
+            rospy.sleep(0.2)  # Short sleep to avoid CPU hogging
 
         # Create observation dictionary
         obs = {
@@ -421,8 +421,7 @@ class PolicyRobotController:
             return
         
         if self.pred_mask is None:
-            print("Waiting for segmentation data...")
-            rospy.sleep(0.1)
+            print("Failed to get segmentation data\n")
             return
         
         # get a randomly picked target mask from the segmented image
