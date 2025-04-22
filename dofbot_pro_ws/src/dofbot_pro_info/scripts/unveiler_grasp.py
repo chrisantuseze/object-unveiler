@@ -351,7 +351,8 @@ class PolicyRobotController:
         obs_data = ObservData()
         obs_data.color_image = self.raw_color_image
         obs_data.depth_image = self.raw_depth_image 
-        obs_data.target_mask = self.target_mask
+        if self.target_mask is not None:
+            obs_data.target_mask = self.target_mask
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
