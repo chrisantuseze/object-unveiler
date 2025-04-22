@@ -2,6 +2,7 @@ cd echris/object-unveiler
 source ~/.bashrc
 source /opt/ros/noetic/setup.bash
 source ~/.bashrc
+source dofbot_pro_ws/devel/setup.bash 
 clear
 
 roscore
@@ -25,4 +26,4 @@ watch -n 1 "free -h && sudo tegrastats"
 Ctrl + Z to stop a program from running
 
 
-source devel/setup.bash 
+source dofbot_pro_ws/devel/setup.bash 

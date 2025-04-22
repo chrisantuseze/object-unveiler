@@ -1,0 +1,10 @@
+<launch>
+  <!-- Node 1: kinemarics_dofbot_pro -->
+  <node pkg="dofbot_pro_info" type="kinemarics_dofbot_pro" name="kinematics_node" output="screen" />
+
+  <!-- Node 2: arm_driver.py -->
+  <node pkg="dofbot_pro_info" type="arm_driver.py" name="arm_driver_node" output="screen" />
+
+  <!-- Launch file for Orbbec camera -->
+  <include file="$(find orbbec_camera)/launch/dabai_dcw2.launch" />
+</launch>

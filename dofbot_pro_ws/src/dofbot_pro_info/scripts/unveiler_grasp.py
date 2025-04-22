@@ -328,10 +328,6 @@ class PolicyRobotController:
         while self.pred_mask is None and time.time() - start_time < timeout:
             rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
 
-        if self.pred_mask is None:
-            rospy.logerr("Failed to get segmentation mask")
-            return None
-
         # Create observation dictionary
         obs = {
             'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
