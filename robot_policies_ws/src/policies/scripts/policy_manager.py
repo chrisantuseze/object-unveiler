@@ -8,7 +8,7 @@ import numpy as np
 import os
 import torch
 import yaml
-
+import argparse
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from policies.msg import SegmentationData, ObservationData, ActionData
@@ -144,12 +144,50 @@ class PolicyManager:
 
         print("Action data published.", action_data.values)
 
+def parse_args():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('--mode', default='ae', type=str, help='')
+    
+    # args for eval_agent
+    parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
+    parser.add_argument('--reg_model', default='downloads/reg_model.pt', type=str, help='')
+    parser.add_argument('--seed', default=16, type=int, help='')
+    parser.add_argument('--n_scenes', default=100, type=int, help='')
+    parser.add_argument('--object_set', default='seen', type=str, help='')
+
+    # args for trainer
+    parser.add_argument('--dataset_dir', default='save/pc-ou-dataset', type=str, help='')
+    parser.add_argument('--epochs', default=100, type=int, help='')
+    parser.add_argument('--lr', default=0.0001, type=float, help='')
+    parser.add_argument('--batch_size', default=1, type=int, help='')
+    parser.add_argument('--split_ratio', default=0.9, type=float, help='')
+    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')
+    parser.add_argument('--weight_decay', type=float, default=1e-3, help='Weight decay for optimizer')
+
+    parser.add_argument('--sequence_length', default=1, type=int, help='')
+    parser.add_argument('--patch_size', default=64, type=int, help='')
+    parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
+    parser.add_argument('--step', default=500, type=int, help='')
+
+    # args for act
+    parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
+    parser.add_argument('--temporal_agg', action='store_true')
+
+    return parser.parse_args()
+
+
 def callback(msg):
     print("Received message:", msg.data)
 
 if __name__ == '__main__':
+    args = parse_args()
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"You are using {args.device}")
+
     try:
-        policy_manager = PolicyManager()
+        policy_manager = PolicyManager(args)
         rospy.spin()
     except Exception as e:
         rospy.logerr(str(e))
