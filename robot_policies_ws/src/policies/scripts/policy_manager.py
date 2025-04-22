@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 #ros
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import convert_numpy_masks_to_ros_image_list
 from policy import grasping
 import rospy
 import cv2
@@ -76,9 +75,7 @@ class PolicyManager:
 
         print("len(processed_masks):", len(processed_masks))
 
-        # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
         state = self.policy.get_dmap(color_image, depth_image, intrinsics=None)
-        # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
         print("Gotten the state")
 
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)

@@ -14,7 +14,7 @@ import argparse
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
-from dofbot_pro_info.msg import ArmJoint, SegmentationData, ObservData, ActionData
+from dofbot_pro_info.msg import ArmJoint, ObservData, ActionData
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
@@ -53,13 +53,8 @@ class PolicyRobotController:
         self.depth_sub = None
         self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
 
-        # self.segment_sub = rospy.Subscriber('/segmentation/data', SegmentationData, self.segment_callback)
-        self.segment_sub = rospy.Subscriber('/segmentation/data', Image, self.segment_callback)
-        self.image_pub = rospy.Publisher('/image_data', Image, queue_size=1)
-
         self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
-        # self.observation_pub = rospy.Publisher("/action/obs", ObservationData, queue_size=1)
-        self.observation_pub = rospy.Publisher("/action/obs", Image, queue_size=1)
+        self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
