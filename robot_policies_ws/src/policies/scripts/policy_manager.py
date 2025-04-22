@@ -45,7 +45,8 @@ class PolicyManager:
         self.image_sub = rospy.Subscriber("/image_data", Image, self.image_sub_callback)
 
         self.action_pub = rospy.Publisher('/action/data', ActionData, queue_size=1)
-        self.observation_sub = rospy.Subscriber("/action/obs", ObservationData, self.process_observation)
+        # self.observation_sub = rospy.Subscriber("/action/obs", ObservationData, self.process_observation)
+        self.observation_sub = rospy.Subscriber("/image_data", Image, self.process_observation)
     
     def image_sub_callback(self, image_data):
         print("Image subscriber callback triggered.")
@@ -83,34 +84,43 @@ class PolicyManager:
 
     def process_observation(self, obs_data):
         print("Observation subscriber callback triggered.")
+
+        target_image = self.bridge.imgmsg_to_cv2(obs_data, desired_encoding='mono8')
+        cv2.imwrite(os.path.join(self.TEST_DIR, "target_image.png"), target_image)
         
-        segm_data = obs_data.segmentation_data
-        pred_mask = self.bridge.imgmsg_to_cv2(segm_data.pred_mask, desired_encoding='mono8')
-        processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in segm_data.processed_masks]
-        bboxes = list(zip(segm_data.bbox_x1, segm_data.bbox_y1, segm_data.bbox_x2, segm_data.bbox_y2))
+        # segm_data = obs_data.segmentation_data
+        # pred_mask = self.bridge.imgmsg_to_cv2(segm_data.pred_mask, desired_encoding='mono8')
+        # processed_masks = [self.bridge.imgmsg_to_cv2(m, desired_encoding='mono8') for m in segm_data.processed_masks]
+        # bboxes = list(zip(segm_data.bbox_x1, segm_data.bbox_y1, segm_data.bbox_x2, segm_data.bbox_y2))
 
-        color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
-        depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding='bgr8')
-        target_image = self.bridge.imgmsg_to_cv2(obs_data.target_image, desired_encoding='bgr8')
+        # color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
+        # depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding='bgr8')
+        # target_image = self.bridge.imgmsg_to_cv2(obs_data.target_image, desired_encoding='bgr8')
 
-        # Convert from BGR (ROS standard) to RGB if needed
-        color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
-        depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
-        target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
+        # # Convert from BGR (ROS standard) to RGB if needed
+        # color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+        # depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
+        # target_image = cv2.cvtColor(target_image, cv2.COLOR_BGR2RGB)
 
-        cv2.imwrite(os.path.join(self.TEST_DIR, "color_image_data.png"), color_image)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "depth_image_data.png"), depth_image)
-        cv2.imwrite(os.path.join(self.TEST_DIR, "target_image_data.png"), target_image)
+        # cv2.imwrite(os.path.join(self.TEST_DIR, "color_image_data.png"), color_image)
+        # cv2.imwrite(os.path.join(self.TEST_DIR, "depth_image_data.png"), depth_image)
+        # cv2.imwrite(os.path.join(self.TEST_DIR, "target_image_data.png"), target_image)
 
-        # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
-        state = self.policy.get_dmap(color_image, depth_image, intrinsics=None)
-        # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
-        print("Gotten the state")
+        # # state = self.hmap_generator.generate_heightmap(obs['color'], obs['depth'], self.intrinsics)
+        # state = self.policy.get_dmap(color_image, depth_image, intrinsics=None)
+        # # np.save(os.path.join(self.TEST_DIR, 'state.npy'), state)
+        # print("Gotten the state")
 
-        print("Getting actions...")
-        # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
-        action = self.policy.exploit_real_robot(state, target_image)
-        print("Gotten the action:", action)
+        # print("Getting actions...")
+        # # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
+        # action = self.policy.exploit_real_robot(state, target_image)
+        # print("Gotten the action:", action)
+
+        action = np.zeros((4,))
+        action[0] = 0.232
+        action[1] = 0.233
+        action[2] = 0.234
+        action[3] = 0.235
 
         # Publish
         action_data = ActionData()

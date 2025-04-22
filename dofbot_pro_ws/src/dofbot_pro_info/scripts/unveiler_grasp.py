@@ -55,7 +55,8 @@ class PolicyRobotController:
         self.image_pub = rospy.Publisher('/image_data', Image, queue_size=1)
 
         self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
-        self.observation_pub = rospy.Publisher("/action/obs", ObservationData, queue_size=1)
+        # self.observation_pub = rospy.Publisher("/action/obs", ObservationData, queue_size=1)
+        self.observation_pub = rospy.Publisher("/image_data", Image, queue_size=1)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image = None, None
@@ -359,19 +360,21 @@ class PolicyRobotController:
             rospy.logerr("No segmentation mask or images available")
             return
         
-        obs_data = ObservationData()
-        obs_data.segmentation_data = SegmentationData()
-        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
-        obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
+        # obs_data = ObservationData()
+        # obs_data.segmentation_data = SegmentationData()
+        # obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
+        # obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
         
-        obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
-        obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
+        # obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
+        # obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
+        # obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
+        # obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
 
-        obs_data.color_image = self.raw_color_image
-        obs_data.depth_image = self.raw_depth_image
-        obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
+        # obs_data.color_image = self.raw_color_image
+        # obs_data.depth_image = self.raw_depth_image
+        # obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
+
+        obs_data = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
