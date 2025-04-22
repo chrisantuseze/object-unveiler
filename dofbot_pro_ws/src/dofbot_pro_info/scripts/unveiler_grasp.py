@@ -360,28 +360,19 @@ class PolicyRobotController:
             rospy.logerr("No segmentation mask or images available")
             return
         
-        # obs_data = ObservationData()
-        # obs_data.segmentation_data = SegmentationData()
-        # obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
-        # obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
+        obs_data = ObservationData()
+        obs_data.segmentation_data = SegmentationData()
+        obs_data.segmentation_data.pred_mask = self.bridge.cv2_to_imgmsg(self.pred_mask.astype('uint8') * 255, encoding='mono8')
+        obs_data.segmentation_data.processed_masks = convert_numpy_masks_to_ros_image_list(self.processed_masks, self.bridge)
         
-        # obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
-        # obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
-        # obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
-        # obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_x1 = [int(x1) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_y1 = [int(y1) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_x2 = [int(x2) for (x1, y1, x2, y2) in self.bboxes]
+        obs_data.segmentation_data.bbox_y2 = [int(y2) for (x1, y1, x2, y2) in self.bboxes]
 
-        # obs_data.color_image = self.raw_color_image
-        # obs_data.depth_image = self.raw_depth_image
-        # obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
-
-        target_mask = np.squeeze(target_mask)  # remove singleton dim if any
-        if target_mask.ndim == 3:
-            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2GRAY)
-
-        print(target_mask.shape)
-        
-        target_mask = target_mask.astype('uint8') * 255  # Ensure correct type and scale
-        obs_data = self.bridge.cv2_to_imgmsg(target_mask, encoding='mono8')
+        obs_data.color_image = self.raw_color_image
+        obs_data.depth_image = self.raw_depth_image
+        obs_data.target_image = self.bridge.cv2_to_imgmsg(target_mask.astype('uint8') * 255, encoding='mono8')
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")
@@ -393,6 +384,19 @@ class PolicyRobotController:
         start_time = time.time()
         while self.action is None and time.time() - start_time < timeout:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
+
+    def call_policy_manager_1(self, target_mask, timeout=5.0):
+        target_mask = np.squeeze(target_mask)  # remove singleton dim if any
+        if target_mask.ndim == 3:
+            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2GRAY)
+
+        print(target_mask.shape)
+        
+        target_mask = target_mask.astype('uint8') * 255  # Ensure correct type and scale
+        obs_data = self.bridge.cv2_to_imgmsg(target_mask, encoding='mono8')
+
+        self.observation_pub.publish(obs_data)
+        print("Publishing observation data to policy manager for action data")
 
     def test(self, args):
         for i in range(10):
@@ -431,7 +435,7 @@ class PolicyRobotController:
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            self.call_policy_manager(target_mask)
+            self.call_policy_manager_1(target_mask)
 
             if self.action is None:
                 rospy.logerr("Failed to get action from policy manager")
