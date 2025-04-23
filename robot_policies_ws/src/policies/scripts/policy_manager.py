@@ -77,16 +77,13 @@ class PolicyManager:
         # depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
         # depth_image = cv2.flip(depth_image, -1)
 
-        if target_mask is not None:
-            target_mask = cv2.cvtColor(target_mask, cv2.COLOR_BGR2RGB)
-
         cv2.imwrite(os.path.join(self.TEST_DIR, "color_image_data.png"), color_image)
         cv2.imwrite(os.path.join(self.TEST_DIR, "depth_image_data.png"), depth_image)
 
         processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
 
          # get a randomly picked target mask from the segmented image
-        if target_mask is None:
+        if target_mask is None or not target_mask.encoding:
             target_mask, target_id = general_utils.get_target_mask(processed_masks, color_image, self.rng)
             print("Target ID:", target_id)
         cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
