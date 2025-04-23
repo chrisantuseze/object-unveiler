@@ -205,7 +205,7 @@ class PolicyRobotController:
             print("Actions executed successfully\n")
 
             # Waiting for a bit to ensure the action is completed
-            rospy.sleep(2)  # Short sleep to avoid CPU hogging
+            rospy.sleep(5)  # Short sleep to avoid CPU hogging
                         
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
