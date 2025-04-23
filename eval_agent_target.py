@@ -159,7 +159,7 @@ def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: Object
     logging.info('--------')
     return episode_data
 
-def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
+def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=8):
     """
     Runs a single episode for evaluating direct target grasping with heuristics.
     Parameters:
