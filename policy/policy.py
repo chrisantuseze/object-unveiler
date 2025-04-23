@@ -62,7 +62,6 @@ class Policy:
         self.replay_buffer = ReplayBuffer(demo_save_dir)
 
     def seed(self, seed):
-        # seed = 1791095845
         self.rng.seed(seed)
 
     def make_act_policy(self):
@@ -521,10 +520,10 @@ class Policy:
         target = general_utils.preprocess_target(target_mask, state)
         target = torch.FloatTensor(target).unsqueeze(0).to(self.device)
 
-        fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(color_image)
-        ax[1].imshow(target_mask)
-        plt.show()
+        # fig, ax = plt.subplots(1, 2)
+        # ax[0].imshow(color_image)
+        # ax[1].imshow(target_mask)
+        # plt.show()
 
         out_prob = self.fcn(x, target, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
