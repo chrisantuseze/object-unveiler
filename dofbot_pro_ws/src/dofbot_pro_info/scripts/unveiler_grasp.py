@@ -195,14 +195,17 @@ class PolicyRobotController:
                 return
             
             # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
+            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
             # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
             # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
 
             # Execute the grasp sequence
             self.step(joint_angles, aperture)
 
-            print("Actions executed successfully")
+            print("Actions executed successfully\n")
+
+            # Waiting for a bit to ensure the action is completed
+            rospy.sleep(2)  # Short sleep to avoid CPU hogging
                         
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
