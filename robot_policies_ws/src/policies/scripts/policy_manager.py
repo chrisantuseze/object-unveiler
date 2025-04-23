@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 #ros
+from matplotlib import pyplot as plt
 from policy import grasping
 import rospy
 import cv2
@@ -68,22 +69,27 @@ class PolicyManager:
         color_image = self.bridge.imgmsg_to_cv2(obs_data.color_image, desired_encoding='bgr8')
         depth_image = self.bridge.imgmsg_to_cv2(obs_data.depth_image, desired_encoding="16UC1")
 
-        target_mask = obs_data.target_mask
-        if target_mask is not None and target_mask.encoding:
-            target_mask = self.bridge.imgmsg_to_cv2(target_mask, desired_encoding='mono8')
+        if obs_data.target_mask is not None and obs_data.target_mask.encoding:
+            target_mask = self.bridge.imgmsg_to_cv2(obs_data.target_mask, desired_encoding='mono8')
+        else:
+            target_mask = None
 
         # Convert from BGR (ROS standard) to RGB if needed
         # color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         # depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
         # depth_image = cv2.flip(depth_image, -1)
 
+        depth_vis = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
+        depth_vis = depth_vis.astype(np.uint8)
+
         cv2.imwrite(os.path.join(self.TEST_DIR, "color_image_data.png"), color_image)
         cv2.imwrite(os.path.join(self.TEST_DIR, "depth_image_data.png"), depth_image)
+        cv2.imwrite(os.path.join(self.TEST_DIR, "depth_vis.png"), depth_vis)
 
         processed_masks, pred_mask, raw_masks, bboxes = self.segmenter.from_maskrcnn(color_image, dir=self.TEST_DIR, bbox=True, dim=(480, 640))
 
          # get a randomly picked target mask from the segmented image
-        if target_mask is None or not target_mask.encoding:
+        if target_mask is None:
             target_mask, target_id = general_utils.get_target_mask(processed_masks, color_image, self.rng)
             print("Target ID:", target_id)
         cv2.imwrite(os.path.join("dofbot_pro_ws/src/dofbot_pro_info/scripts", "initial_target_mask.png"), target_mask)
@@ -91,7 +97,14 @@ class PolicyManager:
 
         print("len(processed_masks):", len(processed_masks))
 
-        state = self.policy.get_dmap(color_image, depth_image, intrinsics=None)
+        state = self.policy.get_dmap(color_image, depth_vis, intrinsics=None)
+        
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        ax[2].imshow(state)
+        plt.show()
+        
         print("Gotten the state")
 
         target_id, target_mask = grasping.find_target(processed_masks, target_mask)
