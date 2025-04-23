@@ -3,7 +3,7 @@
 import os
 import torch
 import yaml
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_numpy_masks_to_ros_image_list
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_numpy_masks_to_ros_image_list, convert_sim_to_robot_pose
 from policy import grasping
 import rospy
 import cv2
@@ -201,6 +201,8 @@ class PolicyRobotController:
 
             # Execute the grasp sequence
             self.step(joint_angles, aperture)
+
+            print("Actions executed successfully")
                         
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
@@ -212,7 +214,7 @@ class PolicyRobotController:
     
     def get_joint_angles_from_pose(self, pos):
         """Use inverse kinematics to get joint angles for a pose"""
-        x, y, z = self.convert_sim_to_robot_pose(pos)
+        x, y, z = convert_sim_to_robot_pose(pos)
         
         request = kinemaricsRequest()
         request.tar_x = x
