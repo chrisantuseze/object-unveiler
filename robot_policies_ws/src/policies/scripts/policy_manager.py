@@ -98,12 +98,14 @@ class PolicyManager:
         print("len(processed_masks):", len(processed_masks))
 
         state = self.policy.get_dmap(color_image, depth_vis, intrinsics=None)
+
+        resized_image = general_utils.resize_mask(depth_image)
         
         fig, ax = plt.subplots(1, 5)
         ax[0].imshow(state)
         ax[1].imshow(color_image)
         ax[2].imshow(depth_image)
-        ax[3].imshow(depth_vis)
+        ax[3].imshow(resized_image)
         ax[4].imshow(target_mask)
         plt.show()
         
@@ -116,7 +118,7 @@ class PolicyManager:
         else:
             print("Getting actions...")
             # action = policy.exploit_unveiler(state, obs['color'], target_mask, processed_masks, bboxes)
-            action = self.policy.exploit_real_robot(depth_vis, target_mask)
+            action = self.policy.exploit_real_robot(resized_image, target_mask)
             print("Gotten the action:", action)
 
         action_data = ActionData()

@@ -30,8 +30,6 @@ def generate_point_cloud(color_img, depth_img, intrinsics, point_cloud):
         pcd.points = o3d.utility.Vector3dVector(points)
         pcd.colors = o3d.utility.Vector3dVector(colors)
 
-        # Save the point cloud
-        point_cloud = pcd
         return pcd
 
 def get_fused_heightmap(obs):
@@ -86,9 +84,13 @@ def convert_sim_to_robot_pose(sim_pos):
     # You may need to scale, offset, and/or rotate coordinates
     
     # Example conversion (adjust based on your setup):
-    robot_x = 102.90 #sim_pos[0] * 100  # Convert to cm
-    robot_y = 29.40 #sim_pos[1] * 100
-    robot_z = 80 #sim_pos[2] * 100
+    # robot_x = 102.90 #sim_pos[0] * 100  # Convert to cm
+    # robot_y = 29.40 #sim_pos[1] * 100
+    # robot_z = 80 #sim_pos[2] * 100
+
+    robot_x = sim_pos[0] * 2  # Convert to cm
+    robot_y = sim_pos[1] * 5
+    robot_z = sim_pos[2] * 5
     
     return robot_x, robot_y, robot_z
 

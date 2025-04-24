@@ -225,7 +225,7 @@ def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         # ax[3].imshow(target_mask)
         # plt.show()
 
-        action = policy.exploit_ppg(state, obs['color'][1], target_mask)
+        action = policy.exploit_ppg(state, target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
