@@ -3,7 +3,7 @@
 import os
 import torch
 import yaml
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_numpy_masks_to_ros_image_list, convert_sim_to_robot_pose
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_sim_to_robot_pose
 from policy import grasping
 import rospy
 import cv2
@@ -17,11 +17,11 @@ from sensor_msgs.msg import Image, CameraInfo
 from dofbot_pro_info.msg import ArmJoint, ObservData, ActionData
 from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.image_manip import HeightmapGenerator
 from utils import general_utils
 import utils.logger as logging
 
 from std_msgs.msg import String
+from utils.orientation import Quaternion, rot_y
 
 class PolicyRobotController:
     def __init__(self):
@@ -67,6 +67,11 @@ class PolicyRobotController:
         # Robot arm parameters
         self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
+
+        self.sim_home_position = np.array([0.7, 0.0, 0.2])
+        
+        # rotation w.r.t. inertia frame
+        self.sim_home_quat = Quaternion.from_rotation_matrix(rot_y(-np.pi / 2))
         
         # Wait for publisher to connect and camera info to be received
         rospy.sleep(1)

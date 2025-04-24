@@ -165,11 +165,6 @@ class FloatingBHand:
         angle = np.arctan2(relative_rot[2, 1], relative_rot[1, 1])
         target_states = [target_pos[0], target_pos[1], target_pos[2], angle]
 
-        # target_states = [
-        #     target_pos[0], target_pos[1], target_pos[2], angle, 
-        #     target_pos[0], target_pos[1], target_pos[2], angle 
-        # ]
-
         current_pos = []
         for i in self.joint_ids:
             current_pos.append(p.getJointState(0, i)[0])

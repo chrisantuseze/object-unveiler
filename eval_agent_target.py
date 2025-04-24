@@ -217,14 +217,6 @@ def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-
-        # fig, ax = plt.subplots(1, 4)
-        # ax[0].imshow(state)
-        # ax[1].imshow(obs['color'][1])
-        # ax[2].imshow(obs['depth'][1])
-        # ax[3].imshow(target_mask)
-        # plt.show()
-
         action = policy.exploit_ppg(state, target_mask)
 
         env_action3d = policy.action3d(action)
