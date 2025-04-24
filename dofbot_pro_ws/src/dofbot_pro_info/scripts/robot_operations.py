@@ -91,9 +91,10 @@ def convert_sim_to_robot_pose(sim_pos):
     robot_x = sim_pos[0] * 2  # Convert to cm
     robot_y = sim_pos[1] * 5
     robot_z = sim_pos[2] * 5
+
+    print(f"Converted sim position {sim_pos} to robot coordinates: ({robot_x}, {robot_y}, {robot_z})")
     
     return robot_x, robot_y, robot_z
-
 
 def convert_numpy_masks_to_ros_image_list(masks, bridge):
     image_msgs = []
