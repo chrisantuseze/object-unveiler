@@ -379,16 +379,6 @@ class PolicyRobotController:
         start_time = time.time()
         while self.action is None and time.time() - start_time < timeout:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
-
-    def test(self, args):
-        for i in range(10):
-            processed_masks = self.get_masks()
-            if len(processed_masks) == 0:
-                rospy.logerr("Failed to get masks")
-                return
-            print("Got masks")
-            print(f"Iter {i}: {len(processed_masks)} masks")
-
     
     def run(self):
         """Main control loop"""
