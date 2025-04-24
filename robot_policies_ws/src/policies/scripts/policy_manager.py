@@ -99,10 +99,11 @@ class PolicyManager:
 
         state = self.policy.get_dmap(color_image, depth_vis, intrinsics=None)
         
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(color_image)
-        ax[1].imshow(target_mask)
-        ax[2].imshow(state)
+        fig, ax = plt.subplots(1, 4)
+        ax[0].imshow(state)
+        ax[1].imshow(color_image)
+        ax[2].imshow(depth_vis)
+        ax[3].imshow(target_mask)
         plt.show()
         
         print("Gotten the state")
