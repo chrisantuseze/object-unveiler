@@ -119,6 +119,8 @@ class PolicyRobotController:
                 # self.image_pub.publish(msg)
                 self.raw_color_image = msg
 
+                np.save("rgb_image.npy", self.rgb_image)
+
                 cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
                 self.rgb_lock = False  # Release the lock
             except Exception as e:
@@ -139,6 +141,9 @@ class PolicyRobotController:
                 depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
                 depth_vis = depth_vis.astype(np.uint8)
                 cv2.imwrite(os.path.join(self.TEST_DIR, "saved_depth_image.png"), depth_vis)
+
+                np.save("depth_image.npy", self.depth_image)
+                np.save("depth_vis.npy", depth_vis)
                 
                 self.depth_lock = False  # Release the lock
             except Exception as e:
