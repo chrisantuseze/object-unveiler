@@ -208,6 +208,9 @@ def compute_R_and_t():
     c_sim   = sim_pts.mean(axis=0)
     c_robot = robot_pts.mean(axis=0)
 
+    # A = (sim_pts - c_sim) * s
+    # B = (robot_pts - c_robot)
+
     A = (sim_pts - c_sim)
     B = (robot_pts - c_robot) * s
 
@@ -220,8 +223,11 @@ def compute_R_and_t():
 
     t = c_robot - R.dot(c_sim * s)
 
+    tt = c_robot - R.dot(c_sim * s)
+
     print(f"R: {R}")
     print(f"t: {t}")
+    print(f"tt: {tt}")
 
     return R, t
 
@@ -233,4 +239,10 @@ def sim_to_robot(sim_pos):
         ])
     t = np.array([-3746.12030864, -5733.33729857, 1194.44197742])
 
-    return R.dot(np.array(sim_pos)) + t #@From Chris: Since the sim points are in cm, do we need to scale them?
+    A = R.dot(np.array(sim_pos))
+    print(f"sim_pos: {sim_pos}")
+    print(f"R: {R}")
+    print(f"A: {A}")
+    print(f"t: {t}")
+
+    return A + t #@From Chris: Since the sim points are in cm, do we need to scale them?

@@ -37,7 +37,7 @@ class PolicyRobotController:
 
         # compute_real_pts(self.ik_client)
 
-        # compute_R_and_t()
+        compute_R_and_t()
 
         # Image Storage
         self.bridge = CvBridge()
