@@ -2,7 +2,7 @@ import open3d as o3d  # For point cloud operations
 import numpy as np
 import cv2
 import torch  # For image processing
-
+from dofbot_pro_info.srv import *
 
 def generate_point_cloud(color_img, depth_img, intrinsics, point_cloud):
         """ Generates and saves a point cloud using depth and RGB data. """
@@ -152,7 +152,7 @@ def compute_real_pts(fk_client):
         hw_joints = [servo_x, servo_y, servo_z, servo_w, servo_palm, servo_grip]
 
         # e) Call your FK service
-        req = KinematicsRequest()
+        req = kinemaricsRequest()
         req.joints = hw_joints
         res = fk_client(req)
         robot_xyz_cm = np.array([res.x, res.y, res.z])
