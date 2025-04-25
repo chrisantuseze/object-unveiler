@@ -183,7 +183,7 @@ def compute_R_and_t():
     # robot_pts = np.array([[ 95,120, 25],[105,120, 25],[ 95,130, 25]])
 
     sim_pts   = np.array([[70.55, 12.00, 20.00], [68.53, 11.69, 20.00], [63.70, 3.78, 20.00], [64.68, 1.25, 20.00], [63.96, 2.76, 20.00]])
-    robot_pts = np.array([])
+    robot_pts = np.array([[0.26867949, 0.15442937, 0.14680159], [0.04553918, -0.02698488, 0.26418912], [0.2236476, -0.12981582, 0.24510726], [0.24058956, -0.13959727, 0.02176884], [0.13161792, 0.07529682, 0.14620293]])
 
     # 1) Check collinearity on sim points:
     v1 = sim_pts[1] - sim_pts[0]
@@ -192,12 +192,12 @@ def compute_R_and_t():
         raise RuntimeError("Points are collinear—pick different points")
 
     # 2) Solve for R,t via Kabsch (scale s=100)
-    s = 100.0 # @From Chris: Since the sim points are in cm, do we need to scale them?
+    s = 100.0 
     c_sim   = sim_pts.mean(axis=0)
     c_robot = robot_pts.mean(axis=0)
 
-    A = (sim_pts - c_sim) * s
-    B = (robot_pts - c_robot)
+    A = (sim_pts - c_sim)
+    B = (robot_pts - c_robot) * s
 
     H = A.T.dot(B)
     U, _, Vt = np.linalg.svd(H)

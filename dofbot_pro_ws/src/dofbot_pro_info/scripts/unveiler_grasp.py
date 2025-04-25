@@ -35,7 +35,9 @@ class PolicyRobotController:
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
         self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
 
-        compute_real_pts(self.ik_client)
+        # compute_real_pts(self.ik_client)
+
+        compute_R_and_t()
 
         # Image Storage
         self.bridge = CvBridge()
