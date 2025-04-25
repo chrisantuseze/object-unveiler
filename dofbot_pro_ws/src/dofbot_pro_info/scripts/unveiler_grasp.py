@@ -227,8 +227,8 @@ class PolicyRobotController:
     def get_joint_angles_from_pose(self, pos):
         """Use inverse kinematics to get joint angles for a pose"""
         # x, y, z = convert_sim_to_robot_pose(pos)
-        res = sim_to_robot(pos)
-        print("res:", res)
+        x, y, z = sim_to_robot(pos)
+        print("res:", x, y, z)
         
         request = kinemaricsRequest()
         request.tar_x = x
