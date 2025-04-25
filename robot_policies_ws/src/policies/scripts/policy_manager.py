@@ -99,7 +99,7 @@ class PolicyManager:
 
         state = self.policy.get_dmap(color_image, depth_vis, intrinsics=None)
 
-        resized_image = general_utils.resize_mask(depth_image)
+        resized_image = general_utils.resize_mask(pred_mask)
         
         # fig, ax = plt.subplots(1, 5)
         # ax[0].imshow(state)
