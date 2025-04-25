@@ -37,7 +37,7 @@ class PolicyRobotController:
 
         # compute_real_pts(self.ik_client)
 
-        compute_R_and_t()
+        # compute_R_and_t()
 
         # Image Storage
         self.bridge = CvBridge()
@@ -227,7 +227,7 @@ class PolicyRobotController:
     def get_joint_angles_from_pose(self, pos):
         """Use inverse kinematics to get joint angles for a pose"""
         # x, y, z = convert_sim_to_robot_pose(pos)
-        res = sim_to_robot(self.R, self.t, pos)
+        res = sim_to_robot(pos)
         print("res:", res)
         
         request = kinemaricsRequest()
