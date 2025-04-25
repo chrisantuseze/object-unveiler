@@ -101,13 +101,13 @@ class PolicyManager:
 
         resized_image = general_utils.resize_mask(depth_image)
         
-        fig, ax = plt.subplots(1, 5)
-        ax[0].imshow(state)
-        ax[1].imshow(color_image)
-        ax[2].imshow(depth_image)
-        ax[3].imshow(resized_image)
-        ax[4].imshow(target_mask)
-        plt.show()
+        # fig, ax = plt.subplots(1, 5)
+        # ax[0].imshow(state)
+        # ax[1].imshow(color_image)
+        # ax[2].imshow(depth_image)
+        # ax[3].imshow(resized_image)
+        # ax[4].imshow(target_mask)
+        # plt.show()
         
         print("Gotten the state")
 
