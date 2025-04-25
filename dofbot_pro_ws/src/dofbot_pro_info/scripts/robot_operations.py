@@ -152,10 +152,24 @@ def compute_real_pts(fk_client):
         hw_joints = [servo_x, servo_y, servo_z, servo_w, servo_palm, servo_grip]
 
         # e) Call your FK service
-        req = kinemaricsRequest()
-        req.joints = hw_joints
-        res = fk_client(req)
-        robot_xyz_cm = np.array([res.x, res.y, res.z])
+        # req = kinemaricsRequest()
+        # req.joints = hw_joints
+        # res = fk_client(req)
+        # robot_xyz_cm = np.array([res.x, res.y, res.z])
+
+        robot_xyz_cm = []
+
+        fk_client.wait_for_service()
+        request = kinemaricsRequest()
+        request.cur_joint1 = hw_joints[0]
+        request.cur_joint2 = hw_joints[1]
+        request.cur_joint3 = hw_joints[2]
+        request.cur_joint4 = hw_joints[3]
+        request.cur_joint5 = hw_joints[4]
+        request.kin_name = "fk"
+        response = fk_client.call(request)
+        if isinstance(response, kinemaricsResponse):
+            robot_xyz_cm = np.array([response.x, response.y, response.z])
 
         # f) Store the pair
         rob_pts_cm.append(robot_xyz_cm)
