@@ -584,7 +584,7 @@ class Environment:
 
     
     def step(self, action):
-        self.bhand.compute_sim_pts()
+        # self.bhand.compute_sim_pts()
 
         trajectories = []
             

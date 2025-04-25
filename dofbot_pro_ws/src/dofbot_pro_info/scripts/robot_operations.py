@@ -233,4 +233,4 @@ def sim_to_robot(sim_pos):
         ])
     t = np.array([-3746.12030864, -5733.33729857, 1194.44197742])
 
-    return R.dot(np.array(sim_pos)*100.0) + t #@From Chris: Since the sim points are in cm, do we need to scale them?
+    return R.dot(np.array(sim_pos)) + t #@From Chris: Since the sim points are in cm, do we need to scale them?

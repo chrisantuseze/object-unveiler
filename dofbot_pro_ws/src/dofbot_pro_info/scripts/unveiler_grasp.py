@@ -363,7 +363,6 @@ class PolicyRobotController:
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
             self.run()
-            # self.test(args)
 
         rospy.is_shutdown()
 
