@@ -223,7 +223,7 @@ def compute_R_and_t():
 
     t = c_robot - R.dot(c_sim * s)
 
-    tt = c_robot - R.dot(c_sim * s)
+    tt = c_robot - R.dot(c_sim)
 
     print(f"R: {R}")
     print(f"t: {t}")
