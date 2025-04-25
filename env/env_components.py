@@ -153,6 +153,42 @@ class FloatingBHand:
         p.removeBody(mount_body_id)
         p.removeBody(robot_id)
 
+    def compute_sim_pts(self):
+        print("Robot hand id", self.robot_hand_id)
+
+        sim_joint_names = ['joint_x', 'joint_y', 'joint_z', 'joint_revolute']
+        sim_joint_limits = {
+            'joint_x'        : (-0.3,  0.3),    # meters (use a realistic bound, not ±1000!)
+            'joint_y'        : (-0.3,  0.3),
+            'joint_z'        : ( 0.0,  1.0),
+            'joint_revolute' : (np.radians(-100), np.radians(100)),  # radians
+        }
+
+        arm_id    = self.robot_hand_id #0        # PyBullet robot id
+        ee_link   = 9        # your end-effector link idx
+        sim_pts_cm = []
+
+        for _ in range(5):
+            # a) Sample sim joint values
+            sim_joints = []
+            for name in sim_joint_names:
+                lo, hi = sim_joint_limits[name]
+                sim_joints.append(np.random.uniform(lo, hi))
+
+            # b) Apply in PyBullet
+            for idx, angle in enumerate(sim_joints):
+                p.resetJointState(arm_id, idx, angle)
+            for _ in range(50): p.stepSimulation()
+
+            # c) Read sim end-effector pose (in meters), convert to cm
+            ls = p.getLinkState(arm_id, ee_link, computeForwardKinematics=True)
+            sim_xyz = np.array(ls[4])       # (x,y,z) in meters
+            sim_xyz_cm = sim_xyz * 100.0
+
+            sim_pts_cm.append(sim_xyz_cm)
+            print("sim_xyz_cm", sim_xyz_cm)
+            print("sim_joints", sim_joints)
+
     def move(self, target_pos, target_quat, duration=2.0, stop_at_contact=False):
         # compute translation
         affine_trans = np.eye(4)

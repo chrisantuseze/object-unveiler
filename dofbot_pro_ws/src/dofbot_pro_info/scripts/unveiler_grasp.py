@@ -3,7 +3,7 @@
 import os
 import torch
 import yaml
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, convert_sim_to_robot_pose
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, convert_sim_to_robot_pose, sim_to_robot
 from policy import grasping
 import rospy
 import cv2
@@ -34,6 +34,8 @@ class PolicyRobotController:
         # Publisher to control the robot arm
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
         self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
+
+        compute_R_and_t(self.ik_client)
 
         # Image Storage
         self.bridge = CvBridge()
@@ -222,7 +224,9 @@ class PolicyRobotController:
     
     def get_joint_angles_from_pose(self, pos):
         """Use inverse kinematics to get joint angles for a pose"""
-        x, y, z = convert_sim_to_robot_pose(pos)
+        # x, y, z = convert_sim_to_robot_pose(pos)
+        res = sim_to_robot(self.R, self.t, pos)
+        print("res:", res)
         
         request = kinemaricsRequest()
         request.tar_x = x
