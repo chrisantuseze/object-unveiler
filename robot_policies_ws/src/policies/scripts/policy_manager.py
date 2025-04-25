@@ -123,7 +123,10 @@ class PolicyManager:
 
         action_data = ActionData()
         action_data.values = action.tolist()
-        action_data.target_mask = self.bridge.cv2_to_imgmsg(target_mask, encoding="mono8")
+
+        if target_mask is not None:
+            action_data.target_mask = self.bridge.cv2_to_imgmsg(target_mask, encoding="mono8")
+            
         self.action_pub.publish(action_data)
 
         print("Action data published.", action_data.values)
