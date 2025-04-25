@@ -3,7 +3,7 @@
 import os
 import torch
 import yaml
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, convert_sim_to_robot_pose, sim_to_robot
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, compute_real_pts, convert_sim_to_robot_pose, sim_to_robot
 from policy import grasping
 import rospy
 import cv2
@@ -35,7 +35,7 @@ class PolicyRobotController:
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
         self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
 
-        compute_R_and_t(self.ik_client)
+        compute_real_pts(self.ik_client)
 
         # Image Storage
         self.bridge = CvBridge()

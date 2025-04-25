@@ -107,16 +107,7 @@ def convert_numpy_masks_to_ros_image_list(masks, bridge):
         image_msgs.append(bridge.cv2_to_imgmsg((m.astype('uint8') * 255), encoding='mono8'))
     return image_msgs
 
-def compute_sim_pts(fk_client):
-    # 1) Joint limits
-    sim_joint_names = ['joint_x', 'joint_y', 'joint_z', 'joint_revolute']
-    sim_joint_limits = {
-        'joint_x'        : (-1.0,  1.0),    # meters (use a realistic bound, not ±1000!)
-        'joint_y'        : (-1.0,  1.0),
-        'joint_z'        : ( 0.0,  1.0),
-        'joint_revolute' : (np.radians(-100), np.radians(100)),  # radians
-    }
-
+def compute_real_pts(fk_client):
     # DS-SY15A servos: ±150° around neutral
     real_joint_names = ['axis_x','axis_y','axis_z','wrist','palm','gripper']
     real_joint_limits = {
@@ -135,11 +126,6 @@ def compute_sim_pts(fk_client):
                     real_joint_limits['axis_x'][0],
                     real_joint_limits['axis_x'][1])
 
-    # 3) Initialize connection to your IK/FK service
-    arm_id    = 0        # PyBullet robot id
-    ee_link   = 9        # your end-effector link idx
-
-    sim_pts_cm = []
     rob_pts_cm = []
 
     all_sim_joints = [
