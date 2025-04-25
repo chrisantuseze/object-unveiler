@@ -225,7 +225,7 @@ def compute_R_and_t():
 
     return R, t
 
-def sim_to_robot(R, t, sim_pos):
+def sim_to_robot(sim_pos):
     R = np.array([
         [0.34825496, -0.4036592, 0.84603648],
         [0.84328404, 0.52905984, -0.09469802],
