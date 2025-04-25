@@ -238,6 +238,7 @@ class PolicyRobotController:
         
         try:
             response = self.ik_client.call(request)
+            print("IK response:", response)
             
             # Check if response is valid (joint angles within limits)
             if response.joint1 < 0 or response.joint1 > 180 or \
