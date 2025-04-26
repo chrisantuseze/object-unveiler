@@ -189,7 +189,7 @@ class PolicyRobotController:
         
         return True
     
-    def grasp_object(self, action):
+    def grasp_object(self, action, i):
         """
         Execute a grasp based on policy prediction
         
@@ -207,10 +207,18 @@ class PolicyRobotController:
             #     rospy.logerr("Failed to compute joint angles, aborting grasp")
             #     return
             
-            joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
-            joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
-            joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
+            # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
+            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
+            # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
+            # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
+
+            grasp_joints = [
+                [110.0, 36.0, 60.0, 20.0, 90.0, 30.0],
+                [90.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Left obstacle
+                [70.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Target
+                [60.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Right obstacle
+            ]
+            joint_angles = grasp_joints[i if i < len(grasp_joints) else 0]
 
             # Execute the grasp sequence
             self.step(joint_angles)
@@ -406,7 +414,7 @@ class PolicyRobotController:
             rospy.logerr("Failed to get initial observation")
             return
         
-        max_steps = 6
+        max_steps = 4
         attempts = 0
         while attempts < max_steps:
             # self.call_policy_manager()
@@ -423,7 +431,7 @@ class PolicyRobotController:
             try:
                 # Execute grasp based on policy
                 print("Executing grasp with action:", self.action)
-                next_obs = self.grasp_object(self.action)
+                next_obs = self.grasp_object(self.action, attempts)
                 if next_obs is None:
                     rospy.logerr("Failed to get observation after grasp")
                     attempts += 1
