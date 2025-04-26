@@ -59,9 +59,9 @@ class PolicyRobotController:
 
         self.action_sub = None
         self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-        while self.observation_pub.get_num_connections() == 0:
-            rospy.loginfo("Waiting for local machine to subscribe...")
-            rospy.sleep(0.5)
+        # while self.observation_pub.get_num_connections() == 0:
+        #     rospy.loginfo("Waiting for local machine to subscribe...")
+        #     rospy.sleep(0.5)
 
         self.processed_masks, self.pred_mask, self.raw_masks, self.bboxes = [], None, [], []
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
@@ -207,10 +207,10 @@ class PolicyRobotController:
                 rospy.logerr("Failed to compute joint angles, aborting grasp")
                 return
             
-            # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
-            # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
-            # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
+            joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
+            joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
+            joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
+            joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
 
             # Execute the grasp sequence
             self.step(joint_angles, aperture)
