@@ -55,7 +55,7 @@ class PolicyRobotController:
         # Subscribers - initialized but not active yet
         self.rgb_sub = None
         self.depth_sub = None
-        self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
+        self.camera_info_sub = None
 
         self.action_sub = None
         self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
@@ -105,8 +105,9 @@ class PolicyRobotController:
 
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
-        self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
-        self.camera_info_received = True
+        if self.camera_info_received:
+            self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
+            self.camera_info_received = False
         # We can keep this subscription active all the time as the camera parameters don't change
 
     def rgb_callback(self, msg):
@@ -170,6 +171,7 @@ class PolicyRobotController:
         # Set locks to acquire new images
         self.rgb_lock = True
         self.depth_lock = True
+        self.camera_info_received = True
         
         # Create subscribers if they don't exist
         if self.rgb_sub is None:
@@ -177,6 +179,9 @@ class PolicyRobotController:
         
         if self.depth_sub is None:
             self.depth_sub = rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
+
+        if self.camera_info_sub is None:
+            self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
         
         # Wait for both images to be received
         start_time = time.time()
@@ -384,6 +389,10 @@ class PolicyRobotController:
         obs_data.depth_image = self.raw_depth_image 
         if self.target_mask is not None:
             obs_data.target_mask = self.target_mask
+
+        obs_data.row0 = self.intrinsics[0].tolist()
+        obs_data.row1 = self.intrinsics[1].tolist()
+        obs_data.row2 = self.intrinsics[2].tolist()
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")

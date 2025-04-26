@@ -74,10 +74,7 @@ class PolicyManager:
         else:
             target_mask = None
 
-        # Convert from BGR (ROS standard) to RGB if needed
-        # color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
-        # depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
-        # depth_image = cv2.flip(depth_image, -1)
+        intrinsics = np.vstack([obs_data.row0, obs_data.row1, obs_data.row2])
 
         depth_vis = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
         depth_vis = depth_vis.astype(np.uint8)
@@ -97,7 +94,7 @@ class PolicyManager:
 
         print("len(processed_masks):", len(processed_masks))
 
-        state = self.policy.get_dmap(color_image, depth_vis, intrinsics=None)
+        state = self.policy.get_dmap(color_image, depth_vis, intrinsics=intrinsics)
 
         resized_image = general_utils.resize_mask(pred_mask)
         

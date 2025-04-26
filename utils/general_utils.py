@@ -568,7 +568,7 @@ def get_heightmap_(obs, configs, bounds, pix_size):
     return color_heightmap, depth_heightmap
 
 def get_heightmap__(color_img, depth_img, cam_intrinsics, configs, bounds, pix_size):
-    cam_intrinsics = configs[0]['intrinsics']
+    # cam_intrinsics = configs[0]['intrinsics']
 
     # Compute heightmap size
     heightmap_size = np.round(((bounds[1][1] - bounds[1][0]) / pix_size,
