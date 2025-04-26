@@ -74,7 +74,8 @@ class PolicyManager:
         else:
             target_mask = None
 
-        intrinsics = np.vstack([obs_data.row0, obs_data.row1, obs_data.row2])
+        intrinsics = obs_data.cam_intrinsics
+        print("intrinsics.shape", intrinsics.shape)
 
         depth_vis = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
         depth_vis = depth_vis.astype(np.uint8)

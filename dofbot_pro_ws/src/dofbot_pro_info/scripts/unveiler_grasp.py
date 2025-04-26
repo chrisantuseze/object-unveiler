@@ -390,9 +390,7 @@ class PolicyRobotController:
         if self.target_mask is not None:
             obs_data.target_mask = self.target_mask
 
-        obs_data.row0 = self.intrinsics[0].tolist()
-        obs_data.row1 = self.intrinsics[1].tolist()
-        obs_data.row2 = self.intrinsics[2].tolist()
+        obs_data.cam_intrinsics = self.intrinsics.flatten()
 
         self.observation_pub.publish(obs_data)
         print("Publishing observation data to policy manager for action data")

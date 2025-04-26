@@ -496,6 +496,10 @@ def get_pointcloud_(color_img, depth_img, camera_intrinsics):
 
     # Project depth into 3D point cloud in camera coordinates
     pix_x,pix_y = np.meshgrid(np.linspace(0,im_w-1,im_w), np.linspace(0,im_h-1,im_h))
+    print("pix_x.shape", pix_x.shape)
+    print("depth_img.shape", depth_img.shape)
+    print("camera_intrinsics", camera_intrinsics)
+
     cam_pts_x = np.multiply(pix_x-camera_intrinsics[2],depth_img/camera_intrinsics[0])
     cam_pts_y = np.multiply(pix_y-camera_intrinsics[5],depth_img/camera_intrinsics[4])
     cam_pts_z = depth_img.copy()
