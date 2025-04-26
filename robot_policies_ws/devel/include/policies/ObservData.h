@@ -30,28 +30,16 @@ struct ObservData_
     : color_image()
     , depth_image()
     , target_mask()
-    , row0()
-    , row1()
-    , row2()  {
-      row0.assign(0.0);
-
-      row1.assign(0.0);
-
-      row2.assign(0.0);
+    , cam_intrinsics()  {
+      cam_intrinsics.assign(0.0);
   }
   ObservData_(const ContainerAllocator& _alloc)
     : color_image(_alloc)
     , depth_image(_alloc)
     , target_mask(_alloc)
-    , row0()
-    , row1()
-    , row2()  {
+    , cam_intrinsics()  {
   (void)_alloc;
-      row0.assign(0.0);
-
-      row1.assign(0.0);
-
-      row2.assign(0.0);
+      cam_intrinsics.assign(0.0);
   }
 
 
@@ -65,14 +53,8 @@ struct ObservData_
    typedef  ::sensor_msgs::Image_<ContainerAllocator>  _target_mask_type;
   _target_mask_type target_mask;
 
-   typedef boost::array<double, 3>  _row0_type;
-  _row0_type row0;
-
-   typedef boost::array<double, 3>  _row1_type;
-  _row1_type row1;
-
-   typedef boost::array<double, 3>  _row2_type;
-  _row2_type row2;
+   typedef boost::array<double, 9>  _cam_intrinsics_type;
+  _cam_intrinsics_type cam_intrinsics;
 
 
 
@@ -106,9 +88,7 @@ bool operator==(const ::policies::ObservData_<ContainerAllocator1> & lhs, const 
   return lhs.color_image == rhs.color_image &&
     lhs.depth_image == rhs.depth_image &&
     lhs.target_mask == rhs.target_mask &&
-    lhs.row0 == rhs.row0 &&
-    lhs.row1 == rhs.row1 &&
-    lhs.row2 == rhs.row2;
+    lhs.cam_intrinsics == rhs.cam_intrinsics;
 }
 
 template<typename ContainerAllocator1, typename ContainerAllocator2>
@@ -165,12 +145,12 @@ struct MD5Sum< ::policies::ObservData_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "8007bb4fec68be80a412454e72b6cb4d";
+    return "0a5e6554a2751cc2588a37d2cc737521";
   }
 
   static const char* value(const ::policies::ObservData_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0x8007bb4fec68be80ULL;
-  static const uint64_t static_value2 = 0xa412454e72b6cb4dULL;
+  static const uint64_t static_value1 = 0x0a5e6554a2751cc2ULL;
+  static const uint64_t static_value2 = 0x588a37d2cc737521ULL;
 };
 
 template<class ContainerAllocator>
@@ -192,9 +172,7 @@ struct Definition< ::policies::ObservData_<ContainerAllocator> >
     return "sensor_msgs/Image color_image\n"
 "sensor_msgs/Image depth_image\n"
 "sensor_msgs/Image target_mask\n"
-"float64[3] row0\n"
-"float64[3] row1\n"
-"float64[3] row2\n"
+"float64[9] cam_intrinsics\n"
 "================================================================================\n"
 "MSG: sensor_msgs/Image\n"
 "# This message contains an uncompressed image\n"
@@ -261,9 +239,7 @@ namespace serialization
       stream.next(m.color_image);
       stream.next(m.depth_image);
       stream.next(m.target_mask);
-      stream.next(m.row0);
-      stream.next(m.row1);
-      stream.next(m.row2);
+      stream.next(m.cam_intrinsics);
     }
 
     ROS_DECLARE_ALLINONE_SERIALIZER
@@ -291,23 +267,11 @@ struct Printer< ::policies::ObservData_<ContainerAllocator> >
     s << indent << "target_mask: ";
     s << std::endl;
     Printer< ::sensor_msgs::Image_<ContainerAllocator> >::stream(s, indent + "  ", v.target_mask);
-    s << indent << "row0[]" << std::endl;
-    for (size_t i = 0; i < v.row0.size(); ++i)
+    s << indent << "cam_intrinsics[]" << std::endl;
+    for (size_t i = 0; i < v.cam_intrinsics.size(); ++i)
     {
-      s << indent << "  row0[" << i << "]: ";
-      Printer<double>::stream(s, indent + "  ", v.row0[i]);
-    }
-    s << indent << "row1[]" << std::endl;
-    for (size_t i = 0; i < v.row1.size(); ++i)
-    {
-      s << indent << "  row1[" << i << "]: ";
-      Printer<double>::stream(s, indent + "  ", v.row1[i]);
-    }
-    s << indent << "row2[]" << std::endl;
-    for (size_t i = 0; i < v.row2.size(); ++i)
-    {
-      s << indent << "  row2[" << i << "]: ";
-      Printer<double>::stream(s, indent + "  ", v.row2[i]);
+      s << indent << "  cam_intrinsics[" << i << "]: ";
+      Printer<double>::stream(s, indent + "  ", v.cam_intrinsics[i]);
     }
   }
 };
