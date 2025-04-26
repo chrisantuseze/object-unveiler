@@ -159,7 +159,7 @@ def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: Object
     logging.info('--------')
     return episode_data
 
-def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=8, action=None):
+def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=8):
     """
     Runs a single episode for evaluating direct target grasping with heuristics.
     Parameters:
@@ -217,7 +217,34 @@ def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        # action = policy.exploit_ppg(state, target_mask)
+
+        depth_image = np.load("depth_image.npy")
+        rgb_image = np.load("rgb_image.npy")
+        depth_vis = np.load("depth_vis.npy")
+
+        print(rgb_image.shape)
+        print(depth_image.shape)
+        print(obs['depth'][1].shape)
+
+        rgb = general_utils.resize_mask(rgb_image, (obs['depth'][1].shape[0], obs['depth'][1].shape[1]))
+        print(rgb.shape)
+
+        # state_ = policy.get_dmap(rgb_image, depth_image, intrinsics=None)
+        state_ = policy.get_dmap(rgb_image, depth_vis, intrinsics=None)
+
+        print(np.all(state_ == 0))
+
+        fig, ax = plt.subplots(2, 3)
+        ax[0][0].imshow(state)
+        ax[0][1].imshow(state_)
+        ax[0][2].imshow(obs['depth'][1])
+        ax[1][0].imshow(depth_image)
+        ax[1][1].imshow(rgb_image)
+        ax[1][2].imshow(rgb)
+        plt.show()
+
+        action = policy.exploit_ppg(state, target_mask)
+        
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -371,22 +398,11 @@ def eval_agent(args):
 
     success_count = 0
 
-    actions = [
-        [84.00, 10.00, 1.18, 0.85], 
-        [89.00, 10.00, 0.79, 0.85], 
-        [93.00, 14.00, 1.18, 0.85], 
-        [99.00, 16.00, 0.79, 0.85], 
-        [42.00, 87.00, 4.32, 0.85], 
-        [14.00, 76.00, 3.93, 0.85], 
-        [56.00, 7.00, 0.79, 0.85], 
-        [51.00, 89.00, 4.32, 0.85]
-    ]
-
     for i in range(args.n_scenes):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_ppg(policy, env, segmenter, rng, episode_seed, action=actions[i])
+        episode_data = run_episode_ppg(policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
