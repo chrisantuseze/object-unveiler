@@ -197,15 +197,15 @@ class PolicyRobotController:
             action: The predicted action from the policy
         """
         try:
-            pos = [action[0], action[1], action[2]]
-            aperture = action[3]
+            # pos = [action[0], action[1], action[2]]
+            # aperture = action[3]
 
-            # Convert to joint angles
-            joint_angles = self.get_joint_angles_from_pose(pos)
+            # # Convert to joint angles
+            # joint_angles = self.get_joint_angles_from_pose(pos)
             
-            if joint_angles is None:
-                rospy.logerr("Failed to compute joint angles, aborting grasp")
-                return
+            # if joint_angles is None:
+            #     rospy.logerr("Failed to compute joint angles, aborting grasp")
+            #     return
             
             joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
             joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
@@ -213,7 +213,7 @@ class PolicyRobotController:
             joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
 
             # Execute the grasp sequence
-            self.step(joint_angles, aperture)
+            self.step(joint_angles)
 
             print("Actions executed successfully\n")
 
@@ -267,13 +267,12 @@ class PolicyRobotController:
             rospy.logerr(f"IK service call failed: {e}")
             return None
     
-    def step(self, joint_positions, aperture):
+    def step(self, joint_positions):
         """
         Execute a complete grasp sequence
         
         Args:
             joint_angles: Target joint angles for grasp position
-            aperture: Gripper aperture (0-1 range)
         """
         
         # 1. Move to pre-grasp position
@@ -410,16 +409,16 @@ class PolicyRobotController:
         max_steps = 6
         attempts = 0
         while attempts < max_steps:
-            self.call_policy_manager()
+            # self.call_policy_manager()
 
-            if self.action is None:
-                rospy.logerr("Failed to get action from policy manager")
-                attempts += 1
-                continue
+            # if self.action is None:
+            #     rospy.logerr("Failed to get action from policy manager")
+            #     attempts += 1
+            #     continue
 
-            if self.action[0] == 0 and self.action[1] == 0 and self.action[2] == 0 and self.action[3] == 0:
-                print("Action is zero. Target is not available")
-                break
+            # if self.action[0] == 0 and self.action[1] == 0 and self.action[2] == 0 and self.action[3] == 0:
+            #     print("Action is zero. Target is not available")
+            #     break
         
             try:
                 # Execute grasp based on policy
