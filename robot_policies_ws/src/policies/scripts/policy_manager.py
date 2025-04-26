@@ -49,18 +49,6 @@ class PolicyManager:
             rospy.loginfo("Waiting for robot to subscribe...")
             rospy.sleep(0.5)
 
-        # rospy.Subscriber('/robot_machine', String, self.callback)
-        # self.pub = rospy.Publisher('/machine_robot', String, queue_size=10)
-        # while self.pub.get_num_connections() == 0:
-        #     rospy.loginfo("Waiting for robot to subscribe...")
-        #     rospy.sleep(0.5)
-
-        # rate = rospy.Rate(1)  # 1Hz
-        # while not rospy.is_shutdown():
-        #     self.pub.publish(String(data="Test message from machine"))
-        #     print("Published message")
-        #     rate.sleep()
-
         print("Initialized everything")
     
     def process_observation(self, obs_data):
@@ -177,27 +165,3 @@ if __name__ == '__main__':
         rospy.spin()
     except Exception as e:
         rospy.logerr(str(e))
-
-# if __name__ == '__main__':
-#     rospy.init_node('test_subscriber')
-
-#     print("ROS_MASTER_URI:", rospy.get_master())
-#     print("Node name:", rospy.get_name())
-#     print("Node URI:", rospy.get_node_uri())
-
-#     def callback(msg):
-#         print("Received message from Robot:", msg.data)
-    
-#     sub = rospy.Subscriber('/robot_machine', String, callback)
-#     pub = rospy.Publisher('/machine_robot', String, queue_size=10)
-#     while pub.get_num_connections() == 0:
-#         rospy.loginfo("Waiting for robot to subscribe...")
-#         rospy.sleep(0.5)
-
-#     rate = rospy.Rate(1)  # 1Hz
-#     while not rospy.is_shutdown():
-#         pub.publish(String(data="Test message from machine"))
-#         print("Published message")
-#         rate.sleep()
-
-#     rospy.spin()

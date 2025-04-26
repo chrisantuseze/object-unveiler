@@ -92,12 +92,6 @@ class PolicyRobotController:
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
-        # self.pub = rospy.Publisher('/robot_machine', String, queue_size=10)
-        # self.sub = None
-        # while self.pub.get_num_connections() == 0:
-        #     rospy.loginfo("Waiting for local machine to subscribe...")
-        #     rospy.sleep(0.5)
-
     def action_sub_callback(self, action_data):
         self.action = action_data.values
         self.target_mask = action_data.target_mask
@@ -418,17 +412,6 @@ class PolicyRobotController:
         while attempts < max_steps:
             self.call_policy_manager()
 
-            # if self.sub is None:
-            #     self.sub = rospy.Subscriber('/machine_robot', String, self.callback)
-
-            # rate = rospy.Rate(1)
-            # while not rospy.is_shutdown():
-            #     self.pub.publish(String(data="Hello from robot"))
-            #     print("Published message")
-            #     rate.sleep()
-
-
-
             if self.action is None:
                 rospy.logerr("Failed to get action from policy manager")
                 attempts += 1
@@ -516,24 +499,3 @@ if __name__ == '__main__':
     controller = PolicyRobotController()
     controller.eval_agent(args)
     controller.cleanup()
-
-# if __name__ == '__main__':
-#     rospy.init_node('test_node')
-
-#     def callback(msg):
-#         print("Received from machine:", msg.data)
-
-#     pub = rospy.Publisher('/robot_machine', String, queue_size=10)
-#     while pub.get_num_connections() == 0:
-#         rospy.loginfo("Waiting for local machine to subscribe...")
-#         rospy.sleep(0.5)
-
-#     rospy.Subscriber('/machine_robot', String, callback)
-
-#     rate = rospy.Rate(1)
-#     while not rospy.is_shutdown():
-#         pub.publish(String(data="Hello from robot"))
-#         print("Published message")
-#         rate.sleep()
-
-#     rospy.spin()

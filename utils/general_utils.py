@@ -572,19 +572,13 @@ def get_heightmap__(color_img, depth_img, cam_intrinsics, configs, bounds, pix_s
     heightmap_size = np.round(((bounds[1][1] - bounds[1][0]) / pix_size,
                                (bounds[0][1] - bounds[0][0]) / pix_size)).astype(int)
     
-    print("heightmap_size", heightmap_size)
-
     # Get 3D point cloud from RGB-D images
     surface_pts, color_pts = get_pointcloud_(color_img, depth_img, cam_intrinsics)
 
-    print("surface_pts.shape, color_pts.shape", surface_pts.shape, color_pts.shape)
-
     cam_pose = p_utils.get_camera_pose(configs[0]['pos'], configs[0]['target_pos'], configs[0]['up_vector'])
-    print("cam_pose", cam_pose)
 
     # Transform 3D point cloud from camera coordinates to robot coordinates
     surface_pts = np.transpose(np.dot(cam_pose[0:3,0:3],np.transpose(surface_pts)) + np.tile(cam_pose[0:3,3:],(1,surface_pts.shape[0])))
-    print("surface_pts.shape", surface_pts.shape)
 
     # Sort surface points by z value
     sort_z_ind = np.argsort(surface_pts[:,2])
@@ -596,7 +590,6 @@ def get_heightmap__(color_img, depth_img, cam_intrinsics, configs, bounds, pix_s
                                                                                       surface_pts[:,0] < bounds[0][1]), 
                                                                                       surface_pts[:,1] >= bounds[1][0]), 
                                                                                       surface_pts[:,1] < bounds[1][1]), surface_pts[:,2] < bounds[2][1])
-    print("heightmap_valid_ind, surface_pts.shape", heightmap_valid_ind, surface_pts.shape)
     surface_pts = surface_pts[heightmap_valid_ind]
     color_pts = color_pts[heightmap_valid_ind]
 
