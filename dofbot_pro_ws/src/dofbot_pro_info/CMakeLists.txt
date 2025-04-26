@@ -63,8 +63,6 @@ add_message_files(
 	Image_Msg.msg
 	Yolov5Detect.msg
         ActionData.msg
-        ObservationData.msg
-        SegmentationData.msg
         ObservData.msg
 )
 

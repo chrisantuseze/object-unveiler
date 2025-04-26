@@ -100,8 +100,6 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   ActionData.msg
-  ObservationData.msg
-  SegmentationData.msg
   ObservData.msg
 )
 
