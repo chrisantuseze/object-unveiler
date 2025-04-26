@@ -218,30 +218,30 @@ def run_episode_ppg(policy: Policy, env: Environment, segmenter: ObjectSegmenter
 
         state = policy.state_representation(obs)
 
-        depth_image = np.load("depth_image.npy")
-        rgb_image = np.load("rgb_image.npy")
-        depth_vis = np.load("depth_vis.npy")
+        # depth_image = np.load("depth_image.npy")
+        # rgb_image = np.load("rgb_image.npy")
+        # depth_vis = np.load("depth_vis.npy")
 
-        print(rgb_image.shape)
-        print(depth_image.shape)
-        print(obs['depth'][1].shape)
+        # print(rgb_image.shape)
+        # print(depth_image.shape)
+        # print(obs['depth'][1].shape)
 
-        rgb = general_utils.resize_mask(rgb_image, (obs['depth'][1].shape[0], obs['depth'][1].shape[1]))
-        print(rgb.shape)
+        # rgb = general_utils.resize_mask(rgb_image, (obs['depth'][1].shape[0], obs['depth'][1].shape[1]))
+        # print(rgb.shape)
 
-        # state_ = policy.get_dmap(rgb_image, depth_image, intrinsics=None)
-        state_ = policy.get_dmap(rgb_image, depth_vis, intrinsics=None)
+        # # state_ = policy.get_dmap(rgb_image, depth_image, intrinsics=None)
+        # state_ = policy.get_dmap(rgb_image, depth_vis, intrinsics=None)
 
-        print(np.all(state_ == 0))
+        # print(np.all(state_ == 0))
 
-        fig, ax = plt.subplots(2, 3)
-        ax[0][0].imshow(state)
-        ax[0][1].imshow(state_)
-        ax[0][2].imshow(obs['depth'][1])
-        ax[1][0].imshow(depth_image)
-        ax[1][1].imshow(rgb_image)
-        ax[1][2].imshow(rgb)
-        plt.show()
+        # fig, ax = plt.subplots(2, 3)
+        # ax[0][0].imshow(state)
+        # ax[0][1].imshow(state_)
+        # ax[0][2].imshow(obs['depth'][1])
+        # ax[1][0].imshow(depth_image)
+        # ax[1][1].imshow(rgb_image)
+        # ax[1][2].imshow(rgb)
+        # plt.show()
 
         action = policy.exploit_ppg(state, target_mask)
         
