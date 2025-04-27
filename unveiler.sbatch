@@ -12,7 +12,7 @@ export APPTAINER_BIND=$PWD
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset-no-crop' --mode 'sre' --epochs 150 --batch_size 16 --lr 1e-4 #For SRE
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset-no-crop' --mode 'sre-multi' --epochs 100 --batch_size 16 --lr 1e-4 #For SRE-MULTI
 # apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset-no-crop' --mode 'ae' --epochs 150 --batch_size 4 --lr 1e-4 #For AE
-apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset-no-crop' --mode 'fcn' --epochs 100 --batch_size 4 --lr 1e-4 #For FCN
+# apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-dataset-no-crop' --mode 'fcn' --epochs 100 --batch_size 4 --lr 1e-4 #For FCN
 
 # apptainer run --nv apptainerfile.sif python3 playground.py
 
@@ -20,16 +20,16 @@ apptainer run --nv apptainerfile.sif python3 main.py --dataset_dir 'save/pc-ou-d
 # 16
 # 1e-4
 
-# apptainer run --nv apptainerfile.sif python3 main_act.py \
-# --task_name sim_object_unveiler \
-# --ckpt_dir act/ckpt \
-# --policy_class ACT \
-# --kl_weight 10 \
-# --chunk_size 5 \
-# --hidden_dim 512 \
-# --batch_size 4 \
-# --dim_feedforward 3200 \
-# --num_epochs 10000 \
-# --lr 1e-4 \
-# --num_patches 10 \
-# --seed 0
+apptainer run --nv apptainerfile.sif python3 main_act.py \
+--task_name sim_object_unveiler \
+--ckpt_dir act/ckpt \
+--policy_class ACT \
+--kl_weight 10 \
+--chunk_size 5 \
+--hidden_dim 512 \
+--batch_size 4 \
+--dim_feedforward 3200 \
+--num_epochs 100000 \
+--lr 1e-4 \
+--num_patches 10 \
+--seed 0

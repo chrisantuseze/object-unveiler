@@ -98,8 +98,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
         self.memory = ReplayBuffer(self.dataset_dir)
         self.sequence_len = self.config['policy_config']['num_queries']
 
-        # self.timestep = np.random.choice(ActionState.NUM_STEPS)
-
         new_dir = "save/images"
         if not os.path.exists(new_dir):
             os.mkdir(new_dir)
@@ -185,7 +183,6 @@ class ACTUnveilerDataset(torch.utils.data.Dataset):
 
         # channel last
         image_data = torch.einsum('k h w c -> k c h w', image_data)
-        # print("image_data.shape", image_data.shape)
 
         # normalize image and change dtype to float
         image_data = image_data / 255.0
@@ -282,10 +279,10 @@ def load_data(config, dataset_dir, camera_names, batch_size_train, batch_size_va
 
     split_index = int(config['split_ratio'] * len(transition_dirs))
     # train_ids = transition_dirs[:split_index]
-    # val_ids = transition_dirs[split_index:]
+    val_ids = transition_dirs[split_index:]
 
     train_ids = transition_dirs
-    val_ids = transition_dirs
+    # val_ids = transition_dirs
 
     # this ensures that the split is done properly without causing input mismatch error
     data_length = (len(train_ids)//config['batch_size']) * config['batch_size']
