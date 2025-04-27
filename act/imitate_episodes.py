@@ -378,9 +378,6 @@ def train_bc(train_dataloader, val_dataloader, config):
 
                 epoch_loss['val'] += forward_dict['loss'].detach().cpu().numpy()
 
-                if epoch % 1000 == 0:
-                    print(f"Gt {data[2]}, Pred {pred}, Loss {forward_dict['loss']}")
-
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)
 
@@ -420,7 +417,7 @@ def train_bc(train_dataloader, val_dataloader, config):
         # summary_string += f'LR: {current_lr:.2e}'
         print(summary_string)
 
-        if epoch % 500 == 0:
+        if epoch % 5000 == 0:
             ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
             torch.save(policy.state_dict(), ckpt_path)
             plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
