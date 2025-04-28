@@ -565,7 +565,11 @@ class Policy:
             obstacle_mask = processed_masks[obstacle_id]
         else:
             obstacle_mask = target_mask
-        obstacle = general_utils.preprocess_target(obstacle_mask, state)
+        # obstacle = general_utils.preprocess_target(obstacle_mask, state)
+
+        resized_obstacle_mask = general_utils.resize_mask(obstacle_mask)
+        obstacle = general_utils.preprocess_image(resized_obstacle_mask)[0]
+        
         obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
         
         # find optimal position and orientation

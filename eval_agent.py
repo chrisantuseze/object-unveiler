@@ -563,7 +563,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_multi(args, policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_unveiler(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
@@ -572,7 +572,7 @@ def eval_agent(args):
 
         if episode_data['successful']:
             success_count += 1
-            with open('multi_unveiler_results.txt', 'a') as file:
+            with open('bin_mask_results.txt', 'a') as file:
                     file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
@@ -587,7 +587,7 @@ def eval_agent(args):
         if i % 5 == 0:
             logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    with open('multi_unveiler_results.txt', 'a') as file:
+    with open('bin_mask_results.txt', 'a') as file:
                     file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
 
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")
