@@ -137,35 +137,58 @@ def modify_transitions(memory: ReplayBuffer, transition_dir, idx):
     memory.store(transition)
     logging.info(f"{idx} - Episode with dir {transition_dir} updated...")
 
+def create_seg_data(segmenter: ObjectSegmenter, rng, episode_dir):    
+    image = cv2.imread(os.path.join(dataset_dir, episode_dir), cv2.IMREAD_COLOR)
+    seg_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(image, dir="/", bbox=True)
+
+    target_mask, target_id = general_utils.get_target_mask(seg_masks, image, rng)
+
+    transition = {
+        'scene_image': image,
+        'scene_mask': pred_mask,
+        'target_mask': target_mask,
+        'object_masks': seg_masks,
+        'target_id': target_id,
+        'bboxes': bboxes,
+    }
+
+    memory.store_seg_data(transition)
+    logging.info(f"{index} - Transition with dir {episode_dir} created...")
+    
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
+    # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
+    dataset_dir = "real_images/images"
 
     episode_dirs = os.listdir(dataset_dir)
     print("Total length:", len(episode_dirs))
     
     for file_ in episode_dirs:
-        if not file_.startswith("episode"):
+        if not file_.startswith("image"):
             print(file_)
             episode_dirs.remove(file_)
 
         # if not file_.startswith("transition"):
         #     episode_dirs.remove(file_)
 
-
-    new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop"
+    # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop"
+    new_dir = "real_images/seg_data"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     memory = ReplayBuffer(new_dir)
 
     segmenter = ObjectSegmenter()
+
+    rng = np.random.RandomState()
+    rng.seed(0)
+
     for i, episode_dir in enumerate(episode_dirs):
         # modify_transitions(memory, episode_dir, i)
 
         # modify_episode_act(episode_dir, i)
-        modify_episode(segmenter, episode_dir)
+        # modify_episode(segmenter, episode_dir)
 
-    logging.info(f"Dataset modified and saved in {new_dir}. Total episodes with no change: {count_no_change}.")
+        create_seg_data(segmenter, rng, episode_dir)
     

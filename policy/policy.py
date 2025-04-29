@@ -707,6 +707,14 @@ class Policy:
 
         return action
     
+    def real_image_inference(self, target_mask, processed_masks, bbox):
+        processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
+        
+        logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        obstacle_id = top_indices.item()
+        return obstacle_id
+    
     def explore(self, state, target_mask):
         explore_prob = max(0.8 * np.power(0.9998, self.learn_step_counter), 0.1)
 

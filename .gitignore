@@ -33,6 +33,8 @@ pyvenv.cfg
 runs/
 *.sif
 
+real_images/
+
 
 ################# FOR ROS ############################
 !dofbot_pro_ws/

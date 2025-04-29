@@ -106,6 +106,50 @@ class ReplayBuffer:
         if self.count < self.buffer_size:
             self.count += 1
 
+    def store_seg_data(self, transition):
+        folder_name = os.path.join(self.save_dir, 'transition_' + str(self.count).zfill(5))
+        if os.path.exists(folder_name):
+            # Try to remove the tree; if it fails, throw an error using try...except.
+            try:
+                shutil.rmtree(folder_name)
+            except OSError as e:
+                pass
+        os.mkdir(folder_name)
+
+        cv2.imwrite(os.path.join(folder_name, 'scene_image.png'), transition['scene_image'])
+        cv2.imwrite(os.path.join(folder_name, 'scene_mask.png'), transition['scene_mask'])
+        cv2.imwrite(os.path.join(folder_name, 'target_mask.png'), transition['target_mask'])
+        for i in range(len(transition['object_masks'])):
+            cv2.imwrite(os.path.join(folder_name, 'object_' + str(i) + '.png'), transition['object_masks'][i])
+
+        pickle.dump(transition['target_id'], open(os.path.join(folder_name, 'target_id'), 'wb'))
+        pickle.dump(transition['bboxes'], open(os.path.join(folder_name, 'bboxes'), 'wb'))
+
+        self.buffer_ids.append(self.count)
+        if self.count < self.buffer_size:
+            self.count += 1
+
+    def load_seg_data(self, dir_ids, idx):
+        try:
+            scene_image = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'scene_image.png'), -1)
+            scene_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'scene_mask.png'), -1)
+            target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
+            target_id = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'target_id'), 'rb'))
+            bboxes = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'bboxes'), 'rb'))
+
+            object_masks = []
+            for i in range(len(bboxes)):
+                object_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'object_' + str(i) + '.png'), -1)
+                if object_mask is None:
+                    break
+                object_masks.append(object_mask)
+
+        except Exception as e:
+            logging.info(e)
+            idx += 1
+
+        return scene_image, scene_mask, target_mask, bboxes, target_id, object_masks
+
     def store(self, transition):
         folder_name = os.path.join(self.save_dir, 'transition_' + str(self.count).zfill(5))
         if os.path.exists(folder_name):
@@ -118,13 +162,6 @@ class ReplayBuffer:
 
         cv2.imwrite(os.path.join(folder_name, 'heightmap.exr'), transition['state'])
         pickle.dump(transition['action'], open(os.path.join(folder_name, 'action'), 'wb'))
-
-        # # Save everything that obs contains
-        # for i in range(len(transition['obs']['color'])):
-        #     cv2.imwrite(os.path.join(folder_name, 'color_' + str(i) + '.png'), transition['obs']['color'][i])
-        #     cv2.imwrite(os.path.join(folder_name, 'depth_' + str(i) + '.exr'), transition['obs']['depth'][i])
-        #     cv2.imwrite(os.path.join(folder_name, 'seg_' + str(i) + '.png'), transition['obs']['seg'][i])
-        # pickle.dump(transition['obs']['full_state'], open(os.path.join(folder_name, 'full_state'), 'wb'))
 
         self.buffer_ids.append(self.count)
         if self.count < self.buffer_size:
