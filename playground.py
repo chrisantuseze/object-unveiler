@@ -71,6 +71,7 @@ def run_sre_policy():
     policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
 
     for idx, transition_dir in enumerate(transition_dirs):
+        print("Transition Directory:", transition_dir)
         scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
         scene_image = cv2.resize(scene_image, (400, 400)) 
 
