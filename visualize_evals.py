@@ -15,6 +15,8 @@ def get_obstacle_images():
             
     memory = ReplayBuffer(dataset_dir)
 
+    image_ids = ['15', '20', '03', '02', '13', '18', '05', '00', '12', '01', '09', '08', '07', '17', '14', '11', '19']
+
     results = [
         {
             'target_id': 4,
@@ -171,37 +173,74 @@ def get_obstacle_images():
         },
     ]
 
-    for idx in range(len(results)):
-        episode = results[idx]
-        transition_dir = "transition_000" + episode['image_id']
-        print("Transition Directory:", transition_dir)
-        scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
-        scene_image = cv2.resize(scene_image, (400, 400)) 
+    for idx, transition_dir in enumerate(transition_dirs):
+        print("Transition Directory:", transition_dir, transition_dir[-2:])
+        if transition_dir[-2:] not in image_ids:
+            continue
 
-        print(len(object_masks), episode['target_id'], target_id)
+        for result in results:
+            if transition_dir[-2:] == result['image_id']:
+                scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
+                scene_image = cv2.resize(scene_image, (400, 400)) 
 
-        c_target_mask = general_utils.extract_target_crop2(object_masks[episode['target_id']], scene_image)
-        sre_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['sre']], scene_image)
-        clip_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['clip']], scene_image)
-        gpt_no_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['gpt-no']], scene_image)
-        gpt_yes_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['gpt-yes']], scene_image)
+                print(len(object_masks), result['target_id'], target_id)
 
-        save_dir = "real_images/results"
+                c_target_mask = general_utils.extract_target_crop2(object_masks[result['target_id']], scene_image)
+                sre_obstacle_mask = general_utils.extract_target_crop2(object_masks[result['sre']], scene_image)
+                clip_obstacle_mask = general_utils.extract_target_crop2(object_masks[result['clip']], scene_image)
+                gpt_no_obstacle_mask = general_utils.extract_target_crop2(object_masks[result['gpt-no']], scene_image)
+                gpt_yes_obstacle_mask = general_utils.extract_target_crop2(object_masks[result['gpt-yes']], scene_image)
 
-        folder_name = os.path.join(save_dir, transition_dir)
-        if os.path.exists(folder_name):
-            try:
-                shutil.rmtree(folder_name)
-            except OSError as e:
-                pass
-        os.makedirs(folder_name)
+                save_dir = "real_images/results"
 
-        cv2.imwrite(os.path.join(folder_name, 'scene_image.png'), scene_image)
-        cv2.imwrite(os.path.join(folder_name, 'c_target_mask.png'), c_target_mask)
-        cv2.imwrite(os.path.join(folder_name, 'sre_obstacle_mask.png'), sre_obstacle_mask)
-        cv2.imwrite(os.path.join(folder_name, 'clip_obstacle_mask.png'), clip_obstacle_mask)
-        cv2.imwrite(os.path.join(folder_name, 'gpt_no_obstacle_mask.png'), gpt_no_obstacle_mask)
-        cv2.imwrite(os.path.join(folder_name, 'gpt_yes_obstacle_mask.png'), gpt_yes_obstacle_mask)
+                folder_name = os.path.join(save_dir, transition_dir)
+                if os.path.exists(folder_name):
+                    try:
+                        shutil.rmtree(folder_name)
+                    except OSError as e:
+                        pass
+                os.makedirs(folder_name)
+
+                cv2.imwrite(os.path.join(folder_name, 'scene_image.png'), scene_image)
+                cv2.imwrite(os.path.join(folder_name, 'c_target_mask.png'), c_target_mask)
+                cv2.imwrite(os.path.join(folder_name, 'sre_obstacle_mask.png'), sre_obstacle_mask)
+                cv2.imwrite(os.path.join(folder_name, 'clip_obstacle_mask.png'), clip_obstacle_mask)
+                cv2.imwrite(os.path.join(folder_name, 'gpt_no_obstacle_mask.png'), gpt_no_obstacle_mask)
+                cv2.imwrite(os.path.join(folder_name, 'gpt_yes_obstacle_mask.png'), gpt_yes_obstacle_mask)
+
+                break
+
+    # for idx in range(len(results)):
+    #     episode = results[idx]
+    #     transition_dir = "transition_000" + episode['image_id']
+    #     print("Transition Directory:", transition_dir)
+    #     scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
+    #     scene_image = cv2.resize(scene_image, (400, 400)) 
+
+    #     print(len(object_masks), episode['target_id'], target_id)
+
+    #     c_target_mask = general_utils.extract_target_crop2(object_masks[episode['target_id']], scene_image)
+    #     sre_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['sre']], scene_image)
+    #     clip_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['clip']], scene_image)
+    #     gpt_no_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['gpt-no']], scene_image)
+    #     gpt_yes_obstacle_mask = general_utils.extract_target_crop2(object_masks[episode['gpt-yes']], scene_image)
+
+    #     save_dir = "real_images/results"
+
+    #     folder_name = os.path.join(save_dir, transition_dir)
+    #     if os.path.exists(folder_name):
+    #         try:
+    #             shutil.rmtree(folder_name)
+    #         except OSError as e:
+    #             pass
+    #     os.makedirs(folder_name)
+
+    #     cv2.imwrite(os.path.join(folder_name, 'scene_image.png'), scene_image)
+    #     cv2.imwrite(os.path.join(folder_name, 'c_target_mask.png'), c_target_mask)
+    #     cv2.imwrite(os.path.join(folder_name, 'sre_obstacle_mask.png'), sre_obstacle_mask)
+    #     cv2.imwrite(os.path.join(folder_name, 'clip_obstacle_mask.png'), clip_obstacle_mask)
+    #     cv2.imwrite(os.path.join(folder_name, 'gpt_no_obstacle_mask.png'), gpt_no_obstacle_mask)
+    #     cv2.imwrite(os.path.join(folder_name, 'gpt_yes_obstacle_mask.png'), gpt_yes_obstacle_mask)
 
 
 if __name__ == "__main__":
