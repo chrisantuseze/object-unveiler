@@ -202,7 +202,6 @@ class PolicyRobotController:
 
         print("joint_positions:", joint_positions)
     
-            
     def eval_agent(self, args):
         self.args = args
 
