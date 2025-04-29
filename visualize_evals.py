@@ -17,44 +17,44 @@ def get_obstacle_images():
 
     results = [
         {
-            'target_id': 1,
-            'gt': 6,
-            'sre': 0,
+            'target_id': 4,
+            'gt': 4,
+            'sre': 5,
             'clip': 0,
             'gpt-no': 2,
             'gpt-yes': 0,
             'image_id': '15'
         },
         {
-            'target_id': 0,
-            'gt': 0,
-            'sre': 0,
-            'clip': 1,
+            'target_id': 4,
+            'gt': 2,
+            'sre': 4,
+            'clip': 0,
             'gpt-no': 2,
             'gpt-yes': 0,
             'image_id': '20'
         },
         {
-            'target_id': 3,
-            'gt': 7,
-            'sre': 3,
-            'clip': 5,
+            'target_id': 2,
+            'gt': 1,
+            'sre': 2,
+            'clip': 0,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '03'
         },
         {
-            'target_id': 2,
-            'gt': 2,
-            'sre': 2,
-            'clip': 3,
+            'target_id': 5,
+            'gt': 9,
+            'sre': 5,
+            'clip': 0,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '02'
         },
         {
             'target_id': 4,
-            'gt': 2,
+            'gt': 5,
             'sre': 4,
             'clip': 0,
             'gpt-no': 0,
@@ -62,18 +62,18 @@ def get_obstacle_images():
             'image_id': '13'
         },
         {
-            'target_id': 4,
-            'gt': 5,
-            'sre': 4,
-            'clip': 5,
+            'target_id': 3,
+            'gt': 7,
+            'sre': 3,
+            'clip': 6,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '18'
         },
         {
-            'target_id': 3,
-            'gt': 3,
-            'sre': 3,
+            'target_id': 2,
+            'gt': 2,
+            'sre': 2,
             'clip': 2,
             'gpt-no': 0,
             'gpt-yes': 0,
@@ -81,48 +81,21 @@ def get_obstacle_images():
         },
         {
             'target_id': 5,
-            'gt': 1,
+            'gt': 6,
             'sre': 5,
-            'clip': 1,
+            'clip': 2,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '00'
         },
         {
             'target_id': 6,
-            'gt': 4,
-            'sre': 2,
-            'clip': 1,
+            'gt': 6,
+            'sre': 0,
+            'clip': 6,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '12'
-        },
-        {
-            'target_id': 5,
-            'gt': 6,
-            'sre': 5,
-            'clip': 1,
-            'gpt-no': 0,
-            'gpt-yes': 0,
-            'image_id': '01'
-        },
-        {
-            'target_id': 6,
-            'gt': 4,
-            'sre': 0,
-            'clip': 0,
-            'gpt-no': 0,
-            'gpt-yes': 0,
-            'image_id': '09'
-        },
-        {
-            'target_id': 4,
-            'gt': 2,
-            'sre': 4,
-            'clip': 2,
-            'gpt-no': 0,
-            'gpt-yes': 0,
-            'image_id': '08'
         },
         {
             'target_id': 1,
@@ -131,7 +104,7 @@ def get_obstacle_images():
             'clip': 4,
             'gpt-no': 0,
             'gpt-yes': 0,
-            'image_id': '07'
+            'image_id': '01'
         },
         {
             'target_id': 5,
@@ -140,16 +113,7 @@ def get_obstacle_images():
             'clip': 0,
             'gpt-no': 0,
             'gpt-yes': 0,
-            'image_id': '17'
-        },
-        {
-            'target_id': 2,
-            'gt': 1,
-            'sre': 2,
-            'clip': 2,
-            'gpt-no': 0,
-            'gpt-yes': 0,
-            'image_id': '14'
+            'image_id': '09'
         },
         {
             'target_id': 3,
@@ -158,13 +122,49 @@ def get_obstacle_images():
             'clip': 1,
             'gpt-no': 0,
             'gpt-yes': 0,
+            'image_id': '08'
+        },
+        {
+            'target_id': 4,
+            'gt': 2,
+            'sre': 4,
+            'clip': 0,
+            'gpt-no': 0,
+            'gpt-yes': 0,
+            'image_id': '07'
+        },
+        {
+            'target_id': 3,
+            'gt': 3,
+            'sre': 3,
+            'clip': 4,
+            'gpt-no': 0,
+            'gpt-yes': 0,
+            'image_id': '17'
+        },
+        {
+            'target_id': 6,
+            'gt': 4,
+            'sre': 2,
+            'clip': 2,
+            'gpt-no': 0,
+            'gpt-yes': 0,
+            'image_id': '14'
+        },
+        {
+            'target_id': 1,
+            'gt': 6,
+            'sre': 0,
+            'clip': 1,
+            'gpt-no': 0,
+            'gpt-yes': 0,
             'image_id': '11'
         },
         {
-            'target_id': 5,
-            'gt': 9,
-            'sre': 5,
-            'clip': 0,
+            'target_id': 6,
+            'gt': 4,
+            'sre': 0,
+            'clip': 3,
             'gpt-no': 0,
             'gpt-yes': 0,
             'image_id': '19'
