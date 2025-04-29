@@ -184,11 +184,6 @@ class PolicyRobotController:
         
         print("Latest images acquired")
 
-        # Wait for both images to be received
-        start_time = time.time()
-        while self.pred_mask is None and time.time() - start_time < timeout:
-            rospy.sleep(0.2)  # Short sleep to avoid CPU hogging
-
         # Create observation dictionary
         obs = {
             'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
