@@ -565,10 +565,10 @@ class Policy:
             obstacle_mask = processed_masks[obstacle_id]
         else:
             obstacle_mask = target_mask
-        # obstacle = general_utils.preprocess_target(obstacle_mask, state)
+        obstacle = general_utils.preprocess_target(obstacle_mask, state)
 
-        resized_obstacle_mask = general_utils.resize_mask(obstacle_mask)
-        obstacle = general_utils.preprocess_image(resized_obstacle_mask)[0]
+        # resized_obstacle_mask = general_utils.resize_mask(obstacle_mask) #For Bin-Mask ablation
+        # obstacle = general_utils.preprocess_image(resized_obstacle_mask)[0]
         
         obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
         
@@ -576,29 +576,29 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        # fig, ax = plt.subplots(2, 2)
+        fig, ax = plt.subplots(2, 2)
 
-        # ax[0][0].imshow(color_image)
-        # ax[0][0].set_title("Scene - Color")
-        # ax[0][0].axis("off")
+        ax[0][0].imshow(color_image)
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
 
-        # ax[0][1].imshow(scene_mask)
-        # ax[0][1].set_title("Scene - Grayscale")
-        # ax[0][1].axis("off")
+        ax[0][1].imshow(scene_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
 
-        # ax[1][0].imshow(target_mask)
-        # ax[1][0].set_title("Target")
-        # ax[1][0].axis("off")
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
 
-        # ax[1][1].imshow(obstacle_mask)
-        # ax[1][1].set_title("Obstacle")
-        # ax[1][1].axis("off")
+        ax[1][1].imshow(obstacle_mask)
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
 
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(color_image)
-        ax[1].imshow(target_mask)
-        ax[2].imshow(obstacle_mask)
-        plt.show()
+        # fig, ax = plt.subplots(1, 3)
+        # ax[0].imshow(color_image)
+        # ax[1].imshow(target_mask)
+        # ax[2].imshow(obstacle_mask)
+        # plt.show()
 
         out_prob = self.ae_model(x, obstacle, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)

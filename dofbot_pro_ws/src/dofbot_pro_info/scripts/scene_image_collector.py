@@ -31,13 +31,6 @@ class PolicyRobotController:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
         
-        # Publisher to control the robot arm
-        self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
-        self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
-
-        # compute_real_pts(self.ik_client)
-
-        # compute_R_and_t()
 
         # Image Storage
         self.bridge = CvBridge()
@@ -57,27 +50,15 @@ class PolicyRobotController:
         self.depth_sub = None
         self.camera_info_sub = None
 
-        self.action_sub = None
-        self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-        # while self.observation_pub.get_num_connections() == 0:
-        #     rospy.loginfo("Waiting for local machine to subscribe...")
-        #     rospy.sleep(0.5)
-
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
         self.action = None
 
-        
+        # Wait for publisher to connect and camera info to be received
+        rospy.sleep(1)
+
         # Robot arm parameters
         self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
-
-        self.sim_home_position = np.array([0.7, 0.0, 0.2])
-        
-        # rotation w.r.t. inertia frame
-        self.sim_home_quat = Quaternion.from_rotation_matrix(rot_y(-np.pi / 2))
-        
-        # Wait for publisher to connect and camera info to be received
-        rospy.sleep(1)
         
         # Move to home position at startup
         self.move_arm_to_position(self.home_position)
@@ -90,11 +71,6 @@ class PolicyRobotController:
         
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
-
-    def action_sub_callback(self, action_data):
-        self.action = action_data.values
-        self.target_mask = action_data.target_mask
-        print("Received action data", self.action)
 
     def camera_info_callback(self, msg):
         """ Extract camera intrinsic parameters. """
@@ -188,149 +164,6 @@ class PolicyRobotController:
         
         return True
     
-    def grasp_object(self, action, i):
-        """
-        Execute a grasp based on policy prediction
-        
-        Args:
-            action: The predicted action from the policy
-        """
-        try:
-            # pos = [action[0], action[1], action[2]]
-            # aperture = action[3]
-
-            # # Convert to joint angles
-            # joint_angles = self.get_joint_angles_from_pose(pos)
-            
-            # if joint_angles is None:
-            #     rospy.logerr("Failed to compute joint angles, aborting grasp")
-            #     return
-            
-            # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
-            # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
-            # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
-
-            grasp_joints = [
-                [110.0, 36.0, 60.0, 20.0, 90.0, 30.0],
-                [90.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Left obstacle
-                [70.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Target
-                [60.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Right obstacle
-            ]
-            joint_angles = grasp_joints[i if i < len(grasp_joints) else 0]
-
-            # Execute the grasp sequence
-            self.step(joint_angles)
-
-            print("Actions executed successfully\n")
-
-            # Waiting for a bit to ensure the action is completed
-            rospy.sleep(5)  # Short sleep to avoid CPU hogging
-                        
-        except Exception as e:
-            rospy.logerr(f"Error executing grasp: {str(e)}")
-
-        general_utils.delete_episodes_misc(self.TEST_DIR)
-
-        # Get new observation after grasp
-        return self.get_observation()
-    
-    def get_joint_angles_from_pose(self, pos):
-        """Use inverse kinematics to get joint angles for a pose"""
-        # x, y, z = convert_sim_to_robot_pose(pos)
-        x, y, z = sim_to_robot(pos)
-        print("res:", x, y, z)
-        
-        request = kinemaricsRequest()
-        request.tar_x = x
-        request.tar_y = y
-        request.tar_z = z
-        request.kin_name = "ik"
-        
-        try:
-            response = self.ik_client.call(request)
-            print("IK response:", response)
-            
-            # Check if response is valid (joint angles within limits)
-            if response.joint1 < 0 or response.joint1 > 180 or \
-               response.joint2 < 0 or response.joint2 > 180 or \
-               response.joint3 < 0 or response.joint3 > 180 or \
-               response.joint4 < 0 or response.joint4 > 180:
-                rospy.logwarn("IK solution contains invalid joint angles")
-                return None
-            
-            joint_angles = [
-                response.joint1,
-                response.joint2,
-                response.joint3,
-                response.joint4,
-                90,  # Usually fixed at 90
-                30   # Initial gripper position
-            ]
-            
-            return joint_angles
-            
-        except rospy.ServiceException as e:
-            rospy.logerr(f"IK service call failed: {e}")
-            return None
-    
-    def step(self, joint_positions):
-        """
-        Execute a complete grasp sequence
-        
-        Args:
-            joint_angles: Target joint angles for grasp position
-        """
-        
-        # 1. Move to pre-grasp position
-        pre_grasp_joints = compute_pre_grasp_joints(joint_positions)
-        self.move_arm_to_position(pre_grasp_joints)
-        rospy.sleep(3)  # Wait for movement to complete
-        
-        # 3. Move to grasp position
-        self.move_arm_to_position(joint_positions)
-        rospy.sleep(3)
-        
-        # 4. Close gripper
-        self.gripper_control(1)  # Fully closed
-        rospy.sleep(2)
-        
-        # 5. Lift object
-        post_grasp_joints = compute_post_grasp_joints(joint_positions)
-        self.move_arm_to_position(post_grasp_joints)
-        rospy.sleep(3)
-        
-        # 6. Return to home position
-        self.move_arm_to_position(self.home_position)
-        rospy.sleep(3)
-        
-        # 7. Open gripper to release object
-        self.gripper_control(0)  # Fully open
-
-    def move_arm_to_position(self, joint_positions, run_time=2000):
-        """Send joint positions to the robot arm"""
-        joint_positions[5] = self.gripper_angle
-        arm_joint = ArmJoint()
-        arm_joint.joints = joint_positions
-        arm_joint.run_time = run_time
-        self.pub_arm.publish(arm_joint)
-
-        print("joint_positions:", joint_positions)
-    
-    def gripper_control(self, aperture, run_time=1000):
-        """Control the gripper (servo 6) based on aperture"""
-        # Map aperture from your policy's range to the robot's range (assumed 30-180)
-        # Adjust this mapping based on your specific aperture range
-        gripper_angle = np.interp(aperture, [0, 1], [30, 140])
-        self.gripper_angle = gripper_angle
-        
-        arm_joint = ArmJoint()
-        arm_joint.id = 6  # Gripper servo ID
-        arm_joint.angle = gripper_angle
-        arm_joint.run_time = run_time
-        arm_joint.joints = []
-        self.pub_arm.publish(arm_joint)
-    
     def get_observation(self, timeout=5.0):
         """
         Get observation for policy input
@@ -349,6 +182,11 @@ class PolicyRobotController:
         
         print("Latest images acquired")
 
+        # Wait for both images to be received
+        start_time = time.time()
+        while self.pred_mask is None and time.time() - start_time < timeout:
+            rospy.sleep(0.2)  # Short sleep to avoid CPU hogging
+
         # Create observation dictionary
         obs = {
             'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
@@ -356,6 +194,17 @@ class PolicyRobotController:
         }
         
         return obs
+    
+    def move_arm_to_position(self, joint_positions, run_time=2000):
+        """Send joint positions to the robot arm"""
+        joint_positions[5] = self.gripper_angle
+        arm_joint = ArmJoint()
+        arm_joint.joints = joint_positions
+        arm_joint.run_time = run_time
+        self.pub_arm.publish(arm_joint)
+
+        print("joint_positions:", joint_positions)
+    
             
     def eval_agent(self, args):
         self.args = args
@@ -367,38 +216,11 @@ class PolicyRobotController:
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-            self.run()
+            self.run(i)
 
         rospy.is_shutdown()
 
-    def call_policy_manager(self, timeout=5.0):
-        if self.action_sub is None:
-            self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
-
-        if self.raw_color_image is None or self.raw_depth_image is None:
-            rospy.logerr("No images available")
-            return
-        
-        obs_data = ObservData()
-        obs_data.color_image = self.raw_color_image
-        obs_data.depth_image = self.raw_depth_image 
-        if self.target_mask is not None:
-            obs_data.target_mask = self.target_mask
-
-        obs_data.cam_intrinsics = self.intrinsics.flatten()
-
-        self.observation_pub.publish(obs_data)
-        print("Publishing observation data to policy manager for action data")
-
-        # Reset segmentation data
-        self.raw_color_image, self.raw_depth_image = None, None
-
-        # Wait for both images to be received
-        start_time = time.time()
-        while self.action is None and time.time() - start_time < timeout:
-            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
-    
-    def run(self):
+    def run(self, i):
         """Main control loop"""
         rate = rospy.Rate(1)  # 1 Hz, adjust as needed
 
@@ -408,42 +230,13 @@ class PolicyRobotController:
             rospy.logerr("Failed to get initial observation")
             return
         
-        max_steps = 4
-        attempts = 0
-        while attempts < max_steps:
-            # self.call_policy_manager()
+        np.save(os.path.join(self.TEST_DIR, f"color_image_{i}.npy"), obs['color'])
 
-            # if self.action is None:
-            #     rospy.logerr("Failed to get action from policy manager")
-            #     attempts += 1
-            #     continue
-
-            # if self.action[0] == 0 and self.action[1] == 0 and self.action[2] == 0 and self.action[3] == 0:
-            #     print("Action is zero. Target is not available")
-            #     break
+        # Wait for both images to be received
+        start_time = time.time()
+        while self.action is None and time.time() - start_time < 10:
+            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
         
-            try:
-                # Execute grasp based on policy
-                print("Executing grasp with action:", self.action)
-                next_obs = self.grasp_object(self.action, attempts)
-                if next_obs is None:
-                    rospy.logerr("Failed to get observation after grasp")
-                    attempts += 1
-                    continue
-
-                obs = copy.deepcopy(next_obs)
-                cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
-                cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
-                
-                attempts += 1
-                rate.sleep()
-                
-            except KeyboardInterrupt:
-                print("Shutting down")
-                break
-            except Exception as e:
-                rospy.logerr(f"Error in main loop: {str(e)}")
-                attempts += 1
 
     def cleanup(self):
         """Clean up subscribers to prevent issues on shutdown"""
