@@ -213,24 +213,25 @@ class ZeroShotCLIPRemovalPredictor:
 
             print("Target ID:", target_id)
             print("Obstacle ID:", prediction)
+            print()
 
-            fig, ax = plt.subplots(2, 2)
-            ax[0][0].imshow(scene_image)
-            ax[0][0].set_title("Scene - Color")
-            ax[0][0].axis("off")
+            # fig, ax = plt.subplots(2, 2)
+            # ax[0][0].imshow(scene_image)
+            # ax[0][0].set_title("Scene - Color")
+            # ax[0][0].axis("off")
 
-            ax[0][1].imshow(scene_mask)
-            ax[0][1].set_title("Scene - Grayscale")
-            ax[0][1].axis("off")
+            # ax[0][1].imshow(scene_mask)
+            # ax[0][1].set_title("Scene - Grayscale")
+            # ax[0][1].axis("off")
 
-            ax[1][0].imshow(c_target_mask)
-            ax[1][0].set_title("Target")
-            ax[1][0].axis("off")
+            # ax[1][0].imshow(c_target_mask)
+            # ax[1][0].set_title("Target")
+            # ax[1][0].axis("off")
 
-            ax[1][1].imshow(c_obstacle_mask)
-            ax[1][1].set_title("Obstacle")
-            ax[1][1].axis("off")
-            plt.show()
+            # ax[1][1].imshow(c_obstacle_mask)
+            # ax[1][1].set_title("Obstacle")
+            # ax[1][1].axis("off")
+            # plt.show()
 
 if __name__ == "__main__":
     
