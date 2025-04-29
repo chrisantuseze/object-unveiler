@@ -59,7 +59,7 @@ class PolicyRobotController:
         rospy.sleep(1)
 
         # Robot arm parameters
-        self.home_position = [90.0, 90.0, 90.0, 0.0, 90.0, 40] #30.0]  # Default home position
+        self.home_position = [90.0, 90.0, 60.0, 30.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
         
         # Move to home position at startups
