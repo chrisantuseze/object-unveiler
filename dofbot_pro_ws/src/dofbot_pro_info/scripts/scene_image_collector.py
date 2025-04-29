@@ -31,6 +31,8 @@ class PolicyRobotController:
         if not os.path.exists(self.TEST_DIR):
             os.makedirs(self.TEST_DIR)
         
+        # Publisher to control the robot arm
+        self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
 
         # Image Storage
         self.bridge = CvBridge()
@@ -60,7 +62,7 @@ class PolicyRobotController:
         self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
         
-        # Move to home position at startup
+        # Move to home position at startups
         self.move_arm_to_position(self.home_position)
         print("Policy Robot Controller initialized")
         
