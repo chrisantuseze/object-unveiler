@@ -59,7 +59,7 @@ class PolicyRobotController:
         rospy.sleep(1)
 
         # Robot arm parameters
-        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
+        self.home_position = [90.0, 90.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
         
         # Move to home position at startups
@@ -226,7 +226,7 @@ class PolicyRobotController:
 
         # Wait for both images to be received
         start_time = time.time()
-        while self.action is None and time.time() - start_time < 10:
+        while self.action is None and time.time() - start_time < 20:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
         
 
