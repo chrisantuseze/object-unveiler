@@ -232,14 +232,9 @@ class ZeroShotCLIPRemovalPredictor:
             ax[1][1].axis("off")
             plt.show()
 
-# Example usage
 if __name__ == "__main__":
     
     # Initialize the predictor
     clip_predictor = ZeroShotCLIPRemovalPredictor()
     
-    # Predict which obstacle to remove
-    # removal_idx = clip_predictor.predict_removal(obstacles, target)
-    # print(f"CLIP predicts removing obstacle {removal_idx} first")
-
     clip_predictor.eval()
