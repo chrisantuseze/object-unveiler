@@ -226,7 +226,7 @@ class PolicyRobotController:
 
         # Wait for both images to be received
         start_time = time.time()
-        while self.action is None and time.time() - start_time < 10:
+        while self.action is None and time.time() - start_time < 20:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
         
 
