@@ -13,6 +13,7 @@ import torch
 import yaml
 from policy.policy import Policy
 from trainer.memory import ReplayBuffer
+from utils import general_utils
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -74,14 +75,17 @@ def run_sre_policy():
         obstacle_id = policy.real_image_inference(target_mask, object_masks, bboxes)
         obstacle_mask = object_masks[obstacle_id]
 
+        c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
+        c_obstacle_mask = general_utils.extract_target_crop2(obstacle_mask, scene_image)
+
         print("Target ID:", target_id)
         print("Obstacle ID:", obstacle_id)
 
         fig, ax = plt.subplots(1, 4)
         ax[0].imshow(scene_image)
         ax[1].imshow(scene_mask)
-        ax[2].imshow(target_mask)
-        ax[3].imshow(obstacle_mask)
+        ax[2].imshow(c_target_mask)
+        ax[3].imshow(c_obstacle_mask)
         plt.show()
 
 

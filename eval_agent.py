@@ -141,7 +141,6 @@ def run_episode_multi(args, policy: Policy, env: Environment, segmenter: ObjectS
     logging.info('--------')
     return episode_data
 
-
 def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     env.seed(episode_seed)
     obs = env.reset()
@@ -272,7 +271,6 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
 
     logging.info('--------')
     return episode_data
-
 
 def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     """
