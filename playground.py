@@ -8,6 +8,7 @@
 import argparse
 import os
 
+import cv2
 from matplotlib import pyplot as plt
 import torch
 import yaml
@@ -71,10 +72,11 @@ def run_sre_policy():
 
     for idx, transition_dir in enumerate(transition_dirs):
         scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
+        scene_image = cv2.resize(scene_image, (400, 400)) 
 
         obstacle_id = policy.real_image_inference(target_mask, object_masks, bboxes)
         obstacle_mask = object_masks[obstacle_id]
-
+ 
         c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
         c_obstacle_mask = general_utils.extract_target_crop2(obstacle_mask, scene_image)
 
