@@ -122,6 +122,7 @@ class ReplayBuffer:
         for i in range(len(transition['object_masks'])):
             cv2.imwrite(os.path.join(folder_name, 'object_' + str(i) + '.png'), transition['object_masks'][i])
 
+        pickle.dump(len(transition['object_masks']), open(os.path.join(folder_name, 'num_objects'), 'wb'))
         pickle.dump(transition['target_id'], open(os.path.join(folder_name, 'target_id'), 'wb'))
         pickle.dump(transition['bboxes'], open(os.path.join(folder_name, 'bboxes'), 'wb'))
 
@@ -136,9 +137,10 @@ class ReplayBuffer:
             target_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'target_mask.png'), -1)
             target_id = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'target_id'), 'rb'))
             bboxes = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'bboxes'), 'rb'))
+            num_objects = pickle.load(open(os.path.join(self.save_dir, dir_ids[idx], 'num_objects'), 'rb'))
 
             object_masks = []
-            for i in range(len(bboxes)):
+            for i in range(num_objects):
                 object_mask = cv2.imread(os.path.join(self.save_dir, dir_ids[idx], 'object_' + str(i) + '.png'), -1)
                 if object_mask is None:
                     break
