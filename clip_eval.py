@@ -234,40 +234,12 @@ class ZeroShotCLIPRemovalPredictor:
 
 # Example usage
 if __name__ == "__main__":
-    # Create some synthetic masks for demonstration
-    def create_synthetic_scene():
-        canvas = np.zeros((224, 224))
-        
-        # Create target object in the middle
-        target_mask = np.zeros((224, 224))
-        target_mask[80:140, 80:140] = 1
-        
-        # Create obstacles
-        obstacles = []
-        
-        # Obstacle 1: Directly blocking the target
-        obstacle1 = np.zeros((224, 224))
-        obstacle1[50:100, 100:150] = 1
-        obstacles.append(obstacle1)
-        
-        # Obstacle 2: Partially blocking
-        obstacle2 = np.zeros((224, 224))
-        obstacle2[140:170, 90:130] = 1
-        obstacles.append(obstacle2)
-        
-        # Obstacle 3: Not blocking
-        obstacle3 = np.zeros((224, 224))
-        obstacle3[40:80, 170:200] = 1
-        obstacles.append(obstacle3)
-        
-        return obstacles, target_mask
     
     # Initialize the predictor
     clip_predictor = ZeroShotCLIPRemovalPredictor()
     
-    # Create a synthetic scene
-    obstacles, target = create_synthetic_scene()
-    
     # Predict which obstacle to remove
-    removal_idx = clip_predictor.predict_removal(obstacles, target)
-    print(f"CLIP predicts removing obstacle {removal_idx} first")
+    # removal_idx = clip_predictor.predict_removal(obstacles, target)
+    # print(f"CLIP predicts removing obstacle {removal_idx} first")
+
+    clip_predictor.eval()
