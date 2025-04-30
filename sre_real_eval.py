@@ -65,14 +65,26 @@ def run_sre_policy():
 
     for idx, transition_dir in enumerate(transition_dirs):
         print("Transition Directory:", transition_dir)
+        if transition_dir[-2:] != "00":
+            continue
+
         scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
         scene_image = cv2.resize(scene_image, (400, 400)) 
 
         obstacle_id = policy.real_image_inference(target_mask, object_masks, bboxes)
-        obstacle_mask = object_masks[obstacle_id]
+        obstacle_mask = object_masks[3]
  
-        # c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
-        # c_obstacle_mask = general_utils.extract_target_crop2(obstacle_mask, scene_image)
+        c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
+        sre_obstacle_mask = general_utils.extract_target_crop2(obstacle_mask, scene_image)
+
+        clip_obstacle_mask = general_utils.extract_target_crop2(object_masks[2], scene_image)
+        gpt_no_obstacle_mask = general_utils.extract_target_crop2(object_masks[obstacle_id], scene_image)
+
+        cv2.imwrite('scene_image.png', scene_image)
+        cv2.imwrite('c_target_mask.png', c_target_mask)
+        cv2.imwrite('sre_obstacle_mask.png', sre_obstacle_mask)
+        cv2.imwrite('clip_obstacle_mask.png', clip_obstacle_mask)
+        cv2.imwrite('gpt_no_obstacle_mask.png', gpt_no_obstacle_mask)
 
         print("Target ID:", target_id)
         print("Obstacle ID:", obstacle_id)

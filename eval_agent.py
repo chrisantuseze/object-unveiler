@@ -293,7 +293,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     """
     query_frequency = args.chunk_size
     temporal_agg = args.temporal_agg
-    # state_dim = 8
     state_dim = 4
     if temporal_agg:
         query_frequency = 1
@@ -305,7 +304,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         all_time_actions = torch.zeros([max_timesteps + 5, max_timesteps+num_queries, state_dim]).to(args.device)
         print("All time actions shape -", all_time_actions.shape)
 
-    episode_seed = 1791095845
     env.seed(episode_seed)
     obs = env.reset()
 
@@ -329,10 +327,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
     processed_masks = copy.deepcopy(initial_masks)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
 
-    # get a randomly picked target mask from the segmented image
-    # target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
-    target_mask, target_id = initial_masks[0], 0
-
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs, rng)
     cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
     
     i = 0
@@ -344,25 +339,20 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
         cv2.imwrite(os.path.join(TEST_DIR, "scene.png"), pred_mask)
 
-        # c_object_mask = general_utils.extract_target_crop2(object_mask, obs['color'][1])
         c_target_mask = general_utils.extract_target_crop2(target_mask, obs['color'][1])
 
         fig, ax = plt.subplots(1, 2)
         ax[0].imshow(obs['color'][1])
-        # ax[1].imshow(c_object_mask)
         ax[1].imshow(c_target_mask)
         plt.show()
 
-        traj_data, obs_actions, heightmap, _ = get_obs(0)
-
         end_of_episode = False
         t = 0
-        preds, gt = [], []
+        preds = []
         state = policy.state_representation(obs)
         while not end_of_episode:
             if t % query_frequency == 0:
                 actions = policy.exploit_act(state, c_target_mask, obs)
-                obs_action = obs_actions[t]
 
             if temporal_agg:
                 all_time_actions[[t], t:t+num_queries] = actions
@@ -380,8 +370,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             action = policy.post_process_action(raw_action)
             preds.append(action)
 
-            gt.append(obs_action)
-
             if t % 10 == 0:
                 print(t, ",", env.current_state)
 
@@ -390,8 +378,6 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
 
             t += 1
             end_of_episode = grasp_info['eoe']
-
-        plot_joint_positions_over_time(np.array(gt), np.array(preds))
 
         episode_data['attempts'] += 1
         if grasp_info['collision']:
@@ -561,7 +547,7 @@ def eval_agent(args):
         episode_seed = rng.randint(0, pow(2, 32) - 1)
         logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
 
-        episode_data = run_episode_unveiler(args, policy, env, segmenter, rng, episode_seed)
+        episode_data = run_episode_act(args, policy, env, segmenter, rng, episode_seed)
         eval_data.append(episode_data)
 
         sr_1 += episode_data['sr-1']
@@ -570,8 +556,8 @@ def eval_agent(args):
 
         if episode_data['successful']:
             success_count += 1
-            with open('bin_mask_results.txt', 'a') as file:
-                    file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
+            with open('act_results.txt', 'a') as file:
+                file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
             avg_clutter_score += (episode_data['total_clutter_score']/episode_data['attempts'])
@@ -585,7 +571,7 @@ def eval_agent(args):
         if i % 5 == 0:
             logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    with open('bin_mask_results.txt', 'a') as file:
-                    file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
+    with open('act_results.txt', 'a') as file:
+        file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
 
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

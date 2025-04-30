@@ -53,8 +53,8 @@ class Policy:
         self.reg_optimizer = optim.Adam(self.reg.parameters(), lr=params['agent']['regressor']['learning_rate'])
         self.reg_criterion = nn.L1Loss()
 
-        # self.policy, self.stats = self.make_act_policy()
-        self.policy, self.stats = None, None
+        self.policy, self.stats = self.make_act_policy()
+        # self.policy, self.stats = None, None
 
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
@@ -80,8 +80,8 @@ class Policy:
         task_config = SIM_TASK_CONFIGS['sim_object_unveiler']
 
         ckpt_dir = "act/ckpt"
-        # ckpt_name = f'policy_epoch_500_seed_0.ckpt'
-        ckpt_name = f'policy_best.ckpt'
+        ckpt_name = f'policy_epoch_15000_seed_0.ckpt'
+        # ckpt_name = f'policy_best.ckpt'
         # ckpt_name = f'policy_last.ckpt'
         # self.state_dim = 8
         self.state_dim = 4
@@ -117,9 +117,6 @@ class Policy:
         with open(stats_path, 'rb') as f:
             stats = pickle.load(f)
 
-        # torch.set_printoptions(precision=17)
-        # np.set_printoptions(precision=17)
-
         self.pre_process = lambda s_qpos: (s_qpos - stats['qpos_mean']) / stats['qpos_std']
         self.post_process = lambda a: a * stats['action_std'] + stats['action_mean']
 
@@ -152,13 +149,6 @@ class Policy:
     def get_state_representation(self, obs):
         state = general_utils.get_fused_heightmap(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
         color_heightmap, depth_heightmap = general_utils.get_heightmap_(obs, cameras.RealSense.CONFIG, self.bounds, self.pxl_size)
-
-        # print(color_heightmap.shape, depth_heightmap.shape)
-        # fig, ax = plt.subplots(1, 3)
-        # ax[0].imshow(state)
-        # ax[1].imshow(color_heightmap)
-        # ax[2].imshow(depth_heightmap)
-        # plt.show()
 
         return state, depth_heightmap
     
@@ -576,23 +566,23 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        fig, ax = plt.subplots(2, 2)
+        # fig, ax = plt.subplots(2, 2)
 
-        ax[0][0].imshow(color_image)
-        ax[0][0].set_title("Scene - Color")
-        ax[0][0].axis("off")
+        # ax[0][0].imshow(color_image)
+        # ax[0][0].set_title("Scene - Color")
+        # ax[0][0].axis("off")
 
-        ax[0][1].imshow(scene_mask)
-        ax[0][1].set_title("Scene - Grayscale")
-        ax[0][1].axis("off")
+        # ax[0][1].imshow(scene_mask)
+        # ax[0][1].set_title("Scene - Grayscale")
+        # ax[0][1].axis("off")
 
-        ax[1][0].imshow(target_mask)
-        ax[1][0].set_title("Target")
-        ax[1][0].axis("off")
+        # ax[1][0].imshow(target_mask)
+        # ax[1][0].set_title("Target")
+        # ax[1][0].axis("off")
 
-        ax[1][1].imshow(obstacle_mask)
-        ax[1][1].set_title("Obstacle")
-        ax[1][1].axis("off")
+        # ax[1][1].imshow(obstacle_mask)
+        # ax[1][1].set_title("Obstacle")
+        # ax[1][1].axis("off")
 
         # fig, ax = plt.subplots(1, 3)
         # ax[0].imshow(color_image)

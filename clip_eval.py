@@ -36,55 +36,6 @@ class ZeroShotCLIPRemovalPredictor:
             self.text_features = self.model.encode_text(text)
             self.text_features = self.text_features / self.text_features.norm(dim=-1, keepdim=True)
     
-    def visualize_masks(self, mask_list, target_mask, prediction=None):
-        """
-        Visualize all masks and highlight the predicted mask to remove
-        
-        Args:
-            mask_list: List of object masks
-            target_mask: Target object mask
-            prediction: Index of the predicted object to remove (optional)
-        """
-        plt.figure(figsize=(12, 8))
-        
-        # Show target mask in green
-        plt.subplot(2, len(mask_list) + 1, 1)
-        plt.imshow(target_mask, cmap='Greens')
-        plt.title("Target")
-        plt.axis('off')
-        
-        # Show all obstacle masks
-        for i, mask in enumerate(mask_list):
-            plt.subplot(2, len(mask_list) + 1, i + 2)
-            if prediction is not None and i == prediction:
-                plt.imshow(mask, cmap='Reds')  # Highlight prediction
-                plt.title(f"Obj {i} (Remove!)")
-            else:
-                plt.imshow(mask, cmap='Blues')
-                plt.title(f"Object {i}")
-            plt.axis('off')
-            
-        # Show combined visualization in second row
-        combined = np.zeros((target_mask.shape[0], target_mask.shape[1], 3))
-        combined[:,:,1] = target_mask  # Target in green
-        
-        for i, mask in enumerate(mask_list):
-            if prediction is not None and i == prediction:
-                combined[:,:,0] += mask  # Prediction in red
-            else:
-                combined[:,:,2] += mask  # Other obstacles in blue
-        
-        # Normalize to 0-1 range
-        combined = np.clip(combined, 0, 1)
-        
-        plt.subplot(2, 1, 2)
-        plt.imshow(combined)
-        plt.title("Combined Scene")
-        plt.axis('off')
-        
-        plt.tight_layout()
-        plt.show()
-        
     def prepare_scene_image(self, mask_list, target_mask, canvas_size=(224, 224)):
         """
         Create scene images from masks for CLIP processing
@@ -124,7 +75,7 @@ class ZeroShotCLIPRemovalPredictor:
             
         return processed_images
     
-    def predict_removal(self, mask_list, target_mask, visualize=True):
+    def predict_removal(self, mask_list, target_mask):
         """
         Predict which object should be removed first
         
@@ -159,36 +110,8 @@ class ZeroShotCLIPRemovalPredictor:
             # Get index of the best match
             best_match_idx = torch.argmax(avg_similarity).item()
         
-        if visualize:
-            self.visualize_masks(mask_list, target_mask, best_match_idx)
-            
         return best_match_idx
     
-    def evaluate_on_dataset(self, dataset, ground_truth_removal_indices):
-        """
-        Evaluate model on a dataset of scenes
-        
-        Args:
-            dataset: List of (mask_list, target_mask) pairs
-            ground_truth_removal_indices: List of correct indices to remove
-            
-        Returns:
-            accuracy: Proportion of correct predictions
-        """
-        correct = 0
-        
-        for i, (mask_list, target_mask) in enumerate(dataset):
-            prediction = self.predict_removal(mask_list, target_mask, visualize=False)
-            
-            if prediction == ground_truth_removal_indices[i]:
-                correct += 1
-                
-        accuracy = correct / len(dataset)
-        print(f"Zero-shot CLIP accuracy: {accuracy:.4f} ({correct}/{len(dataset)})")
-        
-        return accuracy
-    
-
     def eval(self):
         dataset_dir = "real_images/seg_data"
 
@@ -205,7 +128,7 @@ class ZeroShotCLIPRemovalPredictor:
             scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
             scene_image = cv2.resize(scene_image, (400, 400)) 
 
-            prediction = self.predict_removal(object_masks, target_mask, visualize=False)
+            prediction = self.predict_removal(object_masks, target_mask)
             obstacle_mask = object_masks[prediction]
  
             c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
