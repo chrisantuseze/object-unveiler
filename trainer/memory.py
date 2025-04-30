@@ -77,12 +77,13 @@ class ReplayBuffer:
             logging.info(e, "- Failed episode:", episode)
 
         data = episode_data[0]
+        scene_image = data['color_obs']
         target_mask = data['target_mask']
         object_masks = data['object_masks']
         objects_to_remove = data['objects_to_remove_new']
         bboxes = data['bboxes']
 
-        return target_mask, object_masks, objects_to_remove, bboxes
+        return scene_image, target_mask, object_masks, objects_to_remove, bboxes
     
     def load_episode_decoder(self, episode):
         try:

@@ -80,17 +80,16 @@ def train_sre(args):
         model.train()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
-            target = batch[0].to(args.device)
-            object_masks = batch[1].to(args.device)
+            scene_image = batch[0].to(args.device)
+            target = batch[1].to(args.device)
+            object_masks = batch[2].to(args.device)
 
-            bbox = batch[2].to(args.device)
-            is_valid = batch[3].to(args.device)
+            bbox = batch[3].to(args.device)
             objects_to_remove = batch[4].to(args.device)
             
-            pred, valid_mask = model(target, object_masks, bbox)
+            pred, valid_mask = model(scene_image, target, object_masks, bbox)
 
             # Compute loss in the whole scene
-            # loss = compute_loss(pred, objects_to_remove, valid_mask)
             loss = F.cross_entropy(pred, objects_to_remove)
             
             optimizer.zero_grad()
@@ -104,17 +103,16 @@ def train_sre(args):
         # for phase in ['val']:
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                target = batch[0].to(args.device)
-                object_masks = batch[1].to(args.device)
+                scene_image = batch[0].to(args.device)
+                target = batch[1].to(args.device)
+                object_masks = batch[2].to(args.device)
 
-                bbox = batch[2].to(args.device)
-                is_valid = batch[3].to(args.device)
+                bbox = batch[3].to(args.device)
                 objects_to_remove = batch[4].to(args.device)
                 
-                pred, valid_mask = model(target, object_masks, bbox)
+                pred, valid_mask = model(scene_image, target, object_masks, bbox)
 
                 # Compute loss in the whole scene
-                # loss = compute_loss(pred, objects_to_remove, valid_mask) 
                 loss = F.cross_entropy(pred, objects_to_remove)
 
                 # loss = torch.sum(loss)
@@ -207,14 +205,14 @@ def train_sre_multi(args):
         model.train()
         epoch_loss = {'train': 0.0, 'val': 0.0}
         for step, batch in enumerate(data_loader_train):
-            target = batch[0].to(args.device)
-            object_masks = batch[1].to(args.device)
+            scene_image = batch[0].to(args.device)
+            target = batch[1].to(args.device)
+            object_masks = batch[2].to(args.device)
 
-            bbox = batch[2].to(args.device)
-            is_valid = batch[3].to(args.device)
+            bbox = batch[3].to(args.device)
             objects_to_remove = batch[4].to(args.device)
             
-            pred, valid_mask = model(target, object_masks, bbox)
+            pred, valid_mask = model(scene_image, target, object_masks, bbox)
 
             # Compute loss in the whole scene
             loss = compute_loss(pred, objects_to_remove, valid_mask)
@@ -230,14 +228,14 @@ def train_sre_multi(args):
         # for phase in ['val']:
         for phase in ['train', 'val']:
             for step, batch in enumerate(data_loaders[phase]):
-                target = batch[0].to(args.device)
-                object_masks = batch[1].to(args.device)
+                scene_image = batch[0].to(args.device)
+                target = batch[1].to(args.device)
+                object_masks = batch[2].to(args.device)
 
-                bbox = batch[2].to(args.device)
-                is_valid = batch[3].to(args.device)
+                bbox = batch[3].to(args.device)
                 objects_to_remove = batch[4].to(args.device)
                 
-                pred, valid_mask = model(target, object_masks, bbox)
+                pred, valid_mask = model(scene_image, target, object_masks, bbox)
 
                 # Compute loss in the whole scene
                 loss = compute_loss(pred, objects_to_remove, valid_mask) 
