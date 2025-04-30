@@ -429,7 +429,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
                 target_mask = new_masks[target_id]
 
                 ############# Calculating scores ##########
-                avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+                total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
                 processed_masks = copy.deepcopy(new_masks)
                 n_prev_masks = len(processed_masks)
@@ -454,7 +454,7 @@ def run_episode_act(args, policy: Policy, env: Environment, segmenter: ObjectSeg
             break
 
         ############# Calculating scores ##########
-        avg_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+        total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
         processed_masks = copy.deepcopy(new_masks)
         n_prev_masks = len(processed_masks)
