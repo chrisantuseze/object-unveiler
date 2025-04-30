@@ -16,12 +16,12 @@ class SpatialEncoder(nn.Module):
         self.resnet = torchvision.models.resnet18(pretrained=True)
         self.resnet.fc = nn.Linear(512, hidden_dim)
 
-        # self.object_rel_fc = nn.Sequential(
-        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
-        #     nn.LayerNorm(hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
-        # )
+        self.object_rel_fc = nn.Sequential(
+            nn.Linear(self.args.num_patches * 2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
+        )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -44,8 +44,8 @@ class SpatialEncoder(nn.Module):
         )
 
         self.output_projection = nn.Sequential(
-            # nn.Linear(10240, hidden_dim),
-            nn.Linear(5120, hidden_dim),
+            nn.Linear(10240, hidden_dim),
+            # nn.Linear(5120, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -134,7 +134,43 @@ class SpatialEncoder(nn.Module):
         all_edge_features = torch.stack(all_edge_features).to(self.args.device)
         return all_edge_features, valid_mask
         
-    def forward(self, scene_image, target_mask, object_masks, bboxes):
+    def forward(self, target_mask, object_masks, bboxes):
+        B, N, C, H, W = object_masks.shape
+        
+        target_mask = self.normalize(target_mask)
+        object_masks = self.normalize(object_masks)
+        
+        # Extract visual features
+        target_feat = self.resnet(target_mask.repeat(1, 3, 1, 1)).view(B, 1, -1)
+        object_masks_flat = object_masks.repeat(1, 1, 3, 1, 1).view(-1, 3, H, W)
+        object_feats = self.resnet(object_masks_flat).view(B, N, -1)
+
+        objects_rel, valid_mask = self.compute_edge_features(bboxes, object_masks, target_mask)
+        spatial_embedding = self.object_rel_fc(objects_rel.view(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
+
+        # valid_mask is True for valid objects, False for padding
+        attention_mask = ~valid_mask  # For transformer, mask is True for positions to be ignored
+        
+        # Project features for attention
+        query = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
+        key = self.W_o(object_feats.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
+
+        # Process through transformer layers
+        x = key
+        for layer in self.layers:
+            x = layer(x, query, key, spatial_embedding, attention_mask)
+            
+        # Final prediction
+        
+        combined_features = torch.cat([x, spatial_embedding], dim=-1) # Shape: [B, N, 1024]
+        logits = self.output_projection(combined_features.reshape(B, -1)) # Shape: [B, N]
+
+        # Mask out padded positions with large negative values
+        logits = logits.masked_fill(attention_mask, -1e4)
+
+        return logits, valid_mask
+    
+    def forward_new(self, scene_image, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         scene_image = self.normalize(scene_image)
