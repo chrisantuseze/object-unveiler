@@ -299,13 +299,19 @@ class PolicyRobotController:
         post_grasp_joints = compute_post_grasp_joints(joint_positions)
         self.move_arm_to_position(post_grasp_joints)
         rospy.sleep(3)
-        
-        # 6. Return to home position
-        self.move_arm_to_position(self.home_position)
+
+        # 6. Move to pre-home position
+        pre_home = self.home_position
+        pre_home[0] = 60.0
+        self.move_arm_to_position(pre_home)
         rospy.sleep(3)
-        
+
         # 7. Open gripper to release object
         self.gripper_control(0)  # Fully open
+        
+        # 8. Return to home position
+        self.move_arm_to_position(self.home_position)
+        rospy.sleep(3)
 
     def move_arm_to_position(self, joint_positions, run_time=2000):
         """Send joint positions to the robot arm"""
