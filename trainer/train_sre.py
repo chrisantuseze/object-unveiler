@@ -30,9 +30,9 @@ def train_sre(args):
         None
     """
 
-    writer = SummaryWriter(comment="sre-multi")
+    writer = SummaryWriter(comment="sre")
 
-    save_path = 'save/sre-multi'
+    save_path = 'save/sre'
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)

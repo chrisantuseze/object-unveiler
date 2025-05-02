@@ -377,15 +377,16 @@ class Policy:
         
         return action
     
-    def get_unveiler_inputs(self, target_mask, processed_masks, bbox):
-        processed_target = general_utils.preprocess_image(target_mask)[0]
-        processed_target = torch.FloatTensor(processed_target).unsqueeze(0).to(self.device)
+    def get_unveiler_inputs(self, color_image, target_mask, processed_masks, bbox):
+        scene_image = general_utils.resize_mask(color_image).mean(axis=2)
+        processed_scene_image = torch.FloatTensor(scene_image).unsqueeze(0).to(self.device)
+
+        processed_target = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
 
         processed_obj_masks = []
         bboxes = []
         for id, mask in enumerate(processed_masks):
-            processed_mask = general_utils.preprocess_image(mask)[0]
-            processed_mask = torch.FloatTensor(processed_mask).to(self.device)
+            processed_mask = torch.FloatTensor(mask).to(self.device)
             processed_obj_masks.append(processed_mask)
 
             bboxes.append(general_utils.resize_bbox(bbox[id]))
@@ -422,7 +423,7 @@ class Policy:
 
         print("ground truth:", objects_to_remove)
 
-        return processed_target, processed_obj_masks, bboxes, bbox
+        return processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox
     
     def get_act_image(self, scene_image, object_mask):
         image_dict = dict()
@@ -536,9 +537,9 @@ class Policy:
         return action
     
     def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
-        processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
+        processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
         
-        logits, valid_mask = self.sre_model(processed_target, processed_obj_masks, bboxes)
+        logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         obstacle_id = top_indices.item()
         print("preds", obstacle_id)
@@ -584,11 +585,11 @@ class Policy:
         # ax[1][1].set_title("Obstacle")
         # ax[1][1].axis("off")
 
-        # fig, ax = plt.subplots(1, 3)
-        # ax[0].imshow(color_image)
-        # ax[1].imshow(target_mask)
-        # ax[2].imshow(obstacle_mask)
-        # plt.show()
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(color_image)
+        ax[1].imshow(target_mask)
+        ax[2].imshow(obstacle_mask)
+        plt.show()
 
         out_prob = self.ae_model(x, obstacle, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)

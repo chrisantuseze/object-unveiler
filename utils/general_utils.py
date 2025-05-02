@@ -202,12 +202,12 @@ def get_target_mask(processed_masks, image, rng):
     id = 0
     if len(processed_masks) > 1:
         # rand_id = rng.randint(0, len(processed_masks) - 1)
-        # mid_id = grasping.find_central_object(processed_masks)
-        _, min_index = grasping.get_most_peripheral_object(processed_masks)
+        mid_id = grasping.find_central_object(processed_masks)
+        # _, min_index = grasping.get_most_peripheral_object(processed_masks)
 
         # Randomly decide between mid_id and the generated number
         # id = rng.choice([mid_id, min_index])
-        id = min_index
+        id = mid_id
 
         target_mask = processed_masks[id]
     elif len(processed_masks) == 1:

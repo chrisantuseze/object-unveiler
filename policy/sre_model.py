@@ -16,12 +16,12 @@ class SpatialEncoder(nn.Module):
         self.resnet = torchvision.models.resnet18(pretrained=True)
         self.resnet.fc = nn.Linear(512, hidden_dim)
 
-        self.object_rel_fc = nn.Sequential(
-            nn.Linear(self.args.num_patches * 2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
-        )
+        # self.object_rel_fc = nn.Sequential(
+        #     nn.Linear(self.args.num_patches * 2, hidden_dim),
+        #     nn.LayerNorm(hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.args.num_patches * hidden_dim//2)
+        # )
 
         self.W_t = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -44,8 +44,8 @@ class SpatialEncoder(nn.Module):
         )
 
         self.output_projection = nn.Sequential(
-            nn.Linear(10240, hidden_dim),
-            # nn.Linear(5120, hidden_dim),
+            # nn.Linear(10240, hidden_dim),
+            nn.Linear(5120, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim*2),
@@ -134,7 +134,7 @@ class SpatialEncoder(nn.Module):
         all_edge_features = torch.stack(all_edge_features).to(self.args.device)
         return all_edge_features, valid_mask
         
-    def forward(self, target_mask, object_masks, bboxes):
+    def forward_old(self, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         target_mask = self.normalize(target_mask)
@@ -170,7 +170,7 @@ class SpatialEncoder(nn.Module):
 
         return logits, valid_mask
     
-    def forward_new(self, scene_image, target_mask, object_masks, bboxes):
+    def forward(self, scene_image, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         scene_image = self.normalize(scene_image)
@@ -191,10 +191,8 @@ class SpatialEncoder(nn.Module):
         
         # Project features for attention
         query = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
-        key = self.W_t(target_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
+        key = self.W_t(scene_feat.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
         value = self.W_o(object_feats.reshape(B, -1)).view(B, N, -1) # Shape: [B, N, 512]
-
-        # spatial_embedding = query
 
         # Process through transformer layers
         x = key

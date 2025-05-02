@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--step', default=500, type=int, help='')
 
     # args for act
-    parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
+    parser.add_argument('--chunk_size', default=5, action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
 
     return parser.parse_args()
@@ -65,7 +65,7 @@ def run_sre_policy():
 
     for idx, transition_dir in enumerate(transition_dirs):
         print("Transition Directory:", transition_dir)
-        if transition_dir[-2:] != "00":
+        if transition_dir[-2:] != "01":
             continue
 
         scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
@@ -85,6 +85,22 @@ def run_sre_policy():
         cv2.imwrite('sre_obstacle_mask.png', sre_obstacle_mask)
         cv2.imwrite('clip_obstacle_mask.png', clip_obstacle_mask)
         cv2.imwrite('gpt_no_obstacle_mask.png', gpt_no_obstacle_mask)
+
+        fig, ax = plt.subplots(1, len(object_masks))
+        for i, mask in enumerate(object_masks):
+            image = general_utils.extract_target_crop2(mask, scene_image)
+            cv2.imwrite(f'object_{i}.png', image)
+
+            ax[i].imshow(mask)
+            ax[i].axis("off")
+        plt.show()
+        
+        cv2.imwrite('scene_mask.png', scene_mask)
+
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(scene_image)
+        ax[1].imshow(scene_mask)
+        plt.show()
 
         print("Target ID:", target_id)
         print("Obstacle ID:", obstacle_id)
