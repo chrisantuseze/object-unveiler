@@ -301,7 +301,7 @@ class PolicyRobotController:
         rospy.sleep(3)
 
         # 6. Move to pre-home position
-        pre_home = self.home_position
+        pre_home = self.home_position[::]
         pre_home[0] = 180.0
         self.move_arm_to_position(pre_home)
         rospy.sleep(3)
