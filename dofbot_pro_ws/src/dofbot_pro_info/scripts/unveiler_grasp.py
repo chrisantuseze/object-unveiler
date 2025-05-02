@@ -302,12 +302,13 @@ class PolicyRobotController:
 
         # 6. Move to pre-home position
         pre_home = self.home_position
-        pre_home[0] = 60.0
+        pre_home[0] = 180.0
         self.move_arm_to_position(pre_home)
         rospy.sleep(3)
 
         # 7. Open gripper to release object
         self.gripper_control(0)  # Fully open
+        rospy.sleep(3)
         
         # 8. Return to home position
         self.move_arm_to_position(self.home_position)
