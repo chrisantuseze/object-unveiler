@@ -45,9 +45,9 @@ class Controller:
         self.gripper_control(1)  # Fully closed
         rospy.sleep(2)
 
-        # home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40]
-        # self.move_arm_to_position(home_position)
-        # rospy.sleep(3)
+        home_position = joint_positions #[90.0, 120.0, 0.0, 0.0, 90.0, 40]
+        self.move_arm_to_position(home_position)
+        rospy.sleep(3)
 
         # 7. Open gripper to release object
         self.gripper_control(0)  # Fully open
