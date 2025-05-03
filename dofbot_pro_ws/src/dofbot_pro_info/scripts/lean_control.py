@@ -37,7 +37,7 @@ class Controller:
         self.pub_arm.publish(arm_joint)
 
     def run(self):
-        joint_positions = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0]
+        joint_positions = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] #[90.0, 36.0, 60.0, 20.0, 90.0, 30.0]
         self.move_arm_to_position(joint_positions)
         rospy.sleep(3)
         
