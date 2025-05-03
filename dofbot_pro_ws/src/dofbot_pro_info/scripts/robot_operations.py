@@ -76,6 +76,7 @@ def compute_post_grasp_joints(grasp_joints):
     post_grasp = grasp_joints.copy()
     post_grasp[1] += 30  # Adjust second joint to lift
     post_grasp[2] -= 20  # Adjust second joint to lift
+    post_grasp[3] += 30  # Adjust second joint to lift
     return post_grasp
 
 def convert_sim_to_robot_pose(sim_pos):

@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints
 import rospy
 from dofbot_pro_info.msg import ArmJoint
 
@@ -12,6 +13,8 @@ class Controller:
 
         # Publisher to control the robot arm
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
+        # Robot arm parameters
+        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
         self.gripper_angle = 30.0
 
     def move_arm_to_position(self, joint_positions, run_time=2000):
@@ -37,23 +40,52 @@ class Controller:
         self.pub_arm.publish(arm_joint)
 
     def run(self):
-        joint_positions = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] #[90.0, 36.0, 60.0, 20.0, 90.0, 30.0]
+        print("Starting controller...")
+        # joint_positions = [90.0, 0.0, 35.0, 150.0, 90.0, 30.0] # peripheral object
+        joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
+        
+        self.step(joint_positions)
+
+        rospy.is_shutdown()
+
+    def step(self, joint_positions):
+        """
+        Execute a complete grasp sequence
+        
+        Args:
+            joint_angles: Target joint angles for grasp position
+        """
+        
+        # 1. Move to pre-grasp position
+        pre_grasp_joints = compute_pre_grasp_joints(joint_positions)
+        self.move_arm_to_position(pre_grasp_joints)
+        rospy.sleep(3)  # Wait for movement to complete
+        
+        # 3. Move to grasp position
         self.move_arm_to_position(joint_positions)
         rospy.sleep(3)
         
         # 4. Close gripper
         self.gripper_control(1)  # Fully closed
         rospy.sleep(2)
+        
+        # 5. Lift object
+        post_grasp_joints = compute_post_grasp_joints(joint_positions)
+        self.move_arm_to_position(post_grasp_joints)
+        rospy.sleep(3)
 
-        home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40]
-        self.move_arm_to_position(home_position)
+        # 6. Move to pre-home position
+        pre_home = [180, 90, 45, 30.0, 90.0, 30.0]
+        self.move_arm_to_position(pre_home)
         rospy.sleep(3)
 
         # 7. Open gripper to release object
         self.gripper_control(0)  # Fully open
         rospy.sleep(3)
-
-        rospy.is_shutdown()
+        
+        # 8. Return to home position
+        self.move_arm_to_position(self.home_position)
+        rospy.sleep(3)
 
 if __name__ == '__main__':
     controller = Controller()
