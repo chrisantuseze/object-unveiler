@@ -1,11 +1,9 @@
+#!/usr/bin/env python3
+
 import numpy as np
 
 import rospy
-from cv_bridge import CvBridge
-from sensor_msgs.msg import Image, CameraInfo
-from dofbot_pro_info.msg import ArmJoint, ObservData, ActionData
-from dofbot_pro_info.msg import *
-from dofbot_pro_info.srv import *
+from dofbot_pro_info.msg import ArmJoint
 
 class Controller:
     def __init__(self):
