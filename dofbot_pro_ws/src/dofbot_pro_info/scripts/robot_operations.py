@@ -67,16 +67,16 @@ def get_fused_heightmap(obs):
 def compute_pre_grasp_joints(grasp_joints):
     """Compute a pre-grasp position slightly above the grasp position"""
     pre_grasp = grasp_joints.copy()
-    pre_grasp[2] += 20  # Adjust second joint to raise arm
-    pre_grasp[3] += 10  # Adjust second joint to raise arm
+    pre_grasp[2] += 20  # Adjust third joint to raise arm
+    pre_grasp[3] += 10  # Adjust fourth joint to raise arm
     return pre_grasp
 
 def compute_post_grasp_joints(grasp_joints):
     """Compute a post-grasp position"""
     post_grasp = grasp_joints.copy()
     post_grasp[1] += 30  # Adjust second joint to lift
-    post_grasp[2] -= 20  # Adjust second joint to lift
-    post_grasp[3] += 30  # Adjust second joint to lift
+    post_grasp[2] -= 20  # Adjust third joint to lift
+    post_grasp[3] += 30  # Adjust fourth joint to lift
     return post_grasp
 
 def convert_sim_to_robot_pose(sim_pos):
