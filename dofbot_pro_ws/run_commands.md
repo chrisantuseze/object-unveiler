@@ -10,6 +10,7 @@ roscore
 rosrun dofbot_pro_info kinemarics_dofbot_pro
 rosrun dofbot_pro_info arm_driver.py
 rosrun dofbot_pro_info unveiler_grasp.py 
+rosrun dofbot_pro_info lean_controller.py 
 
 
 roslaunch orbbec_camera dabai_dcw2.launch

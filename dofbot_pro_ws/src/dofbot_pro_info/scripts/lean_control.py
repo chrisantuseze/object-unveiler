@@ -61,7 +61,7 @@ class Controller:
         # for joint_positions in episode_actions:
         #     self.step(joint_positions)
         #     rospy.sleep(5)
-
+ 
         self.step(joint_positions)
         
         rospy.is_shutdown()
