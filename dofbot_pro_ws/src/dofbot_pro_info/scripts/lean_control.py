@@ -39,13 +39,31 @@ class Controller:
         arm_joint.joints = []
         self.pub_arm.publish(arm_joint)
 
-    def run(self):
+    def run1(self):
         print("Starting controller...")
         # joint_positions = [90.0, 0.0, 35.0, 150.0, 90.0, 30.0] # peripheral object
-        joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
-        
-        self.step(joint_positions)
+        # joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
 
+        episode_actions = [[90.0, 0.0, 35.0, 150.0, 90.0, 30.0], [90.0, 0.0, 70.0, 100.0, 90.0, 30.0]]
+        for joint_positions in episode_actions:
+            self.step(joint_positions)
+            rospy.sleep(5)
+        
+        rospy.is_shutdown()
+
+    def run2(self):
+        print("Starting controller...")
+        joint_positions = [80.0, 0.0, 35.0, 150.0, 90.0, 30.0] # left peripheral object
+        # joint_positions = [100.0, 0.0, 50.0, 120.0, 90.0, 30.0] # right peripheral object
+        # joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
+
+        # episode_actions = [[90.0, 0.0, 35.0, 150.0, 90.0, 30.0], [90.0, 0.0, 70.0, 100.0, 90.0, 30.0]]
+        # for joint_positions in episode_actions:
+        #     self.step(joint_positions)
+        #     rospy.sleep(5)
+
+        self.step(joint_positions)
+        
         rospy.is_shutdown()
 
     def step(self, joint_positions):
@@ -89,4 +107,4 @@ class Controller:
 
 if __name__ == '__main__':
     controller = Controller()
-    controller.run()
+    controller.run2()
