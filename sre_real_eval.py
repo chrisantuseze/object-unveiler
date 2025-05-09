@@ -3,6 +3,7 @@ import os
 
 import cv2
 from matplotlib import pyplot as plt
+import numpy as np
 import torch
 import yaml
 from policy.policy import Policy
@@ -124,6 +125,77 @@ def run_sre_policy():
         # ax[1][1].axis("off")
         # plt.show()
 
+def make_video_visualization():
+    dataset_dir = "real_images/video_seg_data"
+
+    transition_dirs = os.listdir(dataset_dir)
+
+    for file_ in transition_dirs:
+        if not file_.startswith("transition"):
+            transition_dirs.remove(file_)
+            
+    print("Transition Directories:", transition_dirs)
+
+    transition_dirs = ['transition_00000', 'transition_00001', 'transition_00002']
+    print("Transition Directories:", transition_dirs)
+    memory = ReplayBuffer(dataset_dir)
+
+    scenes = [
+        { #0
+            'target_id': 8,
+            'obstacle_ids': [2, 8],
+            'scene_image_dir': ['real_images/video_seg_data/0/1/scene_image.png', 'real_images/video_seg_data/0/2/scene_image.png'],
+            'scene_mask_dir': ['real_images/video_seg_data/0/1/scene_mask.png', 'real_images/video_seg_data/0/2/scene_mask.png'],
+        },
+        { #1
+            'target_id': 2,
+            'obstacle_ids': [2],
+            'scene_image_dir': ['real_images/video_seg_data/1/1/scene_image.png'],
+            'scene_mask_dir': ['real_images/video_seg_data/1/1/scene_mask.png'],
+        },
+        { #2
+            'target_id': 10,
+            'obstacle_ids': [1, 5, 10],
+            'scene_image_dir': ['real_images/video_seg_data/2/1/scene_image.png', 'real_images/video_seg_data/2/2/scene_image.png', 'real_images/video_seg_data/2/3/scene_image.png'],
+            'scene_mask_dir': ['real_images/video_seg_data/2/1/scene_mask.png', 'real_images/video_seg_data/2/2/scene_mask.png', 'real_images/video_seg_data/2/3/scene_mask.png'],
+        },
+    ]
+
+    for idx, transition_dir in enumerate(transition_dirs):
+        scene_image, scene_mask, target_mask, bboxes, target_id, object_masks = memory.load_seg_data(transition_dirs, idx)
+        scene_image = cv2.resize(scene_image, (400, 400)) 
+
+        scene_dict = scenes[idx]
+        target_mask = object_masks[scene_dict['target_id']]
+        c_target_mask = general_utils.extract_target_crop2(target_mask, scene_image)
+
+        for i, obstacle_id in enumerate(scene_dict['obstacle_ids']):
+            obstacle_mask = object_masks[obstacle_id]
+            c_obstacle_mask = general_utils.extract_target_crop2(obstacle_mask, scene_image)
+
+            scene_image_ = cv2.imread(scene_dict['scene_image_dir'][i])
+            scene_mask_ = cv2.imread(scene_dict['scene_mask_dir'][i], -1)
+            scene_image_ = cv2.resize(scene_image_, (400, 400))
+
+            fig, ax = plt.subplots(2, 2)
+            ax[0][0].imshow(scene_image_)
+            ax[0][0].set_title("Scene - Color")
+            ax[0][0].axis("off")
+
+            ax[0][1].imshow(scene_mask_)
+            ax[0][1].set_title("Scene - Grayscale")
+            ax[0][1].axis("off")
+
+            ax[1][0].imshow(c_target_mask)
+            ax[1][0].set_title("Target")
+            ax[1][0].axis("off")
+
+            ax[1][1].imshow(c_obstacle_mask)
+            ax[1][1].set_title("Obstacle")
+            ax[1][1].axis("off")
+
+            plt.tight_layout()
+            plt.show()
 
 if __name__ == "__main__":
-    run_sre_policy()
+    make_video_visualization()

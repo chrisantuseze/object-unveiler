@@ -134,7 +134,7 @@ class SpatialEncoder(nn.Module):
         all_edge_features = torch.stack(all_edge_features).to(self.args.device)
         return all_edge_features, valid_mask
         
-    def forward(self, scene_image, target_mask, object_masks, bboxes):
+    def forward_old(self, scene_image, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         target_mask = self.normalize(target_mask)
@@ -170,7 +170,7 @@ class SpatialEncoder(nn.Module):
 
         return logits, valid_mask
     
-    def forward_new(self, scene_image, target_mask, object_masks, bboxes):
+    def forward(self, scene_image, target_mask, object_masks, bboxes):
         B, N, C, H, W = object_masks.shape
         
         scene_image = self.normalize(scene_image)

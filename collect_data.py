@@ -19,8 +19,8 @@ from utils.constants import *
 from env.env_components import ActionState, AdaptiveActionState
 
 def collect_episodic_dataset(args, params):
-    # save_dir = "save/pc-ou-dataset"
-    save_dir = 'save/act-dataset'
+    save_dir = "save/pc-ou-dataset"
+    # save_dir = 'save/act-dataset'
 
     # create buffer to store the data
     memory = ReplayBuffer(save_dir)
@@ -42,7 +42,7 @@ def collect_episodic_dataset(args, params):
         #     run_episode_act(i, policy, segmenter, env, memory, rng)
         # except Exception as e:
         #     print(e)
-        run_episode_act(i, policy, segmenter, env, memory, rng)
+        run_episode(i, policy, segmenter, env, memory, rng)
 
 def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment, memory: ReplayBuffer, rng):
     episode_seed = rng.randint(0, pow(2, 32) - 1)
@@ -101,10 +101,6 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         next_obs, grasp_info = env.step(env_action3d)
 
         grasp_status.append(grasp_info['stable'])
-
-        # if not grasp_info['stable']:
-        #     print("A failure has been recorded. Episode cancelled.")
-        #     break
 
         print(grasp_info)
         print('---------')

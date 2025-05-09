@@ -159,21 +159,21 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dataset_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset"
-    dataset_dir = "real_images/images"
+    dataset_dir = "real_images/video_images2"
 
     episode_dirs = os.listdir(dataset_dir)
     print("Total length:", len(episode_dirs))
     
-    for file_ in episode_dirs:
-        if not file_.startswith("image"):
-            print(file_)
-            episode_dirs.remove(file_)
+    # for file_ in episode_dirs:
+    #     if not file_.startswith("episode"):
+    #         print(file_)
+    #         episode_dirs.remove(file_)
 
         # if not file_.startswith("transition"):
         #     episode_dirs.remove(file_)
 
     # new_dir = "/home/e_chrisantus/Projects/grasping_in_clutter/object-unveiler/save/pc-ou-dataset-no-crop"
-    new_dir = "real_images/seg_data"
+    new_dir = "real_images/video_seg_data2"
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 

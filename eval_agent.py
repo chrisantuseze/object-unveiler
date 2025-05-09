@@ -208,6 +208,10 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
 
         obs = copy.deepcopy(next_obs)
 
+        res = input("\nDo you want to continue? (y/n) ")
+        if res.lower() == "n":
+            break
+
         new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
         if len(new_masks) == n_prev_masks:
             count += 1

@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints
+from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_pre_grasp_joints, compute_post_grasp_joints
 import rospy
 from dofbot_pro_info.msg import ArmJoint
 
@@ -29,7 +29,7 @@ class Controller:
         """Control the gripper (servo 6) based on aperture"""
         # Map aperture from your policy's range to the robot's range (assumed 30-180)
         # Adjust this mapping based on your specific aperture range
-        gripper_angle = np.interp(aperture, [0, 1], [30, 140])
+        gripper_angle = np.interp(aperture, [0, 0.5, 1], [30, 160, 140])
         self.gripper_angle = gripper_angle
         
         arm_joint = ArmJoint()
@@ -39,34 +39,81 @@ class Controller:
         arm_joint.joints = []
         self.pub_arm.publish(arm_joint)
 
+    def compute_post_grasp_joints(self, grasp_joints):
+        """Compute a post-grasp position"""
+        post_grasp = grasp_joints.copy()
+        post_grasp[1] = 60  # Adjust second joint to lift
+        # post_grasp[2] = 5  # Adjust third joint to lift
+        # post_grasp[3] = 270  # Adjust fourth joint to lift
+        return post_grasp
+    
+    def run0(self):
+        print("Starting controller...")
+        # joint_positions = [90.0, 0.0, 15.0, 180.0, 90.0, 30.0] # peripheral object
+        # joint_positions = [85.0, 0.0, 50.0, 130.0, 90.0, 30.0] # central/target object
+
+        # self.step(joint_positions, 1)
+
+        episode_actions = [
+            {
+                "direction": "left",
+                "joint_positions": [90.0, 0.0, 15.0, 180.0, 90.0, 30.0],
+                "aperture": 0.5,
+            },
+            {
+                "direction": "right",
+                "joint_positions": [85.0, 0.0, 50.0, 130.0, 90.0, 30.0],
+                "aperture": 1,
+            },
+        ]
+        for item in episode_actions:
+            direction = item["direction"]
+            joint_positions = item["joint_positions"]
+
+            print(f"Moving to {direction} position: {joint_positions}")
+            self.step(joint_positions, item["aperture"])
+            rospy.sleep(3)
+        
+        rospy.is_shutdown()
+
     def run1(self):
         print("Starting controller...")
-        # joint_positions = [90.0, 0.0, 35.0, 150.0, 90.0, 30.0] # peripheral object
-        # joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
+        joint_positions = [72.0, 0.0, 20.0, 160.0, 90.0, 30.0]
 
-        episode_actions = [[90.0, 0.0, 35.0, 150.0, 90.0, 30.0], [90.0, 0.0, 70.0, 100.0, 90.0, 30.0]]
-        for joint_positions in episode_actions:
-            self.step(joint_positions)
-            rospy.sleep(5)
-        
+        self.step(joint_positions)
+
         rospy.is_shutdown()
 
     def run2(self):
         print("Starting controller...")
-        joint_positions = [80.0, 0.0, 35.0, 150.0, 90.0, 30.0] # left peripheral object
-        # joint_positions = [100.0, 0.0, 50.0, 120.0, 90.0, 30.0] # right peripheral object
-        # joint_positions = [90.0, 0.0, 70.0, 100.0, 90.0, 30.0] # central/target object
+        episode_actions = [
+            {
+                "direction": "right",
+                "joint_positions": [90.0, 0.0, 5.0, 180.0, 90.0, 30.0],
+                "aperture": 1,
+            },
+            {
+                "direction": "left", # closest to user
+                "joint_positions": [75.0, 0.0, 10.0, 170.0, 90.0, 30.0],
+                "aperture": 1,
+            },
+            {
+                "direction": "central",
+                "joint_positions": [85.0, 0.0, 50.0, 130.0, 90.0, 30.0],
+                "aperture": 0.5,
+            },
+        ]
+        for item in episode_actions:
+            direction = item["direction"]
+            joint_positions = item["joint_positions"]
 
-        # episode_actions = [[90.0, 0.0, 35.0, 150.0, 90.0, 30.0], [90.0, 0.0, 70.0, 100.0, 90.0, 30.0]]
-        # for joint_positions in episode_actions:
-        #     self.step(joint_positions)
-        #     rospy.sleep(5)
- 
-        self.step(joint_positions)
-        
+            print(f"Moving to {direction} position: {joint_positions}")
+            self.step(joint_positions, item["aperture"])
+            rospy.sleep(3)
+         
         rospy.is_shutdown()
 
-    def step(self, joint_positions):
+    def step(self, joint_positions, aperture=1):
         """
         Execute a complete grasp sequence
         
@@ -84,11 +131,11 @@ class Controller:
         rospy.sleep(3)
         
         # 4. Close gripper
-        self.gripper_control(1)  # Fully closed
+        self.gripper_control(aperture)  # Fully closed
         rospy.sleep(2)
         
         # 5. Lift object
-        post_grasp_joints = compute_post_grasp_joints(joint_positions)
+        post_grasp_joints = self.compute_post_grasp_joints(joint_positions)
         self.move_arm_to_position(post_grasp_joints)
         rospy.sleep(3)
 
@@ -107,4 +154,4 @@ class Controller:
 
 if __name__ == '__main__':
     controller = Controller()
-    controller.run2()
+    controller.run0()
