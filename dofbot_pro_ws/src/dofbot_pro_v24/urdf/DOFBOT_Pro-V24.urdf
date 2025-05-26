@@ -3,7 +3,7 @@
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
-  name="DOFBOT_Pro-V24">
+  name="dofbot_pro_v24">
   <link
     name="base_link">
     <inertial>
@@ -26,7 +26,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/base_link.STL" />
+          filename="package://dofbot_pro_v24/meshes/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -40,7 +40,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/base_link.STL" />
+          filename="package://dofbot_pro_v24/meshes/base_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -66,7 +66,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm1_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm1_Link.STL" />
       </geometry>
       <material
         name="">
@@ -80,7 +80,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm1_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm1_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -124,7 +124,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm2_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm2_Link.STL" />
       </geometry>
       <material
         name="">
@@ -138,7 +138,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm2_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm2_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -182,7 +182,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm3_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm3_Link.STL" />
       </geometry>
       <material
         name="">
@@ -196,7 +196,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm3_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm3_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -240,7 +240,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm4_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm4_Link.STL" />
       </geometry>
       <material
         name="">
@@ -254,7 +254,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm4_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm4_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -298,7 +298,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/DaBai_DCW2_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/DaBai_DCW2_Link.STL" />
       </geometry>
       <material
         name="">
@@ -312,7 +312,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/DaBai_DCW2_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/DaBai_DCW2_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -351,7 +351,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm5_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm5_Link.STL" />
       </geometry>
       <material
         name="">
@@ -365,7 +365,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Arm5_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Arm5_Link.STL" />
       </geometry>
     </collision>
   </link>
@@ -409,7 +409,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink1.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink1.STL" />
       </geometry>
       <material
         name="">
@@ -423,7 +423,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink1.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink1.STL" />
       </geometry>
     </collision>
   </link>
@@ -467,7 +467,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink2.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink2.STL" />
       </geometry>
       <material
         name="">
@@ -481,7 +481,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink2.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink2.STL" />
       </geometry>
     </collision>
   </link>
@@ -524,7 +524,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink1.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink1.STL" />
       </geometry>
       <material
         name="">
@@ -538,7 +538,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink1.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink1.STL" />
       </geometry>
     </collision>
   </link>
@@ -581,7 +581,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink2.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink2.STL" />
       </geometry>
       <material
         name="">
@@ -595,7 +595,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink2.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink2.STL" />
       </geometry>
     </collision>
   </link>
@@ -638,7 +638,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink3.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink3.STL" />
       </geometry>
       <material
         name="">
@@ -652,7 +652,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/rlink3.STL" />
+          filename="package://dofbot_pro_v24/meshes/rlink3.STL" />
       </geometry>
     </collision>
   </link>
@@ -695,7 +695,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink3.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink3.STL" />
       </geometry>
       <material
         name="">
@@ -709,7 +709,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/llink3.STL" />
+          filename="package://dofbot_pro_v24/meshes/llink3.STL" />
       </geometry>
     </collision>
   </link>
@@ -752,7 +752,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Gripping_point_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Gripping_point_Link.STL" />
       </geometry>
       <material
         name="">
@@ -766,7 +766,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://DOFBOT_Pro-V24/meshes/Gripping_point_Link.STL" />
+          filename="package://dofbot_pro_v24/meshes/Gripping_point_Link.STL" />
       </geometry>
     </collision>
   </link>

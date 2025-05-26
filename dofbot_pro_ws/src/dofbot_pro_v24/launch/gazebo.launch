@@ -10,7 +10,7 @@
     name="spawn_model"
     pkg="gazebo_ros"
     type="spawn_model"
-    args="-file $(find DOFBOT_Pro-V24)/urdf/DOFBOT_Pro-V24.urdf -urdf -model DOFBOT_Pro-V24"
+    args="-file $(find dofbot_pro_v24)/urdf/dofbot_pro_v24.urdf -urdf -model dofbot_pro_v24"
     output="screen" />
   <node
     name="fake_joint_calibration"

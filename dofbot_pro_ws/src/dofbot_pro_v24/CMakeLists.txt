@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 
-project(DOFBOT_Pro-V24)
+project(dofbot_pro_v24)
 
 find_package(catkin REQUIRED)
 
