@@ -197,7 +197,7 @@ class SpatialEncoder(nn.Module):
         # Process through transformer layers
         x = key
         for layer in self.layers:
-            x = layer(x, query, key, value, attention_mask)
+            x, self.attn_weights = layer(x, query, key, value, attention_mask)
             
         # Final prediction
         
@@ -243,8 +243,8 @@ class SpatialTransformerLayer(nn.Module):
         key = key.transpose(0, 1)      # [N, B, D]
         spatial_values = spatial_values.transpose(0, 1)  # [N, B, D]
         
-        spatial_attn_out = self.spatial_attn(query, key, spatial_values,
-            key_padding_mask=padding_mask)[0]
+        spatial_attn_out, spatial_attn_out_weights = self.spatial_attn(query, key, spatial_values,
+            key_padding_mask=padding_mask)
         spatial_attn_out = spatial_attn_out.transpose(0, 1)  # [B, N, D]
         x = x + self.dropout(spatial_attn_out)
         
@@ -254,7 +254,7 @@ class SpatialTransformerLayer(nn.Module):
 
         x = self.norm2(x)
         
-        return x
+        return x, spatial_attn_out_weights
     
 def compute_loss(logits, targets, valid_mask):
     """

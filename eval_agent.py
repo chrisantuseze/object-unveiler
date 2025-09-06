@@ -1,4 +1,5 @@
 import pickle
+import time
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -177,11 +178,184 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
     total_clutter_score = 0.0
 
     max_steps = 6
+    times = []
     while episode_data['attempts'] < max_steps:
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
+        start = time.time()
         action = policy.exploit_unveiler(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
+        times.append(time.time() - start)
+
+        env_action3d = policy.action3d(action)
+        next_obs, grasp_info = env.step(env_action3d)
+
+        episode_data['attempts'] += 1
+        if grasp_info['collision']:
+            episode_data['collisions'] += 1
+
+        if grasp_info['stable'] and i ==0:
+            episode_data['sr-1'] += 1
+
+        if grasp_info['stable']:
+            episode_data['sr-n'] += 1
+            episode_data['objects_removed'] += 1
+
+        else:
+            episode_data['fails'] += 1
+
+        print(action)
+        print(grasp_info)
+        print('---------')
+
+        general_utils.delete_episodes_misc(TEST_EPISODES_DIR)
+
+        obs = copy.deepcopy(next_obs)
+
+        res = input("\nDo you want to continue? (y/n) ")
+        if res.lower() == "n":
+            break
+
+        new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
+        if len(new_masks) == n_prev_masks:
+            count += 1
+
+        if count > 2:
+            logging.info("Robot is in an infinite loop")
+            
+            res = input("\nDo you still want to continue? (y/n) ")
+            if res.lower() == "n":
+                res = input("\nDo you think the grasp was successful? (y/n) ")
+                if res.lower() == "y":
+                    logging.info("Target has been grasped!")
+
+                    final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                    episode_data['final_clutter_score'] = final_clutter_score
+                    episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
+                    episode_data['successful'] = True
+                else:
+                    logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+                break
+
+        target_id, target_mask = grasping.find_target(new_masks, target_mask)
+        if target_id == -1:
+            res = input("\nDo you think the target is available? (y/n) ")
+            if res.lower() == "y":
+                target_id = int(input("\nWhat is the index? "))
+                target_mask = new_masks[target_id]
+
+                ############# Calculating scores ##########
+                total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+
+                processed_masks = copy.deepcopy(new_masks)
+                bboxes = copy.deepcopy(new_bboxes)
+                n_prev_masks = len(processed_masks)
+                continue
+
+            res = input("\nDo you think the grasp was successful? (y/n) ")
+            if res.lower() == "y":
+                logging.info("Target has been grasped!")
+
+                final_clutter_score = grasping.compute_singulation(initial_masks, new_masks)
+                episode_data['final_clutter_score'] = final_clutter_score
+                episode_data['total_clutter_score'] = total_clutter_score if total_clutter_score > 0 else final_clutter_score
+                episode_data['successful'] = True
+            else:
+                logging.info("Target could not be grasped. And it is no longer available in the scene.")
+
+            print('------------------------------------------')
+            break
+
+        if policy.is_terminal(next_obs):
+            break
+
+        ############# Calculating scores ##########
+        total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
+
+        processed_masks = copy.deepcopy(new_masks)
+        bboxes = copy.deepcopy(new_bboxes)
+        n_prev_masks = len(processed_masks)
+
+    logging.info('--------')
+    print("Average inference time:", np.mean(np.array(times)))
+    return episode_data
+
+def run_episode_heuristics(args, policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
+    env.seed(episode_seed)
+    obs = env.reset()
+
+    while not policy.is_state_init_valid(obs):
+        obs = env.reset()
+
+    episode_data = {'sr-1': 0,
+                    'sr-n': 0,
+                    'fails': 0,
+                    'attempts': 0,
+                    'collisions': 0,
+                    'objects_removed': 0,
+                    'objects_in_scene': len(obs['full_state']),
+                    'total_clutter_score': 0.0,
+                    'final_clutter_score': 0.0,
+                    'num_objects': env.scene_nr_objs,
+                    'successful': False,
+                }
+    
+    initial_masks, pred_mask, raw_masks, bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
+    processed_masks = copy.deepcopy(initial_masks)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_scene.png"), pred_mask)
+    cv2.imwrite(os.path.join(TEST_DIR, "color0.png"), obs['color'][0])
+    cv2.imwrite(os.path.join(TEST_DIR, "color1.png"), obs['color'][1])
+
+    # get a randomly picked target mask from the segmented image
+    target_mask, target_id = general_utils.get_target_mask(processed_masks, obs['color'][1], rng)
+    print("Target ID:", target_id)
+    cv2.imwrite(os.path.join(TEST_DIR, "initial_target_mask.png"), target_mask)
+    
+    i = 0
+    n_prev_masks, count = 0, 0
+    total_clutter_score = 0.0
+
+    max_steps = 6
+    while episode_data['attempts'] < max_steps:
+        cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
+
+        objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
+
+        if len(objects_to_remove) < 4 and target_id in objects_to_remove:
+            objects_to_remove.remove(target_id)
+            objects_to_remove = [target_id] + objects_to_remove
+
+        obstacle_id = objects_to_remove[0]
+
+        fig, ax = plt.subplots(2, 2)
+
+        ax[0][0].imshow(obs['color'][1])
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
+
+        ax[0][1].imshow(pred_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
+
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
+
+        ax[1][1].imshow(processed_masks[obstacle_id])
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
+
+        plt.show()
+
+        state, depth_heightmap = policy.get_state_representation(obs)
+        try:
+            # Select action
+            action = policy.guided_exploration_old(depth_heightmap, processed_masks[obstacle_id])
+        except Exception as e:
+            obs = env.reset()
+            print("Resetting environment:", e)
+            break
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
@@ -560,7 +734,7 @@ def eval_agent(args):
 
         if episode_data['successful']:
             success_count += 1
-            with open('unveiler_results.txt', 'a') as file:
+            with open('clip_results.txt', 'a') as file:
                 file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
@@ -575,7 +749,7 @@ def eval_agent(args):
         if i % 5 == 0:
             logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    with open('unveiler_results.txt', 'a') as file:
+    with open('clip_results.txt', 'a') as file:
         file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
 
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

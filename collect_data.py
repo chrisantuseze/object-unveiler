@@ -86,6 +86,26 @@ def run_episode(i, policy: Policy, segmenter: ObjectSegmenter, env: Environment,
         # cv2.imwrite(os.path.join(TRAIN_DIR, "scene.png"), pred_mask)
         print("target id:", target_id)
 
+        fig, ax = plt.subplots(2, 2)
+
+        ax[0][0].imshow(obs['color'][1])
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
+
+        ax[0][1].imshow(pred_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
+
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
+
+        ax[1][1].imshow(processed_masks[node_id])
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
+
+        plt.show()
+
         state, depth_heightmap = policy.get_state_representation(obs)
         try:
             # Select action

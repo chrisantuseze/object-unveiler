@@ -18,7 +18,7 @@ import policy.grasping as grasping
 import utils.logger as logging
 from skimage import transform
 
-def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
+def run_episode_decoder_only(policy: Policy, env: Environment, segmenter: ObjectSegmenter, rng, episode_seed, max_steps=15):
     """
     Runs a single episode for evaluating direct target grasping with heuristics.
     Parameters:
@@ -76,7 +76,7 @@ def run_episode_encoder_only(policy: Policy, env: Environment, segmenter: Object
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
-        action = policy.exploit_encoder_only(state, obs['color'][1], target_mask)
+        action = policy.exploit_decoder_only(state, obs['color'][1], target_mask)
 
         env_action3d = policy.action3d(action)
         next_obs, grasp_info = env.step(env_action3d)
