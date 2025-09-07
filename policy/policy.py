@@ -541,9 +541,9 @@ class Policy:
     def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
         processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox, gt = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
         
-        logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
-        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-        obstacle_id = top_indices.item()
+        # logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
+        # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        # obstacle_id = top_indices.item()
 
         # n_parameters = sum(p.numel() for p in self.sre_model.parameters())
         # print("SRE - number of parameters: %.2fM" % (n_parameters/1e6,)) #70.49M
@@ -553,26 +553,20 @@ class Policy:
 
         # n_parameters = sum(p.numel() for p in self.clipPredictor.model.parameters())
         # print("CLIP - number of parameters: %.2fM" % (n_parameters/1e6,)) #151.28M
-
-        print("bbox", bbox)
         
-        test_scene = {
-            'rgb': color_image,
-            'object_bboxes': bbox.squeeze(0).numpy(),
-            'obstacle_scores': logits.detach().cpu(),
-            'attention_weights': self.sre_model.attn_weights.detach().cpu(),
-            'target_bbox': bboxes[0, -1].cpu().numpy(),
-            'valid_mask': valid_mask.detach().cpu().numpy(),
-            'gt': gt.cpu().numpy()
-        }
-        do_analysis(test_scene)
+        # test_scene = {
+        #     'rgb': color_image,
+        #     'object_bboxes': bbox.squeeze(0).numpy(),
+        #     'obstacle_scores': logits.detach().cpu(),
+        #     'attention_weights': self.sre_model.attn_weights.detach().cpu(),
+        #     'target_bbox': bboxes[0, -1].cpu().numpy(),
+        #     'valid_mask': valid_mask.detach().cpu().numpy(),
+        #     'gt': gt.cpu().numpy()
+        # }
+        # do_analysis(test_scene)
 
-
-        # visualize_attention(torch.FloatTensor(color_image), bboxes.cpu().squeeze(0).numpy(), self.sre_model.attn_weights.detach().cpu(), obstacle_id, valid_mask)
-
-
-        # obstacle_id = self.clipPredictor.predict_removal(processed_masks, target_mask)
-        # print("preds", obstacle_id)
+        obstacle_id = self.clipPredictor.predict_removal(processed_masks, target_mask)
+        print("preds", obstacle_id)
 
         # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
         # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)

@@ -44,9 +44,9 @@ class Environment:
         self.pxl_size = params['env']['pixel_size']
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
-        # self.nr_objects = [2, 6]
+        self.nr_objects = [2, 6]
         # self.nr_objects = [6, 9]
-        self.nr_objects = [9, 12]
+        # self.nr_objects = [9, 12]
 
 
         # Setup cameras.
@@ -70,8 +70,8 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        p.connect(p.DIRECT)
-        # p.connect(p.GUI)
+        # p.connect(p.DIRECT)
+        p.connect(p.GUI)
         # Move default camera closer to the scene.
         target = np.array(self.workspace_pos)
         p.resetDebugVisualizerCamera(
