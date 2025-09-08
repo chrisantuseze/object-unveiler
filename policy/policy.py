@@ -1,7 +1,7 @@
 import os
 import pickle
-from baselines.clip_eval import ZeroShotCLIPRemovalPredictor
-from baselines.gpt import GPTRemovalPredictor
+from baseline.clip_eval import ZeroShotCLIPRemovalPredictor
+from baseline.gpt import GPTRemovalPredictor
 from policy.models_target import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
 from policy.ae_model import Regressor, ActionDecoder
