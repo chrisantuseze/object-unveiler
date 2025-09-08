@@ -179,12 +179,14 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
 
     max_steps = 6
     times = []
+
+    old_masks = []
     while episode_data['attempts'] < max_steps:
         cv2.imwrite(os.path.join(TEST_DIR, "target_mask.png"), target_mask)
 
         state = policy.state_representation(obs)
         start = time.time()
-        action = policy.exploit_unveiler(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
+        action = policy.exploit_using_gpt(state, pred_mask, obs['color'][1], target_mask, processed_masks, len(old_masks), bboxes)
         times.append(time.time() - start)
 
         env_action3d = policy.action3d(action)
@@ -273,6 +275,7 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
         ############# Calculating scores ##########
         total_clutter_score += grasping.compute_singulation(processed_masks, new_masks)
 
+        old_masks = copy.deepcopy(processed_masks)
         processed_masks = copy.deepcopy(new_masks)
         bboxes = copy.deepcopy(new_bboxes)
         n_prev_masks = len(processed_masks)

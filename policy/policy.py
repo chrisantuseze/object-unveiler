@@ -1,6 +1,7 @@
 import os
 import pickle
-from clip_eval import ZeroShotCLIPRemovalPredictor
+from baselines.clip_eval import ZeroShotCLIPRemovalPredictor
+from baselines.gpt import GPTRemovalPredictor
 from policy.models_target import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
 from policy.ae_model import Regressor, ActionDecoder
@@ -64,6 +65,7 @@ class Policy:
         self.replay_buffer = ReplayBuffer(demo_save_dir)
 
         self.clipPredictor = ZeroShotCLIPRemovalPredictor()
+        self.gpt4oPredictor = GPTRemovalPredictor()
 
     def seed(self, seed):
         self.rng.seed(seed)
@@ -538,35 +540,81 @@ class Policy:
 
         return action
     
+    def exploit_using_gpt(self, state, scene_mask, color_image, target_mask, processed_masks, old_count, old_obstacle_mask):
+        # Use GPT to select obstacle
+        processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox, gt = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
+
+        if old_count == len(processed_masks):
+            obstacle_mask = old_obstacle_mask
+        else:
+            # call API to get obstacle_id
+            obstacle_id = self.gpt4oPredictor.predict(processed_masks, target_mask)
+
+            if obstacle_id < len(processed_masks):
+                obstacle_mask = processed_masks[obstacle_id]
+            else:
+                obstacle_mask = target_mask
+
+        obstacle = general_utils.preprocess_target(obstacle_mask, state)
+
+        obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+        
+        # find optimal position and orientation
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        fig, ax = plt.subplots(2, 2)
+
+        ax[0][0].imshow(color_image)
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
+
+        ax[0][1].imshow(scene_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
+
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
+
+        ax[1][1].imshow(obstacle_mask)
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
+
+        plt.show()
+
+        out_prob = self.ae_model(x, obstacle, is_volatile=True)
+        out_prob = general_utils.postprocess(out_prob, self.padding_width)
+
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
+
+        # find optimal aperture
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
+
+    
     def exploit_unveiler(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
         processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox, gt = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
         
-        # logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
-        # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
-        # obstacle_id = top_indices.item()
-
-        # n_parameters = sum(p.numel() for p in self.sre_model.parameters())
-        # print("SRE - number of parameters: %.2fM" % (n_parameters/1e6,)) #70.49M
-
-        # n_parameters = sum(p.numel() for p in self.ae_model.parameters())
-        # print("AE - number of parameters: %.2fM" % (n_parameters/1e6,)) #12.54M
-
-        # n_parameters = sum(p.numel() for p in self.clipPredictor.model.parameters())
-        # print("CLIP - number of parameters: %.2fM" % (n_parameters/1e6,)) #151.28M
-        
-        # test_scene = {
-        #     'rgb': color_image,
-        #     'object_bboxes': bbox.squeeze(0).numpy(),
-        #     'obstacle_scores': logits.detach().cpu(),
-        #     'attention_weights': self.sre_model.attn_weights.detach().cpu(),
-        #     'target_bbox': bboxes[0, -1].cpu().numpy(),
-        #     'valid_mask': valid_mask.detach().cpu().numpy(),
-        #     'gt': gt.cpu().numpy()
-        # }
-        # do_analysis(test_scene)
-
-        obstacle_id = self.clipPredictor.predict_removal(processed_masks, target_mask)
-        print("preds", obstacle_id)
+        logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
+        _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        obstacle_id = top_indices.item()
 
         # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
         # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
@@ -574,7 +622,6 @@ class Policy:
         # plt.title("Object Removal Scores")
         # plt.axis("off")
         # plt.show()
-
 
         if obstacle_id < len(processed_masks):
             obstacle_mask = processed_masks[obstacle_id]
