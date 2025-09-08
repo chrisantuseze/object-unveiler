@@ -17,6 +17,8 @@ termcolor
 Pillow
 scikit-image
 tensorboard
+openai==1.106.1
+openai-clip==1.0.1
 
 # for ACT
 #   - python=3.9

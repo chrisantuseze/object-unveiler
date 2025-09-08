@@ -399,7 +399,6 @@ class Policy:
 
         target_id = grasping.get_target_id(target_mask, processed_masks)
         objects_to_remove = grasping.find_obstacles_to_remove(target_id, processed_masks)
-        objects_to_remove = torch.FloatTensor(objects_to_remove).to(self.device)
 
         bboxes = torch.FloatTensor(bboxes).to(self.device)
 
@@ -540,12 +539,13 @@ class Policy:
 
         return action
     
-    def exploit_using_gpt(self, state, scene_mask, color_image, target_mask, processed_masks, old_count, old_obstacle_mask):
+    def exploit_using_gpt(self, state, scene_mask, color_image, target_mask, processed_masks, old_count, bbox):
         # Use GPT to select obstacle
         processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox, gt = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
 
-        if old_count == len(processed_masks):
-            obstacle_mask = old_obstacle_mask
+        if old_count == len(processed_masks) or len(processed_masks) == 1:
+            gt = gt[0] if len(gt) > 0 else 0
+            obstacle_mask = processed_masks[gt]
         else:
             # call API to get obstacle_id
             obstacle_id = self.gpt4oPredictor.predict(processed_masks, target_mask)
