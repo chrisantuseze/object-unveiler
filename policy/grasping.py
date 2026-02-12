@@ -140,7 +140,7 @@ def find_target(processed_masks, old_target_mask):
             id = key
             mask = value[0]
         
-    logging.info("New target id:", id)
+    # logging.info("New target id:", id)
     return id, mask
 
 def get_distance(point1, point2):

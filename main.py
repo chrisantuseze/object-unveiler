@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import torch
 import argparse
+import yaml
 from trainer.train_ae import train_ae, train_fcn_net, train_regressor
 from trainer.train_sre import train_sre, train_sre_multi
+from trainer.train_sre_rl import train_sre_rl
 # from trainer.train import train_fcn_net
 # from eval_agent_target import eval_agent
 from eval_agent import eval_agent
@@ -13,7 +15,7 @@ import utils.logger as logging
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--mode', default='ae', type=str, help='')
+    parser.add_argument('--mode', default='sre-rl', type=str, help='')
     
     # args for eval_agent
     parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
@@ -42,6 +44,11 @@ def parse_args():
     parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
 
+    # args for RL training
+    parser.add_argument('--config', default='config.yaml', type=str, help='Path to config file for environment params')
+    parser.add_argument('--rl_gamma', default=0.99, type=float, help='Discount factor for RL')
+    parser.add_argument('--rl_eps_clip', default=0.2, type=float, help='PPO clip parameter')
+
     return parser.parse_args()
 
 
@@ -54,6 +61,12 @@ if __name__ == "__main__":
 
     if args.mode == 'sre':
         train_sre(args)
+
+    elif args.mode == 'sre-rl':
+        # Load environment parameters
+        with open(args.config, 'r') as f:
+            params = yaml.safe_load(f)
+        train_sre_rl(args, params)
 
     elif args.mode == 'sre-multi':
         train_sre_multi(args)

@@ -4,7 +4,7 @@ torch
 torchvision
 # pybullet==3.0.8
 pybullet
-open3d
+open3d # if you have segfault on open3d, try to downgrade numpy to 1.26.4
 numpy
 matplotlib
 tabulate

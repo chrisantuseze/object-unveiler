@@ -16,6 +16,16 @@ python3 main.py \
 --temporal_agg \
 --seed 1
 
+python3 main.py \
+--mode 'sre-rl' \
+--sre_model 'save/sre/sre_model_best.pt' \
+--config 'yaml/bhand.yml' \
+--seed 42 \
+--epochs 500 \
+--lr 0.00005 \
+--num_patches 10 \
+--patch_size 64 
+
 
 python3 main.py \
 --dataset_dir 'save/ou-dataset' \

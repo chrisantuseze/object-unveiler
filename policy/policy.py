@@ -387,12 +387,14 @@ class Policy:
         scene_image = general_utils.resize_mask(color_image).mean(axis=2)
         processed_scene_image = torch.FloatTensor(scene_image).unsqueeze(0).to(self.device)
 
-        processed_target = torch.FloatTensor(target_mask).unsqueeze(0).to(self.device)
+        resized_target = general_utils.resize_mask(target_mask)
+        processed_target = torch.FloatTensor(resized_target).unsqueeze(0).to(self.device)
 
         processed_obj_masks = []
         bboxes = []
         for id, mask in enumerate(processed_masks):
-            processed_mask = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
+            resized_mask = general_utils.resize_mask(mask)
+            processed_mask = torch.FloatTensor(resized_mask).unsqueeze(0).to(self.device)
             processed_obj_masks.append(processed_mask)
             bboxes.append(general_utils.resize_bbox(bbox[id]))
         processed_obj_masks = torch.stack(processed_obj_masks).to(self.device)
@@ -615,6 +617,7 @@ class Policy:
         logits, valid_mask = self.sre_model(processed_scene_image, processed_target, processed_obj_masks, bboxes)
         _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
         obstacle_id = top_indices.item()
+        print("preds", obstacle_id)
 
         # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
         # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
@@ -638,25 +641,25 @@ class Policy:
         heightmap, self.padding_width = general_utils.preprocess_image(state)
         x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
 
-        # fig, ax = plt.subplots(2, 2)
+        fig, ax = plt.subplots(2, 2)
 
-        # ax[0][0].imshow(color_image)
-        # ax[0][0].set_title("Scene - Color")
-        # ax[0][0].axis("off")
+        ax[0][0].imshow(color_image)
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
 
-        # ax[0][1].imshow(scene_mask)
-        # ax[0][1].set_title("Scene - Grayscale")
-        # ax[0][1].axis("off")
+        ax[0][1].imshow(scene_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
 
-        # ax[1][0].imshow(target_mask)
-        # ax[1][0].set_title("Target")
-        # ax[1][0].axis("off")
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
 
-        # ax[1][1].imshow(obstacle_mask)
-        # ax[1][1].set_title("Obstacle")
-        # ax[1][1].axis("off")
+        ax[1][1].imshow(obstacle_mask)
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
 
-        # plt.show()
+        plt.show()
 
         out_prob = self.ae_model(x, obstacle, is_volatile=True)
         out_prob = general_utils.postprocess(out_prob, self.padding_width)
