@@ -10,6 +10,7 @@ import os
 import copy
 import random
 import numpy as np
+from policy.ae_model import ActionDecoder, Regressor
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,7 +19,6 @@ from matplotlib import pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 from collections import deque
 
-from policy.sre_model import SpatialEncoder
 from mask_rg.object_segmenter import ObjectSegmenter
 from env.environment import Environment
 import utils.rl_rewards as rewards
@@ -26,134 +26,7 @@ import utils.general_utils as general_utils
 import utils.logger as logging
 import policy.grasping as grasping
 from policy.policy import Policy
-
-
-class PPOMemory:
-    """
-    Memory buffer for storing PPO trajectories.
-    """
-    def __init__(self):
-        self.states = []
-        self.actions = []
-        self.logprobs = []
-        self.rewards = []
-        self.is_terminals = []
-        self.values = []
-        
-    def clear(self):
-        del self.states[:]
-        del self.actions[:]
-        del self.logprobs[:]
-        del self.rewards[:]
-        del self.is_terminals[:]
-        del self.values[:]
-    
-    def __len__(self):
-        return len(self.states)
-
-
-class SREActorCritic(nn.Module):
-    """
-    Actor-Critic network for RL fine-tuning of SRE.
-    Uses the pre-trained SRE as the actor, and adds a value head.
-    """
-    def __init__(self, args, sre_pretrained_path=None):
-        super(SREActorCritic, self).__init__()
-        self.args = args
-        
-        # Actor: Pre-trained SRE
-        self.actor = SpatialEncoder(args)
-        
-        # Load pre-trained weights if provided
-        if sre_pretrained_path and os.path.exists(sre_pretrained_path):
-            logging.info(f"Loading pre-trained SRE from {sre_pretrained_path}")
-            self.actor.load_state_dict(torch.load(sre_pretrained_path, map_location=args.device))
-        
-        # Critic: Value network (shares encoder, separate head)
-        # We'll use the same architecture as SRE but output a single value
-        self.critic = nn.Sequential(
-            nn.Linear(args.num_patches, 256),
-            nn.LayerNorm(256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.LayerNorm(128),
-            nn.ReLU(),
-            nn.Linear(128, 1)
-        )
-        
-    def forward(self, scene_image, target_mask, object_masks, bboxes):
-        """
-        Forward pass for both actor and critic.
-        
-        Returns:
-            action_logits: Logits for action distribution [B, N]
-            value: State value estimate [B, 1]
-            valid_mask: Mask of valid objects [B, N]
-        """
-        # Actor forward pass (SRE)
-        # SRE already masks padded positions with -1e4 internally
-        action_logits, valid_mask = self.actor(scene_image, target_mask, object_masks, bboxes)
-        
-        # Critic forward pass: use sanitized logits (no -inf or NaN)
-        # so that LayerNorm inside the critic doesn't produce NaN
-        critic_input = torch.nan_to_num(action_logits, nan=0.0, posinf=0.0, neginf=0.0)
-        critic_input = critic_input.clamp(-100.0, 100.0)
-        value = self.critic(critic_input)
-        
-        # For the action distribution, ensure invalid slots have large
-        # negative logits (SRE uses -1e4; we keep that, no -inf needed)
-        action_logits = torch.nan_to_num(action_logits, nan=-1e4, posinf=-1e4, neginf=-1e4)
-        
-        return action_logits, value, valid_mask
-    
-    def act(self, scene_image, target_mask, object_masks, bboxes, deterministic=False):
-        """
-        Sample an action from the policy.
-        
-        Args:
-            deterministic: If True, select argmax; if False, sample from distribution
-        
-        Returns:
-            action: Selected action (object index)
-            action_logprob: Log probability of the action
-            value: State value estimate
-        """
-        action_logits, value, valid_mask = self.forward(
-            scene_image, target_mask, object_masks, bboxes
-        )
-        
-        # Build distribution from logits (handles softmax internally)
-        dist = torch.distributions.Categorical(logits=action_logits)
-        
-        if deterministic:
-            action = torch.argmax(action_logits, dim=-1)
-        else:
-            action = dist.sample()
-        
-        action_logprob = dist.log_prob(action)
-        
-        return action, action_logprob, value
-    
-    def evaluate(self, scene_image, target_mask, object_masks, bboxes, action):
-        """
-        Evaluate an action taken in a state.
-        
-        Returns:
-            action_logprob: Log probability of the action
-            value: State value estimate
-            dist_entropy: Entropy of the action distribution
-        """
-        action_logits, value, valid_mask = self.forward(
-            scene_image, target_mask, object_masks, bboxes
-        )
-        
-        dist = torch.distributions.Categorical(logits=action_logits)
-        
-        action_logprob = dist.log_prob(action)
-        dist_entropy = dist.entropy()
-        
-        return action_logprob, value, dist_entropy
-
+from policy.sre_actor_critic import SREActorCritic, PPOMemory
 
 class RLEnvironmentWrapper:
     """
@@ -161,6 +34,7 @@ class RLEnvironmentWrapper:
     Provides step(), reset(), and reward computation.
     """
     def __init__(self, args, params, device, rng, num_patches):
+        self.args = args
         self.env = Environment(params)
         self.segmenter = ObjectSegmenter(args)
         self.device = device
@@ -186,6 +60,14 @@ class RLEnvironmentWrapper:
 
         self.policy = Policy(args, params)
         self.policy.seed(args.seed)
+
+        self.ae_model = ActionDecoder(args).to(args.device)
+        self.ae_model.load_state_dict(torch.load(args.ae_model, map_location=args.device))
+        self.ae_model.eval()
+
+        # self.reg = Regressor().to(self.device)
+        # self.reg.load_state_dict(torch.load(args.reg_model, map_location=args.device))
+        # self.reg.eval()
         
     def reset(self, seed=None):
         """
@@ -253,11 +135,25 @@ class RLEnvironmentWrapper:
         if visualize:
             self._visualize_selection(obs_before, action_idx)
 
+        else:
+            # Get heuristic's selection for comparison
+            heuristic_obstacles = grasping.find_obstacles_to_remove(
+                self.target_id, self.object_masks
+            )
+            heuristic_idx = heuristic_obstacles[0] if len(heuristic_obstacles) > 0 else -1
+            
+            print(
+                f"Target ID: {self.target_id} | "
+                f"Predicted obstacle ID: {action_idx} | "
+                f"Heuristic obstacle ID: {heuristic_idx}"
+            )
+
         # Generate grasp action for the selected object
         action_mask = self.object_masks[action_idx]
         if visualize:
             print(f"Generating grasp action for object ID {action_idx}...")
-        env_action = self._generate_grasp_action(action_mask)
+        # env_action = self._generate_grasp_action(action_mask)
+        env_action = self.get_action_from_policy(action_mask)
         
         # print(f"Grasp position: {env_action['pos']}")
         # print(f"Grasp aperture: {env_action['aperture']:.3f}")
@@ -279,6 +175,7 @@ class RLEnvironmentWrapper:
         
         # Find target in new masks
         new_target_id, new_target_mask = grasping.find_target(new_masks, self.target_mask)
+        self.target_id = new_target_id  # Update target ID for next step
         
         # Check if target still exists
         target_reached = (new_target_id == -1 and grasp_info['stable'])
@@ -387,8 +284,9 @@ class RLEnvironmentWrapper:
             return {}
         
         # Get depth heightmap for grasp action generation
-        _, depth_heightmap = self.policy.get_state_representation(obs)
+        state, depth_heightmap = self.policy.get_state_representation(obs)
         self.depth_heightmap = depth_heightmap
+        self.scene_state = state
         
         # Use raw RGB image (obs['color'][1]) as scene_image - matches collect_data.py
         # Then preprocess: resize and convert to grayscale (matches sre_dataset.py)
@@ -443,6 +341,48 @@ class RLEnvironmentWrapper:
         env_action3d = self.policy.action3d(action)
         return env_action3d
     
+    def get_action_from_policy(self, obstacle_mask):
+        obstacle = general_utils.preprocess_target(obstacle_mask, self.scene_state)
+
+        # resized_obstacle_mask = general_utils.resize_mask(obstacle_mask) #For Bin-Mask ablation
+        # obstacle = general_utils.preprocess_image(resized_obstacle_mask)[0]
+        
+        obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.args.device)
+        
+        # find optimal position and orientation
+        heightmap, padding_width = general_utils.preprocess_image(self.scene_state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.args.device)
+
+        out_prob = self.ae_model(x, obstacle, is_volatile=True)
+        out_prob = general_utils.postprocess(out_prob, padding_width)
+
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
+
+        # find optimal aperture
+        # aperture_img = general_utils.preprocess_aperture_image(self.scene_state, p1, theta, padding_width)
+        # x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.args.device)
+        # aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+        
+        # # undo normalization
+        # aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+        #                                 target_range=[self.aperture_limits[0], 
+        #                                                 self.aperture_limits[1]])
+
+        # sample aperture uniformly
+        aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        env_action3d = self.policy.action3d(action)
+
+        return env_action3d
+
 def train_sre_rl(args, params):
     """
     Train SRE with PPO for RL fine-tuning.
@@ -465,7 +405,7 @@ def train_sre_rl(args, params):
     value_coef = 0.5  # Value loss coefficient
     max_grad_norm = 0.5  # Gradient clipping
     
-    episodes_per_update = 10  # Collect this many episodes before PPO update
+    episodes_per_update = 5  # Collect this many episodes before PPO update
     total_episodes = args.epochs  # Reuse epochs argument as episode count
     
     print(f"\n{'#'*70}")
@@ -484,6 +424,10 @@ def train_sre_rl(args, params):
     # Initialize model
     print("Initializing SREActorCritic model...")
     policy = SREActorCritic(args, sre_pretrained_path=args.sre_model).to(args.device)
+    if os.path.exists(args.sre_rl):
+        policy.load_state_dict(torch.load(args.sre_rl, map_location=args.device))
+        print(f"✓ Loaded pre-trained SRE A-C weights from {args.sre_rl}")
+
     optimizer = optim.Adam(policy.parameters(), lr=lr)
     print(f"Model initialized with {sum(p.numel() for p in policy.parameters())} parameters\n")
     
@@ -659,7 +603,7 @@ def train_sre_rl(args, params):
 
 
 def update_policy_ppo(
-    policy, optimizer, memory, gamma, eps_clip, K_epochs,
+    policy: SREActorCritic, optimizer, memory, gamma, eps_clip, K_epochs,
     entropy_coef, value_coef, max_grad_norm, device
 ):
     """

@@ -65,7 +65,7 @@ class ObjectSegmenter:
                 
                 processed_masks.append(img)
                 raw_masks.append(mask)
-                pred_mask[img > 0] = 255 - idx * 20
+                pred_mask[img > 0] = max(1, 255 - idx * 20)
                 name = str(idx) + "mask.png"
                 cv2.imwrite(os.path.join(dir, name), img)
 

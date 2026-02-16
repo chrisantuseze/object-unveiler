@@ -187,7 +187,7 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
         state = policy.state_representation(obs)
         start = time.time()
         # action = policy.exploit_using_gpt(state, pred_mask, obs['color'][1], target_mask, processed_masks, len(old_masks), bboxes)
-        action = policy.exploit_unveiler(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
+        action = policy.exploit_unveiler_rl(state, pred_mask, obs['color'][1], target_mask, processed_masks, bboxes)
         times.append(time.time() - start)
 
         env_action3d = policy.action3d(action)
@@ -711,7 +711,7 @@ def eval_agent(args):
     env = Environment(params, objects_set="unseen")
 
     policy = Policy(args, params)
-    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model)
+    policy.load(ae_model=args.ae_model, reg_model=args.reg_model, sre_model=args.sre_model, sre_rl=args.sre_rl)
 
     segmenter = ObjectSegmenter(args)
 

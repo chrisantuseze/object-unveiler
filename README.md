@@ -11,6 +11,7 @@ python3 main.py \
 --fcn_model 'save/fcn/fcn_model_best.pt' \
 --ae_model 'save/ae/ae_model_best.pt' \
 --sre_model 'save/sre/sre_model_best.pt' \
+--sre_rl 'save/sre_rl/sre_rl_best.pt' \
 --n_scenes 30 \
 --chunk_size 5 \
 --temporal_agg \
@@ -18,10 +19,14 @@ python3 main.py \
 
 python3 main.py \
 --mode 'sre-rl' \
+--reg_model 'downloads/reg_model.pt' \
+--fcn_model 'save/fcn/fcn_model_best.pt' \
+--ae_model 'save/ae/ae_model_best.pt' \
 --sre_model 'save/sre/sre_model_best.pt' \
+--sre_rl 'save/sre_rl/sre_rl_best.pt' \
 --config 'yaml/bhand.yml' \
 --seed 42 \
---epochs 500 \
+--epochs 10000 \
 --lr 0.00005 \
 --num_patches 10 \
 --patch_size 64 
