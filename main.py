@@ -20,7 +20,7 @@ def parse_args():
     # args for eval_agent
     parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
     parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
-    parser.add_argument('--sre_rl', default='save/sre_rl/sre_rl_model_best.pt', type=str, help='')
+    parser.add_argument('--sre_rl', default='save/sre_rl/sre_rl_best.pt', type=str, help='')
     parser.add_argument('--fcn_model', default='save/fcn/fcn_model_best.pt', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
     parser.add_argument('--seed', default=16, type=int, help='')

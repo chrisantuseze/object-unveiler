@@ -908,7 +908,12 @@ class Policy:
         self.sre_model.load_state_dict(torch.load(sre_model, map_location=self.device))
         self.sre_model.eval()
 
-        self.sre_rl.load_state_dict(torch.load(sre_rl, map_location=self.device))
+        # Handle both new-style (full checkpoint) and legacy (state_dict only) formats
+        sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device)
+        if isinstance(sre_rl_checkpoint, dict) and 'model_state_dict' in sre_rl_checkpoint:
+            self.sre_rl.load_state_dict(sre_rl_checkpoint['model_state_dict'])
+        else:
+            self.sre_rl.load_state_dict(sre_rl_checkpoint)
         self.sre_rl.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):

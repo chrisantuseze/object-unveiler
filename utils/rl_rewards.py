@@ -235,9 +235,10 @@ def compute_episode_reward(
         reward_components['speed_bonus'] = 0.0
     
     # ====== 2. TARGET ACCESSIBILITY — select target when graspable ======
-    # Matches heuristic logic: if <=3 objects, target is accessible, just grasp it
+    # Use actual mask overlap to determine if target is accessible,
+    # instead of a hard object-count threshold.
     selected_target = (target_id is not None and removed_idx == target_id)
-    target_accessible = (num_objects <= 3)
+    target_accessible = _is_target_accessible(target_mask, object_masks, target_id)
     
     if selected_target and target_accessible:
         # Correctly chose to grasp the target when it was accessible
@@ -251,13 +252,16 @@ def compute_episode_reward(
     else:
         reward_components['target_selection'] = 0.0
     
-    # ====== 3. DISTANCE-BASED SHAPING (only for obstacle removal) ======
+    # ====== 3. OCCLUSION-BASED SHAPING (only for obstacle removal) ======
+    # Reward removing objects that actually overlap/occlude the target
+    # and that clear the path to the target — not just centroid proximity.
     if not selected_target:
-        distance = compute_target_distance(target_mask, object_masks, removed_idx)
-        distance_reward = 1.0 - distance  # Closer to target = higher reward
-        reward_components['distance'] = distance_reward * 3.0
+        overlap_reward = _compute_overlap_with_target(target_mask, object_masks, removed_idx)
+        clearance_reward = compute_path_clearance_reward(target_mask, object_masks, removed_idx)
+        # Combine: overlap matters most, path clearance is secondary
+        reward_components['occlusion'] = overlap_reward * 2.5 + clearance_reward * 1.5
     else:
-        reward_components['distance'] = 0.0
+        reward_components['occlusion'] = 0.0
     
     # ====== 4. GRASP OUTCOME (light feedback) ======
     if grasp_success:
@@ -272,6 +276,74 @@ def compute_episode_reward(
     total_reward = sum(reward_components.values())
     
     return total_reward, reward_components
+
+
+def _is_target_accessible(target_mask, object_masks, target_id):
+    """
+    Determine if the target is accessible for grasping by checking how much
+    of its surface is occluded by other objects.
+    
+    Uses mask overlap ratio instead of a hard object-count threshold.
+    The target is considered accessible if less than 15% of its pixels
+    are overlapped by other object masks.
+    
+    Args:
+        target_mask: Binary mask of target [H, W]
+        object_masks: Masks of all objects [N, H, W] (may include padding)
+        target_id: Index of the target in object_masks
+    
+    Returns:
+        bool: True if target is accessible for direct grasping
+    """
+    if isinstance(target_mask, torch.Tensor):
+        target_mask = target_mask.cpu().numpy()
+    if isinstance(object_masks, torch.Tensor):
+        object_masks = object_masks.cpu().numpy()
+    
+    target_flat = target_mask.squeeze().astype(bool)
+    target_area = target_flat.sum()
+    
+    if target_area == 0:
+        return False
+    
+    # Accumulate overlap from all non-target objects
+    total_overlap = 0
+    for i, mask in enumerate(object_masks):
+        if i == target_id:
+            continue
+        m = mask.squeeze().astype(bool)
+        if m.sum() == 0:  # skip padding
+            continue
+        total_overlap += np.logical_and(target_flat, m).sum()
+    
+    overlap_ratio = total_overlap / target_area
+    # Target is accessible when less than 15% occluded
+    return overlap_ratio < 0.15
+
+
+def _compute_overlap_with_target(target_mask, object_masks, removed_idx):
+    """
+    Compute how much the removed object overlaps (occludes) the target.
+    Higher overlap means removing it directly helps expose the target.
+    
+    Returns:
+        reward: Normalized overlap reward in [0, 1]
+    """
+    if isinstance(target_mask, torch.Tensor):
+        target_mask = target_mask.cpu().numpy()
+    if isinstance(object_masks, torch.Tensor):
+        object_masks = object_masks.cpu().numpy()
+    
+    target_flat = target_mask.squeeze().astype(bool)
+    removed_flat = object_masks[removed_idx].squeeze().astype(bool)
+    
+    target_area = target_flat.sum()
+    if target_area == 0:
+        return 0.0
+    
+    overlap = np.logical_and(target_flat, removed_flat).sum()
+    # Normalize by target area: what fraction of the target does this object cover?
+    return min(float(overlap) / float(target_area), 1.0)
 
 
 def get_centroid(mask):

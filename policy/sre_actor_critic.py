@@ -71,9 +71,11 @@ class SREActorCritic(nn.Module):
         action_logits, valid_mask = self.actor(scene_image, target_mask, object_masks, bboxes)
         
         # Critic forward pass: use sanitized logits (no -inf or NaN)
-        # so that LayerNorm inside the critic doesn't produce NaN
+        # so that LayerNorm inside the critic doesn't produce NaN.
+        # IMPORTANT: detach so critic loss doesn't send conflicting gradients
+        # through the actor — the critic should only update its own head.
         critic_input = torch.nan_to_num(action_logits, nan=0.0, posinf=0.0, neginf=0.0)
-        critic_input = critic_input.clamp(-100.0, 100.0)
+        critic_input = critic_input.detach().clamp(-100.0, 100.0)
         value = self.critic(critic_input)
         
         # For the action distribution, ensure invalid slots have large

@@ -175,7 +175,11 @@ class RLEnvironmentWrapper:
         
         # Find target in new masks
         new_target_id, new_target_mask = grasping.find_target(new_masks, self.target_mask)
-        self.target_id = new_target_id  # Update target ID for next step
+        
+        # IMPORTANT: Save original target_id for reward computation BEFORE updating.
+        # self.target_id indexes into self.object_masks (pre-removal),
+        # while new_target_id indexes into new_masks (post-removal).
+        old_target_id = self.target_id
         
         # Check if target still exists
         target_reached = (new_target_id == -1 and grasp_info['stable'])
@@ -191,7 +195,7 @@ class RLEnvironmentWrapper:
                 print(f"⚠️  Target lost in scene")
             done = True
         
-        # Compute reward
+        # Compute reward using old_target_id (index into pre-removal object_masks)
         reward, reward_components = rewards.compute_episode_reward(
             target_mask=self.target_mask,
             object_masks=self.object_masks,
@@ -201,9 +205,12 @@ class RLEnvironmentWrapper:
             step_num=self.step_count,
             max_steps=self.max_steps,
             target_reached=target_reached,
-            target_id=self.target_id,
+            target_id=old_target_id,
             num_objects=len(self.object_masks)
         )
+        
+        # Now update target_id for the next step
+        self.target_id = new_target_id
         
         if visualize:
             print(f"Reward: {reward:.4f} | Components: {reward_components}")
@@ -405,7 +412,7 @@ def train_sre_rl(args, params):
     value_coef = 0.5  # Value loss coefficient
     max_grad_norm = 0.5  # Gradient clipping
     
-    episodes_per_update = 5  # Collect this many episodes before PPO update
+    episodes_per_update = 20  # Collect this many episodes before PPO update
     total_episodes = args.epochs  # Reuse epochs argument as episode count
     
     print(f"\n{'#'*70}")
@@ -424,11 +431,35 @@ def train_sre_rl(args, params):
     # Initialize model
     print("Initializing SREActorCritic model...")
     policy = SREActorCritic(args, sre_pretrained_path=args.sre_model).to(args.device)
-    if os.path.exists(args.sre_rl):
-        policy.load_state_dict(torch.load(args.sre_rl, map_location=args.device))
-        print(f"✓ Loaded pre-trained SRE A-C weights from {args.sre_rl}")
-
     optimizer = optim.Adam(policy.parameters(), lr=lr)
+    
+    # Resume from checkpoint if available
+    best_avg_reward = -float('inf')
+    episode_count = 0
+    checkpoint_path = os.path.join(save_path, 'sre_rl_best.pt')
+    
+    # Prefer the path from args if it exists, otherwise check default save_path
+    if os.path.exists(args.sre_rl):
+        checkpoint_path = args.sre_rl
+    
+    if os.path.exists(checkpoint_path):
+        checkpoint = torch.load(checkpoint_path, map_location=args.device)
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            # New-style full checkpoint
+            policy.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            episode_count = checkpoint.get('episode_count', 0)
+            best_avg_reward = checkpoint.get('best_avg_reward', -float('inf'))
+            print(f"✓ Resumed from checkpoint: {checkpoint_path}")
+            print(f"  Episode: {episode_count}, Best Avg Reward: {best_avg_reward:.2f}")
+        else:
+            # Legacy checkpoint (model state_dict only)
+            policy.load_state_dict(checkpoint)
+            print(f"✓ Loaded legacy model weights from {checkpoint_path}")
+            print(f"  (optimizer state and episode count not restored)")
+    else:
+        print(f"No checkpoint found, starting fresh with pre-trained SRE")
+    
     print(f"Model initialized with {sum(p.numel() for p in policy.parameters())} parameters\n")
     
     # Initialize environment
@@ -444,9 +475,6 @@ def train_sre_rl(args, params):
     episode_rewards = deque(maxlen=100)
     episode_lengths = deque(maxlen=100)
     episode_successes = deque(maxlen=100)
-    
-    best_avg_reward = -float('inf')
-    episode_count = 0
 
     debug = False  # Set to True to enable detailed step visualization
     
@@ -573,21 +601,35 @@ def train_sre_rl(args, params):
         #     f"Success Rate = {success_rate:.2%}"
         # )
         
+        # Build checkpoint dict
+        checkpoint = {
+            'model_state_dict': policy.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'episode_count': episode_count,
+            'best_avg_reward': best_avg_reward,
+        }
+        
         # Save best model
         if avg_reward > best_avg_reward:
             best_avg_reward = avg_reward
-            torch.save(policy.state_dict(), os.path.join(save_path, 'sre_rl_best.pt'))
+            checkpoint['best_avg_reward'] = best_avg_reward
+            torch.save(checkpoint, os.path.join(save_path, 'sre_rl_best.pt'))
             print(f"✓ Saved new best model (reward: {best_avg_reward:.2f})\n")
-            # logging.info(f"Saved best model with avg reward: {best_avg_reward:.2f}")
         
         # Periodic checkpoint
         if episode_count % 100 == 0:
-            torch.save(policy.state_dict(), 
+            torch.save(checkpoint, 
                       os.path.join(save_path, f'sre_rl_{episode_count}.pt'))
             print(f"✓ Saved checkpoint at episode {episode_count}\n")
     
     # Save final model
-    torch.save(policy.state_dict(), os.path.join(save_path, 'sre_rl_last.pt'))
+    checkpoint = {
+        'model_state_dict': policy.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'episode_count': episode_count,
+        'best_avg_reward': best_avg_reward,
+    }
+    torch.save(checkpoint, os.path.join(save_path, 'sre_rl_last.pt'))
     writer.close()
     
     print(f"\n{'#'*70}")
@@ -621,6 +663,9 @@ def update_policy_ppo(
         rewards.insert(0, discounted_reward)
     
     rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
+    
+    # Normalize returns for stable critic training
+    rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
     
     # Convert memory to tensors
     old_actions = torch.cat([a for a in memory.actions]).detach().to(device)
