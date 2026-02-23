@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import torch
 import yaml
-from dofbot_pro_ws.src.dofbot_pro_info.scripts.robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, compute_real_pts, convert_sim_to_robot_pose, sim_to_robot
-from policy import grasping
+
+# ---------------------------------------------------------------------------
+# Resolve project root (two levels up from this script's directory) so that
+# all top-level modules (policy, utils, mask_rg, etc.) are importable.
+# ---------------------------------------------------------------------------
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# scripts/ -> dofbot_pro_info/ -> src/ -> dofbot_pro_ws/ -> object-unveiler/
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..', '..', '..', '..'))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+from robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, compute_real_pts, convert_sim_to_robot_pose, sim_to_robot
+import policy.grasping as grasping
 import rospy
 import cv2
 import time
@@ -24,20 +36,19 @@ from std_msgs.msg import String
 from utils.orientation import Quaternion, rot_y
 
 class PolicyRobotController:
-    def __init__(self):
+    def __init__(self, args):
+        self.args = args
+
         # Initialize the ROS node
         rospy.init_node('policy_robot_controller')
-        self.TEST_DIR = "dofbot_pro_ws/src/dofbot_pro_info/scripts/images"
-        if not os.path.exists(self.TEST_DIR):
-            os.makedirs(self.TEST_DIR)
-        
+        self.TEST_DIR = os.path.join(_SCRIPT_DIR, 'images')
+        self.TEST_EPISODES_DIR = os.path.join(self.TEST_DIR, 'episodes')
+        os.makedirs(self.TEST_DIR, exist_ok=True)
+        os.makedirs(self.TEST_EPISODES_DIR, exist_ok=True)
+
         # Publisher to control the robot arm
         self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
         self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
-
-        # compute_real_pts(self.ik_client)
-
-        # compute_R_and_t()
 
         # Image Storage
         self.bridge = CvBridge()
@@ -46,12 +57,12 @@ class PolicyRobotController:
         self.point_cloud = None
         self.state = None
         self.intrinsics = None  # Camera intrinsics
-        
+
         # Image acquisition locks and flags
         self.rgb_lock = False
         self.depth_lock = False
         self.camera_info_received = False
-        
+
         # Subscribers - initialized but not active yet
         self.rgb_sub = None
         self.depth_sub = None
@@ -59,35 +70,50 @@ class PolicyRobotController:
 
         self.action_sub = None
         self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-        # while self.observation_pub.get_num_connections() == 0:
-        #     rospy.loginfo("Waiting for local machine to subscribe...")
-        #     rospy.sleep(0.5)
 
         self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
         self.action = None
 
-        
         # Robot arm parameters
-        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40] #30.0]  # Default home position
+        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40.0]  # Default home position
         self.gripper_angle = 30.0
 
         self.sim_home_position = np.array([0.7, 0.0, 0.2])
-        
+
         # rotation w.r.t. inertia frame
         self.sim_home_quat = Quaternion.from_rotation_matrix(rot_y(-np.pi / 2))
-        
+
+        # -------------------------------------------------------------------
+        # Load policy models
+        # -------------------------------------------------------------------
+        params_path = os.path.join(_PROJECT_ROOT, 'yaml', 'bhand.yml')
+        with open(params_path, 'r') as f:
+            params = yaml.safe_load(f)
+
+        from policy.policy import Policy
+        from mask_rg.object_segmenter import ObjectSegmenter
+
+        self.policy = Policy(args, params)
+        self.policy.load(
+            ae_model=os.path.join(_PROJECT_ROOT, args.ae_model),
+            reg_model=os.path.join(_PROJECT_ROOT, args.reg_model),
+            sre_model=os.path.join(_PROJECT_ROOT, args.sre_model),
+        )
+        self.segmenter = ObjectSegmenter(args)
+        rospy.loginfo("Policy and segmenter loaded.")
+
         # Wait for publisher to connect and camera info to be received
         rospy.sleep(1)
-        
+
         # Move to home position at startup
         self.move_arm_to_position(self.home_position)
         print("Policy Robot Controller initialized")
-        
+
         # Wait for camera info to be received
         start_time = time.time()
         while not self.camera_info_received and time.time() - start_time < 10:
             rospy.sleep(0.1)
-        
+
         if not self.camera_info_received:
             rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
 
@@ -188,51 +214,41 @@ class PolicyRobotController:
         
         return True
     
-    def grasp_object(self, action, i):
+    def grasp_object(self, action_dict):
         """
-        Execute a grasp based on policy prediction
-        
+        Execute a grasp based on policy prediction.
+
         Args:
-            action: The predicted action from the policy
+            action_dict: dict returned by policy.action3d() with keys
+                         'pos' (sim-frame xyz), 'quat', 'aperture', 'push_distance'.
         """
         try:
-            # pos = [action[0], action[1], action[2]]
-            # aperture = action[3]
+            sim_pos = action_dict['pos']          # (x, y, z) in sim metres
+            aperture = action_dict['aperture']    # normalised [0, 1]
 
-            # # Convert to joint angles
-            # joint_angles = self.get_joint_angles_from_pose(pos)
-            
-            # if joint_angles is None:
-            #     rospy.logerr("Failed to compute joint angles, aborting grasp")
-            #     return
-            
-            # joint_angles = [110.0, 36.0, 60.0, 20.0, 90.0, 30.0]
-            # joint_angles = [90.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Left obstacle
-            # joint_angles = [70.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Target
-            # joint_angles = [60.0, 36.0, 60.0, 20.0, 90.0, 30.0] # Right obstacle
+            # Set gripper aperture before reaching the grasp point
+            self.gripper_control(aperture)
+            rospy.sleep(0.5)
 
-            grasp_joints = [
-                [110.0, 36.0, 60.0, 20.0, 90.0, 30.0],
-                [90.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Left obstacle
-                [70.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Target
-                [60.0, 36.0, 60.0, 20.0, 90.0, 30.0], # Right obstacle
-            ]
-            joint_angles = grasp_joints[i if i < len(grasp_joints) else 0]
+            # ------------------------------------------------------------------
+            # IK-based joint solve from sim → robot coordinates
+            # ------------------------------------------------------------------
+            joint_angles = self.get_joint_angles_from_pose(sim_pos)
 
-            # Execute the grasp sequence
-            self.step(joint_angles)
+            if joint_angles is None:
+                rospy.logerr("IK failed — skipping grasp step")
+            else:
+                self.step(joint_angles)
+                print("Grasp executed successfully")
 
-            print("Actions executed successfully\n")
+            rospy.sleep(2)
 
-            # Waiting for a bit to ensure the action is completed
-            rospy.sleep(5)  # Short sleep to avoid CPU hogging
-                        
         except Exception as e:
             rospy.logerr(f"Error executing grasp: {str(e)}")
 
-        general_utils.delete_episodes_misc(self.TEST_DIR)
+        general_utils.delete_episodes_misc(self.TEST_EPISODES_DIR)
 
-        # Get new observation after grasp
+        # Return fresh observation after the grasp
         return self.get_observation()
     
     def get_joint_angles_from_pose(self, pos):
@@ -368,16 +384,13 @@ class PolicyRobotController:
         
         return obs
             
-    def eval_agent(self, args):
-        self.args = args
-
+    def eval_agent(self):
         rng = np.random.RandomState()
-        rng.seed(args.seed)
+        rng.seed(self.args.seed)
 
-        for i in range(args.n_scenes):
+        for i in range(self.args.n_scenes):
             episode_seed = rng.randint(0, pow(2, 32) - 1)
             logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
-
             self.run()
 
         rospy.is_shutdown()
@@ -410,51 +423,99 @@ class PolicyRobotController:
             rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
     
     def run(self):
-        """Main control loop"""
-        rate = rospy.Rate(1)  # 1 Hz, adjust as needed
+        """Run one episode: segment scene, pick target, call policy, execute grasps."""
 
-        # Get initial observation
+        # ------------------------------------------------------------------
+        # 1. Initial observation
+        # ------------------------------------------------------------------
         obs = self.get_observation()
         if obs is None:
             rospy.logerr("Failed to get initial observation")
             return
-        
-        max_steps = 4
+
+        color_img = obs['color']   # HxWx3 BGR
+
+        # ------------------------------------------------------------------
+        # 2. Segment the scene
+        # ------------------------------------------------------------------
+        initial_masks, pred_mask, _, bboxes = self.segmenter.from_maskrcnn(
+            color_img, dir=self.TEST_EPISODES_DIR, bbox=True
+        )
+        if not initial_masks:
+            rospy.logerr("Segmenter returned no masks — ensure objects are visible")
+            return
+
+        processed_masks = copy.deepcopy(initial_masks)
+
+        cv2.imwrite(os.path.join(self.TEST_DIR, 'initial_scene.png'), pred_mask)
+        cv2.imwrite(os.path.join(self.TEST_DIR, 'color0.png'), color_img)
+
+        # ------------------------------------------------------------------
+        # 3. Pick target (operator selects or auto-pick first mask)
+        # ------------------------------------------------------------------
+        rng = np.random.RandomState()
+        target_mask, target_id = general_utils.get_target_mask(
+            processed_masks, color_img, rng
+        )
+        cv2.imwrite(os.path.join(self.TEST_DIR, 'initial_target_mask.png'), target_mask)
+        print(f"Target ID selected: {target_id}")
+
+        # ------------------------------------------------------------------
+        # 4. Episode loop
+        # ------------------------------------------------------------------
+        max_steps = 6
         attempts = 0
+        n_prev_masks = len(processed_masks)
+
         while attempts < max_steps:
-            # self.call_policy_manager()
+            cv2.imwrite(os.path.join(self.TEST_DIR, 'target_mask.png'), target_mask)
 
-            # if self.action is None:
-            #     rospy.logerr("Failed to get action from policy manager")
-            #     attempts += 1
-            #     continue
+            # Policy inference
+            state = self.policy.state_representation(obs)
+            action = self.policy.exploit_unveiler(
+                state, pred_mask, color_img, target_mask, processed_masks, bboxes
+            )
+            action_dict = self.policy.action3d(action)
 
-            # if self.action[0] == 0 and self.action[1] == 0 and self.action[2] == 0 and self.action[3] == 0:
-            #     print("Action is zero. Target is not available")
-            #     break
-        
-            try:
-                # Execute grasp based on policy
-                print("Executing grasp with action:", self.action)
-                next_obs = self.grasp_object(self.action, attempts)
-                if next_obs is None:
-                    rospy.logerr("Failed to get observation after grasp")
-                    attempts += 1
-                    continue
+            print(f"Step {attempts + 1}: sim action pos={action_dict['pos']}, aperture={action_dict['aperture']:.3f}")
 
-                obs = copy.deepcopy(next_obs)
-                cv2.imwrite(os.path.join(self.TEST_DIR, "color0.png"), obs['color'])
-                cv2.imwrite(os.path.join(self.TEST_DIR, "depth0.png"), obs['depth'])
-                
-                attempts += 1
-                rate.sleep()
-                
-            except KeyboardInterrupt:
-                print("Shutting down")
+            # Execute on the real robot
+            next_obs = self.grasp_object(action_dict)
+            attempts += 1
+
+            if next_obs is None:
+                rospy.logerr("Failed to get observation after grasp")
+                continue
+
+            obs = copy.deepcopy(next_obs)
+            color_img = obs['color']
+
+            cv2.imwrite(os.path.join(self.TEST_DIR, f'color_step{attempts}.png'), color_img)
+
+            ask = input("\nContinue to next step? (y/n): ").strip().lower()
+            if ask == 'n':
                 break
-            except Exception as e:
-                rospy.logerr(f"Error in main loop: {str(e)}")
-                attempts += 1
+
+            # Re-segment
+            new_masks, pred_mask, _, new_bboxes = self.segmenter.from_maskrcnn(
+                color_img, dir=self.TEST_EPISODES_DIR, bbox=True
+            )
+
+            # Track target across re-segmentation
+            target_id, target_mask = grasping.find_target(new_masks, target_mask)
+            if target_id == -1:
+                ans = input("Target not auto-found. Is it still available? (y/n): ").strip().lower()
+                if ans == 'n':
+                    print("Episode complete — target grasped or lost.")
+                    break
+                target_id = int(input("Enter target index manually: "))
+                target_mask = new_masks[target_id]
+
+            processed_masks = copy.deepcopy(new_masks)
+            bboxes = copy.deepcopy(new_bboxes)
+            n_prev_masks = len(processed_masks)
+
+        print(f"Episode finished after {attempts} steps.")
 
     def cleanup(self):
         """Clean up subscribers to prevent issues on shutdown"""
@@ -502,9 +563,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # args.device = torch.device("cpu")
     print(f"You are using {args.device}")
 
-    controller = PolicyRobotController()
-    controller.eval_agent(args)
+    controller = PolicyRobotController(args)
+    controller.eval_agent()
     controller.cleanup()
