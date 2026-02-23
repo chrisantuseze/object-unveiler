@@ -4,6 +4,7 @@ from baseline.clip_eval import ZeroShotCLIPRemovalPredictor
 from baseline.gpt import GPTRemovalPredictor
 from policy.models_target import Regressor, ResFCN
 from policy.sre_model import SpatialEncoder
+from policy.sre_actor_critic import SREActorCritic
 from policy.ae_model import Regressor, ActionDecoder
 from mask_rg.object_segmenter import ObjectSegmenter
 import torch
@@ -49,6 +50,7 @@ class Policy:
         self.fcn = ResFCN(args).to(self.device)
         self.ae_model = ActionDecoder(args).to(self.device)
         self.sre_model = SpatialEncoder(args).to(self.device)
+        self.sre_rl = SREActorCritic(args, sre_pretrained_path=args.sre_model).to(self.device)
 
         self.segmenter = ObjectSegmenter(args)
 
@@ -689,6 +691,85 @@ class Policy:
 
         return action
     
+    def exploit_unveiler_rl(self, state, scene_mask, color_image, target_mask, processed_masks, bbox):
+        processed_scene_image, processed_target, processed_obj_masks, bboxes, bbox, gt = self.get_unveiler_inputs(color_image, target_mask, processed_masks, bbox)
+        
+        logits, _, _ = self.sre_rl.act(processed_scene_image, processed_target, processed_obj_masks, bboxes, deterministic=True)
+        # _, top_indices = torch.topk(logits, k=self.args.sequence_length, dim=1)
+        # obstacle_id = top_indices.item()
+        obstacle_id = logits.item()
+        print("preds", obstacle_id)
+
+        # scores = torch.softmax(logits, dim=1)  # Optional: softmax if you want probabilistic scores
+        # heatmap_img = general_utils.visualize_scores_on_scene(scene_mask, bbox, scores, valid_mask)
+        # plt.imshow(heatmap_img)
+        # plt.title("Object Removal Scores")
+        # plt.axis("off")
+        # plt.show()
+
+        if obstacle_id < len(processed_masks):
+            obstacle_mask = processed_masks[obstacle_id]
+        else:
+            obstacle_mask = target_mask
+        obstacle = general_utils.preprocess_target(obstacle_mask, state)
+
+        # resized_obstacle_mask = general_utils.resize_mask(obstacle_mask) #For Bin-Mask ablation
+        # obstacle = general_utils.preprocess_image(resized_obstacle_mask)[0]
+        
+        obstacle = torch.FloatTensor(obstacle).unsqueeze(0).to(self.device)
+        
+        # find optimal position and orientation
+        heightmap, self.padding_width = general_utils.preprocess_image(state)
+        x = torch.FloatTensor(heightmap).unsqueeze(0).to(self.device)
+
+        fig, ax = plt.subplots(2, 2)
+
+        ax[0][0].imshow(color_image)
+        ax[0][0].set_title("Scene - Color")
+        ax[0][0].axis("off")
+
+        ax[0][1].imshow(scene_mask)
+        ax[0][1].set_title("Scene - Grayscale")
+        ax[0][1].axis("off")
+
+        ax[1][0].imshow(target_mask)
+        ax[1][0].set_title("Target")
+        ax[1][0].axis("off")
+
+        ax[1][1].imshow(obstacle_mask)
+        ax[1][1].set_title("Obstacle")
+        ax[1][1].axis("off")
+
+        plt.show()
+
+        out_prob = self.ae_model(x, obstacle, is_volatile=True)
+        out_prob = general_utils.postprocess(out_prob, self.padding_width)
+
+        best_action = np.unravel_index(np.argmax(out_prob), out_prob.shape)
+        p1 = np.array([best_action[3], best_action[2]])
+        theta = best_action[0] * 2 * np.pi/self.rotations
+
+        # find optimal aperture
+        aperture_img = general_utils.preprocess_aperture_image(state, p1, theta, self.padding_width)
+        x = torch.FloatTensor(aperture_img).unsqueeze(0).to(self.device)
+        aperture = self.reg(x).detach().cpu().numpy()[0, 0]
+       
+        # undo normalization
+        aperture = general_utils.min_max_scale(aperture, range=[0, 1], 
+                                       target_range=[self.aperture_limits[0], 
+                                                     self.aperture_limits[1]])
+
+        # sample aperture uniformly
+        # aperture = (self.aperture_limits[0] + self.aperture_limits[1])/2
+
+        action = np.zeros((4,))
+        action[0] = p1[0]
+        action[1] = p1[1]
+        action[2] = theta
+        action[3] = aperture
+
+        return action
+    
     def exploit_unveiler_multi(self, state, target_mask, target_id, processed_masks, bbox):
         processed_target, processed_obj_masks, bboxes, bbox = self.get_unveiler_inputs(target_mask, processed_masks, bbox)
         
@@ -813,7 +894,7 @@ class Policy:
                 'aperture': action[3],
                 'push_distance': self.push_distance}
     
-    def load(self, ae_model, reg_model, sre_model):
+    def load(self, ae_model, reg_model, sre_model, sre_rl):
         # self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
         # self.fcn.eval()
 
@@ -826,6 +907,14 @@ class Policy:
 
         self.sre_model.load_state_dict(torch.load(sre_model, map_location=self.device))
         self.sre_model.eval()
+
+        # Handle both new-style (full checkpoint) and legacy (state_dict only) formats
+        sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device)
+        if isinstance(sre_rl_checkpoint, dict) and 'model_state_dict' in sre_rl_checkpoint:
+            self.sre_rl.load_state_dict(sre_rl_checkpoint['model_state_dict'])
+        else:
+            self.sre_rl.load_state_dict(sre_rl_checkpoint)
+        self.sre_rl.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine
