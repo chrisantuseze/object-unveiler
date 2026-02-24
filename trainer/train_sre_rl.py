@@ -145,7 +145,7 @@ class RLEnvironmentWrapper:
             print(
                 f"Target ID: {self.target_id} | "
                 f"Predicted obstacle ID: {action_idx} | "
-                f"Heuristic obstacle ID: {heuristic_idx}"
+                f"Heuristic obstacle IDs: {heuristic_obstacles}"
             )
 
         # Generate grasp action for the selected object
