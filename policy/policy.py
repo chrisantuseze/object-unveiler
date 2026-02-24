@@ -19,7 +19,7 @@ import numpy as np
 from skimage import transform
 
 import pybullet as p
-from sre_attention_visualizer import do_analysis
+from paper_viz.sre_attention_visualizer import do_analysis
 from trainer.memory import ReplayBuffer
 
 import utils.general_utils as general_utils
@@ -909,7 +909,9 @@ class Policy:
         self.sre_model.eval()
 
         # Handle both new-style (full checkpoint) and legacy (state_dict only) formats
-        sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device)
+        # weights_only=False is required because the checkpoint contains non-tensor data
+        # (optimizer state, episode_count, best_avg_reward which may include numpy scalars)
+        sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device, weights_only=False)
         if isinstance(sre_rl_checkpoint, dict) and 'model_state_dict' in sre_rl_checkpoint:
             self.sre_rl.load_state_dict(sre_rl_checkpoint['model_state_dict'])
         else:

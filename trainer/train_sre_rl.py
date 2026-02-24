@@ -145,7 +145,7 @@ class RLEnvironmentWrapper:
             print(
                 f"Target ID: {self.target_id} | "
                 f"Predicted obstacle ID: {action_idx} | "
-                f"Heuristic obstacle ID: {heuristic_idx}"
+                f"Heuristic obstacle IDs: {heuristic_obstacles}"
             )
 
         # Generate grasp action for the selected object
@@ -408,7 +408,7 @@ def train_sre_rl(args, params):
     gamma = getattr(args, 'rl_gamma', 0.99)  # Discount factor
     eps_clip = getattr(args, 'rl_eps_clip', 0.2)  # PPO clip parameter
     K_epochs = 4  # PPO update epochs
-    entropy_coef = 0.01  # Entropy regularization
+    entropy_coef = 0.05  # Entropy regularization (higher to resist policy collapse)
     value_coef = 0.5  # Value loss coefficient
     max_grad_norm = 0.5  # Gradient clipping
     
@@ -664,8 +664,10 @@ def update_policy_ppo(
     
     rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
     
-    # Normalize returns for stable critic training
-    rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
+    # NOTE: Do NOT normalize returns here. The critic should learn to predict
+    # raw returns. Only advantages are normalized (below). Normalizing returns
+    # creates a scale mismatch with old_values from collection, which can
+    # cause catastrophic policy collapse on the first update.
     
     # Convert memory to tensors
     old_actions = torch.cat([a for a in memory.actions]).detach().to(device)
