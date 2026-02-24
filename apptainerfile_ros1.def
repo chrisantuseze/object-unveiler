@@ -59,6 +59,8 @@ From: nvidia/cuda:11.8.0-runtime-ubuntu20.04
         libsm6 \
         libxext6 \
         libxrender-dev \
+        libgl1-mesa-glx \
+        libgles2-mesa \
         && rm -rf /var/lib/apt/lists/*
 
     # ── ROS 1 Noetic ─────────────────────────────────────────────────────────
@@ -86,16 +88,24 @@ From: nvidia/cuda:11.8.0-runtime-ubuntu20.04
 
     # ── Python inference dependencies ─────────────────────────────────────────
     python3 -m pip install --upgrade pip
+
+    # ROS Noetic apt packages install PyYAML 5.3.1 as a distutils package.
+    # Install the newer version first with --ignore-installed so that pip
+    # never tries to *uninstall* the system copy when resolving dependencies
+    # of open3d, tensorboard, etc.
+    python3 -m pip install --no-cache-dir --ignore-installed pyyaml==6.0
+
     python3 -m pip install --no-cache-dir \
-        numpy==1.26.3 \
+        numpy \
         opencv-python \
-        torch==2.1.2+cu118 \
-        torchvision==0.16.2+cu118 \
-        --extra-index-url https://download.pytorch.org/whl/cu118
+        torch \
+        torchvision 
 
     python3 -m pip install --no-cache-dir \
         pybullet \
         open3d \
+        openai-clip==1.0.1 \
+        openai==1.106.1 \
         matplotlib \
         tabulate \
         imutils \
@@ -105,7 +115,6 @@ From: nvidia/cuda:11.8.0-runtime-ubuntu20.04
         scikit-image \
         tensorboard \
         pyquaternion==0.9.9 \
-        pyyaml==6.0 \
         pexpect==4.8.0 \
         einops \
         packaging \

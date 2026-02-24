@@ -32,6 +32,14 @@ source /opt/ros/noetic/setup.bash
 # ── 3.  Export ROS networking ─────────────────────────────────────────────────
 export ROS_MASTER_URI="http://${LAB_IP}:11311"
 export ROS_IP="${LAB_IP}"
+export ROS_HOSTNAME="${LAB_IP}"   # prevents roscore binding to the wrong interface
+# Prefer container-provided GL libraries so Python/OpenCV doesn't load the
+# host-injected NVIDIA libGL (which may require a newer glibc than the
+# container provides).  Prepend container lib dirs to LD_LIBRARY_PATH.
+export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/usr/lib:${LD_LIBRARY_PATH:-}"
+# Ensure the project workspace is on Python's import path so local modules
+# like `sre_attention_visualizer` can be imported with a bare name.
+export PYTHONPATH="${WORKSPACE_DIR}:${PYTHONPATH:-}"
 
 echo "============================================================"
 echo "  ROS master : ${ROS_MASTER_URI}"
