@@ -1,9 +1,16 @@
-cd echris/object-unveiler
+# Jetson terminal #1
+cd ~/echris/object-unveiler
 source ~/.bashrc
 source /opt/ros/noetic/setup.bash
 source ~/.bashrc
 source dofbot_pro_ws/devel/setup.bash 
+
+# start the driver (leave this terminal open)
+rosrun dofbot_pro_info arm_driver.py
 clear
+
+
+
 
 roscore
 

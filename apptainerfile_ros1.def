@@ -59,6 +59,9 @@ From: nvidia/cuda:11.8.0-runtime-ubuntu20.04
         libsm6 \
         libxext6 \
         libxrender-dev \
+        iputils-ping \
+        net-tools \
+        iproute2 \
         && rm -rf /var/lib/apt/lists/*
 
     # ── ROS 1 Noetic ─────────────────────────────────────────────────────────
