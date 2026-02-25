@@ -2,569 +2,346 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import torch
 import yaml
+import time
+import argparse
 
-# ---------------------------------------------------------------------------
-# Resolve project root (two levels up from this script's directory) so that
-# all top-level modules (policy, utils, mask_rg, etc.) are importable.
-# ---------------------------------------------------------------------------
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# scripts/ -> dofbot_pro_info/ -> src/ -> dofbot_pro_ws/ -> object-unveiler/
+import rospy
+import cv2
+import numpy as np
+
+# Resolve project root so all top-level modules are importable.
+_SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..', '..', '..', '..'))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from robot_operations import compute_R_and_t, compute_post_grasp_joints, compute_pre_grasp_joints, compute_real_pts, convert_sim_to_robot_pose, sim_to_robot
-import policy.grasping as grasping
-import rospy
-import cv2
-import time
-import copy
-import numpy as np
-import argparse
-
+from robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, sim_to_robot
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from dofbot_pro_info.msg import ArmJoint, ObservData, ActionData
-from dofbot_pro_info.msg import *
 from dofbot_pro_info.srv import *
 from utils import general_utils
 import utils.logger as logging
-
-from std_msgs.msg import String
+import utils.orientation as ori
 from utils.orientation import Quaternion, rot_y
+
+
+# ---------------------------------------------------------------------------
+# Coordinate conversion (no ML models required)
+# ---------------------------------------------------------------------------
+
+def action3d_from_params(action, params):
+    """Convert 4-DoF pixel action → 3-D robot pose using yaml workspace params."""
+    pxl_size = params['env']['pixel_size']
+    bounds   = np.array(params['env']['workspace']['bounds'])
+    x    = -(pxl_size * action[0] - bounds[0][1])
+    y    =   pxl_size * action[1] - bounds[1][1]
+    quat = Quaternion.from_rotation_matrix(
+        np.matmul(ori.rot_y(-np.pi / 2), ori.rot_x(action[2]))
+    )
+    return {'pos': np.array([x, y, 0.08]), 'quat': quat,
+            'aperture': action[3], 'push_distance': 0.10}
+
+
+# ---------------------------------------------------------------------------
+# Robot controller
+# ---------------------------------------------------------------------------
 
 class PolicyRobotController:
     def __init__(self, args):
         self.args = args
 
-        # Initialize the ROS node
         rospy.init_node('policy_robot_controller')
+
         self.TEST_DIR = os.path.join(_SCRIPT_DIR, 'images')
         self.TEST_EPISODES_DIR = os.path.join(self.TEST_DIR, 'episodes')
         os.makedirs(self.TEST_DIR, exist_ok=True)
         os.makedirs(self.TEST_EPISODES_DIR, exist_ok=True)
 
-        # Publisher to control the robot arm
-        self.pub_arm = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
-        self.ik_client = rospy.ServiceProxy("get_kinemarics", kinemarics)
-
-        # Image Storage
-        self.bridge = CvBridge()
-        self.rgb_image = None
-        self.depth_image = None
-        self.point_cloud = None
-        self.state = None
-        self.intrinsics = None  # Camera intrinsics
-
-        # Image acquisition locks and flags
-        self.rgb_lock = False
-        self.depth_lock = False
-        self.camera_info_received = False
-
-        # Subscribers - initialized but not active yet
-        self.rgb_sub = None
-        self.depth_sub = None
-        self.camera_info_sub = None
-
-        self.action_sub = None
-        self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-
-        self.raw_color_image, self.raw_depth_image, self.target_mask = None, None, None
-        self.action = None
-
-        # Robot arm parameters
-        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40.0]  # Default home position
+        # Arm control
+        self.pub_arm       = rospy.Publisher("TargetAngle", ArmJoint, queue_size=10)
+        self.ik_client     = rospy.ServiceProxy("get_kinemarics", kinemarics)
+        self.home_position = [90.0, 120.0, 0.0, 0.0, 90.0, 40.0]
         self.gripper_angle = 30.0
 
-        self.sim_home_position = np.array([0.7, 0.0, 0.2])
-
-        # rotation w.r.t. inertia frame
-        self.sim_home_quat = Quaternion.from_rotation_matrix(rot_y(-np.pi / 2))
-
-        # -------------------------------------------------------------------
-        # Load policy models
-        # -------------------------------------------------------------------
-        params_path = os.path.join(_PROJECT_ROOT, 'yaml', 'bhand.yml')
-        with open(params_path, 'r') as f:
-            params = yaml.safe_load(f)
-
-        from policy.policy import Policy
-        from mask_rg.object_segmenter import ObjectSegmenter
-
-        self.policy = Policy(args, params)
-        self.policy.load(
-            ae_model=os.path.join(_PROJECT_ROOT, args.ae_model),
-            reg_model=os.path.join(_PROJECT_ROOT, args.reg_model),
-            sre_model=os.path.join(_PROJECT_ROOT, args.sre_model),
-        )
-        self.segmenter = ObjectSegmenter(args)
-        rospy.loginfo("Policy and segmenter loaded.")
-
-        # Wait for publisher to connect and camera info to be received
-        rospy.sleep(1)
-
-        # Move to home position at startup
-        self.move_arm_to_position(self.home_position)
-        print("Policy Robot Controller initialized")
-
-        # Wait for camera info to be received
-        start_time = time.time()
-        while not self.camera_info_received and time.time() - start_time < 10:
-            rospy.sleep(0.1)
-
-        if not self.camera_info_received:
-            rospy.logwarn("Camera info not received within timeout. Some features may not work properly.")
-
-    def action_sub_callback(self, action_data):
-        self.action = action_data.values
-        self.target_mask = action_data.target_mask
-        print("Received action data", self.action)
-
-    def camera_info_callback(self, msg):
-        """ Extract camera intrinsic parameters. """
-        if self.camera_info_received:
-            self.intrinsics = np.array(msg.K).reshape(3, 3)  # Intrinsic matrix (3x3)
-            self.camera_info_received = False
-        # We can keep this subscription active all the time as the camera parameters don't change
-
-    def rgb_callback(self, msg):
-        """ Callback to receive the RGB image. """
-        if self.rgb_lock:
-            try:
-                self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")  # Convert to OpenCV format
-                self.rgb_image = cv2.flip(self.rgb_image, -1)
-
-                # self.image_pub.publish(msg)
-                self.raw_color_image = msg
-
-                # np.save("rgb_image.npy", self.rgb_image)
-
-                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb_image.png"), self.rgb_image)
-                self.rgb_lock = False  # Release the lock
-            except Exception as e:
-                rospy.logerr(f"RGB conversion error: {e}")
-                self.rgb_lock = False  # Make sure to release the lock even if there's an error
-
-    def depth_callback(self, msg):
-        """ Callback to receive the depth image. """
-        if self.depth_lock:
-            try:
-                # Convert ROS depth image to OpenCV format
-                self.depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1")  # Depth is in 16-bit unsigned int
-                self.depth_image = cv2.flip(self.depth_image, -1)
-
-                self.raw_depth_image = msg
-
-                # Normalize depth to 0–255 and convert to 8-bit for visualization
-                depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
-                depth_vis = depth_vis.astype(np.uint8)
-                cv2.imwrite(os.path.join(self.TEST_DIR, "saved_depth_image.png"), depth_vis)
-
-                # np.save("depth_image.npy", self.depth_image)
-                # np.save("depth_vis.npy", depth_vis)
-                
-                self.depth_lock = False  # Release the lock
-            except Exception as e:
-                rospy.logerr(f"Depth conversion error: {e}")
-                self.depth_lock = False  # Make sure to release the lock even if there's an error
-
-    def get_latest_image(self, timeout=5.0):
-        """
-        Get the latest RGB and depth images on demand
-        
-        Args:
-            timeout: Maximum time to wait for images (seconds)
-            
-        Returns:
-            True if both images were successfully acquired, False otherwise
-        """
-        # Reset image data
-        self.rgb_image = None
+        # Camera state
+        self.bridge      = CvBridge()
+        self.rgb_image   = None
         self.depth_image = None
+        self.intrinsics  = None
+        self.rgb_lock    = False
+        self.depth_lock  = False
+        self.camera_info_received = False
 
+        # On-demand camera subscribers (created once, reused)
+        self.rgb_sub         = None
+        self.depth_sub       = None
+        self.camera_info_sub = None
+
+        # Communication with lab-computer inference server
+        self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
+        self.action_sub      = None
         self.raw_color_image = None
         self.raw_depth_image = None
-        
-        # Set locks to acquire new images
-        self.rgb_lock = True
-        self.depth_lock = True
-        self.camera_info_received = True
-        
-        # Create subscribers if they don't exist
-        if self.rgb_sub is None:
-            self.rgb_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.rgb_callback)
-        
-        if self.depth_sub is None:
-            self.depth_sub = rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
+        self.target_mask     = None
+        self.action          = None
 
+        # Workspace params for pixel → 3-D coordinate conversion
+        params_path = os.path.join(_PROJECT_ROOT, 'yaml', 'bhand.yml')
+        with open(params_path, 'r') as f:
+            self.params = yaml.safe_load(f)
+
+        rospy.sleep(1)
+        self.move_arm_to_position(self.home_position)
+        rospy.loginfo("PolicyRobotController ready — inference on lab computer.")
+
+    # ------------------------------------------------------------------
+    # Subscribers / callbacks
+    # ------------------------------------------------------------------
+
+    def _ensure_camera_subscribers(self):
+        if self.rgb_sub is None:
+            self.rgb_sub = rospy.Subscriber(
+                "/camera/color/image_raw", Image, self._rgb_callback)
+        if self.depth_sub is None:
+            self.depth_sub = rospy.Subscriber(
+                "/camera/depth/image_raw", Image, self._depth_callback)
         if self.camera_info_sub is None:
-            self.camera_info_sub = rospy.Subscriber("/camera/depth/camera_info", CameraInfo, self.camera_info_callback)
-        
-        # Wait for both images to be received
-        start_time = time.time()
-        while (self.rgb_lock or self.depth_lock) and time.time() - start_time < timeout:
-            rospy.sleep(0.05)  # Short sleep to avoid CPU hogging
-        
-        # Check if both images were received
+            self.camera_info_sub = rospy.Subscriber(
+                "/camera/depth/camera_info", CameraInfo, self._camera_info_callback)
+
+    def _rgb_callback(self, msg):
+        if not self.rgb_lock:
+            return
+        try:
+            img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.rgb_image       = cv2.flip(img, -1)
+            self.raw_color_image = msg
+            cv2.imwrite(os.path.join(self.TEST_DIR, "saved_rgb.png"), self.rgb_image)
+        except Exception as e:
+            rospy.logerr(f"RGB callback error: {e}")
+        finally:
+            self.rgb_lock = False
+
+    def _depth_callback(self, msg):
+        if not self.depth_lock:
+            return
+        try:
+            depth = self.bridge.imgmsg_to_cv2(msg, "16UC1")
+            self.depth_image     = cv2.flip(depth, -1)
+            self.raw_depth_image = msg
+            depth_vis = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+            cv2.imwrite(os.path.join(self.TEST_DIR, "saved_depth.png"), depth_vis)
+        except Exception as e:
+            rospy.logerr(f"Depth callback error: {e}")
+        finally:
+            self.depth_lock = False
+
+    def _camera_info_callback(self, msg):
+        if self.camera_info_received:
+            self.intrinsics = np.array(msg.K).reshape(3, 3)
+            self.camera_info_received = False
+
+    def _action_callback(self, msg):
+        self.action      = msg.values
+        self.target_mask = msg.target_mask
+        rospy.loginfo(f"[Jetson] Action received: {list(self.action)}")
+
+    # ------------------------------------------------------------------
+    # Image acquisition
+    # ------------------------------------------------------------------
+
+    def get_latest_image(self, timeout=10.0):
+        """Acquire a fresh RGB + depth frame. Returns True on success."""
+        self.rgb_image = self.depth_image = None
+        self.raw_color_image = self.raw_depth_image = None
+        self.rgb_lock = self.depth_lock = self.camera_info_received = True
+
+        self._ensure_camera_subscribers()
+
+        deadline = time.time() + timeout
+        while (self.rgb_lock or self.depth_lock) and time.time() < deadline:
+            rospy.sleep(0.05)
+
         if self.rgb_image is None or self.depth_image is None:
-            rospy.logwarn(f"Failed to get images within timeout ({timeout}s)")
+            rospy.logwarn(f"Images not received within {timeout}s")
             return False
-        
         return True
     
+    # ------------------------------------------------------------------
+    # Lab-computer communication
+    # ------------------------------------------------------------------
+
+    def call_policy_manager(self, timeout=30.0):
+        """Publish current observation and block until an action is received."""
+        if self.action_sub is None:
+            self.action_sub = rospy.Subscriber(
+                '/action/data', ActionData, self._action_callback)
+
+        if self.raw_color_image is None or self.raw_depth_image is None:
+            rospy.logerr("[Jetson] No images to publish")
+            return
+        if self.intrinsics is None:
+            rospy.logerr("[Jetson] Camera intrinsics not available")
+            return
+
+        obs = ObservData()
+        obs.color_image    = self.raw_color_image
+        obs.depth_image    = self.raw_depth_image
+        obs.cam_intrinsics = self.intrinsics.flatten()
+        if self.target_mask is not None:
+            obs.target_mask = self.target_mask
+
+        self.observation_pub.publish(obs)
+        rospy.loginfo("[Jetson] Observation published — waiting for action…")
+
+        # Stale images consumed; prevent re-sending on the next call
+        self.raw_color_image = self.raw_depth_image = None
+
+        deadline = time.time() + timeout
+        while self.action is None and time.time() < deadline:
+            rospy.sleep(0.1)
+
+        if self.action is None:
+            rospy.logwarn(f"[Jetson] No action received within {timeout}s")
+
+    # ------------------------------------------------------------------
+    # Robot execution
+    # ------------------------------------------------------------------
+
     def grasp_object(self, action_dict):
-        """
-        Execute a grasp based on policy prediction.
-
-        Args:
-            action_dict: dict returned by policy.action3d() with keys
-                         'pos' (sim-frame xyz), 'quat', 'aperture', 'push_distance'.
-        """
+        """Set gripper aperture, solve IK, execute grasp sequence, return to home."""
         try:
-            sim_pos = action_dict['pos']          # (x, y, z) in sim metres
-            aperture = action_dict['aperture']    # normalised [0, 1]
-
-            # Set gripper aperture before reaching the grasp point
-            self.gripper_control(aperture)
+            self.gripper_control(action_dict['aperture'])
             rospy.sleep(0.5)
 
-            # ------------------------------------------------------------------
-            # IK-based joint solve from sim → robot coordinates
-            # ------------------------------------------------------------------
-            joint_angles = self.get_joint_angles_from_pose(sim_pos)
-
-            if joint_angles is None:
-                rospy.logerr("IK failed — skipping grasp step")
+            joint_angles = self.get_joint_angles_from_pose(action_dict['pos'])
+            if joint_angles is not None:
+                self.execute_grasp_sequence(joint_angles)
             else:
-                self.step(joint_angles)
-                print("Grasp executed successfully")
+                rospy.logerr("IK failed — skipping grasp")
 
             rospy.sleep(2)
-
         except Exception as e:
-            rospy.logerr(f"Error executing grasp: {str(e)}")
+            rospy.logerr(f"Grasp error: {e}")
 
         general_utils.delete_episodes_misc(self.TEST_EPISODES_DIR)
 
-        # Return fresh observation after the grasp
-        return self.get_observation()
-    
     def get_joint_angles_from_pose(self, pos):
-        """Use inverse kinematics to get joint angles for a pose"""
-        # x, y, z = convert_sim_to_robot_pose(pos)
+        """Call IK service and return joint angles, or None on failure."""
         x, y, z = sim_to_robot(pos)
-        print("res:", x, y, z)
-        
-        request = kinemaricsRequest()
-        request.tar_x = x
-        request.tar_y = y
-        request.tar_z = z
-        request.kin_name = "ik"
-        
+        req = kinemaricsRequest()
+        req.tar_x, req.tar_y, req.tar_z = x, y, z
+        req.kin_name = "ik"
         try:
-            response = self.ik_client.call(request)
-            print("IK response:", response)
-            
-            # Check if response is valid (joint angles within limits)
-            if response.joint1 < 0 or response.joint1 > 180 or \
-               response.joint2 < 0 or response.joint2 > 180 or \
-               response.joint3 < 0 or response.joint3 > 180 or \
-               response.joint4 < 0 or response.joint4 > 180:
-                rospy.logwarn("IK solution contains invalid joint angles")
+            resp = self.ik_client.call(req)
+            angles = [resp.joint1, resp.joint2, resp.joint3, resp.joint4]
+            if any(a < 0 or a > 180 for a in angles):
+                rospy.logwarn("IK returned out-of-range joint angles")
                 return None
-            
-            joint_angles = [
-                response.joint1,
-                response.joint2,
-                response.joint3,
-                response.joint4,
-                90,  # Usually fixed at 90
-                30   # Initial gripper position
-            ]
-            
-            return joint_angles
-            
+            return angles + [90, 30]
         except rospy.ServiceException as e:
-            rospy.logerr(f"IK service call failed: {e}")
+            rospy.logerr(f"IK service failed: {e}")
             return None
-    
-    def step(self, joint_positions):
-        """
-        Execute a complete grasp sequence
-        
-        Args:
-            joint_angles: Target joint angles for grasp position
-        """
-        
-        # 1. Move to pre-grasp position
-        pre_grasp_joints = compute_pre_grasp_joints(joint_positions)
-        self.move_arm_to_position(pre_grasp_joints)
-        rospy.sleep(3)  # Wait for movement to complete
-        
-        # 3. Move to grasp position
+
+    def execute_grasp_sequence(self, joint_positions):
+        """Pre-grasp → grasp → close gripper → lift → release → home."""
+        self.move_arm_to_position(compute_pre_grasp_joints(joint_positions))
+        rospy.sleep(3)
         self.move_arm_to_position(joint_positions)
         rospy.sleep(3)
-        
-        # 4. Close gripper
-        self.gripper_control(1)  # Fully closed
+        self.gripper_control(1)   # close
         rospy.sleep(2)
-        
-        # 5. Lift object
-        post_grasp_joints = compute_post_grasp_joints(joint_positions)
-        self.move_arm_to_position(post_grasp_joints)
+        self.move_arm_to_position(compute_post_grasp_joints(joint_positions))
         rospy.sleep(3)
-
-        # 6. Move to pre-home position
         pre_home = self.home_position[::]
-        pre_home[0] = 180.0
-        pre_home[1] = 80.0
-        pre_home[2] = 20.0
-
-        # [90.0, 36.0, 60.0, 20.0, 90.0, 30.0],
+        pre_home[0], pre_home[1], pre_home[2] = 180.0, 80.0, 20.0
         self.move_arm_to_position(pre_home)
         rospy.sleep(3)
-
-        # 7. Open gripper to release object
-        self.gripper_control(0)  # Fully open
+        self.gripper_control(0)   # open / release
         rospy.sleep(3)
-        
-        # 8. Return to home position
         self.move_arm_to_position(self.home_position)
         rospy.sleep(3)
 
     def move_arm_to_position(self, joint_positions, run_time=2000):
-        """Send joint positions to the robot arm"""
         joint_positions[5] = self.gripper_angle
-        arm_joint = ArmJoint()
-        arm_joint.joints = joint_positions
-        arm_joint.run_time = run_time
-        self.pub_arm.publish(arm_joint)
+        msg = ArmJoint()
+        msg.joints   = joint_positions
+        msg.run_time = run_time
+        self.pub_arm.publish(msg)
+        rospy.loginfo(f"Arm target: {joint_positions}")
 
-        print("joint_positions:", joint_positions)
-    
     def gripper_control(self, aperture, run_time=1000):
-        """Control the gripper (servo 6) based on aperture"""
-        # Map aperture from your policy's range to the robot's range (assumed 30-180)
-        # Adjust this mapping based on your specific aperture range
-        gripper_angle = np.interp(aperture, [0, 1], [30, 140])
-        self.gripper_angle = gripper_angle
-        
-        arm_joint = ArmJoint()
-        arm_joint.id = 6  # Gripper servo ID
-        arm_joint.angle = gripper_angle
-        arm_joint.run_time = run_time
-        arm_joint.joints = []
-        self.pub_arm.publish(arm_joint)
-    
-    def get_observation(self, timeout=5.0):
-        """
-        Get observation for policy input
-        
-        Returns:
-            Observation dictionary
-        """
-        print("Acquiring latest images")
-        # Get the latest images on demand
-        success = self.get_latest_image(timeout=5.0)
-        
-        if not success:
-            print("Failed to get images")
-            rospy.logerr("Failed to get observation")
-            return None
-        
-        print("Latest images acquired")
-
-        # Create observation dictionary
-        obs = {
-            'color': self.rgb_image.copy(),  # Create copies to avoid reference issues
-            'depth': self.depth_image.copy()
-        }
-        
-        return obs
+        self.gripper_angle = np.interp(aperture, [0, 1], [30, 140])
+        msg = ArmJoint()
+        msg.id       = 6
+        msg.angle    = self.gripper_angle
+        msg.run_time = run_time
+        msg.joints   = []
+        self.pub_arm.publish(msg)
             
-    def eval_agent(self):
-        rng = np.random.RandomState()
-        rng.seed(self.args.seed)
+    # ------------------------------------------------------------------
+    # Episode loop
+    # ------------------------------------------------------------------
 
-        for i in range(self.args.n_scenes):
-            episode_seed = rng.randint(0, pow(2, 32) - 1)
-            logging.info('Episode: {}, seed: {}'.format(i, episode_seed))
-            self.run()
-
-        rospy.is_shutdown()
-
-    def call_policy_manager(self, timeout=5.0):
-        if self.action_sub is None:
-            self.action_sub = rospy.Subscriber('/action/data', ActionData, self.action_sub_callback)
-
-        if self.raw_color_image is None or self.raw_depth_image is None:
-            rospy.logerr("No images available")
-            return
-        
-        obs_data = ObservData()
-        obs_data.color_image = self.raw_color_image
-        obs_data.depth_image = self.raw_depth_image 
-        if self.target_mask is not None:
-            obs_data.target_mask = self.target_mask
-
-        obs_data.cam_intrinsics = self.intrinsics.flatten()
-
-        self.observation_pub.publish(obs_data)
-        print("Publishing observation data to policy manager for action data")
-
-        # Reset segmentation data
-        self.raw_color_image, self.raw_depth_image = None, None
-
-        # Wait for both images to be received
-        start_time = time.time()
-        while self.action is None and time.time() - start_time < timeout:
-            rospy.sleep(0.5)  # Short sleep to avoid CPU hogging
-    
     def run(self):
-        """Run one episode: segment scene, pick target, call policy, execute grasps."""
-
-        # ------------------------------------------------------------------
-        # 1. Initial observation
-        # ------------------------------------------------------------------
-        obs = self.get_observation()
-        if obs is None:
-            rospy.logerr("Failed to get initial observation")
+        """One episode: capture → send to lab → receive action → execute → repeat."""
+        if not self.get_latest_image():
+            rospy.logerr("Failed to acquire initial images")
             return
 
-        color_img = obs['color']   # HxWx3 BGR
+        for step in range(1, 7):  # max 6 steps
+            self.action = None
+            self.call_policy_manager(timeout=30.0)
 
-        # ------------------------------------------------------------------
-        # 2. Segment the scene
-        # ------------------------------------------------------------------
-        initial_masks, pred_mask, _, bboxes = self.segmenter.from_maskrcnn(
-            color_img, dir=self.TEST_EPISODES_DIR, bbox=True
-        )
-        if not initial_masks:
-            rospy.logerr("Segmenter returned no masks — ensure objects are visible")
-            return
-
-        processed_masks = copy.deepcopy(initial_masks)
-
-        cv2.imwrite(os.path.join(self.TEST_DIR, 'initial_scene.png'), pred_mask)
-        cv2.imwrite(os.path.join(self.TEST_DIR, 'color0.png'), color_img)
-
-        # ------------------------------------------------------------------
-        # 3. Pick target (operator selects or auto-pick first mask)
-        # ------------------------------------------------------------------
-        rng = np.random.RandomState()
-        target_mask, target_id = general_utils.get_target_mask(
-            processed_masks, color_img, rng
-        )
-        cv2.imwrite(os.path.join(self.TEST_DIR, 'initial_target_mask.png'), target_mask)
-        print(f"Target ID selected: {target_id}")
-
-        # ------------------------------------------------------------------
-        # 4. Episode loop
-        # ------------------------------------------------------------------
-        max_steps = 6
-        attempts = 0
-        n_prev_masks = len(processed_masks)
-
-        while attempts < max_steps:
-            cv2.imwrite(os.path.join(self.TEST_DIR, 'target_mask.png'), target_mask)
-
-            # Policy inference
-            state = self.policy.state_representation(obs)
-            action = self.policy.exploit_unveiler(
-                state, pred_mask, color_img, target_mask, processed_masks, bboxes
-            )
-            action_dict = self.policy.action3d(action)
-
-            print(f"Step {attempts + 1}: sim action pos={action_dict['pos']}, aperture={action_dict['aperture']:.3f}")
-
-            # Execute on the real robot
-            next_obs = self.grasp_object(action_dict)
-            attempts += 1
-
-            if next_obs is None:
-                rospy.logerr("Failed to get observation after grasp")
-                continue
-
-            obs = copy.deepcopy(next_obs)
-            color_img = obs['color']
-
-            cv2.imwrite(os.path.join(self.TEST_DIR, f'color_step{attempts}.png'), color_img)
-
-            ask = input("\nContinue to next step? (y/n): ").strip().lower()
-            if ask == 'n':
+            if self.action is None:
+                rospy.logerr("[Jetson] No action received — aborting episode.")
                 break
 
-            # Re-segment
-            new_masks, pred_mask, _, new_bboxes = self.segmenter.from_maskrcnn(
-                color_img, dir=self.TEST_EPISODES_DIR, bbox=True
-            )
+            action_dict = action3d_from_params(np.array(self.action, dtype=np.float32), self.params)
+            rospy.loginfo(f"Step {step}: pos={action_dict['pos']}, aperture={action_dict['aperture']:.3f}")
 
-            # Track target across re-segmentation
-            target_id, target_mask = grasping.find_target(new_masks, target_mask)
-            if target_id == -1:
-                ans = input("Target not auto-found. Is it still available? (y/n): ").strip().lower()
-                if ans == 'n':
-                    print("Episode complete — target grasped or lost.")
-                    break
-                target_id = int(input("Enter target index manually: "))
-                target_mask = new_masks[target_id]
+            self.grasp_object(action_dict)
 
-            processed_masks = copy.deepcopy(new_masks)
-            bboxes = copy.deepcopy(new_bboxes)
-            n_prev_masks = len(processed_masks)
+            if self.rgb_image is not None:
+                cv2.imwrite(os.path.join(self.TEST_DIR, f'color_step{step}.png'), self.rgb_image)
 
-        print(f"Episode finished after {attempts} steps.")
+            if input("\nContinue? (y/n): ").strip().lower() == 'n':
+                break
+
+            # Re-acquire fresh images for the next observation
+            if not self.get_latest_image():
+                rospy.logwarn("Could not re-acquire images after grasp.")
+
+        rospy.loginfo(f"Episode finished after {step} steps.")
+
+    def eval_agent(self):
+        for i in range(self.args.n_scenes):
+            logging.info(f'Episode: {i}')
+            self.run()
 
     def cleanup(self):
-        """Clean up subscribers to prevent issues on shutdown"""
-        if self.rgb_sub is not None:
-            self.rgb_sub.unregister()
-        if self.depth_sub is not None:
-            self.depth_sub.unregister()
-        if self.camera_info_sub is not None:
-            self.camera_info_sub.unregister()
+        for sub in [self.rgb_sub, self.depth_sub, self.camera_info_sub]:
+            if sub is not None:
+                sub.unregister()
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument('--mode', default='ae', type=str, help='')
-    
-    # args for eval_agent
-    parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
-    parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
-    parser.add_argument('--reg_model', default='downloads/reg_model.pt', type=str, help='')
-    parser.add_argument('--seed', default=16, type=int, help='')
-    parser.add_argument('--n_scenes', default=100, type=int, help='')
-    parser.add_argument('--object_set', default='seen', type=str, help='')
-
-    # args for trainer
-    parser.add_argument('--dataset_dir', default='save/pc-ou-dataset', type=str, help='')
-    parser.add_argument('--epochs', default=100, type=int, help='')
-    parser.add_argument('--lr', default=0.0001, type=float, help='')
-    parser.add_argument('--batch_size', default=1, type=int, help='')
-    parser.add_argument('--split_ratio', default=0.9, type=float, help='')
-    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD')
-    parser.add_argument('--weight_decay', type=float, default=1e-3, help='Weight decay for optimizer')
-
-    parser.add_argument('--sequence_length', default=1, type=int, help='')
-    parser.add_argument('--patch_size', default=64, type=int, help='')
-    parser.add_argument('--num_patches', default=10, type=int, help='This should not be less than the maximum possible number of objects in the scene, which from list Environment.nr_objects is 9')
-    parser.add_argument('--step', default=500, type=int, help='')
-
-    # args for act
-    parser.add_argument('--chunk_size', default=3, action='store', type=int, help='chunk_size', required=False)
-    parser.add_argument('--temporal_agg', action='store_true')
-
+    parser.add_argument('--seed',     default=16,  type=int, help='Random seed')
+    parser.add_argument('--n_scenes', default=100, type=int, help='Number of episodes to run')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"You are using {args.device}")
-
     controller = PolicyRobotController(args)
-    controller.eval_agent()
-    controller.cleanup()
+    try:
+        controller.eval_agent()
+    finally:
+        controller.cleanup()

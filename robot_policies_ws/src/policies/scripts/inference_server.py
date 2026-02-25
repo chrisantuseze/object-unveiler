@@ -138,6 +138,7 @@ class InferenceServer:
             ae_model  = os.path.join(_PROJECT_ROOT, args.ae_model),
             reg_model = os.path.join(_PROJECT_ROOT, args.reg_model),
             sre_model = os.path.join(_PROJECT_ROOT, args.sre_model),
+            sre_rl    = os.path.join(_PROJECT_ROOT, args.sre_rl),
         )
         self.segmenter = ObjectSegmenter(args)
         print("Models loaded.")
@@ -287,8 +288,9 @@ def parse_args():
     )
 
     # Model paths (relative to project root)
-    parser.add_argument('--ae_model',  default='save/ae/ae_model_best.pt',  type=str)
+    parser.add_argument('--ae_model',  default='save/ae/ae_model_best.pt',   type=str)
     parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str)
+    parser.add_argument('--sre_rl',    default='save/sre/sre_rl_best.pt',    type=str)
     parser.add_argument('--reg_model', default='downloads/reg_model.pt',     type=str)
 
     # Policy hyper-params (must match training config)
