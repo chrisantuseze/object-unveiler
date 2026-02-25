@@ -160,9 +160,8 @@ class PolicyRobotController:
             self.camera_info_received = False
 
     def _action_callback(self, msg):
-        self.action      = msg.values
-        self.target_mask = msg.target_mask
-        rospy.loginfo(f"[Jetson] Action received: {list(self.action)}")
+        self.action = list(msg.values)
+        rospy.loginfo(f"[Jetson] Action received: {self.action}")
 
     # ------------------------------------------------------------------
     # Image acquisition
@@ -210,8 +209,8 @@ class PolicyRobotController:
         obs.color_image    = self.raw_color_image
         obs.depth_image    = self.raw_depth_image
         obs.cam_intrinsics = self.intrinsics.flatten()
-        if self.target_mask is not None:
-            obs.target_mask = self.target_mask
+        # target_mask is not included: the lab server tracks the episode
+        # target internally to avoid sending large image payloads over rosbridge.
 
         self.observation_pub.publish(obs)
         rospy.loginfo("[Jetson] Observation published — waiting for action…")

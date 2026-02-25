@@ -136,6 +136,9 @@ class InferenceServer:
         self.args = args
         self.rng  = np.random.RandomState(args.seed)
         self._inference_lock = threading.Lock()
+        # Persists the chosen target across steps within one episode so we
+        # don't re-advertise a fresh target every call.
+        self._episode_target_mask: np.ndarray | None = None
 
         # ── Load models ───────────────────────────────────────────────────
         print("Loading models…")
@@ -260,20 +263,36 @@ class InferenceServer:
             cv2.imwrite(os.path.join(DEBUG_DIR, "pred_mask.png"), pred_mask)
 
             # ── 3. Pick target mask ───────────────────────────────────────
-            if target_mask is None:
-                target_mask, target_id = general_utils.get_target_mask(
-                    processed_masks, color_image, self.rng
-                )
-                print(f"[InferenceServer] Auto-selected target ID: {target_id}")
-            else:
+            # Use episode-level target if already established; otherwise pick one
+            # or match the hint sent from the Jetson.
+            if self._episode_target_mask is not None:
+                # Continue tracking the same target within this episode.
                 target_id, target_mask = grasping.find_target(
-                    processed_masks, target_mask
+                    processed_masks, self._episode_target_mask
                 )
                 if target_id == -1:
-                    print("[InferenceServer] Provided target mask not matched — auto-selecting.")
+                    print("[InferenceServer] Episode target lost — re-selecting.")
+                    self._episode_target_mask = None
+
+            if self._episode_target_mask is None:
+                if target_mask is not None:
+                    # Jetson supplied a hint from a previous session.
+                    target_id, target_mask = grasping.find_target(
+                        processed_masks, target_mask
+                    )
+                    if target_id == -1:
+                        target_mask, target_id = general_utils.get_target_mask(
+                            processed_masks, color_image, self.rng
+                        )
+                        print(f"[InferenceServer] Hint not matched; auto-selected target ID: {target_id}")
+                    else:
+                        print(f"[InferenceServer] Using Jetson-supplied target ID: {target_id}")
+                else:
                     target_mask, target_id = general_utils.get_target_mask(
                         processed_masks, color_image, self.rng
                     )
+                    print(f"[InferenceServer] Auto-selected target ID: {target_id}")
+                self._episode_target_mask = target_mask
 
             cv2.imwrite(os.path.join(DEBUG_DIR, "target_mask.png"), target_mask)
 
@@ -297,9 +316,12 @@ class InferenceServer:
             print(f"[InferenceServer] Action: {action}")
 
             # ── 6. Publish ActionData back to Jetson ──────────────────────
+            # Do NOT include target_mask here: serialising a 480×640 mono image
+            # as a JSON integer array (~307 K elements) silently exceeds
+            # rosbridge's buffer and the entire message is dropped.  The lab
+            # tracks the target across steps internally (_episode_target_mask).
             action_msg = {
                 'values':      [float(v) for v in action],
-                'target_mask': cv2_to_ros_image(target_mask, encoding='mono8'),
             }
             self.action_pub.publish(roslibpy.Message(action_msg))
             print(f"[InferenceServer] Action published: {action}")
@@ -311,6 +333,11 @@ class InferenceServer:
             self._inference_lock.release()
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    def reset_episode(self):
+        """Call between episodes to allow automatic target re-selection."""
+        self._episode_target_mask = None
+        print("[InferenceServer] Episode target reset.")
 
     def spin(self):
         """Block until the connection drops or the user interrupts."""
