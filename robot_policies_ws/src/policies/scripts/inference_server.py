@@ -28,6 +28,7 @@ import base64
 import argparse
 import time
 import copy
+import threading
 
 import numpy as np
 import cv2
@@ -146,22 +147,36 @@ class InferenceServer:
         # ── Connect to rosbridge on Jetson ────────────────────────────────
         print(f"Connecting to rosbridge at ws://{JETSON_IP}:{JETSON_PORT} …")
         self.client = roslibpy.Ros(host=JETSON_IP, port=JETSON_PORT)
+        # run() is non-blocking: it starts the WebSocket handshake in a background
+        # thread and returns immediately.  Poll until the handshake completes.
         self.client.run()
+        deadline = time.time() + 15.0
+        while not self.client.is_connected and time.time() < deadline:
+            time.sleep(0.2)
 
         if not self.client.is_connected:
             raise RuntimeError("Failed to connect to rosbridge on the Jetson.")
         print(f"Connected: {self.client.is_connected}")
 
         # ── Publisher: action → Jetson ────────────────────────────────────
+        # Advertise eagerly so rosbridge registers the topic before any observation
+        # arrives and before we need to publish.
         self.action_pub = roslibpy.Topic(
             self.client, ACTION_TOPIC, ACTION_MSG_TYPE
         )
+        self.action_pub.advertise()
 
         # ── Subscriber: observation ← Jetson ──────────────────────────────
         self.obs_sub = roslibpy.Topic(
             self.client, OBS_TOPIC, OBS_MSG_TYPE
         )
         self.obs_sub.subscribe(self.on_observation)
+
+        # Give rosbridge time to process the subscribe command and create the
+        # ROS-level subscriber on the Jetson, so that get_num_connections() in
+        # unveiler_grasp.py returns > 0 as soon as we print the ready message.
+        print("Waiting for rosbridge to propagate subscription…")
+        time.sleep(2.0)
         print(f"Subscribed to {OBS_TOPIC}. Waiting for observations…")
 
     # ── Callback ──────────────────────────────────────────────────────────────
@@ -170,6 +185,23 @@ class InferenceServer:
         """
         Triggered each time the Jetson publishes an ObservData message.
 
+        IMPORTANT: this callback runs on the roslibpy WebSocket thread.  Blocking
+        here (e.g. running GPU inference) freezes the event loop so rosbridge
+        never processes the subsequent publish() call.  Dispatch to a daemon
+        thread and return immediately.
+        """
+        print("[InferenceServer] Observation received — dispatching inference thread…")
+        threading.Thread(
+            target=self._run_inference,
+            args=(msg,),
+            daemon=True,
+        ).start()
+
+    def _run_inference(self, msg: dict):
+        """
+        Heavy inference pipeline — runs in a background thread so the roslibpy
+        WebSocket event loop is never blocked.
+
         Steps:
           1. Decode color / depth / (optional) target_mask images.
           2. Segment the scene to get object masks and bounding boxes.
@@ -177,7 +209,7 @@ class InferenceServer:
           4. Run exploit_unveiler_rl → 4-DoF action.
           5. Publish ActionData back to the Jetson.
         """
-        print("[InferenceServer] Observation received — running inference…")
+        print("[InferenceServer] Running inference…")
 
         try:
             # ── 1. Decode images ──────────────────────────────────────────

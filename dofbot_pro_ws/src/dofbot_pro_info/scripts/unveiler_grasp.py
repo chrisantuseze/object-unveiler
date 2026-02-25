@@ -97,8 +97,18 @@ class PolicyRobotController:
         self.move_arm_to_position(self.home_position)
 
         # Wait until the lab-computer inference_server is subscribed to /action/obs.
+        # Note: roslibpy.Ros.run() is non-blocking — the WebSocket handshake and
+        # rosbridge subscription propagation can take a few seconds after the
+        # inference_server prints "Connected".  Give it a minimum 3 s head-start
+        # before polling, then keep polling until rosbridge has created the ROS
+        # subscriber (get_num_connections > 0).
         rospy.loginfo("Waiting for inference server to connect…")
+        rospy.sleep(3.0)          # minimum grace period for roslibpy / rosbridge
+        timeout_wait = rospy.Time.now() + rospy.Duration(60.0)
         while self.observation_pub.get_num_connections() == 0:
+            if rospy.Time.now() > timeout_wait:
+                rospy.logwarn("Timed out waiting for inference server — proceeding anyway.")
+                break
             rospy.sleep(0.5)
         rospy.loginfo("PolicyRobotController ready — inference server connected.")
 
