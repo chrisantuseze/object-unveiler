@@ -230,7 +230,7 @@ class InferenceServer:
                     target_mask = target_mask_raw
 
             # Camera intrinsics — float64[9] comes through as a plain list
-            intrinsics = np.array(msg['cam_intrinsics'], dtype=np.float64).reshape(3, 3)
+            intrinsics = np.array(msg['cam_intrinsics'], dtype=np.float64) # shape (9,)
 
             # Save debug images
             cv2.imwrite(os.path.join(DEBUG_DIR, "color_image_data.png"), color_image)
