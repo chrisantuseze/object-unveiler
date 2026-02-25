@@ -177,11 +177,14 @@ class PolicyRobotController:
         self._ensure_camera_subscribers()
 
         deadline = time.time() + timeout
-        while (self.rgb_lock or self.depth_lock) and time.time() < deadline:
+        while (self.rgb_lock or self.depth_lock or self.camera_info_received) and time.time() < deadline:
             rospy.sleep(0.05)
 
         if self.rgb_image is None or self.depth_image is None:
             rospy.logwarn(f"Images not received within {timeout}s")
+            return False
+        if self.intrinsics is None:
+            rospy.logwarn(f"Camera intrinsics not received within {timeout}s")
             return False
         return True
     
@@ -197,6 +200,11 @@ class PolicyRobotController:
         if self.intrinsics is None:
             rospy.logerr("[Jetson] Camera intrinsics not available")
             return
+
+        obs_connections = self.observation_pub.get_num_connections()
+        rospy.loginfo(f"[Jetson] /action/obs connections: {obs_connections}")
+        if obs_connections == 0:
+            rospy.logwarn("[Jetson] No subscribers on /action/obs; observation may be dropped.")
 
         obs = ObservData()
         obs.color_image    = self.raw_color_image

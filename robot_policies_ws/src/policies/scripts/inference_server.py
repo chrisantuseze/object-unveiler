@@ -49,10 +49,6 @@ from mask_rg.object_segmenter import ObjectSegmenter
 from utils import general_utils
 import policy.grasping as grasping
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-JETSON_IP   = "192.168.0.8"
-JETSON_PORT = 9090
-
 # Topic names must match what unveiler_grasp.py publishes / subscribes to.
 OBS_TOPIC    = "/action/obs"
 OBS_MSG_TYPE = "dofbot_pro_info/ObservData"
@@ -70,12 +66,21 @@ os.makedirs(DEBUG_DIR, exist_ok=True)
 def ros_image_to_cv2(img_msg: dict) -> np.ndarray:
     """Convert a rosbridge sensor_msgs/Image dict → OpenCV numpy array.
 
-    rosbridge encodes the uint8[] `data` field as a base64 string.
+    rosbridge may encode uint8[] `data` either as:
+      - base64 string, or
+      - JSON number array (list[int]).
     """
     h        = img_msg['height']
     w        = img_msg['width']
     encoding = img_msg['encoding']
-    raw      = base64.b64decode(img_msg['data'])
+    data     = img_msg['data']
+
+    if isinstance(data, str):
+        raw = base64.b64decode(data)
+    elif isinstance(data, list):
+        raw = bytes(data)
+    else:
+        raise ValueError(f"Unsupported image data type: {type(data)}")
 
     if encoding in ('bgr8', 'rgb8'):
         img = np.frombuffer(raw, dtype=np.uint8).reshape(h, w, 3).copy()
@@ -100,7 +105,9 @@ def cv2_to_ros_image(img: np.ndarray, encoding: str = 'mono8') -> dict:
         h, w, c = img.shape
         step = w * c * img.itemsize
 
-    data_b64 = base64.b64encode(img.tobytes()).decode('ascii')
+    # For publishing through rosbridge, use uint8[] list payload to match
+    # sensor_msgs/Image.data type exactly.
+    data_list = np.frombuffer(img.tobytes(), dtype=np.uint8).tolist()
 
     return {
         'header': {
@@ -113,7 +120,7 @@ def cv2_to_ros_image(img: np.ndarray, encoding: str = 'mono8') -> dict:
         'encoding':     encoding,
         'is_bigendian': False,
         'step':         step,
-        'data':         data_b64,
+        'data':         data_list,
     }
 
 
@@ -128,6 +135,7 @@ class InferenceServer:
     def __init__(self, args):
         self.args = args
         self.rng  = np.random.RandomState(args.seed)
+        self._inference_lock = threading.Lock()
 
         # ── Load models ───────────────────────────────────────────────────
         print("Loading models…")
@@ -145,8 +153,8 @@ class InferenceServer:
         print("Models loaded.")
 
         # ── Connect to rosbridge on Jetson ────────────────────────────────
-        print(f"Connecting to rosbridge at ws://{JETSON_IP}:{JETSON_PORT} …")
-        self.client = roslibpy.Ros(host=JETSON_IP, port=JETSON_PORT)
+        print(f"Connecting to rosbridge at ws://{args.jetson_ip}:{args.jetson_port} …")
+        self.client = roslibpy.Ros(host=args.jetson_ip, port=args.jetson_port)
         # run() is non-blocking: it starts the WebSocket handshake in a background
         # thread and returns immediately.  Poll until the handshake completes.
         self.client.run()
@@ -190,6 +198,10 @@ class InferenceServer:
         never processes the subsequent publish() call.  Dispatch to a daemon
         thread and return immediately.
         """
+        if not self._inference_lock.acquire(blocking=False):
+            print("[InferenceServer] Busy with previous frame — dropping observation.")
+            return
+
         print("[InferenceServer] Observation received — dispatching inference thread…")
         threading.Thread(
             target=self._run_inference,
@@ -295,6 +307,8 @@ class InferenceServer:
         except Exception as exc:
             import traceback
             print(f"[InferenceServer] ERROR during inference:\n{traceback.format_exc()}")
+        finally:
+            self._inference_lock.release()
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -324,6 +338,10 @@ def parse_args():
     parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str)
     parser.add_argument('--sre_rl',    default='save/sre/sre_rl_best.pt',    type=str)
     parser.add_argument('--reg_model', default='downloads/reg_model.pt',     type=str)
+
+    # Jetson rosbridge endpoint
+    parser.add_argument('--jetson_ip',   default='192.168.0.8', type=str)
+    parser.add_argument('--jetson_port', default=9090,          type=int)
 
     # Policy hyper-params (must match training config)
     parser.add_argument('--sequence_length', default=1,   type=int)
