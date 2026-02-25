@@ -81,7 +81,8 @@ class PolicyRobotController:
 
         # Communication with lab-computer inference server
         self.observation_pub = rospy.Publisher("/action/obs", ObservData, queue_size=1)
-        self.action_sub      = None
+        # Subscribe immediately so the callback is registered before the first publish.
+        self.action_sub      = rospy.Subscriber('/action/data', ActionData, self._action_callback)
         self.raw_color_image = None
         self.raw_depth_image = None
         self.target_mask     = None
@@ -94,7 +95,12 @@ class PolicyRobotController:
 
         rospy.sleep(1)
         self.move_arm_to_position(self.home_position)
-        rospy.loginfo("PolicyRobotController ready — inference on lab computer.")
+
+        # Wait until the lab-computer inference_server is subscribed to /action/obs.
+        rospy.loginfo("Waiting for inference server to connect…")
+        while self.observation_pub.get_num_connections() == 0:
+            rospy.sleep(0.5)
+        rospy.loginfo("PolicyRobotController ready — inference server connected.")
 
     # ------------------------------------------------------------------
     # Subscribers / callbacks
@@ -175,10 +181,6 @@ class PolicyRobotController:
 
     def call_policy_manager(self, timeout=30.0):
         """Publish current observation and block until an action is received."""
-        if self.action_sub is None:
-            self.action_sub = rospy.Subscriber(
-                '/action/data', ActionData, self._action_callback)
-
         if self.raw_color_image is None or self.raw_depth_image is None:
             rospy.logerr("[Jetson] No images to publish")
             return
@@ -322,7 +324,7 @@ class PolicyRobotController:
             self.run()
 
     def cleanup(self):
-        for sub in [self.rgb_sub, self.depth_sub, self.camera_info_sub]:
+        for sub in [self.rgb_sub, self.depth_sub, self.camera_info_sub, self.action_sub]:
             if sub is not None:
                 sub.unregister()
 
