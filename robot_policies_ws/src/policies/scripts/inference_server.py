@@ -308,8 +308,20 @@ class InferenceServer:
             cv2.imwrite(os.path.join(DEBUG_DIR, "target_mask.png"), target_mask)
 
             # ── 4. Build state (depth-map heightmap) ──────────────────────
-            state = self.policy.get_dmap(color_image, depth_vis, intrinsics=intrinsics)
+            # policy.get_dmap expects metric depth (metres). Convert raw uint16
+            # depth (typically mm) to float32 metres before calling.
+            depth_m = depth_image.astype(np.float32) / 1000.0
+            try:
+                print(f"[InferenceServer] depth_m min={depth_m.min():.4f} max={depth_m.max():.4f} nonzero={np.count_nonzero(depth_m)}")
+            except Exception:
+                pass
+
+            state = self.policy.get_dmap(color_image, depth_m, intrinsics=intrinsics)
             print(f"[InferenceServer] State all-zero: {np.all(state == 0)}")
+            try:
+                print(f"[InferenceServer] state min={state.min()} max={state.max()} nonzero={np.count_nonzero(state)}")
+            except Exception:
+                pass
 
             # scene_mask for exploit_unveiler_rl is the raw segmentation overlay
             scene_mask = general_utils.resize_mask(pred_mask)
