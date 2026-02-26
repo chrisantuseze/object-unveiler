@@ -234,6 +234,16 @@ class InferenceServer:
             # Normalise depth to 8-bit for visualisation (matches policy_manager.py)
             depth_vis = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
             depth_vis = depth_vis.astype(np.uint8)
+            # Debug: log depth image statistics so we can triage all-zero state
+            try:
+                print(f"[InferenceServer] depth_image dtype={depth_image.dtype} "
+                      f"min={depth_image.min()} max={depth_image.max()} "
+                      f"nonzero={np.count_nonzero(depth_image)}")
+                print(f"[InferenceServer] depth_vis dtype={depth_vis.dtype} "
+                      f"min={depth_vis.min()} max={depth_vis.max()} "
+                      f"nonzero={np.count_nonzero(depth_vis)}")
+            except Exception:
+                print("[InferenceServer] Failed to compute depth statistics")
 
             # Target mask is optional — Jetson may send an all-zero Image when absent
             target_mask_ros = msg.get('target_mask', None)
@@ -246,6 +256,7 @@ class InferenceServer:
 
             # Camera intrinsics — float64[9] comes through as a plain list
             intrinsics = np.array(msg['cam_intrinsics'], dtype=np.float64) # shape (9,)
+            print(f"[InferenceServer] intrinsics: {intrinsics}")
 
             # Save debug images
             cv2.imwrite(os.path.join(DEBUG_DIR, "color_image_data.png"), color_image)
