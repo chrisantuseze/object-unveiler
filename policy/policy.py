@@ -160,6 +160,29 @@ class Policy:
 
         return state, depth_heightmap
     
+    def get_dmap_real(self, color, depth_m, intrinsics_flat, T_cam_base):
+        """
+        Build the depth heightmap from a real RGB-D frame.
+
+        Parameters
+        ----------
+        color           : (H, W, 3) uint8   BGR image
+        depth_m         : (H, W)    float32 depth in metres (raw uint16 / 1000)
+        intrinsics_flat : array-like len-9  flat camera K: [fx,0,cx,0,fy,cy,0,0,1]
+        T_cam_base      : (4, 4)    float64 camera→robot-base transform;
+                           pass np.eye(4) as placeholder until calibrated
+                           (heightmap will be in camera frame — useful for
+                            verifying the pipeline is wired up correctly).
+
+        Returns
+        -------
+        depth_heightmap : (H_map, W_map) float32
+        """
+        _, depth_heightmap = general_utils.get_real_heightmap(
+            color, depth_m, intrinsics_flat, T_cam_base, self.bounds, self.pxl_size
+        )
+        return depth_heightmap
+    
     def random_sample(self, state):
         action = np.zeros((4,))
         action[0] = self.rng.randint(0, state.shape[0])
