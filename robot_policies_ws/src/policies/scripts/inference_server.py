@@ -153,6 +153,22 @@ class InferenceServer:
             sre_rl    = os.path.join(_PROJECT_ROOT, args.sre_rl),
         )
         self.segmenter = ObjectSegmenter(args)
+
+        # ── Load camera extrinsics (T_cam_base) ───────────────────────────
+        _extrinsics_path = os.path.join(_PROJECT_ROOT, 'yaml', 'cam_extrinsics.yaml')
+        if os.path.exists(_extrinsics_path):
+            with open(_extrinsics_path, 'r') as _f:
+                _ext = yaml.safe_load(_f)
+            self.T_cam_base = np.array(_ext['T_cam_base'], dtype=np.float64)
+            print(f"Loaded T_cam_base from {_extrinsics_path}")
+        else:
+            self.T_cam_base = np.eye(4, dtype=np.float64)
+            print(
+                "[WARNING] yaml/cam_extrinsics.yaml not found — "
+                "using identity T_cam_base.  Heightmap will be in camera frame; "
+                "complete camera calibration (Step 1 in REAL_ROBOT_SETUP_PLAN.md) "
+                "to get correct robot-frame coordinates."
+            )
         print("Models loaded.")
 
         # ── Connect to rosbridge on Jetson ────────────────────────────────
@@ -234,6 +250,10 @@ class InferenceServer:
             # Normalise depth to 8-bit for visualisation (matches policy_manager.py)
             depth_vis = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
             depth_vis = depth_vis.astype(np.uint8)
+
+            # Metric depth in metres — used by get_dmap_real for heightmap building
+            depth_m = depth_image.astype(np.float32) / 1000.0
+
             # Debug: log depth image statistics so we can triage all-zero state
             try:
                 print(f"[InferenceServer] depth_image dtype={depth_image.dtype} "
@@ -308,15 +328,20 @@ class InferenceServer:
             cv2.imwrite(os.path.join(DEBUG_DIR, "target_mask.png"), target_mask)
 
             # ── 4. Build state (depth-map heightmap) ──────────────────────
-            # policy.get_dmap expects metric depth (metres). Convert raw uint16
-            # depth (typically mm) to float32 metres before calling.
-            depth_m = depth_image.astype(np.float32) / 1000.0
+            # Use real T_cam_base (loaded from yaml/cam_extrinsics.yaml, or
+            # identity if calibration hasn't been done yet).
+            # depth_m was already computed above (uint16 mm → float32 m).
             try:
                 print(f"[InferenceServer] depth_m min={depth_m.min():.4f} max={depth_m.max():.4f} nonzero={np.count_nonzero(depth_m)}")
             except Exception:
                 pass
 
-            state = self.policy.get_dmap(color_image, depth_m, intrinsics=intrinsics)
+            state = self.policy.get_dmap_real(
+                color_image,
+                depth_m,
+                intrinsics,
+                self.T_cam_base,
+            )
             print(f"[InferenceServer] State all-zero: {np.all(state == 0)}")
             try:
                 print(f"[InferenceServer] state min={state.min()} max={state.max()} nonzero={np.count_nonzero(state)}")

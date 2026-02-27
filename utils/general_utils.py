@@ -612,6 +612,97 @@ def get_heightmap__(color_img, depth_img, cam_intrinsics, configs, bounds, pix_s
 
     return color_heightmap, depth_heightmap
 
+
+def get_real_heightmap(color_img, depth_m, cam_intrinsics_flat, T_cam_base, bounds, pix_size):
+    """
+    Build a top-down depth heightmap from a single RGB-D frame using the
+    measured camera-to-robot-base extrinsics (T_cam_base).
+
+    Unlike get_heightmap__(), this function does NOT use the simulation camera
+    config.  It accepts the real 4x4 rigid-body transform T_cam_base that maps
+    points from the Orbbec camera frame into the robot base frame.
+
+    Parameters
+    ----------
+    color_img        : (H, W, 3) uint8     — BGR image
+    depth_m          : (H, W)    float32   — depth in metres (raw uint16 / 1000)
+    cam_intrinsics_flat : array-like len-9 — flat row-major camera K matrix:
+                          [fx, 0, cx, 0, fy, cy, 0, 0, 1]
+    T_cam_base       : (4, 4)    float64   — camera → robot base transform;
+                          use np.eye(4) as a placeholder until calibrated,
+                          but expect an all-zero heightmap in that case unless the
+                          workspace bounds are also adjusted to camera-frame coords.
+    bounds           : (3, 2)              — [[xmin,xmax],[ymin,ymax],[zmin,zmax]]
+                          in the robot base frame (metres)
+    pix_size         : float               — metres per pixel in the output heightmap
+
+    Returns
+    -------
+    color_heightmap  : (H_map, W_map, 3) uint8
+    depth_heightmap  : (H_map, W_map)    float32
+    """
+    heightmap_size = np.round(
+        ((bounds[1][1] - bounds[1][0]) / pix_size,
+         (bounds[0][1] - bounds[0][0]) / pix_size)
+    ).astype(int)
+
+    # Back-project depth pixels → 3-D points in camera frame
+    surface_pts, color_pts = get_pointcloud_(color_img, depth_m, cam_intrinsics_flat)
+
+    # Transform camera-frame points into robot base frame using T_cam_base
+    T = np.asarray(T_cam_base, dtype=np.float64)
+    R = T[:3, :3]
+    t = T[:3, 3:]
+    surface_pts = (R @ surface_pts.T + t).T   # N×3 in robot base frame
+
+    # Sort by z so higher points overwrite lower ones in the heightmap
+    sort_z_ind = np.argsort(surface_pts[:, 2])
+    surface_pts = surface_pts[sort_z_ind]
+    color_pts   = color_pts[sort_z_ind]
+
+    # Filter to workspace bounds
+    valid = (
+        (surface_pts[:, 0] >= bounds[0][0]) & (surface_pts[:, 0] < bounds[0][1]) &
+        (surface_pts[:, 1] >= bounds[1][0]) & (surface_pts[:, 1] < bounds[1][1]) &
+        (surface_pts[:, 2] < bounds[2][1])
+    )
+    surface_pts = surface_pts[valid]
+    color_pts   = color_pts[valid]
+
+    # Build orthographic top-down heightmap
+    color_heightmap_r = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    color_heightmap_g = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    color_heightmap_b = np.zeros((heightmap_size[0], heightmap_size[1], 1), dtype=np.uint8)
+    depth_heightmap   = np.zeros(heightmap_size, dtype=np.float32)
+
+    if surface_pts.shape[0] > 0:
+        hpix_x = np.floor((surface_pts[:, 0] - bounds[0][0]) / pix_size).astype(int)
+        hpix_y = np.floor((surface_pts[:, 1] - bounds[1][0]) / pix_size).astype(int)
+
+        # Clamp to valid indices (rounding edge cases)
+        hpix_x = np.clip(hpix_x, 0, heightmap_size[1] - 1)
+        hpix_y = np.clip(hpix_y, 0, heightmap_size[0] - 1)
+
+        color_heightmap_r[hpix_y, hpix_x] = color_pts[:, [0]]
+        color_heightmap_g[hpix_y, hpix_x] = color_pts[:, [1]]
+        color_heightmap_b[hpix_y, hpix_x] = color_pts[:, [2]]
+        depth_heightmap[hpix_y, hpix_x]   = surface_pts[:, 2]
+
+    color_heightmap = np.concatenate(
+        (color_heightmap_r, color_heightmap_g, color_heightmap_b), axis=2
+    )
+
+    z_bottom = bounds[2][0]
+    depth_heightmap = depth_heightmap - z_bottom
+    depth_heightmap[depth_heightmap < 0] = 0
+    depth_heightmap[depth_heightmap == -z_bottom] = np.nan
+
+    color_heightmap = cv2.flip(color_heightmap, 1)
+    depth_heightmap = cv2.flip(depth_heightmap, 1)
+
+    return color_heightmap, depth_heightmap
+
+
 def resize_image(image, target_size=(224, 224)):#(480, 640)):
     # # Get the shape of the input image
     input_shape = image.shape
