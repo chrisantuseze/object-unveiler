@@ -42,7 +42,7 @@ class ObjectSegmenter:
         Use Mask R-CNN to do instance segmentation and output masks in binary format.
         """
         image = color_image.copy()
-        image = cv2.resize(color_image, dim) 
+        image = cv2.resize(color_image, (dim[1], dim[0]))  # cv2 takes (width, height); dim is (height, width)
         image = TF.to_tensor(image).to(self.device)
 
         prediction = self.mask_model([image])

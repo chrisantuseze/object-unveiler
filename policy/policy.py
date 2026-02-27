@@ -899,11 +899,10 @@ class Policy:
         # self.fcn.eval()
 
         self.ae_model.load_state_dict(torch.load(ae_model, map_location=self.device))
-        # self.ae_model.half()  # Do this once during model init
         self.ae_model.eval()
 
-        self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
-        self.reg.eval()
+        # self.reg.load_state_dict(torch.load(reg_model, map_location=self.device))
+        # self.reg.eval()
 
         self.sre_model.load_state_dict(torch.load(sre_model, map_location=self.device))
         self.sre_model.eval()

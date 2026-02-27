@@ -199,23 +199,22 @@ def sample_distribution(prob, rng, n_samples=1):
     return np.int32(rand_ind_coords.squeeze())
 
 def get_target_mask(processed_masks, image, rng):
-    id = 0
+    idx = 0
     if len(processed_masks) > 1:
         # rand_id = rng.randint(0, len(processed_masks) - 1)
-        # mid_id = grasping.find_central_object(processed_masks)
-        _, min_index = grasping.get_most_peripheral_object(processed_masks)
+        idx = grasping.find_central_object(processed_masks)
+        # _, idx = grasping.get_most_peripheral_object(processed_masks)
 
         # Randomly decide between mid_id and the generated number
         # id = rng.choice([mid_id, min_index])
-        id = min_index
 
-        target_mask = processed_masks[id]
+        target_mask = processed_masks[idx]
     elif len(processed_masks) == 1:
-        target_mask = processed_masks[id]
+        target_mask = processed_masks[idx]
     else:
         target_mask = image
 
-    return target_mask, id
+    return target_mask, idx
 
 def delete_episodes_misc(path):
     # Try to remove the tree; if it fails, throw an error using try...except.
