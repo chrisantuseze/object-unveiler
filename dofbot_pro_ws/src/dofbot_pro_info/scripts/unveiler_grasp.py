@@ -16,7 +16,8 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..', '..', '..', '..'
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from robot_operations import compute_post_grasp_joints, compute_pre_grasp_joints, sim_to_robot
+from robot_operations import (compute_post_grasp_joints, compute_pre_grasp_joints,
+                              sim_to_robot, load_T_cam_base, get_real_heightmap)
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from dofbot_pro_info.msg import ArmJoint, ObservData, ActionData
@@ -92,6 +93,13 @@ class PolicyRobotController:
         params_path = os.path.join(_PROJECT_ROOT, 'yaml', 'bhand.yml')
         with open(params_path, 'r') as f:
             self.params = yaml.safe_load(f)
+
+        # Load camera-to-robot extrinsics and real workspace bounds
+        self.T_cam_base  = load_T_cam_base()
+        self.real_bounds = np.array(
+            self.params['env']['real_workspace']['bounds'], dtype=np.float64
+        )
+        rospy.loginfo(f"[Jetson] T_cam_base loaded; real_bounds = {self.real_bounds.tolist()}")
 
         rospy.sleep(1)
         self.move_arm_to_position(self.home_position)
@@ -229,22 +237,97 @@ class PolicyRobotController:
     # Robot execution
     # ------------------------------------------------------------------
 
-    def grasp_object(self, action_dict):
-        """Set gripper aperture, solve IK, execute grasp sequence, return to home."""
+    def real_action3d(self, action, real_bounds, pix_size):
+        """
+        Convert a 4-DOF pixel action [px, py, theta, aperture] to joint angles
+        via the IK service using real workspace bounds.
+
+        Returns (joint_angles list, aperture) or (None, aperture) on failure.
+        """
+        px, py, theta, aperture = action
+        # Clamp x/y to the calibrated workspace so out-of-range pixels don't
+        # produce poses outside the robot's kinematic envelope.
+        x = np.clip(real_bounds[0][0] + pix_size * float(px),
+                    real_bounds[0][0], real_bounds[0][1])
+        y = np.clip(real_bounds[1][0] + pix_size * float(py),
+                    real_bounds[1][0], real_bounds[1][1])
+
+        # Clamp combined horizontal reach to the arm's physical limit (~22 cm).
+        # The workspace corners can push sqrt(x²+y²) beyond the arm length,
+        # causing the IK solver to return degenerate solutions with joint2 < 0.
+        MAX_REACH = 0.1163   # metres — tune to match your robot's actual reach
+        d = np.hypot(x, y)
+        if d > MAX_REACH:
+            scale = MAX_REACH / d
+            x, y = x * scale, y * scale
+            rospy.logwarn(
+                f"real_action3d: clamped reach from {d:.3f} m → {MAX_REACH:.3f} m "
+                f"(x={x:.3f}, y={y:.3f})"
+            )
+
+        # z = table surface (real_bounds[2][0]) + small standoff.
+        # real_bounds[2][0] ≈ −0.14 m, i.e. the table is 14 cm below the
+        # robot base-frame origin — this is correct and expected.
+        z = float(real_bounds[2][0]) + 0.03   # ~3 cm above table surface
+        rospy.loginfo(
+            f"real_action3d → XYZ: ({x:.3f}, {y:.3f}, {z:.3f})  "
+            f"theta={np.degrees(float(theta)):.1f}°"
+        )
+        req = kinemaricsRequest()
+        req.kin_name = "ik"
+        req.tar_x    = x
+        req.tar_y    = y
+        req.tar_z    = z
+        req.Roll     = float(theta)
+        try:
+            self.ik_client.wait_for_service(timeout=3.0)
+            resp = self.ik_client.call(req)
+            joints = [
+                resp.joint1, resp.joint2, resp.joint3,
+                min(resp.joint4, 90.0),
+                90.0,   # palm fixed
+                30.0,   # gripper — overridden by gripper_control
+            ]
+            if any(j < 0 or j > 180 for j in joints[:4]):
+                rospy.logwarn(f"IK result out of range: {joints}")
+                return None, aperture
+            return joints, aperture
+        except rospy.ServiceException as e:
+            rospy.logerr(f"IK service failed: {e}")
+            return None, aperture
+
+    def grasp_object(self, action_4dof):
+        """Execute grasp from raw 4-DOF policy action [px, py, theta, aperture]."""
+        pix_size = self.params['env']['pixel_size']
+        joint_angles, aperture = self.real_action3d(
+            action_4dof, self.real_bounds, pix_size
+        )
+        if joint_angles is None:
+            rospy.logerr("IK failed — skipping grasp step")
+            general_utils.delete_episodes_misc(self.TEST_EPISODES_DIR)
+            return
+        try:
+            self.gripper_control(aperture)
+            rospy.sleep(0.5)
+            self.execute_grasp_sequence(joint_angles)
+            rospy.sleep(2)
+        except Exception as e:
+            rospy.logerr(f"Grasp error: {e}")
+        general_utils.delete_episodes_misc(self.TEST_EPISODES_DIR)
+
+    def grasp_object_from_pose(self, action_dict):
+        """Legacy: Set gripper aperture, solve IK from 3-D pos dict, execute grasp."""
         try:
             self.gripper_control(action_dict['aperture'])
             rospy.sleep(0.5)
-
             joint_angles = self.get_joint_angles_from_pose(action_dict['pos'])
             if joint_angles is not None:
                 self.execute_grasp_sequence(joint_angles)
             else:
                 rospy.logerr("IK failed — skipping grasp")
-
             rospy.sleep(2)
         except Exception as e:
             rospy.logerr(f"Grasp error: {e}")
-
         general_utils.delete_episodes_misc(self.TEST_EPISODES_DIR)
 
     def get_joint_angles_from_pose(self, pos):
@@ -318,10 +401,12 @@ class PolicyRobotController:
                 rospy.logerr("[Jetson] No action received — aborting episode.")
                 break
 
-            action_dict = action3d_from_params(np.array(self.action, dtype=np.float32), self.params)
-            rospy.loginfo(f"Step {step}: pos={action_dict['pos']}, aperture={action_dict['aperture']:.3f}")
-
-            self.grasp_object(action_dict)
+            action_arr = np.array(self.action, dtype=np.float32)
+            rospy.loginfo(
+                f"Step {step}: px={action_arr[0]:.1f}, py={action_arr[1]:.1f}, "
+                f"theta={np.degrees(action_arr[2]):.1f}°, aperture={action_arr[3]:.3f}"
+            )
+            self.grasp_object(action_arr)
 
             if self.rgb_image is not None:
                 cv2.imwrite(os.path.join(self.TEST_DIR, f'color_step{step}.png'), self.rgb_image)

@@ -27,20 +27,15 @@ def try_extract_tag_pose(msg):
     """Try a few common attribute paths used by apriltag_ros messages.
     Return (t_vec, quat) or None if extraction fails.
     """
-    # msg may have .detections array
     dets = getattr(msg, 'detections', None)
     if dets and len(dets) > 0:
         det = dets[0]
-        # common structure: det.pose.pose.pose OR det.pose.pose OR det.pose
         for first in ['pose', 'poses']:
             p = getattr(det, first, None)
             if p is None:
                 continue
-            # p might be a list
             if isinstance(p, (list, tuple)) and len(p) > 0:
                 p = p[0]
-
-            # now try nested .pose
             for _ in range(3):
                 if p is None:
                     break
@@ -48,14 +43,12 @@ def try_extract_tag_pose(msg):
                     p = p.pose
                     continue
                 break
-
             pos = getattr(p, 'position', None)
             ori = getattr(p, 'orientation', None)
             if pos is not None and ori is not None:
                 t = np.array([pos.x, pos.y, pos.z], dtype=float)
                 q = np.array([ori.x, ori.y, ori.z, ori.w], dtype=float)
                 return t, q
-
     return None
 
 
@@ -73,7 +66,6 @@ def collect_pairs(n, auto_fk=False, fk_service_name='get_kinemarics', tag_topic=
             fk_client = None
     while len(pairs) < n and not rospy.is_shutdown():
         print('\n--- Sample %d of %d ---' % (len(pairs) + 1, n))
-        # Poll for up to 5s to get a frame that actually contains detections.
         posed = None
         poll_start = time.time()
         while time.time() - poll_start < 5.0 and not rospy.is_shutdown():
@@ -82,7 +74,6 @@ def collect_pairs(n, auto_fk=False, fk_service_name='get_kinemarics', tag_topic=
             except Exception:
                 msg = None
                 continue
-
             posed = try_extract_tag_pose(msg)
             if posed is not None:
                 break
@@ -112,22 +103,19 @@ def collect_pairs(n, auto_fk=False, fk_service_name='get_kinemarics', tag_topic=
                 continue
 
         t_base = None
-        # try auto FK via service if requested
         if auto_fk and fk_client is not None:
             try:
-                # read latest joint states
                 js = rospy.wait_for_message('/joint_states', JointState, timeout=2.0)
                 joints = list(js.position)
             except Exception:
                 joints = []
-
             req = kinemaricsRequest()
-            # fill target (unused for fk)
             req.tar_x = 0.0; req.tar_y = 0.0; req.tar_z = 0.0
             req.Roll = 0.0; req.Pitch = 0.0; req.Yaw = 0.0
-            # populate cur_joint1..6 from available joint positions, pad with zeros
+            import math
+            defaults = [90.0, 90.0, 90.0, 0.0, 90.0, 30.0]
             for i in range(6):
-                val = joints[i] if i < len(joints) else 0.0
+                val = math.degrees(joints[i]) if i < len(joints) else defaults[i]
                 setattr(req, f'cur_joint{i+1}', float(val))
             req.kin_name = 'fk'
             try:
@@ -161,25 +149,20 @@ def compute_T_from_pair(t_cam, q_cam, t_base):
     T_tag_in_cam = np.eye(4)
     T_tag_in_cam[:3, :3] = R_tag_cam
     T_tag_in_cam[:3, 3] = t_cam
-
     T_tag_in_base = np.eye(4)
     T_tag_in_base[:3, 3] = t_base
-
     T_cam_base = T_tag_in_base @ np.linalg.inv(T_tag_in_cam)
     return T_cam_base
 
 
 def average_transforms(T_list):
-    # Average translations; average rotations by quaternion-sum then normalize
     translations = np.array([T[:3, 3] for T in T_list])
     mean_t = translations.mean(axis=0)
-
     rots = [Rotation.from_matrix(T[:3, :3]).as_quat() for T in T_list]
     Q = np.array(rots)
     q_mean = Q.sum(axis=0)
     q_mean = q_mean / np.linalg.norm(q_mean)
     R_mean = Rotation.from_quat(q_mean).as_matrix()
-
     T_avg = np.eye(4)
     T_avg[:3, :3] = R_mean
     T_avg[:3, 3] = mean_t
@@ -236,7 +219,6 @@ def main():
     save = input('Save averaged T_cam_base to %s ? [Y/n]: ' % args.out).strip().lower()
     if save != 'n':
         write_yaml(T_avg, args.out)
-        print('Wrote', args.out)
 
 
 if __name__ == '__main__':

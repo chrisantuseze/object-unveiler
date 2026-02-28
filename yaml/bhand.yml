@@ -1,21 +1,35 @@
-env:
-  workspace:
-    bounds: [[-0.25, 0.25], [-0.25, 0.25], [0.01, 0.3]]
-    position: [0, 0, 0]
-  pixel_size: 0.005
-  nr_of_obstacles:
-    -5
-    -7
-
 agent:
-  per: False
-
   fcn:
+    batch_size: 1
+    learning_rate: 0.0001
     rotations: 16
-    batch_size: 1
-    learning_rate: 0.0001
-
+  per: false
   regressor:
-    aperture_limits: [0.6, 1.1]
+    aperture_limits:
+    - 0.6
+    - 1.1
     batch_size: 1
     learning_rate: 0.0001
+env:
+  nr_of_obstacles: -5 -7
+  pixel_size: 0.005
+  real_workspace:
+    bounds:
+    - - -0.22759514876326095
+      - 0.2618648344220961
+    - - -0.0005999972306303041
+      - 0.25906914525079594
+    - - -0.14
+      - 0.03
+  workspace:
+    bounds:
+    - - -0.25
+      - 0.25
+    - - -0.25
+      - 0.25
+    - - 0.01
+      - 0.3
+    position:
+    - 0
+    - 0
+    - 0

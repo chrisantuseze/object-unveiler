@@ -1,8 +1,15 @@
 import open3d as o3d  # For point cloud operations
 import numpy as np
 import cv2
+import yaml
+import os
 import torch  # For image processing
 from dofbot_pro_info.srv import *
+
+_EXTRINSICS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '..', '..', '..', '..', 'yaml', 'cam_extrinsics.yaml'
+)
 
 def generate_point_cloud(color_img, depth_img, intrinsics, point_cloud):
         """ Generates and saves a point cloud using depth and RGB data. """
@@ -60,6 +67,93 @@ def get_fused_heightmap(obs):
             if height_grid[idx_y][idx_x] < z:
                 height_grid[idx_y][idx_x] = z
                 seg_grid[idx_y][idx_x] = seg_class[i, 0]
+
+    return cv2.flip(height_grid, 1)
+
+
+# ---------------------------------------------------------------------------
+# Real-robot camera extrinsics & heightmap
+# ---------------------------------------------------------------------------
+
+def load_T_cam_base():
+    """Load the measured camera-to-robot-base 4x4 transform from yaml/cam_extrinsics.yaml."""
+    path = _EXTRINSICS_PATH
+    with open(path, 'r') as f:
+        data = yaml.safe_load(f)
+    return np.array(data['T_cam_base'], dtype=np.float64)
+
+
+def get_real_heightmap(color_bgr, depth_m, intrinsics_3x3, T_cam_base, bounds, pix_size):
+    """
+    Build a top-down depth heightmap from a single RGB-D frame.
+
+    Parameters
+    ----------
+    color_bgr      : (H, W, 3) uint8   — BGR image from the Orbbec camera
+    depth_m        : (H, W)    float32 — depth in metres (raw 16UC1 / 1000)
+    intrinsics_3x3 : (3, 3)    float64 — camera K matrix
+    T_cam_base     : (4, 4)    float64 — camera→robot-base rigid transform
+    bounds         : (3, 2)    float64 — [[xmin,xmax],[ymin,ymax],[zmin,zmax]] metres
+    pix_size       : float              — metres per pixel in the output heightmap
+
+    Returns
+    -------
+    height_grid : (H_map, W_map) float32 — top-down heightmap in robot base frame
+    """
+    H, W = depth_m.shape
+    fx = intrinsics_3x3[0, 0]
+    fy = intrinsics_3x3[1, 1]
+    cx = intrinsics_3x3[0, 2]
+    cy = intrinsics_3x3[1, 2]
+
+    # Back-project depth pixels to 3-D points in camera frame (vectorised)
+    u, v = np.meshgrid(np.arange(W), np.arange(H))
+    valid = (depth_m > 0.05) & (depth_m < 1.5)
+
+    z_c = depth_m[valid].astype(np.float64)
+    x_c = (u[valid] - cx) * z_c / fx
+    y_c = (v[valid] - cy) * z_c / fy
+
+    pts_cam  = np.vstack([x_c, y_c, z_c, np.ones_like(z_c)])  # 4 × N
+    pts_base = (T_cam_base @ pts_cam)[:3, :]                   # 3 × N
+
+    px_arr = pts_base[0]
+    py_arr = pts_base[1]
+    pz_arr = pts_base[2]
+
+    # Filter to workspace x/y bounds and z upper bound (mirrors utils/general_utils.py)
+    in_bounds = (
+        (px_arr >= bounds[0][0]) & (px_arr < bounds[0][1]) &
+        (py_arr >= bounds[1][0]) & (py_arr < bounds[1][1]) &
+        (pz_arr < bounds[2][1])
+    )
+    px_arr = px_arr[in_bounds]
+    py_arr = py_arr[in_bounds]
+    pz_arr = pz_arr[in_bounds]
+
+    h_map = int(np.round((bounds[1][1] - bounds[1][0]) / pix_size))
+    w_map = int(np.round((bounds[0][1] - bounds[0][0]) / pix_size))
+    height_grid = np.zeros((h_map, w_map), dtype=np.float32)
+
+    if px_arr.size > 0:
+        # Sort by z ascending so higher points overwrite lower (matches sim)
+        sort_z = np.argsort(pz_arr)
+        px_arr = px_arr[sort_z]
+        py_arr = py_arr[sort_z]
+        pz_arr = pz_arr[sort_z]
+
+        idx_x = np.clip(np.floor((px_arr - bounds[0][0]) / pix_size).astype(int), 0, w_map - 1)
+        idx_y = np.clip(np.floor((py_arr - bounds[1][0]) / pix_size).astype(int), 0, h_map - 1)
+        height_grid[idx_y, idx_x] = pz_arr.astype(np.float32)
+
+    # Normalise heights relative to workspace floor so output is always >= 0
+    # (mirrors the depth_heightmap - z_bottom step in utils/general_utils.py)
+    z_bottom = float(bounds[2][0])
+    height_grid = height_grid - z_bottom
+    height_grid[height_grid < 0] = 0
+    # Cells that were never filled still equal -z_bottom after subtraction; mark as NaN
+    unfilled = np.isclose(height_grid, -z_bottom, atol=1e-4)
+    height_grid[unfilled] = np.nan
 
     return cv2.flip(height_grid, 1)
 
