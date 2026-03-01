@@ -64,7 +64,7 @@ class SceneCapture:
             if rospy.is_shutdown():
                 break
 
-            frame = self.latest_frame.copy()
+            frame = cv2.flip(self.latest_frame.copy(), 0)  # flip vertically (upside-down fix)
             os.makedirs(folder, exist_ok=True)
             save_path = os.path.join(folder, "scene_image.png")
             cv2.imwrite(save_path, frame)

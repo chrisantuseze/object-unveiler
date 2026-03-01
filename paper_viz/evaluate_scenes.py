@@ -16,6 +16,9 @@ Results are saved to:
     <scenes_dir>/results.pkl   – dict keyed by scene_id
 """
 
+from __future__ import annotations
+
+
 import argparse
 import os
 import pickle
