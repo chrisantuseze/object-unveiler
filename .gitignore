@@ -195,3 +195,5 @@ Unveiler__IROS.pdf
 .nfs*
 
 *.h
+
+paper_viz/real*
