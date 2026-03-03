@@ -47,6 +47,13 @@ def main():
         target_mask = extract_target_crop(target_mask, color_image)
         obstacle_mask = extract_target_crop(obstacle_mask, color_image)
 
+        # Special handling for obstacle_2.2 to use run_2.1.png as the color image
+        if 'obstacle_2.2' in obstacle_mask_path:
+            color_image_ = cv2.imread(os.path.join(dataset_dir1, 'run_2.1.png'), -1)
+            obstacle_mask = cv2.imread(os.path.join(dataset_dir1, 'obstacle_2.2.png'), -1)
+
+            obstacle_mask = extract_target_crop(obstacle_mask, color_image_)
+
         visualize(color_image, scene_mask, target_mask, obstacle_mask)
 
 def extract_target_crop(target, scene):
