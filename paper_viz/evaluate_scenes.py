@@ -179,7 +179,7 @@ def parse_args():
     parser.add_argument(
         "--sre_model",
         type=str,
-        default="save/sre/sre_model_best.pt",
+        default="save/sre_rl/sre_rl_best.pt",
     )
     parser.add_argument(
         "--skip_gpt",

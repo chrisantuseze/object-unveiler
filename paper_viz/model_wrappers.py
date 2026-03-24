@@ -69,17 +69,18 @@ class HeuristicPredictor:
 
 class SREPredictor:
     """
-    Wraps SpatialEncoder (SRE) for standalone inference.
-    Replicates the preprocessing from Policy.get_unveiler_inputs.
+    Wraps SREActorCritic for standalone inference.
+    Replicates the preprocessing from Policy.get_unveiler_inputs and uses
+    SREActorCritic.act (deterministic=True) matching exploit_unveiler_rl.
     """
 
     def __init__(
         self,
-        model_path: str = "save/sre/sre_model_best.pt",
+        model_path: str = "save/sre_rl/sre_rl_best.pt",
         num_patches: int = 10,
         device: torch.device = None,
     ):
-        from policy.sre_model import SpatialEncoder
+        from policy.sre_actor_critic import SREActorCritic
 
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -87,10 +88,14 @@ class SREPredictor:
         self.num_patches = num_patches
 
         args = argparse.Namespace(device=self.device, num_patches=num_patches)
-        self.model = SpatialEncoder(args).to(self.device)
-        self.model.load_state_dict(
-            torch.load(model_path, map_location=self.device)
-        )
+        # Construct without pretrained path — weights loaded manually below
+        self.model = SREActorCritic(args).to(self.device)
+
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            self.model.load_state_dict(checkpoint)
         self.model.eval()
 
     @torch.no_grad()
@@ -130,9 +135,8 @@ class SREPredictor:
             proc_masks = proc_masks[: self.num_patches].unsqueeze(0)
             bboxes_t = bboxes_t[: self.num_patches].unsqueeze(0)
 
-        logits, _ = self.model(proc_scene, proc_target, proc_masks, bboxes_t)
-        obstacle_id = int(torch.topk(logits, k=1, dim=1).indices.item())
-        return obstacle_id
+        action, _, _ = self.model.act(proc_scene, proc_target, proc_masks, bboxes_t, deterministic=True)
+        return int(action.item())
 
 
 # ---------------------------------------------------------------------------
