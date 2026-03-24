@@ -443,7 +443,9 @@ def train_sre_rl(args, params):
         checkpoint_path = args.sre_rl
     
     if os.path.exists(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path, map_location=args.device)
+        # Explicitly allow non-weights-only loading for legacy full checkpoints
+        # (PyTorch 2.6 changed torch.load default to weights_only=True).
+        checkpoint = torch.load(checkpoint_path, map_location=args.device, weights_only=False)
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
             # New-style full checkpoint
             policy.load_state_dict(checkpoint['model_state_dict'])

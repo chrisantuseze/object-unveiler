@@ -166,26 +166,25 @@ class GPT4oPredictor:
 
     def __init__(self):
         self._predictor = GPTRemovalPredictor()
-        # Override the system prompt for a clearer task description
-        self._predictor.predict = self._predict_patched.__get__(
-            self._predictor, GPTRemovalPredictor
-        )
 
-    def _predict_patched(self_inner, objects, target, prompts=None):
-        """
-        Patched version of GPTRemovalPredictor.predict with an improved prompt.
-        'self_inner' refers to the GPTRemovalPredictor instance.
-        """
+    def predict(self, scene: SceneData) -> int:
         import json
-        object_data_uris = [self_inner.np_to_data_uri(obj) for obj in objects]
-        target_data_uri = self_inner.np_to_data_uri(target)
+
+        object_crops = [scene.object_crop(m) for m in scene.object_masks]
+        target_crop = scene.object_crop(scene.target_mask)
+        # Convert BGR→RGB for display models
+        object_crops_rgb = [cv2.cvtColor(c, cv2.COLOR_BGR2RGB) for c in object_crops]
+        target_crop_rgb = cv2.cvtColor(target_crop, cv2.COLOR_BGR2RGB)
+
+        object_data_uris = [self._predictor.np_to_data_uri(obj) for obj in object_crops_rgb]
+        target_data_uri = self._predictor.np_to_data_uri(target_crop_rgb)
 
         object_contents = []
         for i, uri in enumerate(object_data_uris):
             object_contents.append({"type": "text", "text": f"Object {i}:"})
             object_contents.append({"type": "image_url", "image_url": {"url": uri}})
 
-        response = self_inner.client.chat.completions.create(
+        response = self._predictor.client.chat.completions.create(
             model="gpt-4o-2024-08-06",
             messages=[
                 {
@@ -238,12 +237,4 @@ class GPT4oPredictor:
 
         chosen_index = json.loads(response.choices[0].message.content)["chosen_index"]
         print("GPT-4o response:", chosen_index)
-        return chosen_index
-
-    def predict(self, scene: SceneData) -> int:
-        object_crops = [scene.object_crop(m) for m in scene.object_masks]
-        target_crop = scene.object_crop(scene.target_mask)
-        # Convert BGR→RGB for display models
-        object_crops_rgb = [cv2.cvtColor(c, cv2.COLOR_BGR2RGB) for c in object_crops]
-        target_crop_rgb = cv2.cvtColor(target_crop, cv2.COLOR_BGR2RGB)
-        return int(self._predictor.predict(object_crops_rgb, target_crop_rgb))
+        return int(chosen_index)

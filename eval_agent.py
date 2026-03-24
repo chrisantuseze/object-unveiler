@@ -215,9 +215,9 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
 
         obs = copy.deepcopy(next_obs)
 
-        res = input("\nDo you want to continue? (y/n) ")
-        if res.lower() == "n":
-            break
+        # res = input("\nDo you want to continue? (y/n) ")
+        # if res.lower() == "n":
+        #     break
 
         new_masks, pred_mask, raw_masks, new_bboxes = segmenter.from_maskrcnn(obs['color'][1], dir=TEST_EPISODES_DIR, bbox=True)
         if len(new_masks) == n_prev_masks:
@@ -226,9 +226,9 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
         if count > 2:
             logging.info("Robot is in an infinite loop")
             
-            res = input("\nDo you still want to continue? (y/n) ")
+            res = input("\nDo you still want to continue? (y/n): ")
             if res.lower() == "n":
-                res = input("\nDo you think the grasp was successful? (y/n) ")
+                res = input("\nDo you think the grasp was successful? (y/n): ")
                 if res.lower() == "y":
                     logging.info("Target has been grasped!")
 
@@ -243,7 +243,7 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
 
         target_id, target_mask = grasping.find_target(new_masks, target_mask)
         if target_id == -1:
-            res = input("\nDo you think the target is available? (y/n) ")
+            res = input("\nDo you think the target is available? (y/n): ")
             if res.lower() == "y":
                 target_id = int(input("\nWhat is the index? "))
                 target_mask = new_masks[target_id]
@@ -256,7 +256,7 @@ def run_episode_unveiler(args, policy: Policy, env: Environment, segmenter: Obje
                 n_prev_masks = len(processed_masks)
                 continue
 
-            res = input("\nDo you think the grasp was successful? (y/n) ")
+            res = input("\nDo you think the grasp was successful? (y/n): ")
             if res.lower() == "y":
                 logging.info("Target has been grasped!")
 
@@ -738,7 +738,7 @@ def eval_agent(args):
 
         if episode_data['successful']:
             success_count += 1
-            with open('gpt_results.txt', 'a') as file:
+            with open('sre_rl_results_2_6_full.txt', 'a') as file:
                 file.write(f"Success rate (success/total): {success_count}/{i+1}, final_clutter_score: {episode_data['final_clutter_score']}, total_clutter_score: {episode_data['total_clutter_score']}, planning steps: {episode_data['attempts']}, number of objects: {episode_data['num_objects']}\n")
 
             final_clutter_score += episode_data['final_clutter_score']
@@ -753,7 +753,7 @@ def eval_agent(args):
         if i % 5 == 0:
             logging.info('Episode: {}, Avg. Clutter Score:{}, Final Clutter Score: {}, Planning Steps: {}'.format(i, avg_clutter_score, final_clutter_score, planning_steps))
 
-    with open('gpt_results.txt', 'a') as file:
+    with open('sre_rl_results_2_6_full.txt', 'a') as file:
         file.write(f"\nAvg Total Clutter Score: {avg_clutter_score/success_count}, Avg Final Clutter Score: {final_clutter_score/success_count}, Avg Planning Steps: {planning_steps/success_count}\n")
 
     logging.info(f"Success rate was -> {success_count}/{args.n_scenes} = {success_count/args.n_scenes}")

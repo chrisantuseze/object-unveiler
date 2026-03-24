@@ -37,7 +37,7 @@ from trainer.memory import ReplayBuffer
 import utils.general_utils as general_utils
 
 
-SCENES_DIR_DEFAULT = "save/real-eval-scenes"
+SCENES_DIR_DEFAULT = "paper_viz/real-eval-scenes-2-4-"
 MODELS = ["sre", "clip", "gpt", "heuristic"]
 
 
