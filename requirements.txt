@@ -41,3 +41,4 @@ ipython
 
 # for diffusion model
 diffusers
+roslibpy==2.1.0
