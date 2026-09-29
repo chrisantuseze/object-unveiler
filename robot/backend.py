@@ -11,9 +11,13 @@ in the choice.
     clip       zero-shot CLIP obstacle selection (baseline/clip_eval.py, as in Table IV)
     random     uniform over the selectable objects
 
-Preprocessing matches the sim evaluation (eval_agent.py -> Policy.exploit_unveiler_rl): the (optionally cropped)
-frame is resized to the 400x400 sim resolution and segmented by the same Mask R-CNN, and the SRE gets 100x100 object
-masks, a 100x100 target mask and a grey-scale 100x100 scene image, padded to ``num_patches`` object slots.
+Preprocessing matches the sim evaluation (eval_agent.py -> Policy.exploit_unveiler_rl): the workspace is mapped to
+the 400x400 sim resolution and segmented by the same Mask R-CNN, and the SRE gets 100x100 object masks, a 100x100
+target mask and a grey-scale 100x100 scene image, padded to ``num_patches`` object slots.
+
+Frame -> sim view is one homography H. ``warp`` (four workspace corners in camera pixels, TL TR BR BL) rectifies an
+oblique camera to the straight-down view the sim camera had; ``crop`` (an axis-aligned box) is the special case of a
+scale + shift; neither = the whole frame. Masks go back to the frame through H^-1, so replies stay in camera pixels.
 """
 
 import json
@@ -47,10 +51,17 @@ class UnveilerBackend:
     def __init__(self, device: str = "cuda", sre_rl_ckpt: str = "save/sre_rl/sre_rl_best.pt",
                  sre_il_ckpt: str = "save/sre/sre_model_best.pt", num_patches: int = 10,
                  seg_threshold: float = 0.97, crop: Optional[Sequence[int]] = None,
+                 warp: Optional[Sequence[float]] = None,
                  output_dir: str = "save/real_eval", seed: int = 0):
+        if crop and warp:
+            raise ValueError("give either crop or warp, not both")
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
         self.num_patches = num_patches
         self.crop = list(crop) if crop else None
+        self.warp = [float(v) for v in warp] if warp else None
+        if self.warp is not None and len(self.warp) != 8:
+            raise ValueError(f"warp needs 8 numbers (TL TR BR BL corners as x y), got {len(self.warp)}")
+        self._H_cache = {}   # frame (h, w) -> (H, H_inv)
         self.output_dir = Path(output_dir)
         self.rng = np.random.RandomState(seed)
         model_args = Namespace(device=self.device, num_patches=num_patches, sequence_length=1)
@@ -91,12 +102,13 @@ class UnveilerBackend:
     def from_args(cls, args):
         return cls(device=args.device, sre_rl_ckpt=args.sre_rl_ckpt, sre_il_ckpt=args.sre_il_ckpt,
                    num_patches=args.num_patches, seg_threshold=args.seg_threshold, crop=args.crop,
-                   output_dir=args.output_dir, seed=args.seed)
+                   warp=getattr(args, "warp", None), output_dir=args.output_dir, seed=args.seed)
 
     @property
     def settings(self) -> dict:
         return {"methods": list(METHODS), "default_method": "sre", "num_patches": self.num_patches,
-                "sim_image_size": SIM_SIZE, "crop": self.crop, "seg_threshold": self.segmenter.threshold}
+                "sim_image_size": SIM_SIZE, "crop": self.crop, "warp": self.warp,
+                "seg_threshold": self.segmenter.threshold}
 
     # ── ops ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -117,15 +129,16 @@ class UnveilerBackend:
         t0 = time.perf_counter()
 
         # ── segment at sim resolution ──
-        x0, y0, x1, y1 = self._roi(image_bgr.shape)
-        color = cv2.resize(cv2.cvtColor(image_bgr[y0:y1, x0:x1], cv2.COLOR_BGR2RGB), (SIM_SIZE, SIM_SIZE))
-        target = self._to_sim(target_mask, (x0, y0, x1, y1))
+        H, H_inv = self._homography(image_bgr.shape)
+        color = cv2.cvtColor(cv2.warpPerspective(image_bgr, H, (SIM_SIZE, SIM_SIZE), flags=cv2.INTER_LINEAR),
+                             cv2.COLOR_BGR2RGB)
+        target = self._to_sim(target_mask, H)
         masks, _, _, bboxes = self.segmenter.from_maskrcnn(color, dir=self._seg_dir, bbox=True,
                                                            dim=(SIM_SIZE, SIM_SIZE))
         t_seg = time.perf_counter()
 
         n = len(masks)
-        full_masks = [self._to_frame(m, image_bgr.shape, (x0, y0, x1, y1)) for m in masks]
+        full_masks = [self._to_frame(m, image_bgr.shape, H_inv) for m in masks]
         centroids = [_centroid(m) for m in full_masks]
         if reachable_mask is None:
             reachable = [True] * n
@@ -138,7 +151,7 @@ class UnveilerBackend:
             "target_visible": target_index >= 0, "target_index": target_index,
             "target_reachable": bool(target_index < 0 or reachable[target_index]),
             "objects": [{"index": i, "centroid": centroids[i],
-                         "bbox": self._bbox_to_frame(bboxes[i], (x0, y0, x1, y1)),
+                         "bbox": self._bbox_to_frame(bboxes[i], H_inv),
                          "area": int(np.count_nonzero(full_masks[i])), "reachable": reachable[i]}
                         for i in range(n)],
             "unfiltered_index": None, "probs": None, "reason": "",
@@ -148,7 +161,7 @@ class UnveilerBackend:
         if n == 0:
             chosen, reply["reason"] = -1, "no objects segmented"
         elif target.max() == 0:
-            chosen, reply["reason"] = -1, "empty target mask (after crop)"
+            chosen, reply["reason"] = -1, "empty target mask (after crop/warp)"
         else:
             candidates = [i for i in range(n) if reachable[i]]
             if not candidates:
@@ -183,7 +196,7 @@ class UnveilerBackend:
         })
 
         overlay = draw_overlay(image_bgr, full_masks, target_mask, chosen, target_index, reachable)
-        reply["log_dir"] = self._log_step(step, method, image_bgr, target_mask, overlay, masks, reply)
+        reply["log_dir"] = self._log_step(step, method, image_bgr, target_mask, overlay, masks, reply, color)
         if return_overlay:
             reply["overlay"] = encode_image(overlay, quality=85)
         return reply
@@ -265,42 +278,59 @@ class UnveilerBackend:
 
     # ── geometry helpers ─────────────────────────────────────────────────────────────────────────────────────────
 
-    def _roi(self, shape):
+    def _homography(self, shape):
+        """H maps frame pixels to the 400x400 sim view (the workspace quad, crop box or whole frame fills it)."""
         h, w = shape[:2]
-        if not self.crop:
-            return 0, 0, w, h
-        x0, y0, x1, y1 = self.crop
-        if not (0 <= x0 < x1 <= w and 0 <= y0 < y1 <= h):
-            raise ValueError(f"crop {self.crop} does not fit a {w}x{h} frame")
-        return x0, y0, x1, y1
+        if (h, w) not in self._H_cache:
+            if self.warp:
+                src = np.float32(self.warp).reshape(4, 2)
+                # corners may sit a little outside the frame (the table edge is off-camera); the part of the quad
+                # the camera does not see comes out black in the sim view
+                if not ((src[:, 0] >= -w / 2) & (src[:, 0] <= 1.5 * w) & (src[:, 1] >= -h / 2)
+                        & (src[:, 1] <= 1.5 * h)).all():
+                    raise ValueError(f"warp corners {self.warp} are far outside a {w}x{h} frame")
+                if not (src[:, 0].min() >= 0 and src[:, 0].max() <= w and src[:, 1].min() >= 0
+                        and src[:, 1].max() <= h):
+                    logger.warning("warp corners %s extend past the %dx%d frame", self.warp, w, h)
+            else:
+                x0, y0, x1, y1 = self.crop if self.crop else (0, 0, w, h)
+                if not (0 <= x0 < x1 <= w and 0 <= y0 < y1 <= h):
+                    raise ValueError(f"crop {self.crop} does not fit a {w}x{h} frame")
+                src = np.float32([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+            dst = np.float32([[0, 0], [SIM_SIZE, 0], [SIM_SIZE, SIM_SIZE], [0, SIM_SIZE]])
+            H = cv2.getPerspectiveTransform(src, dst)
+            self._H_cache[(h, w)] = (H, np.linalg.inv(H))
+        return self._H_cache[(h, w)]
 
     @staticmethod
-    def _to_sim(mask, roi):
-        x0, y0, x1, y1 = roi
-        m = cv2.resize(np.asarray(mask)[y0:y1, x0:x1].astype(np.uint8), (SIM_SIZE, SIM_SIZE),
-                       interpolation=cv2.INTER_NEAREST)
+    def _to_sim(mask, H):
+        m = cv2.warpPerspective(np.asarray(mask).astype(np.uint8), H, (SIM_SIZE, SIM_SIZE),
+                                flags=cv2.INTER_NEAREST)
         return (m > 0).astype(np.uint8) * 255
 
     @staticmethod
-    def _to_frame(mask_sim, shape, roi):
-        x0, y0, x1, y1 = roi
-        full = np.zeros(shape[:2], np.uint8)
-        full[y0:y1, x0:x1] = cv2.resize(mask_sim, (x1 - x0, y1 - y0), interpolation=cv2.INTER_NEAREST)
-        return full
+    def _to_frame(mask_sim, shape, H_inv):
+        m = cv2.warpPerspective(np.asarray(mask_sim).astype(np.uint8), H_inv, (shape[1], shape[0]),
+                                flags=cv2.INTER_NEAREST)
+        return (m > 0).astype(np.uint8) * 255
 
     @staticmethod
-    def _bbox_to_frame(b, roi):
-        x0, y0, x1, y1 = roi
-        sx, sy = (x1 - x0) / SIM_SIZE, (y1 - y0) / SIM_SIZE
-        return [round(b[0] * sx + x0, 1), round(b[1] * sy + y0, 1), round(b[2] * sx + x0, 1), round(b[3] * sy + y0, 1)]
+    def _bbox_to_frame(b, H_inv):
+        """Sim-view box -> the axis-aligned frame box around its four warped corners."""
+        corners = np.float32([[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]).reshape(-1, 1, 2)
+        p = cv2.perspectiveTransform(corners, H_inv).reshape(-1, 2)
+        return [round(float(p[:, 0].min()), 1), round(float(p[:, 1].min()), 1),
+                round(float(p[:, 0].max()), 1), round(float(p[:, 1].max()), 1)]
 
-    def _log_step(self, step, method, image_bgr, target_mask, overlay, masks, reply) -> str:
+    def _log_step(self, step, method, image_bgr, target_mask, overlay, masks, reply, sim_rgb=None) -> str:
         name = f"step_{int(step):02d}_{method}" if step is not None else f"step_{time.strftime('%H%M%S')}_{method}"
         d = self.log_dir / name
         d.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(d / "frame.jpg"), image_bgr)
         cv2.imwrite(str(d / "target_mask.png"), (np.asarray(target_mask) > 0).astype(np.uint8) * 255)
         cv2.imwrite(str(d / "overlay.jpg"), overlay)
+        if sim_rgb is not None:   # what the segmenter and the SRE saw (after crop/warp)
+            cv2.imwrite(str(d / "sim_view.jpg"), cv2.cvtColor(sim_rgb, cv2.COLOR_RGB2BGR))
         np.savez_compressed(d / "masks_sim.npz", masks=np.array(masks, dtype=np.uint8).reshape(-1, SIM_SIZE, SIM_SIZE))
         with open(d / "reply.json", "w") as f:
             json.dump({k: v for k, v in reply.items() if k not in ("chosen_mask", "overlay")}, f, indent=2)

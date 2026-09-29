@@ -31,7 +31,9 @@ class Simulation:
         # self.names_button.show_names(self.objects) TODO: Uncomment
 
 class Environment:
-    def __init__(self, params, assets_root = "assets/", objects_set="seen") -> None:
+    def __init__(self, params, assets_root = "assets/", objects_set="seen", render="gui", nr_objects=None) -> None:
+        """render: 'gui' (default, opens a window), 'direct' (headless, CPU TinyRenderer) or 'egl' (headless,
+        GPU OpenGL like the GUI; use on clusters). nr_objects: [low, high) objects per scene, default [2, 6]."""
         self.objects = []
 
         self.assets_root = assets_root
@@ -44,7 +46,7 @@ class Environment:
         self.pxl_size = params['env']['pixel_size']
         self.bounds = np.array(params['env']['workspace']['bounds'])
 
-        self.nr_objects = [2, 6]
+        self.nr_objects = list(nr_objects) if nr_objects else [2, 6]
         # self.nr_objects = [6, 9]
         # self.nr_objects = [9, 12]
 
@@ -70,18 +72,26 @@ class Environment:
 
         self.rng = np.random.RandomState()
 
-        # p.connect(p.DIRECT)
-        p.connect(p.GUI)
-        # Move default camera closer to the scene.
-        target = np.array(self.workspace_pos)
-        p.resetDebugVisualizerCamera(
-            cameraDistance=0.75,
-            cameraYaw=180,
-            cameraPitch=-45,
-            cameraTargetPosition=target)
-        
+        if render == "gui":
+            p.connect(p.GUI)
+            # Move default camera closer to the scene.
+            target = np.array(self.workspace_pos)
+            p.resetDebugVisualizerCamera(
+                cameraDistance=0.75,
+                cameraYaw=180,
+                cameraPitch=-45,
+                cameraTargetPosition=target)
+            p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+        else:
+            p.connect(p.DIRECT)
+            if render == "egl":
+                import pkgutil
+                egl = pkgutil.get_loader('eglRenderer')
+                plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin") if egl else -1
+                if plugin < 0:
+                    logging.info("EGL renderer unavailable; falling back to TinyRenderer")
+
         p.setAdditionalSearchPath(self.assets_root)
-        p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         p.setTimeStep(1.0 / hz)
         p.setGravity(0, 0, -9.8)
         p.setPhysicsEngineParameter(numSolverIterations=10)

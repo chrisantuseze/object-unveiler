@@ -7,7 +7,7 @@ execution; this process only segments the frame and picks the next object to rem
 
     Jetson:  roscore, arm_driver, camera, ..., roslaunch rosbridge_server rosbridge_websocket.launch
     Lab PC:  conda activate unveiler
-             python -m robot.server --jetson-ip 192.168.0.8 [--crop X0 Y0 X1 Y1]
+             python -m robot.server --jetson-ip 192.168.0.8 [--crop X0 Y0 X1 Y1 | --warp TLx TLy TRx TRy BRx BRy BLx BLy]
 
 Offline check without the Jetson (loads the models, selects once on image files):
     python -m robot.server --offline-image frame.png --offline-target target_mask.png --method sre
@@ -134,6 +134,10 @@ def parse_args(argv=None):
     ap.add_argument("--crop", type=int, nargs=4, metavar=("X0", "Y0", "X1", "Y1"), default=None,
                     help="workspace ROI in camera pixels; the heuristic treats the ROI border as the workspace edge, "
                          "as the sim camera did. Default: whole frame")
+    ap.add_argument("--warp", type=float, nargs=8, metavar="XY", default=None,
+                    help="workspace corners in camera pixels, TL TR BR BL as x y pairs; the quad is rectified to the "
+                         "straight-down 400x400 sim view (use for an oblique camera; get them with "
+                         "`python -m robot.pick_corners frame.jpg`). Excludes --crop")
     ap.add_argument("--output-dir", default="save/real_eval", help="per-session step logs")
     ap.add_argument("--seed", type=int, default=0, help="seed for the random selector")
 
@@ -145,6 +149,8 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
+    if args.crop and args.warp:
+        raise SystemExit("--crop and --warp are exclusive: pick one")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
 

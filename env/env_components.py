@@ -56,7 +56,9 @@ class FloatingBHand:
         # If there is no urdf file, generate the mounted-gripper urdf.
         self.mount_urdf = os.path.join('assets', MOUNT_URDF_PATH)
         mounted_urdf_name = "../assets/mounted_" + robot_hand_urdf.split('/')[-1].split('.')[0] + ".urdf"
-        if not os.path.exists(mounted_urdf_name):
+        # pybullet resolves the name against the 'assets/' search path, so check the file there (checking it relative
+        # to the cwd never found it and regenerated the urdf on every reset; under EGL that dropped visual meshes)
+        if not os.path.exists(os.path.join('assets', os.path.basename(mounted_urdf_name))):
             self.generate_mounted_urdf(robot_hand_urdf, pos_offset, orn_offset)
 
         # rotation w.r.t. inertia frame

@@ -23,6 +23,7 @@ client side is described in [`CLIENT_INTEGRATION.md`](CLIENT_INTEGRATION.md).
 | `client.py` | `UnveilerClient`: ping / reset / select over rosbridge (no torch; the Jetson copies it) |
 | `backend.py` | segmentation, SRE input construction (same tensors as the sim eval), the six selectors, step logs |
 | `server.py` | rosbridge server + `--offline-image` mode |
+| `pick_corners.py` | click the workspace corners on a frame, print `--warp` arguments, preview the rectified view |
 | `fake_rosbridge.py` | minimal rosbridge stand-in for testing without a Jetson |
 | `mock_client.py` | sends the requests the robot will send, and checks the replies |
 | `testdata/` | a sim top-down scene placed in a 640x480 frame at (120, 40)-(520, 440), plus its target mask |
@@ -39,9 +40,15 @@ python -m robot.server --jetson-ip 192.168.0.8 --crop X0 Y0 X1 Y1
   400x400, the sim camera resolution the segmenter and the SRE were trained on. Choose a square-ish box that tightly
   frames the workspace. The heuristic ranks objects by distance to the image border, so the crop border should be the
   workspace edge, as it was in sim. The default is the whole frame.
+- `--warp TLx TLy TRx TRy BRx BRy BLx BLy` (use instead of `--crop` when the camera is oblique): the four workspace
+  corners in camera pixels. The quad is rectified with a homography to the straight-down 400x400 view the sim camera
+  had, and masks are warped back, so replies stay in camera pixels. Get the corners by clicking them on a saved frame:
+  `python -m robot.pick_corners <frame.jpg>` prints the `--warp ...` arguments and writes a preview of the rectified
+  view. Pick a square-ish region of the table (the sim workspace was square), so blocks keep their aspect ratio.
+  Every step also saves `sim_view.jpg`, the rectified image the segmenter and the SRE actually saw.
 - `--seg-threshold` (default 0.97, `ObjectSegmenter`'s real-image value). Lower it if blocks are missed.
 - `--output-dir` (default `save/real_eval`): every `select` writes
-  `<session>/episode_NNNN/step_SS_<method>/{frame.jpg, target_mask.png, overlay.jpg, masks_sim.npz, reply.json}`.
+  `<session>/episode_NNNN/step_SS_<method>/{frame.jpg, target_mask.png, overlay.jpg, sim_view.jpg, masks_sim.npz, reply.json}`.
   `overlay.jpg` outlines every object with its index: target red, chosen green, unreachable grey.
 - Checkpoints: `--sre-rl-ckpt save/sre_rl/sre_rl_best.pt` (the one `main.py` evaluates) and
   `--sre-il-ckpt save/sre/sre_model_best.pt`.
