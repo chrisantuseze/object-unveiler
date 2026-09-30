@@ -210,6 +210,20 @@ def make_probe(p, args):
     return Probe(p, args.corridor_len, args.corridor_width, args.corridor_height)
 
 
+BLOCK_COLOURS = [(0.75, 0.12, 0.10, 1), (0.10, 0.36, 0.26, 1), (0.15, 0.45, 0.80, 1), (0.95, 0.80, 0.15, 1)]
+
+
+def dress_like_real(p, objects, rng):
+    """Block scenes: paint each box a real block colour and the table white like the real paper sheet."""
+    for o in objects:
+        p.changeVisualShape(o, -1, rgbaColor=BLOCK_COLOURS[rng.randint(len(BLOCK_COLOURS))])
+    for b in range(p.getNumBodies()):
+        uid = p.getBodyUniqueId(b)
+        if "table" in p.getBodyInfo(uid)[1].decode(errors="ignore").lower():
+            for j in range(-1, p.getNumJoints(uid)):
+                p.changeVisualShape(uid, j, rgbaColor=(0.92, 0.92, 0.92, 1))
+
+
 def stack_on_target(p, target, others, rng, args):
     """Top-occlusion scenes: drop 1-2 of the target's nearest neighbours onto it and let them settle."""
     lo, hi = p.getAABB(target)
@@ -289,6 +303,9 @@ def collect(wid, args, n_states, student_path, beta, out_dir, seed):
         env.nr_objects = [lo, hi]
         env.seed(int(rng.randint(0, 2 ** 31 - 1)))
         obs = env.reset()
+        if args.objects_set == "blocks":
+            dress_like_real(p, [o.body_id for o in env.objects], rng)
+            obs = env.get_observation()
         probe = make_probe(p, args)                     # env.reset cleared all bodies
         search = Search(p, probe, args)
         stats["scenes"] += 1
