@@ -464,6 +464,9 @@ def train_student(args, data_dirs, init_path, out_path, log):
         if va[0] < best:
             best = va[0]
             torch.save(model.state_dict(), out_path)
+    # release the GPU before the next iteration's collection workers start (they OOM'd next to a cached ~2.5 GB)
+    del model, opt
+    torch.cuda.empty_cache()
     return {"states": int(n), "val_loss": best}
 
 

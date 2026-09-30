@@ -191,6 +191,20 @@ The expert-iteration SRE is the only method well above the trivial baselines, an
 scenes. On the easy set, the same checkpoint scores 11/20 against 15/20 for "always grasp". Later iterations should
 be checked on both sets, so a gain on covered scenes does not hide a loss on free targets.
 
+### Later iterations on real frames
+
+| Top checkpoint | Sim states | Easy set (20) | Covered set (25) |
+| --- | --- | --- | --- |
+| it0 | 2,505 | 11/20 | **15/25** |
+| it1 | 3,809 | 12/20 | 12/25 |
+| it2 | 5,877 | 11/20 | 8/25 |
+| it3 | 8,380 | 12/20 | 8/25 |
+
+The DAgger iterations kept improving the fit to simulated states but made covered real scenes worse. That is a
+sim-to-real gap: training scenes use household meshes, while the real scenes use blocks. **Use `sre_exit_it0.pt`
+on the robot.** `sre_exit_best.pt` is only a copy of the last iteration (it3). The likely fix is training scenes
+built from box-shaped objects the size of the real blocks.
+
 ### Running overnight (started 2026-09-29, about 15:30)
 
 - `scripts/train_sre_exit_all.sh`: the top model (iterations 1-3), then the side model (4 iterations).
