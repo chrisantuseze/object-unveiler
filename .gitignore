@@ -197,3 +197,5 @@ Unveiler__IROS.pdf
 *.h
 
 paper_viz/real*
+# local planning notes
+docs/paper_update_plan.md
