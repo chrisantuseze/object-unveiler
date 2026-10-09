@@ -62,6 +62,13 @@ class UnveilerBackend:
         if self.warp is not None and len(self.warp) != 8:
             raise ValueError(f"warp needs 8 numbers (TL TR BR BL corners as x y), got {len(self.warp)}")
         self._H_cache = {}   # frame (h, w) -> (H, H_inv)
+        # SRE methods: grasp the target only when its probability is at least this, else take the best other
+        # object. A grasp at a still-covered target fails the episode; an unneeded removal costs one step.
+        self.target_min_prob = None
+        # Set by `robot.server --method`: every select runs this method, whatever the client asked for, and the
+        # replies and step logs carry `method_label`. The client then needs no notion of methods.
+        self.forced_method = None
+        self.method_label = None
         self.output_dir = Path(output_dir)
         self.rng = np.random.RandomState(seed)
         model_args = Namespace(device=self.device, num_patches=num_patches, sequence_length=1)
@@ -106,7 +113,8 @@ class UnveilerBackend:
 
     @property
     def settings(self) -> dict:
-        return {"methods": list(METHODS), "default_method": "sre", "num_patches": self.num_patches,
+        return {"methods": list(METHODS), "default_method": "sre", "forced_method": self.forced_method,
+                "method": self.method_label, "num_patches": self.num_patches,
                 "sim_image_size": SIM_SIZE, "crop": self.crop, "warp": self.warp,
                 "seg_threshold": self.segmenter.threshold}
 
@@ -120,8 +128,12 @@ class UnveilerBackend:
     def select(self, image_bgr: np.ndarray, target_mask: np.ndarray, method: str = "sre",
                reachable_mask: Optional[np.ndarray] = None, target_visible: Optional[bool] = None,
                step: Optional[int] = None, return_overlay: bool = False, decode_ms: float = 0.0) -> dict:
+        requested = method
+        if self.forced_method:
+            method = self.forced_method
         if method not in METHODS:
             raise ValueError(f"unknown method '{method}', expected one of {METHODS}")
+        label = self.method_label if self.forced_method else method
         if target_mask.shape[:2] != image_bgr.shape[:2]:
             raise ValueError(f"target_mask {target_mask.shape[:2]} and image {image_bgr.shape[:2]} differ in size")
         if reachable_mask is not None and reachable_mask.shape[:2] != image_bgr.shape[:2]:
@@ -146,8 +158,16 @@ class UnveilerBackend:
             reachable = [bool(reachable_mask[cy, cx] > 0) for cx, cy in centroids]
 
         target_index = -1 if target_visible is False else _match_target(target, masks)
+        if method == "always_target" and target_index < 0 and target_visible is not False and target.max() > 0:
+            # the segmenter gave the visible target no mask: this baseline grasps it anyway, from the client's mask
+            x, y, w, h = cv2.boundingRect((target > 0).astype(np.uint8))
+            masks, bboxes = list(masks) + [target], list(bboxes) + [[x, y, x + w, y + h]]
+            full_masks.append((target_mask > 0).astype(np.uint8) * 255)
+            centroids.append(_centroid(full_masks[-1]))
+            reachable.append(True)
+            target_index, n = n, n + 1
         reply = {
-            "method": method, "num_objects": n, "truncated": n > self.num_patches,
+            "method": label, "requested_method": requested, "num_objects": n, "truncated": n > self.num_patches,
             "target_visible": target_index >= 0, "target_index": target_index,
             "target_reachable": bool(target_index < 0 or reachable[target_index]),
             "objects": [{"index": i, "centroid": centroids[i],
@@ -174,6 +194,12 @@ class UnveilerBackend:
                 chosen = self._select_gpt(target, masks, reachable)
             elif method == "clip":
                 chosen = self._select_clip(target, masks, candidates)
+            elif method == "always_target":
+                chosen = target_index
+                if chosen < 0:
+                    reply["reason"] = "target hidden"
+                elif not reachable[chosen]:
+                    chosen, reply["reason"] = -1, "target not reachable"
             else:
                 chosen = int(self.rng.choice(candidates))
         t_sel = time.perf_counter()
@@ -196,7 +222,7 @@ class UnveilerBackend:
         })
 
         overlay = draw_overlay(image_bgr, full_masks, target_mask, chosen, target_index, reachable)
-        reply["log_dir"] = self._log_step(step, method, image_bgr, target_mask, overlay, masks, reply, color)
+        reply["log_dir"] = self._log_step(step, label, image_bgr, target_mask, overlay, masks, reply, color)
         if return_overlay:
             reply["overlay"] = encode_image(overlay, quality=85)
         return reply
@@ -220,7 +246,14 @@ class UnveilerBackend:
         if all(not reachable[i] for i in range(k)):   # every reachable object is past the SRE's slots
             reply["reason"] = f"no reachable object among the first {k} slots"
             return -1
-        return int(torch.argmax(logits[:k]).item())
+        best = int(torch.argmax(logits[:k]).item())
+        t = reply["target_index"]
+        if self.target_min_prob and best == t and sum(reachable[:k]) > 1:
+            if float(torch.softmax(logits[:k], dim=0)[t]) < self.target_min_prob:
+                logits[t] = -1e4
+                best = int(torch.argmax(logits[:k]).item())
+                reply["reason"] = f"target below {self.target_min_prob:.2f}: next best object"
+        return best
 
     def _sre_inputs(self, color, target, masks, bboxes):
         """Same tensors as Policy.get_unveiler_inputs (the sim evaluation path)."""

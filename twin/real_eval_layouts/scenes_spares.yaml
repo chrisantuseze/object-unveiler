@@ -1,0 +1,8 @@
+# Task 1 scenes for unveiler/unveiler_session.py, one per layout sheet (twin/make_eval_layouts.py).
+# The twin search's answer for each scene is in layouts.json (optimal_steps, first_choices, plan).
+# When a layout cannot be built or reached, use the next unused spare of the same kind, for every method.
+- {id: C1-11, density: "3", occlusion: partial, target: blue, blocks: [blue, red, green]}
+- {id: C2-07, density: "4", occlusion: partial, target: yellow, blocks: [yellow, green, blue, red]}
+- {id: F-05, density: "4", occlusion: free, target: blue, blocks: [blue, yellow, red, green]}
+- {id: C1-12, density: "4", occlusion: partial, target: yellow, blocks: [yellow, green, blue, red]}
+- {id: C2-08, density: "4", occlusion: full, target: red, blocks: [red, yellow, green, blue]}

@@ -88,6 +88,7 @@ def replay(args):
     backend = UnveilerBackend(device=args.device, sre_rl_ckpt=args.sre_rl_ckpt, sre_il_ckpt=args.sre_il_ckpt,
                               seg_threshold=args.seg_threshold, crop=args.crop, warp=args.warp,
                               output_dir=str(out_dir / "server_logs"), seed=args.seed)
+    backend.target_min_prob = args.target_min_prob
     default_rl = backend.sre_rl
     rl_models = {}
     for path in args.rl_ckpts or []:
@@ -243,6 +244,8 @@ def parse_args(argv=None):
     ap.add_argument("--crop", type=int, nargs=4, default=None)
     ap.add_argument("--warp", type=float, nargs=8, default=None)
     ap.add_argument("--seg-threshold", type=float, default=0.97)
+    ap.add_argument("--target-min-prob", type=float, default=None,
+                    help="SRE methods grasp the target only at or above this probability (backend.target_min_prob)")
     ap.add_argument("--sre-rl-ckpt", default="save/sre_rl/sre_rl_best.pt")
     ap.add_argument("--sre-il-ckpt", default="save/sre/sre_model_best.pt")
     ap.add_argument("--device", default="cuda")

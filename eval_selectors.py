@@ -11,6 +11,7 @@ Selectors (all return an index into the segmented objects; the target's own inde
     nearest    closest object to the target                       random     uniform over segmented objects
     clip       zero-shot CLIP (baseline/clip_eval.py)             gpt4o      GPT-4o (baseline/gpt.py)
     oracle     removes an object that physically touches the target (simulator ground truth); upper bound
+    search     argmin Q of the expert-iteration search (--execution ideal only); the optimum of that MDP
 
 Per step it also logs, from PyBullet ground truth:
     sel_valid   the chosen object touches the target (or the target is free and was chosen)  -> eps_SRE = 1 - mean
@@ -22,6 +23,11 @@ Run (one density bin, all local selectors, headless GPU rendering):
         --selectors oracle sre sre_il heuristic planner nearest random
 Summarize:
     python eval_selectors.py --summarize save/selector_eval/6_9
+Selection only (--execution ideal): the chosen object is lifted out and the pile settles, and the target is retrieved
+when the search's graspability test passes, exactly the MDP of trainer/train_sre_exit.py. The Action Decoder fails
+60-90% of valid grasps, which hides selection in the default mode; here every step that fails is the selector's.
+    python eval_selectors.py --execution ideal --nr_objects 6 9 --n_scenes 30 --out save/selector_eval/6_9_ideal \
+        --selectors search oracle sre sre_il heuristic planner nearest random
 Mask-noise sweep (Item 3): add e.g. --mask_noise merge:0.3  (types: merge, split, drop, erode, dilate)
 
 Episodes are appended to <out>/episodes.jsonl as they finish, and (episode, selector) pairs already there are skipped,
@@ -42,7 +48,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-SELECTORS = ("oracle", "sre", "sre_il", "heuristic", "planner", "nearest", "random", "clip", "gpt4o")
+SELECTORS = ("search", "oracle", "sre", "sre_il", "heuristic", "planner", "nearest", "random", "clip", "gpt4o")
 
 
 # ── ground truth from PyBullet ───────────────────────────────────────────────────────────────────────────────────────
@@ -181,6 +187,12 @@ class Harness:
             self.sre_rl.load_state_dict(ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt)
             self.sre_rl.eval()
         self._clip = self._gpt = None
+        self.exit_args = None
+        if args.execution == "ideal":       # the search's own defaults, so the test is the one the labels used
+            from trainer.train_sre_exit import parse_args as exit_parse_args
+            self.exit_args = exit_parse_args(["--access", args.access])
+        elif "search" in args.selectors:
+            raise SystemExit("the 'search' selector needs --execution ideal")
 
     # ── one episode ──
 
@@ -208,6 +220,10 @@ class Harness:
         if target_body is None:
             return {"episode": episode, "seed": seed, "selector": selector, "skipped": "target mask has no body"}
         ref_target_mask = masks[target_id]
+        search = None
+        if self.exit_args is not None:
+            from trainer.train_sre_exit import Search, make_probe
+            search = Search(p, make_probe(p, self.exit_args), self.exit_args)    # env.reset cleared all bodies
 
         rec = {"episode": episode, "seed": seed, "selector": selector, "nr_objects": env.scene_nr_objs,
                "n_objects_initial": len(object_ids), "n_segmented_initial": len(masks),
@@ -234,8 +250,19 @@ class Harness:
 
             touching = touching_bodies(p, target_body, object_ids, self.args.contact_dist)
             valid = set(touching) if touching else {target_body}
+            q = v0 = graspable = None
+            if search is not None:
+                root = p.saveState()
+                search.reset(root, target_body, object_ids)
+                q, v0, graspable = search.q_values(bodies)
+                p.removeState(root)
+                if step == 0:
+                    if v0 > self.exit_args.max_depth + 1:
+                        return {"episode": episode, "seed": seed, "selector": selector,
+                                "skipped": "no solution within the search horizon"}
+                    rec["optimal_steps"] = int(v0)
             ctx = dict(obs=obs, masks=masks, bboxes=bboxes, target_mask=target_mask, target_id=target_id,
-                       bodies=bodies, valid=valid, rng=rng)
+                       bodies=bodies, valid=valid, rng=rng, q=q)
 
             t0 = time.perf_counter()
             chosen, probs = self._select(selector, ctx)
@@ -251,10 +278,38 @@ class Harness:
                   "sel_valid": chosen_body in valid, "heuristic_choice": heur,
                   "agrees_heuristic": chosen == heur, "probs": probs, "noise": noise_log,
                   "select_ms": round(sel_ms, 1)}
+            if search is not None:
+                st.update(q=[float(v) for v in q], v0=int(v0), graspable=bool(graspable),
+                          sel_optimal=chosen is not None and 0 <= chosen < n and bool(q[chosen] <= q.min()))
 
             if chosen is None or chosen < 0 or chosen >= n:
                 st.update(exec_skipped=True, exec_ok=False, removed=[], stable=None)
                 rec["steps"].append(st)
+                continue
+
+            if search is not None:
+                # ideal execution: a graspable target is retrieved, a blocked one costs the step; any other object
+                # is lifted out and the pile settles (a toppled or displaced target ends the episode)
+                if chosen_body == target_body and graspable:
+                    st.update(removed=[int(target_body)], exec_ok=True)
+                    rec["steps"].append(st)
+                    success, outcome, rec["success_intended"] = True, "success", True
+                    break
+                if chosen_body is None or chosen_body == target_body:
+                    st.update(removed=[], exec_ok=False)
+                    rec["steps"].append(st)
+                    continue
+                p.resetBasePositionAndOrientation(chosen_body, [20.0, 20.0, -0.6], [0, 0, 0, 1])
+                for _ in range(self.exit_args.settle_steps):
+                    p.stepSimulation()
+                target_ok = search._target_ok()
+                env.remove_flat_objs()
+                obs = env.get_observation()
+                st.update(removed=[int(chosen_body)], exec_ok=True)
+                rec["steps"].append(st)
+                if not target_ok or target_body not in [o.body_id for o in env.objects]:
+                    outcome = "target_disturbed"
+                    break
                 continue
 
             before = set(object_ids)
@@ -339,6 +394,8 @@ class Harness:
             return self._select_planner(c), None
         if name == "oracle":
             return self._select_oracle(c), None
+        if name == "search":
+            return int(np.argmin(c["q"])), None
         if name in ("sre", "sre_il"):
             return self._select_sre(name, c)
         if name == "clip":
@@ -480,6 +537,33 @@ def summarize(out_dir):
               f"{e_sre:>8.3f} {e_exec:>8.3f} {agree:>8.1%}  intended={n_intended} {dict(outc)}")
     print("\neps_SRE = share of steps choosing an object that does not touch the target (or not the free target);"
           "\neps_exec = share of valid choices the grasp failed to remove; agree_H = step choices equal to Alg. 1.")
+    if any("optimal_steps" in r for r in rows):
+        summarize_ideal(by, common, order)
+
+
+def summarize_ideal(by, common, order):
+    """Selection-only columns for --execution ideal runs, with the search's cost-to-go as the reference."""
+    rng = np.random.RandomState(0)
+    print(f"\nideal execution (selection only)\n{'selector':<10} {'success':>10} {'95% interval':>14} "
+          f"{'needs removal':>14} {'free target':>12} {'opt choice':>11} {'excess steps':>13} {'early grasp':>12}")
+    for s in order:
+        eps = [r for r in by[s] if r["episode"] in common]
+        if not eps:
+            continue
+        ok = np.array([r["success"] for r in eps])
+        lo, hi = np.percentile([rng.choice(ok, len(ok)).mean() for _ in range(2000)], [2.5, 97.5])
+        hard = [r["success"] for r in eps if r["optimal_steps"] > 1]
+        easy = [r["success"] for r in eps if r["optimal_steps"] == 1]
+        steps = [st for r in eps for st in r["steps"]]
+        excess = [r["n_steps"] - r["optimal_steps"] for r in eps if r["success"]]
+        early = sum(any(st["chosen_is_target"] and not st["graspable"] for st in r["steps"]) for r in eps)
+        print(f"{s:<10} {ok.sum():>4}/{len(ok):<5} {f'[{lo:.0%}, {hi:.0%}]':>14} {f'{sum(hard)}/{len(hard)}':>14} "
+              f"{f'{sum(easy)}/{len(easy)}':>12} {np.mean([st['sel_optimal'] for st in steps]):>11.1%} "
+              f"{np.mean(excess) if excess else float('nan'):>13.2f} {f'{early}/{len(eps)}':>12}")
+    print("\nneeds removal / free target = scenes where the search's optimum is more than one action / one action;"
+          "\nopt choice = share of steps whose choice has the minimum search cost; excess steps = steps beyond the"
+          "\noptimum on successful episodes; early grasp = episodes with a grasp at the target while it was still blocked"
+          "\n(the step is wasted and the scene unchanged, so a deterministic selector repeats it to the step limit).")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -495,6 +579,10 @@ def parse_args(argv=None):
     ap.add_argument("--seed", type=int, default=1, help="scene seeds are drawn from this, as in eval_agent")
     ap.add_argument("--max_steps", type=int, default=6, help="eval_agent uses 6")
     ap.add_argument("--contact_dist", type=float, default=0.01, help="metres; 'touching the target' for ground truth")
+    ap.add_argument("--execution", default="ad", choices=["ad", "ideal"],
+                    help="ad: Action Decoder grasps in physics; ideal: lift the chosen object out (selection only)")
+    ap.add_argument("--access", default="side", choices=["side", "top"],
+                    help="--execution ideal: graspability test of trainer/train_sre_exit.py")
     ap.add_argument("--mask_noise", default=None, help="e.g. merge:0.3, split:0.3, drop:0.2, erode:4, dilate:4")
     ap.add_argument("--render", default="egl", choices=["gui", "direct", "egl"])
     ap.add_argument("--objects_set", default="unseen", help="eval_agent uses 'unseen'")

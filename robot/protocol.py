@@ -45,7 +45,7 @@ REQUEST_TOPIC = "/unveiler/request"
 RESPONSE_TOPIC = "/unveiler/response"
 MSG_TYPE = "std_msgs/String"
 
-METHODS = ("sre", "sre_il", "heuristic", "gpt4o", "clip", "random")
+METHODS = ("sre", "sre_il", "heuristic", "gpt4o", "clip", "random", "always_target")
 
 SELECT_REPLY_TIMEOUT_S = 60.0   # Jetson-side wait for a `select` reply (gpt4o is the slow one)
 PING_REPLY_TIMEOUT_S = 5.0

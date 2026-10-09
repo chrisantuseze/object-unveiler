@@ -236,8 +236,8 @@ def recreate_train():
     except OSError as e:
         logging.info("Error: %s - %s." % (e.filename, e.strerror))
         
-    if not os.path.exists(path):
-        os.makedirs(path)
+    # exist_ok: parallel workers (trainer/train_sre_exit.py) reset their environments at the same time
+    os.makedirs(path, exist_ok=True)
 
 def recreate_test():
     path = TEST_EPISODES_DIR

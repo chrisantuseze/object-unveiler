@@ -1,0 +1,3 @@
+# Layouts to film for the video (Task 1), a subset of scenes.yaml.
+- {id: C2-02, density: "4", occlusion: partial, target: blue, blocks: [blue, green, yellow, red]}
+- {id: F-02, density: "4", occlusion: free, target: yellow, blocks: [yellow, green, blue, red]}

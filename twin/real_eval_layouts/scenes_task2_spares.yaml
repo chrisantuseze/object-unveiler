@@ -1,0 +1,5 @@
+# Task 2 (two targets in order) scenes for unveiler/unveiler_session.py, one per layout sheet (twin/make_eval_layouts.py).
+# The twin search's answer for each scene is in layouts.json (optimal_steps, first_choices, plan).
+# When a layout cannot be built or reached, use the next unused spare of the same kind, for every method.
+- {id: T2a-07, task: ordered, targets: [blue, green], blocks: [blue, green, yellow, red]}
+- {id: T2b-05, task: ordered, targets: [green, yellow], blocks: [green, yellow, red, blue]}

@@ -36,6 +36,10 @@ cd object-unveiler
 python -m robot.server --jetson-ip 192.168.0.8 --crop X0 Y0 X1 Y1
 ```
 
+- `--method ours|il|ppo|gpt4o|clip|heuristic|random|always_target`: serve this one method. Every `select` runs it,
+  whatever method the client names, and replies and step logs are labelled with it. `ours` loads the SRE trained
+  by expert iteration in the twin, `il` the imitation-only SRE. Without `--method` the client picks the method per
+  request, as before. Commands for the evaluation: `docs/real_eval_commands.md`.
 - `--crop X0 Y0 X1 Y1`: the table workspace in camera pixels. The frame is cropped to this box and resized to
   400x400, the sim camera resolution the segmenter and the SRE were trained on. Choose a square-ish box that tightly
   frames the workspace. The heuristic ranks objects by distance to the image border, so the crop border should be the

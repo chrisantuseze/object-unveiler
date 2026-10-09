@@ -9,6 +9,9 @@ execution; this process only segments the frame and picks the next object to rem
     Lab PC:  conda activate unveiler
              python -m robot.server --jetson-ip 192.168.0.8 [--crop X0 Y0 X1 Y1 | --warp TLx TLy TRx TRy BRx BRy BLx BLy]
 
+One method per server process, chosen here (the Jetson client is the same for every method):
+    python -m robot.server --jetson-ip 192.168.0.8 --warp ... --method ours     # see METHOD_PRESETS
+
 Offline check without the Jetson (loads the models, selects once on image files):
     python -m robot.server --offline-image frame.png --offline-target target_mask.png --method sre
 """
@@ -29,6 +32,20 @@ from robot.protocol import MSG_TYPE, REQUEST_TOPIC, RESPONSE_TOPIC, decode_image
 
 logging.getLogger("twisted").setLevel(logging.WARNING)
 logger = logging.getLogger("unveiler_server")
+
+
+# --method: name -> (backend method, SRE-IL checkpoint or None). "ours" is the SRE trained by expert iteration in the
+# twin, "il" the imitation-only SRE, "ppo" the PPO-fine-tuned SRE.
+METHOD_PRESETS = {
+    "ours": ("sre_il", "save/sre_twin2/sre_exit_it2.pt"),
+    "il": ("sre_il", "save/sre/sre_model_best.pt"),
+    "ppo": ("sre", None),
+    "gpt4o": ("gpt4o", None),
+    "clip": ("clip", None),
+    "heuristic": ("heuristic", None),
+    "random": ("random", None),
+    "always_target": ("always_target", None),
+}
 
 
 class Server:
@@ -127,7 +144,8 @@ def parse_args(argv=None):
     ap.add_argument("--port", type=int, default=9090)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--sre-rl-ckpt", default="save/sre_rl/sre_rl_best.pt")
-    ap.add_argument("--sre-il-ckpt", default="save/sre/sre_model_best.pt")
+    ap.add_argument("--sre-il-ckpt", default=None,
+                    help="default: the --method preset's checkpoint, else save/sre/sre_model_best.pt")
     ap.add_argument("--num-patches", type=int, default=10, help="SRE object slots (must match training)")
     ap.add_argument("--seg-threshold", type=float, default=0.97,
                     help="Mask R-CNN score threshold (ObjectSegmenter uses 0.97 for real, 0.98 for sim)")
@@ -143,7 +161,9 @@ def parse_args(argv=None):
 
     ap.add_argument("--offline-image", default=None, help="skip rosbridge: select once on this image and exit")
     ap.add_argument("--offline-target", default=None, help="target mask for --offline-image (nonzero = target)")
-    ap.add_argument("--method", default="sre", help="method for --offline-image")
+    ap.add_argument("--method", default=None, choices=sorted(METHOD_PRESETS),
+                    help="serve this method only: every select runs it, whatever the client asks for. Without it "
+                         "the client names the method in each request")
     return ap.parse_args(argv)
 
 
@@ -154,8 +174,15 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    forced, preset_ckpt = METHOD_PRESETS[args.method] if args.method else (None, None)
+    args.sre_il_ckpt = args.sre_il_ckpt or preset_ckpt or "save/sre/sre_model_best.pt"
+
     from robot.backend import UnveilerBackend
     backend = UnveilerBackend.from_args(args)
+    if forced:
+        backend.forced_method, backend.method_label = forced, args.method
+        logger.info("Serving method '%s' only (backend %s, SRE-IL checkpoint %s)", args.method, forced,
+                    args.sre_il_ckpt)
 
     if args.offline_image:
         import cv2
@@ -164,7 +191,7 @@ def main(argv=None):
         if image is None or target is None:
             raise SystemExit("could not read --offline-image / --offline-target")
         backend.reset("offline", 0)
-        reply = backend.select(image, target, method=args.method, step=0)
+        reply = backend.select(image, target, method=forced or "sre", step=0)
         print(json.dumps({k: v for k, v in reply.items() if k != "chosen_mask"}, indent=2))
         return 0
 
