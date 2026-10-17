@@ -106,7 +106,7 @@ def replay(args):
         m.eval()
         il_models[f"il@{Path(path).parent.name}/{Path(path).stem}"] = m
 
-    methods = list(args.methods) + list(rl_models) + list(il_models)
+    methods = [m for m in args.methods if m != "sre" or default_rl is not None] + list(rl_models) + list(il_models)
     rows = []
     for k, sc in enumerate(scenes):
         frame = cv2.imread(str(sc["dir"] / "frame.jpg"))
@@ -246,7 +246,7 @@ def parse_args(argv=None):
     ap.add_argument("--seg-threshold", type=float, default=0.97)
     ap.add_argument("--target-min-prob", type=float, default=None,
                     help="SRE methods grasp the target only at or above this probability (backend.target_min_prob)")
-    ap.add_argument("--sre-rl-ckpt", default="save/sre_rl/sre_rl_best.pt")
+    ap.add_argument("--sre-rl-ckpt", default=None, help="legacy PPO SRE; method 'sre' is skipped without it")
     ap.add_argument("--sre-il-ckpt", default="save/sre/sre_model_best.pt")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--seed", type=int, default=0)

@@ -4,14 +4,14 @@ Every method answers the same question: which segmented object should be removed
 answer is an index into the objects the server segmented, so all methods share the Jetson's executor and differ only
 in the choice.
 
-    sre        SRE after PPO fine-tuning (the full Unveiler reasoning module)
-    sre_il     SRE after imitation learning only
+    sre_il     the SRE loaded from sre_il_ckpt: expert iteration (the full Unveiler) or imitation only
+    sre        legacy PPO-fine-tuned SRE, not the method in the paper
     heuristic  the periphery + target-distance heuristic that supervised the SRE (policy/grasping.py)
     gpt4o      GPT-4o obstacle selection (baseline/gpt.py, as in the sim tables)
     clip       zero-shot CLIP obstacle selection (baseline/clip_eval.py, as in Table IV)
     random     uniform over the selectable objects
 
-Preprocessing matches the sim evaluation (eval_agent.py -> Policy.exploit_unveiler_rl): the workspace is mapped to
+Preprocessing matches the sim evaluation (eval_agent.py -> Policy.exploit_unveiler): the workspace is mapped to
 the 400x400 sim resolution and segmented by the same Mask R-CNN, and the SRE gets 100x100 object masks, a 100x100
 target mask and a grey-scale 100x100 scene image, padded to ``num_patches`` object slots.
 
@@ -48,7 +48,7 @@ TARGET_MATCH_IOU = 0.3
 
 
 class UnveilerBackend:
-    def __init__(self, device: str = "cuda", sre_rl_ckpt: str = "save/sre_rl/sre_rl_best.pt",
+    def __init__(self, device: str = "cuda", sre_rl_ckpt: Optional[str] = None,
                  sre_il_ckpt: str = "save/sre/sre_model_best.pt", num_patches: int = 10,
                  seg_threshold: float = 0.97, crop: Optional[Sequence[int]] = None,
                  warp: Optional[Sequence[float]] = None,
@@ -78,11 +78,13 @@ class UnveilerBackend:
         self.segmenter.threshold = seg_threshold
         self._seg_dir = tempfile.mkdtemp(prefix="unveiler_seg_")   # from_maskrcnn writes debug PNGs here
 
-        logger.info("Loading SRE-RL from %s ...", sre_rl_ckpt)
-        self.sre_rl = SREActorCritic(model_args).to(self.device)
-        ckpt = torch.load(sre_rl_ckpt, map_location=self.device, weights_only=False)
-        self.sre_rl.load_state_dict(ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt)
-        self.sre_rl.eval()
+        self.sre_rl = None   # legacy PPO SRE (method "sre"), only loaded when a checkpoint is given
+        if sre_rl_ckpt:
+            logger.info("Loading SRE-RL from %s ...", sre_rl_ckpt)
+            self.sre_rl = SREActorCritic(model_args).to(self.device)
+            ckpt = torch.load(sre_rl_ckpt, map_location=self.device, weights_only=False)
+            self.sre_rl.load_state_dict(ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt)
+            self.sre_rl.eval()
 
         logger.info("Loading SRE-IL from %s ...", sre_il_ckpt)
         self.sre_il = SpatialEncoder(model_args).to(self.device)
@@ -102,7 +104,8 @@ class UnveilerBackend:
         box = np.zeros((SIM_SIZE, SIM_SIZE), np.uint8)
         box[150:250, 150:250] = 255
         inputs = self._sre_inputs(blank, box, [box], [[150.0, 150.0, 250.0, 250.0]])
-        self.sre_rl(*inputs)
+        if self.sre_rl is not None:
+            self.sre_rl(*inputs)
         self.sre_il(*inputs)
 
     @classmethod
@@ -233,6 +236,8 @@ class UnveilerBackend:
     def _select_sre(self, method, color, target, masks, bboxes, reachable, reply) -> int:
         scene_t, target_t, masks_t, bboxes_t = self._sre_inputs(color, target, masks, bboxes)
         if method == "sre":
+            if self.sre_rl is None:
+                raise ValueError("method 'sre' (legacy PPO SRE) needs a checkpoint: pass --sre-rl-ckpt")
             logits, _, _ = self.sre_rl(scene_t, target_t, masks_t, bboxes_t)
         else:
             logits, _ = self.sre_il(scene_t, target_t, masks_t, bboxes_t)

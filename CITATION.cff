@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite it as below."
 title: "Learning Object-Centric Spatial Reasoning for Sequential Manipulation in Cluttered Environments"
-version: "1.2"
+version: "1.2.1"
 doi: 10.5281/zenodo.23438694
 date-released: "2026-10-17"
 license: MIT

@@ -6,7 +6,9 @@ comparison the IROS AE asked for. It runs headless and labels outcomes from simu
 can run unattended on a cluster.
 
 Selectors (all return an index into the segmented objects; the target's own index = grasp the target now):
-    sre        SRE after PPO fine-tuning (full Unveiler)          sre_il     SRE after imitation only
+    sre_il     the SRE loaded from --sre_model: the expert-iteration SRE (sre_exit_best.pt, full Unveiler) or the
+               imitation-only SRE (sre_model_best.pt)
+    sre        legacy PPO-fine-tuned SRE (--sre_rl); not the method in the paper
     heuristic  Algorithm 1, the IL supervisor                     planner    occlusion-graph planner (classical)
     nearest    closest object to the target                       random     uniform over segmented objects
     clip       zero-shot CLIP (baseline/clip_eval.py)             gpt4o      GPT-4o (baseline/gpt.py)

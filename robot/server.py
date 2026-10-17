@@ -13,7 +13,7 @@ One method per server process, chosen here (the Jetson client is the same for ev
     python -m robot.server --jetson-ip 192.168.0.8 --warp ... --method ours     # see METHOD_PRESETS
 
 Offline check without the Jetson (loads the models, selects once on image files):
-    python -m robot.server --offline-image frame.png --offline-target target_mask.png --method sre
+    python -m robot.server --offline-image frame.png --offline-target target_mask.png --method ours
 """
 
 import argparse
@@ -35,7 +35,7 @@ logger = logging.getLogger("unveiler_server")
 
 
 # --method: name -> (backend method, SRE-IL checkpoint or None). "ours" is the SRE trained by expert iteration in the
-# twin, "il" the imitation-only SRE, "ppo" the PPO-fine-tuned SRE.
+# twin, "il" the imitation-only SRE, "ppo" the legacy PPO-fine-tuned SRE.
 METHOD_PRESETS = {
     "ours": ("sre_il", "save/sre_twin2/sre_exit_it2.pt"),
     "il": ("sre_il", "save/sre/sre_model_best.pt"),
@@ -143,7 +143,8 @@ def parse_args(argv=None):
     ap.add_argument("--jetson-ip", default="192.168.0.8")
     ap.add_argument("--port", type=int, default=9090)
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--sre-rl-ckpt", default="save/sre_rl/sre_rl_best.pt")
+    ap.add_argument("--sre-rl-ckpt", default=None,
+                    help="legacy PPO SRE; default: save/sre_rl/sre_rl_best.pt with --method ppo, else not loaded")
     ap.add_argument("--sre-il-ckpt", default=None,
                     help="default: the --method preset's checkpoint, else save/sre/sre_model_best.pt")
     ap.add_argument("--num-patches", type=int, default=10, help="SRE object slots (must match training)")
@@ -176,6 +177,8 @@ def main(argv=None):
 
     forced, preset_ckpt = METHOD_PRESETS[args.method] if args.method else (None, None)
     args.sre_il_ckpt = args.sre_il_ckpt or preset_ckpt or "save/sre/sre_model_best.pt"
+    if args.method == "ppo" and not args.sre_rl_ckpt:
+        args.sre_rl_ckpt = "save/sre_rl/sre_rl_best.pt"
 
     from robot.backend import UnveilerBackend
     backend = UnveilerBackend.from_args(args)

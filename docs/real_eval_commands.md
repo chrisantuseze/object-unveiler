@@ -18,7 +18,7 @@ python -m robot.server --jetson-ip 192.168.0.8 --warp 88 71 501 38 639 479 54 47
 python -m robot.server --jetson-ip 192.168.0.8 --warp 88 71 501 38 639 479 54 479 --method always_target   # grasps the target at once
 ```
 
-Also available: `--method ppo` (the PPO SRE) and `--method random`.
+Also available: `--method ppo` (the legacy PPO SRE, not used in the paper) and `--method random`.
 
 ## Jetson: the client
 

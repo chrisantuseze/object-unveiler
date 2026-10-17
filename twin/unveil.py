@@ -1,7 +1,7 @@
 """Covered-target scenes in the DOFBOT twin, labelled by search, for fine-tuning the SRE (real2sim training data).
 
 The twin (twin/scene.py, from verify2act) renders the real setup: the same blocks, sheet, table and arm camera. Here
-it makes the Task 1 scenes of docs/sre_training_and_real_eval.md: at most four blocks of different colours, with the
+it makes the Task 1 scenes of twin/real_eval_layouts/README.md: at most four blocks of different colours, with the
 target covered from above by one or two of the others, leaned on, or free. Each render goes through the real robot's
 preprocessing (robot/backend.py: the fixed workspace warp to the 400x400 view, then Mask R-CNN), so the SRE trains on
 the tensors it gets on the robot.

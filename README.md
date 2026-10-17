@@ -24,10 +24,10 @@ used.
 
 | path | what it is |
 |---|---|
-| `main.py` | entry point for training (`--mode sre`, `sre-rl`, `ae`, `fcn`, `reg`) and simulation evaluation (`--mode eval`) |
+| `main.py` | entry point for training (`--mode sre`, `ae`, `fcn`, `reg`) and simulation evaluation (`--mode eval`) |
 | `collect_data.py` | collects heuristic demonstrations in PyBullet |
-| `policy/` | SRE (`sre_model.py`, `sre_actor_critic.py`), Action Decoder and grasping models |
-| `trainer/` | training loops, including expert iteration (`train_sre_exit.py`) |
+| `policy/` | SRE (`sre_model.py`), Action Decoder and grasping models |
+| `trainer/` | training loops, including expert iteration (`train_sre_exit.py`). `train_sre_rl.py` is an earlier PPO attempt kept for reference; the paper does not use it |
 | `env/` | PyBullet environment and cameras |
 | `mask_rg/` | Mask R-CNN object segmentation |
 | `eval_agent.py`, `eval_agent_target.py` | full-system simulation evaluation |
@@ -36,7 +36,7 @@ used.
 | `twin/` | MuJoCo digital twin of the real setup: training scenes, selection-only evaluation, printable evaluation layouts |
 | `robot/` | real-robot server (segmentation + object selection over rosbridge); see [`robot/README.md`](robot/README.md) |
 | `scripts/` | training/evaluation chains and the paper figure and video scripts |
-| `docs/` | lab record and real-robot evaluation commands |
+| `docs/` | real-robot evaluation commands and camera calibration |
 | `act/` | ACT policy experiments |
 
 ## Setup
@@ -50,26 +50,30 @@ pip install -r requirements.txt
 The digital twin needs MuJoCo with EGL (`pip install mujoco`, `MUJOCO_GL=egl`). The GPT-4o baseline needs `OPENAI_API_KEY`.
 
 Checkpoints and datasets are not in the repository. The code expects them under `save/` and `downloads/`
-(for example `save/sre/sre_model_best.pt`, `save/ae/ae_model_best.pt`, `save/fcn/fcn_model_best.pt`,
-`downloads/reg_model.pt`), both of which are gitignored.
+(for example `save/sre_exit/sre_exit_best.pt`, `save/sre/sre_model_best.pt`, `save/ae/ae_model_best.pt`), both of
+which are gitignored.
 
 ## Pretrained weights
 
-The [v1.2 release](https://github.com/chrisantuseze/object-unveiler/releases/tag/v1.2) includes the segmenter and
-the imitation-learning checkpoints:
+The [v1.2.1 release](https://github.com/chrisantuseze/object-unveiler/releases/tag/v1.2.1) includes the segmenter,
+the imitation-learning checkpoints and the SRE after expert iteration (in simulation and in the digital twin):
 
 | file | model | place it at |
 |---|---|---|
 | `maskrcnn.pth` | Mask R-CNN object segmenter | `downloads/maskrcnn.pth` |
 | `ae_model_best.pt` | Action Decoder (imitation learning) | `save/ae/ae_model_best.pt` |
 | `sre_model_best.pt` | SRE (imitation learning; the starting point for expert iteration) | `save/sre/sre_model_best.pt` |
+| `sre_exit_best.pt` | SRE after expert iteration (the full Unveiler SRE, used in the simulation evaluation) | `save/sre_exit/sre_exit_best.pt` |
+| `sre_exit_it2.pt` | SRE after expert iteration in the digital twin (the `ours` method on the real robot) | `save/sre_twin2/sre_exit_it2.pt` |
 
 ```bash
-BASE=https://github.com/chrisantuseze/object-unveiler/releases/download/v1.2
-mkdir -p downloads save/ae save/sre
+BASE=https://github.com/chrisantuseze/object-unveiler/releases/download/v1.2.1
+mkdir -p downloads save/ae save/sre save/sre_exit save/sre_twin2
 wget -P downloads  $BASE/maskrcnn.pth
 wget -P save/ae    $BASE/ae_model_best.pt
 wget -P save/sre   $BASE/sre_model_best.pt
+wget -P save/sre_exit $BASE/sre_exit_best.pt
+wget -P save/sre_twin2 $BASE/sre_exit_it2.pt
 ```
 
 ## Simulation
@@ -103,18 +107,18 @@ PY=$(which python) scripts/train_sre_exit_all.sh   # full run; resumes from save
 python -m trainer.train_sre_exit --probe 30       # check the graspability test on a few scenes
 ```
 
-Evaluate the full system:
+Evaluate the full system. This opens the PyBullet GUI and is interactive: when the target cannot be tracked
+automatically, it asks you whether the grasp succeeded.
 
 ```bash
 python3 main.py --mode eval \
-    --reg_model downloads/reg_model.pt \
-    --fcn_model save/fcn/fcn_model_best.pt \
     --ae_model save/ae/ae_model_best.pt \
-    --sre_model save/sre/sre_model_best.pt \
+    --sre_model save/sre_exit/sre_exit_best.pt \
     --n_scenes 30 --chunk_size 5 --temporal_agg --seed 1
 ```
 
-Compare selection methods with everything else held fixed:
+Compare selection methods with everything else held fixed (headless, labelled from simulator ground truth;
+`sre_il` runs whichever SRE `--sre_model` points to):
 
 ```bash
 python eval_selectors.py --nr_objects 6 9 --n_scenes 30 --render egl --out save/selector_eval/6_9 \
@@ -144,12 +148,10 @@ pick-and-place skill. They communicate over rosbridge. One server process serves
 python -m robot.server --jetson-ip <ROBOT_IP> --warp <8 corner coordinates> --method ours
 ```
 
-Methods: `ours`, `il`, `gpt4o`, `clip`, `heuristic`, `random`, `always_target`, `ppo`.
+Methods: `ours`, `il`, `gpt4o`, `clip`, `heuristic`, `random`, `always_target`.
 
 - [`robot/README.md`](robot/README.md): server options, wire protocol and offline testing
 - [`docs/real_eval_commands.md`](docs/real_eval_commands.md): the commands used for the evaluation
-- [`docs/sre_training_and_real_eval.md`](docs/sre_training_and_real_eval.md): the lab record, with training
-  details, offline checks and per-task results
 
 ## Citation
 

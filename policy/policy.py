@@ -916,7 +916,7 @@ class Policy:
                 'aperture': action[3],
                 'push_distance': self.push_distance}
     
-    def load(self, ae_model, reg_model, sre_model, sre_rl):
+    def load(self, ae_model, reg_model, sre_model, sre_rl=None):
         # self.fcn.load_state_dict(torch.load(fcn_model, map_location=self.device))
         # self.fcn.eval()
 
@@ -932,12 +932,13 @@ class Policy:
         # Handle both new-style (full checkpoint) and legacy (state_dict only) formats
         # weights_only=False is required because the checkpoint contains non-tensor data
         # (optimizer state, episode_count, best_avg_reward which may include numpy scalars)
-        sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device, weights_only=False)
-        if isinstance(sre_rl_checkpoint, dict) and 'model_state_dict' in sre_rl_checkpoint:
-            self.sre_rl.load_state_dict(sre_rl_checkpoint['model_state_dict'])
-        else:
-            self.sre_rl.load_state_dict(sre_rl_checkpoint)
-        self.sre_rl.eval()
+        if sre_rl:  # legacy PPO SRE, only when asked for
+            sre_rl_checkpoint = torch.load(sre_rl, map_location=self.device, weights_only=False)
+            if isinstance(sre_rl_checkpoint, dict) and 'model_state_dict' in sre_rl_checkpoint:
+                self.sre_rl.load_state_dict(sre_rl_checkpoint['model_state_dict'])
+            else:
+                self.sre_rl.load_state_dict(sre_rl_checkpoint)
+            self.sre_rl.eval()
 
     def is_terminal(self, next_obs: ori.Quaternion):
         # check if there is only one object left in the scene TODO This won't be used for mine

@@ -1,4 +1,4 @@
-"""Fixed scenes for the real-robot evaluation (Task 1 of docs/sre_training_and_real_eval.md), built in the twin, so
+"""Fixed scenes for the real-robot evaluation (Task 1 of twin/real_eval_layouts/README.md), built in the twin, so
 every method is run on the same arrangements (as verify2act/twin/make_eval_layouts.py does for Verify2Act).
 Task 2 scenes (two targets, retrieved in order) follow the Task 1 ones: T2a puts each target under its own block,
 T2b lays one block across both targets.

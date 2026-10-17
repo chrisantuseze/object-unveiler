@@ -15,12 +15,14 @@ import utils.logger as logging
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--mode', default='sre-rl', type=str, help='')
+    parser.add_argument('--mode', default='eval', type=str, help='')
     
     # args for eval_agent
     parser.add_argument('--ae_model', default='save/ae/ae_model_best.pt', type=str, help='')
-    parser.add_argument('--sre_model', default='save/sre/sre_model_best.pt', type=str, help='')
-    parser.add_argument('--sre_rl', default='save/sre_rl/sre_rl_best.pt', type=str, help='')
+    parser.add_argument('--sre_model', default='save/sre_exit/sre_exit_best.pt', type=str,
+                        help='SRE weights: sre_exit_best.pt (expert iteration) or sre_model_best.pt (imitation only)')
+    parser.add_argument('--sre_rl', default='', type=str,
+                        help='legacy PPO-fine-tuned SRE (trainer/train_sre_rl.py); if given, eval selects with it instead')
     parser.add_argument('--fcn_model', default='save/fcn/fcn_model_best.pt', type=str, help='')
     parser.add_argument('--reg_model', default='', type=str, help='')
     parser.add_argument('--seed', default=16, type=int, help='')

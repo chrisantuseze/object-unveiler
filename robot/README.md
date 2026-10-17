@@ -54,8 +54,8 @@ python -m robot.server --jetson-ip 192.168.0.8 --crop X0 Y0 X1 Y1
 - `--output-dir` (default `save/real_eval`): every `select` writes
   `<session>/episode_NNNN/step_SS_<method>/{frame.jpg, target_mask.png, overlay.jpg, sim_view.jpg, masks_sim.npz, reply.json}`.
   `overlay.jpg` outlines every object with its index: target red, chosen green, unreachable grey.
-- Checkpoints: `--sre-rl-ckpt save/sre_rl/sre_rl_best.pt` (the one `main.py` evaluates) and
-  `--sre-il-ckpt save/sre/sre_model_best.pt`.
+- Checkpoints: `--sre-il-ckpt` overrides the method preset's SRE (`ours`: the expert-iteration SRE fine-tuned in the
+  twin; `il`: `save/sre/sre_model_best.pt`). `--sre-rl-ckpt` is only used by the legacy `ppo` method.
 - `gpt4o` needs `OPENAI_API_KEY`. `clip` loads on first use (about 5 s once).
 - The first start builds Mask R-CNN from torchvision, which downloads the COCO weights once (170 MB) before loading
   `downloads/maskrcnn.pth`.
@@ -87,8 +87,9 @@ python -m robot.server --offline-image robot/testdata/frame.png --offline-target
 
 - All methods see the same segmentation, and each returns one object index. Execution is identical across methods
   (the Jetson's pick-and-place skill), so differences come from selection alone.
-- `sre` is the PPO-fine-tuned SRE (the full Unveiler reasoning module). `sre_il` is the imitation-only SRE, i.e. the
-  "SRE w/o RL" ablation.
+- `ours` is the SRE improved by expert iteration (the full Unveiler reasoning module); `il` is the imitation-only
+  SRE, i.e. the "SRE w/o RL" ablation. Both run through the backend's `sre_il` selector with different checkpoints.
+  `ppo` is a legacy PPO-fine-tuned SRE that the paper does not use.
 - `heuristic` is `grasping.find_obstacles_to_remove`, the supervisor the SRE was trained on. For three or fewer
   objects it returns the target itself, and the server then ranks the remaining objects by distance to the target.
 - `gpt4o` and `clip` are the sim and Table IV baselines, unchanged (`baseline/gpt.py`, `baseline/clip_eval.py`).
@@ -100,6 +101,5 @@ python -m robot.server --offline-image robot/testdata/frame.png --offline-target
   method's choice: SRE logits are set to -1e4, the heuristic skips them, GPT-4o is told their indices, and CLIP and
   random choose among the reachable objects. `unfiltered_index` records the SRE's choice before filtering, so you can
   report how often the arm's reach changed the decision.
-- `sre_rl_best.pt` (PPO episode 6060, entropy bonus 0.05) produces a much flatter distribution over objects than the
-  IL checkpoint. On the test scene its top probability is 0.20, versus 0.85 for `sre_il`. It is the checkpoint behind
-  the sim numbers, so it is the right one to report. Just don't read much into its probabilities as confidence.
+- `sre_rl_best.pt` (the legacy PPO SRE) drifted towards a nearly uniform distribution over objects. It is kept
+  only for comparison.
