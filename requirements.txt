@@ -1,0 +1,44 @@
+# opencv-python==4.5.1.48
+opencv-python
+torch
+torchvision
+# pybullet==3.0.8
+pybullet
+open3d # if you have segfault on open3d, try to downgrade numpy to 1.26.4
+numpy
+matplotlib
+tabulate
+#imutils==0.5.3
+imutils
+# pycocotools==2.0.2
+pycocotools
+# termcolor==1.1.0
+termcolor
+Pillow
+scikit-image
+tensorboard
+openai==1.106.1
+openai-clip==1.0.1
+
+# for ACT
+#   - python=3.9
+#   - pip=23.0.1
+#   - pytorch=2.0.0
+#   - torchvision=0.15.0
+#   - pytorch-cuda=11.8
+pyquaternion==0.9.9
+pyyaml==6.0
+#   - rospkg=1.5.0
+pexpect==4.8.0
+# mujoco==2.3.7
+# dm_control==1.0.9
+#   - py-opencv==4.7.0
+#   - matplotlib=3.7.1
+einops
+packaging
+h5py
+ipython
+
+# for diffusion model
+diffusers
+roslibpy==2.1.0

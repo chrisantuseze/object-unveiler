@@ -1,0 +1,23 @@
+# Task 1 scenes for unveiler/unveiler_session.py, one per layout sheet (twin/make_eval_layouts.py).
+# The twin search's answer for each scene is in layouts.json (optimal_steps, first_choices, plan).
+# In run order: the kinds are spread evenly over the session.
+- {id: C1-01, density: "3", occlusion: partial, target: red, blocks: [red, green, blue]}
+- {id: C2-01, density: "4", occlusion: partial, target: green, blocks: [green, red, blue, yellow]}
+- {id: F-01, density: "4", occlusion: free, target: blue, blocks: [blue, red, green, yellow]}
+- {id: C1-02, density: "4", occlusion: partial, target: green, blocks: [green, blue, yellow, red]}
+- {id: C1-03, density: "3", occlusion: partial, target: blue, blocks: [blue, yellow, red]}
+- {id: C2-02, density: "4", occlusion: partial, target: blue, blocks: [blue, green, yellow, red]}
+- {id: C1-04, density: "4", occlusion: partial, target: yellow, blocks: [yellow, red, green, blue]}
+- {id: F-02, density: "4", occlusion: free, target: yellow, blocks: [yellow, green, blue, red]}
+- {id: C2-03, density: "4", occlusion: partial, target: yellow, blocks: [yellow, blue, red, green]}
+- {id: C1-05, density: "3", occlusion: partial, target: red, blocks: [red, yellow, green]}
+- {id: C1-06, density: "4", occlusion: partial, target: green, blocks: [green, red, blue, yellow]}
+- {id: C2-04, density: "4", occlusion: partial, target: red, blocks: [red, green, blue, yellow]}
+- {id: F-03, density: "4", occlusion: free, target: red, blocks: [red, yellow, green, blue]}
+- {id: C1-07, density: "3", occlusion: partial, target: blue, blocks: [blue, green, yellow]}
+- {id: C1-08, density: "4", occlusion: partial, target: yellow, blocks: [yellow, blue, red, green]}
+- {id: C2-05, density: "4", occlusion: partial, target: green, blocks: [green, yellow, red, blue]}
+- {id: C1-09, density: "3", occlusion: partial, target: red, blocks: [red, blue, yellow]}
+- {id: F-04, density: "4", occlusion: free, target: green, blocks: [green, red, blue, yellow]}
+- {id: C2-06, density: "4", occlusion: partial, target: blue, blocks: [blue, red, green, yellow]}
+- {id: C1-10, density: "4", occlusion: partial, target: green, blocks: [green, yellow, red, blue]}

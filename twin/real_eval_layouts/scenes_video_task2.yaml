@@ -1,0 +1,3 @@
+# Layouts to film for the video (Task 2), a subset of scenes_task2.yaml.
+- {id: T2a-01, task: ordered, targets: [red, green], blocks: [red, green, blue, yellow]}
+- {id: T2b-01, task: ordered, targets: [green, red], blocks: [green, red, blue, yellow]}

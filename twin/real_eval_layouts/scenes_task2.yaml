@@ -1,0 +1,13 @@
+# Task 2 (two targets in order) scenes for unveiler/unveiler_session.py, one per layout sheet (twin/make_eval_layouts.py).
+# The twin search's answer for each scene is in layouts.json (optimal_steps, first_choices, plan).
+# In run order: the kinds are spread evenly over the session.
+- {id: T2a-01, task: ordered, targets: [red, green], blocks: [red, green, blue, yellow]}
+- {id: T2b-01, task: ordered, targets: [green, red], blocks: [green, red, blue, yellow]}
+- {id: T2a-02, task: ordered, targets: [green, blue], blocks: [green, blue, yellow, red]}
+- {id: T2b-02, task: ordered, targets: [blue, green], blocks: [blue, green, yellow, red]}
+- {id: T2a-03, task: ordered, targets: [blue, yellow], blocks: [blue, yellow, red, green]}
+- {id: T2a-04, task: ordered, targets: [yellow, red], blocks: [yellow, red, green, blue]}
+- {id: T2b-03, task: ordered, targets: [yellow, blue], blocks: [yellow, blue, red, green]}
+- {id: T2a-05, task: ordered, targets: [red, yellow], blocks: [red, yellow, green, blue]}
+- {id: T2b-04, task: ordered, targets: [red, green], blocks: [red, green, blue, yellow]}
+- {id: T2a-06, task: ordered, targets: [green, red], blocks: [green, red, blue, yellow]}

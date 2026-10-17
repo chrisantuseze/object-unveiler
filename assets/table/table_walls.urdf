@@ -1,0 +1,105 @@
+<?xml version="1.0" ?>
+<robot name="table_with_walls">
+
+  <!-- Table link -->
+  <link name="table_link">
+    <contact>
+      <lateral_friction value="1"/>
+    </contact>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.6 0.6 0.01"/>
+      </geometry>
+      <material name="wooden">
+        <color rgba="0.52 0.36 0.25 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.6 0.6 0.01"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Right Wall link -->
+  <link name="right_wall_link">
+    <contact>
+        <lateral_friction value="1.0"/>
+        <rolling_friction value="0.0001"/>
+        <inertia_scaling value="3.0"/>
+        <restitution value="0.0"/> <!-- No bounce -->
+    </contact>
+    <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="1"/>
+        <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.6 0 0.25"/> <!-- Adjusted height --> <!-- -0.6 ensures wall is at the tip of the table--> 
+      <geometry>
+        <box size="0.1 0.6 0.5"/> <!-- Adjusted height --> <!-- 0.1 is for the thickness. the last 0.5 is for the height --> 
+      </geometry>
+      <material name="concrete">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.6 0 0.25"/> <!-- Adjusted height -->
+      <geometry>
+        <box size="0.1 0.6 0.5"/> <!-- Adjusted height -->
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Left Wall link at 90 degrees -->
+  <link name="left_wall_link">
+    <contact>
+        <lateral_friction value="1.0"/>
+        <rolling_friction value="0.0001"/>
+        <inertia_scaling value="3.0"/>
+        <restitution value="0.0"/> <!-- No bounce -->
+    </contact>
+    <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="1"/>
+        <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.25 -0.6 0.25"/> <!-- Adjusted position and height -->
+      <geometry>
+        <box size="0.6 0.1 0.5"/> <!-- Adjusted size to make it perpendicular -->
+      </geometry>
+      <material name="concrete">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.25 -0.6 0.25"/> <!-- Adjusted position and height -->
+      <geometry>
+        <box size="0.6 0.1 0.5"/> <!-- Adjusted size to make it perpendicular -->
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Joint connecting table and right wall -->
+  <joint name="table_to_right_wall" type="fixed">
+    <parent link="table_link"/>
+    <child link="right_wall_link"/>
+    <origin rpy="0 0 0" xyz="0.25 0 0"/>
+  </joint>
+
+  <!-- Joint connecting right wall and left wall at 90 degrees -->
+  <joint name="right_wall_to_left_wall" type="fixed">
+    <parent link="right_wall_link"/>
+    <child link="left_wall_link"/>
+    <origin rpy="0 0 0" xyz="0 0.25 0"/> <!-- Adjusted position to make it adjacent and perpendicular -->
+  </joint>
+
+</robot>

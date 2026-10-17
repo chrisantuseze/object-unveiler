@@ -1,0 +1,106 @@
+# DOFBOT digital twin (verify2act/twin, README.md §5).
+# World frame: origin at the sheet centre on the table top, x away from the robot (up in the image), y = image left, z up.
+# Lengths in metres, angles in degrees.
+
+blocks:
+  colors: [red, green, blue, yellow]
+  # 30x30x60 mm, lying on the table on a 60 mm side (user, 2026-09-25). The long side is x in the block frame.
+  size: [0.06, 0.03, 0.03]          # length, width, height
+  mass: 0.05
+  friction: 1.0
+  # Fallback albedo when no texture is built (textures.py writes assets/<color>_*.png and overrides these).
+  rgba:
+    red:    [0.72, 0.13, 0.11, 1.0]
+    green:  [0.10, 0.36, 0.22, 1.0]
+    blue:   [0.13, 0.40, 0.78, 1.0]
+    yellow: [0.93, 0.80, 0.18, 1.0]
+
+sheet:
+  size: [0.279, 0.216]              # US Letter, portrait (x = away from the robot); the robot base stands on its near part
+  offset: [0.0, 0.0]                # sheet centre in the world frame (it is the origin by definition)
+  rgba: [0.86, 0.87, 0.88, 1.0]
+  visible: false                    # no sheet any more (Chris, 2026-10-05): blocks lie on the wooden table
+
+table:
+  rgba: [0.40, 0.24, 0.14, 1.0]
+
+camera:
+  # Arm camera at the home/observation pose, fitted to this project's workspace corners (the --warp quad
+  # 88 71 501 38 639 479 54 479: the sheet's far corners and its side edges at the bottom of the frame), fovy from
+  # verify2act's fit. The fit landed within 1 cm of verify2act's median pose.
+  pos: [-0.1328, 0.0126, 0.2758]
+  lookat: [0.0269, -0.0008, 0.0]
+  fovy: 36.86
+  roll: -1.04
+  poses: []
+  width: 640
+  height: 480
+  # Optional calibrated pinhole (calibrate.py). When set, fovy is ignored.
+  intrinsics: null                  # {fx, fy, cx, cy}
+  # On top of the sampled fitted pose (the poses already cover the session-to-session spread): per episode, then per frame.
+  jitter_episode: {pos: 0.005, lookat: 0.006, fovy: 0.0, roll: 1.0}
+  jitter_frame:   {pos: 0.0015, lookat: 0.002, fovy: 0.0, roll: 0.2}
+
+placement:
+  region_margin: 0.015              # keep block footprints this far inside the sheet
+  image_margin_px: 8                # every block fully in view, this far from the image border
+  yaw_std: 20.0                     # initial yaw around the long-axis-along-x pose (real frames: up to ~40 deg)
+  yaw_max: 50.0
+  # Tag end face toward the camera; the rest face away. Real frames: under half of the blocks show their tag.
+  p_tag_toward_camera: 0.4
+  side_distance: [0.06, 0.09]       # left/right of: centre-to-centre along y
+  side_x_std: 0.008
+  side_yaw_std: 8.0
+  stack_xy_std: 0.004
+  stack_yaw_std: 6.0
+  min_gap: 0.008                    # footprints of blocks on the table stay this far apart
+  p_fail: 0.0                       # optional real-robot style misplacement (0 = the WM learns the intended effect)
+  fail_offset: [0.015, 0.03]
+  p_offsheet: 0.0                   # per block at reset: sample from the sheet grown by offsheet_margin (on the table)
+  offsheet_margin: 0.03
+
+# How the real robot fails when a subtask's precondition does not hold (scene.apply(..., conflicts=True)).
+conflict:
+  min_visible_px: 250               # a covered block the camera barely sees is not attempted (the robot cannot find it)
+  p_wrong_block: 0.45               # covered block: the robot grasps the blocker instead and carries it; else knock-over
+  knock_distance: [0.04, 0.08]      # knocked-off blocker lands this far from the target's centre
+  p_tumble: 0.4                     # ... and lands in a random orientation (on its end, leaning)
+  nudge: [0.003, 0.015]             # the target (and nearby blocks) are pushed this far
+  nudge_yaw_std: 8.0
+  nudge_radius: 0.07
+  p_nudge_neighbour: 0.5
+  drop_height: 0.004                # side_occupied / ref_covered: release height above the obstacle
+  drop_tilt_deg: 12.0
+
+physics:
+  timestep: 0.002
+  settle_steps: 250
+
+render:
+  lights:
+    dir_elevation: [60.0, 88.0]
+    dir_azimuth: [-180.0, 180.0]
+    diffuse: [0.30, 0.50]           # the lab light is diffuse: soft, faint shadows
+    ambient: [0.60, 0.80]
+    shadows: true
+
+augment:
+  brightness: [-0.08, 0.04]          # tuned so the SRE's view matches the real sheet-less frames (grey mean ~49)
+  contrast: [0.85, 1.12]
+  saturation: [0.75, 1.1]
+  gamma: [0.85, 1.2]
+  wb_gain: [0.92, 1.08]             # per channel
+  blur_sigma: [0.0, 1.1]
+  noise_std: [0.005, 0.02]
+  vignette: [0.0, 0.25]
+  jpeg_quality: [55, 92]
+
+episodes:
+  n_blocks: [2, 4]
+  p_n_blocks_4: 0.6                 # the eval scenes always have all four blocks
+  prelude_steps: [0, 2]
+  p_prelude: 0.35
+  random_walk_frac: 0.2
+  # Goal-directed episodes by family (eval = the real eval tasks 1a-1d, 2a/2b, 3a verbatim; the others paraphrase them).
+  family_weights: {eval: 0.3, bin: 0.3, side: 0.17, stack: 0.15, compound: 0.08}
+  random_walk_steps: [1, 3]
